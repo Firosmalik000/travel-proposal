@@ -74,7 +74,7 @@ class Cashflow extends Model
 
         $urls = array_map(function ($path) {
             try {
-                return \Storage::disk('minio')->url($path);
+                return \Storage::disk(config('filesystems.default'))->url($path);
             } catch (\Exception $e) {
                 \Log::warning("Failed to generate MinIO URL for attachment: {$path}");
                 return null;

@@ -43,7 +43,7 @@ trait HasMinioUpload
                 'mime' => $file->getMimeType(),
             ]);
 
-            $path = Storage::disk('minio')->putFileAs($folder, $file, $filename);
+            $path = Storage::disk(config('filesystems.default'))->putFileAs($folder, $file, $filename);
 
             if ($path) {
                 \Log::info("✅ File uploaded to MinIO successfully", ['path' => $path]);
@@ -103,7 +103,7 @@ trait HasMinioUpload
                 return false;
             }
 
-            $result = Storage::disk('minio')->delete($path);
+            $result = Storage::disk(config('filesystems.default'))->delete($path);
 
             if ($result) {
                 \Log::info("Deleted file from MinIO: {$path}");
@@ -153,7 +153,7 @@ trait HasMinioUpload
         }
 
         try {
-            return Storage::disk('minio')->url($path);
+            return Storage::disk(config('filesystems.default'))->url($path);
         } catch (\Exception $e) {
             \Log::warning("Failed to generate MinIO URL for: {$path}", [
                 'error' => $e->getMessage()
@@ -194,7 +194,7 @@ trait HasMinioUpload
     protected function getMinioTemporaryUrl(string $path, int $minutes = 30): ?string
     {
         try {
-            return Storage::disk('minio')->temporaryUrl($path, now()->addMinutes($minutes));
+            return Storage::disk(config('filesystems.default'))->temporaryUrl($path, now()->addMinutes($minutes));
         } catch (\Exception $e) {
             \Log::warning("Failed to generate temporary MinIO URL for: {$path}", [
                 'error' => $e->getMessage()

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class MinioTestController extends Controller
 {
@@ -22,16 +21,19 @@ class MinioTestController extends Controller
     public function testConnection()
     {
         try {
-            // Test apakah bisa akses MinIO
-            $files = Storage::disk('minio')->files();
+            $disk = config('filesystems.default');
+
+            // Test apakah storage default dapat diakses
+            $files = Storage::disk($disk)->files();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Koneksi ke MinIO berhasil!',
+                'message' => 'Koneksi storage berhasil!',
                 'data' => [
-                    'disk' => 'minio',
-                    'endpoint' => config('filesystems.disks.minio.endpoint'),
-                    'bucket' => config('filesystems.disks.minio.bucket'),
+                    'disk' => $disk,
+                    'root' => config("filesystems.disks.{$disk}.root"),
+                    'url' => config("filesystems.disks.{$disk}.url"),
+                    'visibility' => config("filesystems.disks.{$disk}.visibility"),
                     'files_count' => count($files),
                 ]
             ], 200);
@@ -39,13 +41,12 @@ class MinioTestController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Koneksi ke MinIO gagal!',
+                'message' => 'Koneksi storage gagal!',
                 'error' => $e->getMessage(),
                 'tips' => [
-                    'Pastikan MinIO server sudah berjalan',
-                    'Cek endpoint di file .env',
-                    'Cek Access Key dan Secret Key',
-                    'Pastikan bucket sudah dibuat di MinIO Console'
+                    'Pastikan folder storage dapat ditulis',
+                    'Cek FILESYSTEM_DISK di file .env',
+                    'Jalankan php artisan storage:link jika perlu'
                 ]
             ], 500);
         }
@@ -57,15 +58,17 @@ class MinioTestController extends Controller
     public function testUploadDummy()
     {
         try {
+            $disk = config('filesystems.default');
+
             // Buat file dummy
             $content = "Test file created at " . now()->toDateTimeString();
             $filename = 'test_' . time() . '.txt';
 
-            // Upload ke MinIO
-            $path = Storage::disk('minio')->put('test-files/' . $filename, $content);
+            // Upload ke storage default
+            $path = Storage::disk($disk)->put('test-files/' . $filename, $content);
 
             // Get URL
-            $url = Storage::disk('minio')->url('test-files/' . $filename);
+            $url = Storage::disk($disk)->url('test-files/' . $filename);
 
             return response()->json([
                 'success' => true,
@@ -93,17 +96,18 @@ class MinioTestController extends Controller
     public function testListFiles()
     {
         try {
-            $allFiles = Storage::disk('minio')->allFiles();
-            $directories = Storage::disk('minio')->allDirectories();
+            $disk = config('filesystems.default');
+            $allFiles = Storage::disk($disk)->allFiles();
+            $directories = Storage::disk($disk)->allDirectories();
 
             $fileDetails = [];
             foreach ($allFiles as $file) {
                 $fileDetails[] = [
                     'path' => $file,
-                    'size' => Storage::disk('minio')->size($file),
-                    'size_human' => $this->formatBytes(Storage::disk('minio')->size($file)),
-                    'last_modified' => date('Y-m-d H:i:s', Storage::disk('minio')->lastModified($file)),
-                    'url' => Storage::disk('minio')->url($file),
+                    'size' => Storage::disk($disk)->size($file),
+                    'size_human' => $this->formatBytes(Storage::disk($disk)->size($file)),
+                    'last_modified' => date('Y-m-d H:i:s', Storage::disk($disk)->lastModified($file)),
+                    'url' => Storage::disk($disk)->url($file),
                 ];
             }
 
@@ -133,6 +137,7 @@ class MinioTestController extends Controller
     public function testDelete(Request $request)
     {
         try {
+            $disk = config('filesystems.default');
             $path = $request->input('path');
 
             if (!$path) {
@@ -142,14 +147,14 @@ class MinioTestController extends Controller
                 ], 400);
             }
 
-            if (!Storage::disk('minio')->exists($path)) {
+            if (!Storage::disk($disk)->exists($path)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'File tidak ditemukan: ' . $path
                 ], 404);
             }
 
-            Storage::disk('minio')->delete($path);
+            Storage::disk($disk)->delete($path);
 
             return response()->json([
                 'success' => true,
@@ -170,16 +175,18 @@ class MinioTestController extends Controller
      */
     public function systemInfo()
     {
+        $disk = config('filesystems.default');
+
         return response()->json([
             'success' => true,
             'data' => [
                 'php_version' => phpversion(),
                 'laravel_version' => app()->version(),
-                'minio_config' => [
-                    'endpoint' => config('filesystems.disks.minio.endpoint'),
-                    'bucket' => config('filesystems.disks.minio.bucket'),
-                    'region' => config('filesystems.disks.minio.region'),
-                    'access_key' => Str::mask(config('filesystems.disks.minio.key'), '*', 3, -3),
+                'storage_config' => [
+                    'disk' => $disk,
+                    'root' => config("filesystems.disks.{$disk}.root"),
+                    'url' => config("filesystems.disks.{$disk}.url"),
+                    'visibility' => config("filesystems.disks.{$disk}.visibility"),
                 ],
                 'packages' => [
                     'flysystem_aws_s3' => class_exists('League\Flysystem\AwsS3V3\AwsS3V3Adapter') ? 'Installed' : 'Not Installed',

@@ -72,7 +72,7 @@ class MasterKaryawan extends Model
         }
 
         try {
-            return \Storage::disk('minio')->url($this->foto);
+            return \Storage::disk(config('filesystems.default'))->url($this->foto);
         } catch (\Exception $e) {
             \Log::warning("Failed to generate MinIO URL for foto: {$this->foto}", ['error' => $e->getMessage()]);
             return null;

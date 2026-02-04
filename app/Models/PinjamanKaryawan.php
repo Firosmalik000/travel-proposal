@@ -79,7 +79,7 @@ class PinjamanKaryawan extends Model
         }
 
         try {
-            return \Storage::disk('minio')->url($this->file_scorelife);
+            return \Storage::disk(config('filesystems.default'))->url($this->file_scorelife);
         } catch (\Exception $e) {
             \Log::warning("Failed to generate MinIO URL for file_scorelife: {$this->file_scorelife}");
             return null;

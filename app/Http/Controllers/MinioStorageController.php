@@ -17,6 +17,7 @@ class MinioStorageController extends Controller
     public function upload(Request $request): JsonResponse
     {
         try {
+            $disk = config('filesystems.default');
             $request->validate([
                 'file' => 'required|file|max:10240', // max 10MB
             ]);
@@ -24,15 +25,15 @@ class MinioStorageController extends Controller
             $file = $request->file('file');
             $fileName = time() . '_' . $file->getClientOriginalName();
 
-            // Upload ke MinIO menggunakan disk 'minio'
-            $path = Storage::disk('minio')->putFileAs(
+            // Upload ke storage default
+            $path = Storage::disk($disk)->putFileAs(
                 'uploads',
                 $file,
                 $fileName
             );
 
             // Generate URL
-            $url = Storage::disk('minio')->url($path);
+            $url = Storage::disk($disk)->url($path);
 
             return response()->json([
                 'success' => true,
@@ -63,14 +64,16 @@ class MinioStorageController extends Controller
     public function download(string $path)
     {
         try {
-            if (!Storage::disk('minio')->exists($path)) {
+            $disk = config('filesystems.default');
+
+            if (!Storage::disk($disk)->exists($path)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'File tidak ditemukan'
                 ], 404);
             }
 
-            return Storage::disk('minio')->download($path);
+            return Storage::disk($disk)->download($path);
 
         } catch (\Exception $e) {
             return response()->json([
@@ -89,14 +92,16 @@ class MinioStorageController extends Controller
     public function delete(string $path): JsonResponse
     {
         try {
-            if (!Storage::disk('minio')->exists($path)) {
+            $disk = config('filesystems.default');
+
+            if (!Storage::disk($disk)->exists($path)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'File tidak ditemukan'
                 ], 404);
             }
 
-            Storage::disk('minio')->delete($path);
+            Storage::disk($disk)->delete($path);
 
             return response()->json([
                 'success' => true,
@@ -120,15 +125,16 @@ class MinioStorageController extends Controller
     public function listFiles(string $directory = ''): JsonResponse
     {
         try {
-            $files = Storage::disk('minio')->files($directory);
-            $directories = Storage::disk('minio')->directories($directory);
+            $disk = config('filesystems.default');
+            $files = Storage::disk($disk)->files($directory);
+            $directories = Storage::disk($disk)->directories($directory);
 
             $fileDetails = array_map(function($file) {
                 return [
                     'path' => $file,
-                    'size' => Storage::disk('minio')->size($file),
-                    'last_modified' => Storage::disk('minio')->lastModified($file),
-                    'url' => Storage::disk('minio')->url($file),
+                    'size' => Storage::disk(config('filesystems.default'))->size($file),
+                    'last_modified' => Storage::disk(config('filesystems.default'))->lastModified($file),
+                    'url' => Storage::disk(config('filesystems.default'))->url($file),
                 ];
             }, $files);
 
@@ -158,6 +164,7 @@ class MinioStorageController extends Controller
     public function getTemporaryUrl(Request $request): JsonResponse
     {
         try {
+            $disk = config('filesystems.default');
             $request->validate([
                 'path' => 'required|string',
                 'expires' => 'nullable|integer|min:1|max:10080' // max 7 hari
@@ -166,7 +173,7 @@ class MinioStorageController extends Controller
             $path = $request->input('path');
             $expires = $request->input('expires', 60); // default 60 menit
 
-            if (!Storage::disk('minio')->exists($path)) {
+            if (!Storage::disk($disk)->exists($path)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'File tidak ditemukan'
@@ -174,7 +181,7 @@ class MinioStorageController extends Controller
             }
 
             // Generate temporary URL yang expire setelah waktu tertentu
-            $url = Storage::disk('minio')->temporaryUrl(
+            $url = Storage::disk($disk)->temporaryUrl(
                 $path,
                 now()->addMinutes($expires)
             );
@@ -205,7 +212,9 @@ class MinioStorageController extends Controller
     public function getFileInfo(string $path): JsonResponse
     {
         try {
-            if (!Storage::disk('minio')->exists($path)) {
+            $disk = config('filesystems.default');
+
+            if (!Storage::disk($disk)->exists($path)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'File tidak ditemukan'
@@ -216,12 +225,12 @@ class MinioStorageController extends Controller
                 'success' => true,
                 'data' => [
                     'path' => $path,
-                    'size' => Storage::disk('minio')->size($path),
-                    'size_human' => $this->formatBytes(Storage::disk('minio')->size($path)),
-                    'last_modified' => Storage::disk('minio')->lastModified($path),
-                    'last_modified_date' => date('Y-m-d H:i:s', Storage::disk('minio')->lastModified($path)),
-                    'url' => Storage::disk('minio')->url($path),
-                    'mime_type' => Storage::disk('minio')->mimeType($path),
+                    'size' => Storage::disk($disk)->size($path),
+                    'size_human' => $this->formatBytes(Storage::disk($disk)->size($path)),
+                    'last_modified' => Storage::disk($disk)->lastModified($path),
+                    'last_modified_date' => date('Y-m-d H:i:s', Storage::disk($disk)->lastModified($path)),
+                    'url' => Storage::disk($disk)->url($path),
+                    'mime_type' => Storage::disk($disk)->mimeType($path),
                 ]
             ], 200);
 

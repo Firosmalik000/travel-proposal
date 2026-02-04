@@ -191,7 +191,7 @@ class Recruitment extends Model
         }
 
         try {
-            return \Storage::disk('minio')->url($this->foto_kandidat);
+            return \Storage::disk(config('filesystems.default'))->url($this->foto_kandidat);
         } catch (\Exception $e) {
             \Log::warning("Failed to generate MinIO URL for foto_kandidat: {$this->foto_kandidat}");
             return null;
@@ -205,7 +205,7 @@ class Recruitment extends Model
         }
 
         try {
-            return \Storage::disk('minio')->url($this->cv_file);
+            return \Storage::disk(config('filesystems.default'))->url($this->cv_file);
         } catch (\Exception $e) {
             \Log::warning("Failed to generate MinIO URL for cv_file: {$this->cv_file}");
             return null;
