@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
+const phpBinary = process.env.PHP_BINARY ?? 'php';
+
 export default defineConfig({
     plugins: [
         laravel({
@@ -19,6 +21,7 @@ export default defineConfig({
         tailwindcss(),
         wayfinder({
             formVariants: true,
+            command: `${phpBinary} artisan wayfinder:generate`,
         }),
     ],
     esbuild: {
