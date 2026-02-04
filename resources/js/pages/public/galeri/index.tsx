@@ -1,46 +1,92 @@
 ﻿import { Head } from '@inertiajs/react';
 import PublicLayout from '@/layouts/PublicLayout';
+import { usePublicLocale } from '@/contexts/public-locale';
+
+const content = {
+    id: {
+        title: 'Galeri Foto & Video',
+        desc: 'Dokumentasi jamaah, manasik, hotel, dan perjalanan di tanah suci.',
+        items: [
+            { label: 'Foto Jamaah', image: '/images/dummy.jpg' },
+            { label: 'Suasana Masjid', image: '/images/dummy.jpg' },
+            { label: 'Masjidil Haram', image: '/images/dummy.jpg' },
+            { label: 'Hotel Makkah', image: '/images/dummy.jpg' },
+            { label: 'Hotel Madinah', image: '/images/dummy.jpg' },
+            { label: 'Manasik', image: '/images/dummy.jpg' },
+            { label: 'Suasana Kota', image: '/images/dummy.jpg' },
+            { label: 'Masjid Nabawi', image: '/images/dummy.jpg' },
+            { label: 'Dokumentasi Tim', image: '/images/dummy.jpg' },
+            { label: 'Perjalanan Bus', image: '/images/dummy.jpg' },
+            { label: 'Makkah by Night', image: '/images/dummy.jpg' },
+            { label: 'Kegiatan Ibadah', image: '/images/dummy.jpg' },
+            { label: 'Ziarah', image: '/images/dummy.jpg' },
+            { label: 'Suasana Mall', image: '/images/dummy.jpg' },
+            { label: 'City Walk', image: '/images/dummy.jpg' },
+            { label: 'Hotel Lobby', image: '/images/dummy.jpg' },
+            { label: 'Rombongan Jamaah', image: '/images/dummy.jpg' },
+            { label: 'Kota Madinah', image: '/images/dummy.jpg' },
+            { label: 'Kegiatan Malam', image: '/images/dummy.jpg' },
+            { label: 'Pemandangan Kota', image: '/images/dummy.jpg' },
+            { label: 'Suasana Airport', image: '/images/dummy.jpg' },
+        ],
+    },
+    en: {
+        title: 'Photo & Video Gallery',
+        desc: 'Documentation of pilgrims, manasik, hotels, and journeys in the holy land.',
+        items: [
+            { label: 'Pilgrims', image: '/images/dummy.jpg' },
+            { label: 'Mosque Atmosphere', image: '/images/dummy.jpg' },
+            { label: 'Masjid al-Haram', image: '/images/dummy.jpg' },
+            { label: 'Makkah Hotel', image: '/images/dummy.jpg' },
+            { label: 'Madinah Hotel', image: '/images/dummy.jpg' },
+            { label: 'Manasik', image: '/images/dummy.jpg' },
+            { label: 'City Scene', image: '/images/dummy.jpg' },
+            { label: 'Masjid Nabawi', image: '/images/dummy.jpg' },
+            { label: 'Team Documentation', image: '/images/dummy.jpg' },
+            { label: 'Bus Trip', image: '/images/dummy.jpg' },
+            { label: 'Makkah by Night', image: '/images/dummy.jpg' },
+            { label: 'Worship Activities', image: '/images/dummy.jpg' },
+            { label: 'Ziyarah', image: '/images/dummy.jpg' },
+            { label: 'Mall Atmosphere', image: '/images/dummy.jpg' },
+            { label: 'City Walk', image: '/images/dummy.jpg' },
+            { label: 'Hotel Lobby', image: '/images/dummy.jpg' },
+            { label: 'Pilgrim Group', image: '/images/dummy.jpg' },
+            { label: 'Madinah City', image: '/images/dummy.jpg' },
+            { label: 'Night Activities', image: '/images/dummy.jpg' },
+            { label: 'City View', image: '/images/dummy.jpg' },
+            { label: 'Airport Atmosphere', image: '/images/dummy.jpg' },
+        ],
+    },
+};
 
 export default function Galeri() {
+    const { locale } = usePublicLocale();
+    const t = content[locale];
+
     return (
         <PublicLayout>
-            <Head title="Galeri">
-                <meta name="description" content="Dokumentasi jamaah, manasik, hotel, dan perjalanan umroh." />
+            <Head title={t.title}>
+                <meta name="description" content={t.desc} />
             </Head>
 
-            <section className="mx-auto w-full max-w-6xl px-6 pb-10 pt-6">
-                <h1 className="public-heading text-3xl font-semibold text-[var(--emerald-900)] sm:text-4xl">Galeri Foto & Video</h1>
-                <p className="mt-3 text-[var(--ink-700)]">Dokumentasi jamaah, manasik, hotel, dan perjalanan di tanah suci.</p>
+            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-10 pt-6">
+                <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
+                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                        Gallery
+                    </span>
+                    <h1 className="public-heading mt-4 text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
+                        {t.title}
+                    </h1>
+                    <p className="mt-2 text-muted-foreground">{t.desc}</p>
+                </div>
             </section>
 
-            <section className="mx-auto w-full max-w-6xl px-6 pb-16">
+            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                    {[
-                        { label: 'Foto Jamaah', image: 'https://source.unsplash.com/kZTSM4i7x-8/1200x900' },
-                        { label: 'Suasana Masjid', image: 'https://source.unsplash.com/AdZ68iA9X08/1200x900' },
-                        { label: 'Masjidil Haram', image: 'https://source.unsplash.com/Cg4NDIa4iN0/1200x900' },
-                        { label: 'Hotel Makkah', image: 'https://source.unsplash.com/thb9M2F4QTs/1200x900' },
-                        { label: 'Hotel Madinah', image: 'https://source.unsplash.com/KtzvN3OJ4Gg/1200x900' },
-                        { label: 'Manasik', image: 'https://source.unsplash.com/yC0rPZiMZMI/1200x900' },
-                        { label: 'Suasana Kota', image: 'https://source.unsplash.com/exk_T96LMVk/1200x900' },
-                        { label: 'Masjid Nabawi', image: 'https://source.unsplash.com/EIVfsewIHP0/1200x900' },
-                        { label: 'Dokumentasi Tim', image: 'https://source.unsplash.com/jrZN8Fp1M7A/1200x900' },
-                        { label: 'Perjalanan Bus', image: 'https://source.unsplash.com/1WQxT7kVub0/1200x900' },
-                        { label: 'Makkah by Night', image: 'https://source.unsplash.com/oMPAz-DN-9I/1200x900' },
-                        { label: 'Kegiatan Ibadah', image: 'https://source.unsplash.com/2d4lAQAlbDA/1200x900' },
-                        { label: 'Ziarah', image: 'https://source.unsplash.com/0s5ZpXK0e2g/1200x900' },
-                        { label: 'Suasana Mall', image: 'https://source.unsplash.com/9p54GPnsW4U/1200x900' },
-                        { label: 'City Walk', image: 'https://source.unsplash.com/9m1OFDFA5Kc/1200x900' },
-                        { label: 'Hotel Lobby', image: 'https://source.unsplash.com/2gOxKj594nM/1200x900' },
-                        { label: 'Rombongan Jamaah', image: 'https://source.unsplash.com/0F0E8fG8rvU/1200x900' },
-                        { label: 'Kota Madinah', image: 'https://source.unsplash.com/0C9-yxVxZ6o/1200x900' },
-                        { label: 'Kegiatan Malam', image: 'https://source.unsplash.com/8manzosDSGM/1200x900' },
-                        { label: 'Pemandangan Kota', image: 'https://source.unsplash.com/HN-5Z6AmxrM/1200x900' },
-                        { label: 'Suasana Airport', image: 'https://source.unsplash.com/7R8bhoJv9nA/1200x900' },
-                    ].map((item) => (
+                    {t.items.map((item) => (
                         <div
                             key={item.label}
-                            className="group relative h-44 overflow-hidden rounded-2xl border border-white/70 shadow-[0_14px_30px_rgba(31, 47, 77,0.12)] parallax-frame"
+                            className="group relative h-36 overflow-hidden rounded-2xl border border-border shadow-sm parallax-frame sm:h-44"
                             data-parallax
                             data-speed="0.28"
                         >
@@ -61,4 +107,3 @@ export default function Galeri() {
         </PublicLayout>
     );
 }
-
