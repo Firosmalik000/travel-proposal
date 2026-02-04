@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('master_salaries', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->decimal('basic_salary', 15, 2)->default(0);
+            $table->decimal('allowances', 15, 2)->default(0)->comment('Total tunjangan');
+            $table->decimal('deductions', 15, 2)->default(0)->comment('Total potongan');
+            $table->decimal('total_salary', 15, 2)->default(0)->comment('Gaji bersih');
+            $table->date('effective_date')->comment('Tanggal berlaku');
+            $table->boolean('is_active')->default(true);
+            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('master_salaries');
+    }
+};

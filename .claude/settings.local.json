@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan:*)",
+      "Bash(php.exe:*)",
+      "Bash(ssh ploi@103.103.20.150 \"pwd && ls -la public/storage 2>&1 || echo ''storage link not found''\")",
+      "Bash(ssh:*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: add automatic storage link creation on deployment\n\nMenambahkan perintah `php artisan storage:link` pada post-autoload-dump\ndi composer.json untuk memastikan symlink storage otomatis dibuat setiap\nkali composer install/update dijalankan.\n\nIni mencegah masalah foto \"not found\" di production yang disebabkan oleh\nsymlink storage yang hilang atau salah arah setelah deployment.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat: implement single session per user\n\nMenambahkan fitur single session yang otomatis logout device/browser\nlain ketika user login di device/browser baru. Ini meningkatkan\nkeamanan dengan memastikan hanya satu aktif session per user.\n\nImplementasi:\n- Menambahkan event listener untuk Authenticated event\n- Ketika user login, semua session lain untuk user tersebut akan dihapus\n- Hanya berlaku untuk web guard\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(php test-minio-connection.php:*)",
+      "Bash(C:laragonbinphpphp-8.3.9-Win32-vs16-x64php.exe test-minio-connection.php)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(\"C:\\\\laragon\\\\bin\\\\php\\\\php-8.3.9-Win32-vs16-x64\\\\php.exe\" artisan make:migration add_tracing_fields_to_cashflows_table)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

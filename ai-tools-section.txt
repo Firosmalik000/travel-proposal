@@ -1,0 +1,45 @@
+    const [customAiTool, setCustomAiTool] = useState('');
+    const [showCustomAiInput, setShowCustomAiInput] = useState(false);
+
+    const commonAiTools = [
+        'ChatGPT',
+        'Claude',
+        'Gemini',
+        'Midjourney',
+        'DALL-E',
+        'Stable Diffusion',
+        'GitHub Copilot',
+        'Notion AI',
+        'Jasper',
+        'Copy.ai',
+        'Grammarly',
+        'Canva AI',
+        'Adobe Firefly',
+        'Runway ML',
+        'Synthesia',
+        'DeepL',
+        'Perplexity AI',
+        'Bard',
+        'Microsoft Copilot',
+        'Bing AI',
+    ];
+
+    const toggleAiTool = (tool: string) => {
+        if (data.ai_tools.includes(tool)) {
+            setData('ai_tools', data.ai_tools.filter(t => t !== tool));
+        } else {
+            setData('ai_tools', [...data.ai_tools, tool]);
+        }
+    };
+
+    const addCustomAiTool = () => {
+        if (customAiTool.trim() && !data.ai_tools.includes(customAiTool.trim())) {
+            setData('ai_tools', [...data.ai_tools, customAiTool.trim()]);
+            setCustomAiTool('');
+            setShowCustomAiInput(false);
+        }
+    };
+
+    const removeAiTool = (tool: string) => {
+        setData('ai_tools', data.ai_tools.filter(t => t !== tool));
+    };

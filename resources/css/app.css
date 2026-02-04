@@ -1,0 +1,191 @@
+@import url('https://fonts.bunny.net/css?family=manrope:400,500,600,700&family=space-grotesk:400,500,600,700');
+@import 'tailwindcss';
+
+@import "tw-animate-css";
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+    --font-sans:
+        'Manrope', 'Space Grotesk', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+        'Noto Color Emoji';
+    --font-auth-sans: var(--font-sans);
+    --font-auth-display:
+        'Space Grotesk', 'Manrope', 'Sora', 'Montserrat', 'Segoe UI',
+        'Helvetica Neue', Arial, sans-serif;
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+    /* Base colors - Warm, modern light mode */
+    --background: oklch(0.985 0.01 95);
+    --foreground: oklch(0.2 0.02 255);
+    --card: oklch(0.995 0.005 95);
+    --card-foreground: oklch(0.2 0.02 255);
+    --popover: oklch(0.995 0.005 95);
+    --popover-foreground: oklch(0.2 0.02 255);
+
+    /* Primary - Teal/ink blend */
+    --primary: oklch(0.55 0.14 215);
+    --primary-foreground: oklch(0.98 0 0);
+
+    /* Secondary - Soft sand */
+    --secondary: oklch(0.94 0.02 90);
+    --secondary-foreground: oklch(0.25 0.02 250);
+
+    /* Muted - Gentle warm neutrals */
+    --muted: oklch(0.95 0.01 95);
+    --muted-foreground: oklch(0.45 0.03 255);
+
+    /* Accent - Warm highlight */
+    --accent: oklch(0.88 0.07 85);
+    --accent-foreground: oklch(0.22 0.03 255);
+
+    /* Destructive - Balanced red */
+    --destructive: oklch(0.55 0.2 25);
+    --destructive-foreground: oklch(0.98 0 0);
+
+    /* Borders and inputs */
+    --border: oklch(0.9 0.01 95);
+    --input: oklch(0.9 0.01 95);
+    --ring: oklch(0.55 0.14 215);
+
+    /* Charts - New palette */
+    --chart-1: oklch(0.55 0.14 215);
+    --chart-2: oklch(0.62 0.13 165);
+    --chart-3: oklch(0.63 0.12 95);
+    --chart-4: oklch(0.6 0.14 280);
+    --chart-5: oklch(0.68 0.12 45);
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar: oklch(0.97 0.01 95);
+    --sidebar-foreground: oklch(0.18 0.02 250);
+    --sidebar-primary: oklch(0.55 0.14 215);
+    --sidebar-primary-foreground: oklch(0.98 0 0);
+    --sidebar-accent: oklch(0.93 0.02 90);
+    --sidebar-accent-foreground: oklch(0.2 0.02 255);
+    --sidebar-border: oklch(0.89 0.01 95);
+    --sidebar-ring: oklch(0.55 0.14 215);
+}
+
+.dark {
+    /* Base colors - Deep, cinematic dark mode */
+    --background: oklch(0.13 0.02 255);
+    --foreground: oklch(0.95 0.01 95);
+    --card: oklch(0.17 0.02 255);
+    --card-foreground: oklch(0.95 0.01 95);
+    --popover: oklch(0.17 0.02 255);
+    --popover-foreground: oklch(0.95 0.01 95);
+
+    /* Primary - Cooler teal glow */
+    --primary: oklch(0.67 0.12 190);
+    --primary-foreground: oklch(0.12 0.02 255);
+
+    /* Secondary - Inky slate */
+    --secondary: oklch(0.22 0.02 255);
+    --secondary-foreground: oklch(0.92 0.01 95);
+
+    /* Muted - Balanced dark tones */
+    --muted: oklch(0.23 0.02 255);
+    --muted-foreground: oklch(0.68 0.02 95);
+
+    /* Accent - Warm ember */
+    --accent: oklch(0.3 0.08 85);
+    --accent-foreground: oklch(0.96 0.01 95);
+
+    /* Destructive - Softer red for dark backgrounds */
+    --destructive: oklch(0.56 0.2 25);
+    --destructive-foreground: oklch(0.98 0 0);
+
+    /* Borders and inputs */
+    --border: oklch(0.28 0.02 255);
+    --input: oklch(0.28 0.02 255);
+    --ring: oklch(0.67 0.12 190);
+
+    /* Charts - Vibrant but balanced */
+    --chart-1: oklch(0.67 0.12 190);
+    --chart-2: oklch(0.7 0.14 160);
+    --chart-3: oklch(0.7 0.12 95);
+    --chart-4: oklch(0.68 0.12 280);
+    --chart-5: oklch(0.72 0.12 45);
+
+    /* Sidebar */
+    --sidebar: oklch(0.15 0.02 255);
+    --sidebar-foreground: oklch(0.93 0.01 95);
+    --sidebar-primary: oklch(0.67 0.12 190);
+    --sidebar-primary-foreground: oklch(0.12 0.02 255);
+    --sidebar-accent: oklch(0.22 0.02 255);
+    --sidebar-accent-foreground: oklch(0.93 0.01 95);
+    --sidebar-border: oklch(0.25 0.02 255);
+    --sidebar-ring: oklch(0.67 0.12 190);
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        font-family: var(--font-auth-display);
+        letter-spacing: -0.02em;
+    }
+}
