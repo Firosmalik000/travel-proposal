@@ -11,18 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Drop old table if exists
         Schema::dropIfExists('user_accesses');
 
-        // Create new table with JSON structure
         Schema::create('user_accesses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->json('access'); // JSON column untuk menyimpan semua akses
+            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
+            $table->json('access');
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            // Index
-            $table->unique('user_id');
+            $table->index('user_id');
         });
     }
 

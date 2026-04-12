@@ -3,68 +3,60 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
         $users = [
             [
                 'username' => 'admin',
                 'name' => 'Administrator',
-                'full_name' => 'Administrator',
-                'email' => 'admin@xboss.com',
+                'full_name' => 'Administrator Asfar Tour',
+                'email' => 'admin@asfartour.co.id',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
             ],
             [
-                'username' => 'amad',
-                'name' => 'Muhammad Aziiz Putra Nugroho',
-                'full_name' => 'Muhammad Aziiz Putra Nugroho',
-                'email' => 'aziiz@xboss.asia',
+                'username' => 'operasional',
+                'name' => 'Operasional',
+                'full_name' => 'Tim Operasional Asfar Tour',
+                'email' => 'operasional@asfartour.co.id',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
             ],
             [
-                'username' => 'asiyah',
-                'name' => 'Asiyah',
-                'full_name' => 'Asiyah',
-                'email' => 'asiyah@xboss.id',
+                'username' => 'marketing',
+                'name' => 'Marketing',
+                'full_name' => 'Tim Marketing Asfar Tour',
+                'email' => 'marketing@asfartour.co.id',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
             ],
             [
-                'username' => 'Chika',
-                'name' => 'Fajar Rifaldi',
-                'full_name' => 'Fajar Rifaldi',
-                'email' => 'fajarrifaldi@xboss.id',
-                'email_verified_at' => now(),
-                'password' => Hash::make('password'),
-            ],
-            [
-                'username' => 'firos123',
-                'name' => 'Firos Malik Abdillah',
-                'full_name' => 'Firos Malik Abdillah',
-                'email' => 'Firosmalik.job@gmail.com',
+                'username' => 'admincs',
+                'name' => 'Customer Care',
+                'full_name' => 'Admin Customer Care',
+                'email' => 'cs@asfartour.co.id',
                 'email_verified_at' => now(),
                 'password' => Hash::make('password'),
             ],
         ];
 
-        foreach ($users as $user) {
-            User::updateOrCreate(
-                ['email' => $user['email']],
-                $user
+        foreach ($users as $row) {
+            $user = User::query()->updateOrCreate(['email' => $row['email']], $row);
+
+            UserProfile::query()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'full_name' => $row['full_name'],
+                    'phone' => '+62 812-3456-7890',
+                    'address' => 'Jl. Asfar No. 12, Jakarta Pusat',
+                ],
             );
         }
-
-        $this->command->info('✓ Users seeded successfully!');
-        $this->command->info('  - Total users: ' . count($users));
-        $this->command->info('  - Default password: password');
     }
 }

@@ -2,263 +2,212 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use App\Models\User;
-use App\Models\MasterKaryawan;
-use App\Models\Department;
-use App\Models\SlipGaji;
-use App\Models\IzinKeluarKaryawan;
-use App\Models\Recruitment;
-use App\Models\PinjamanKaryawan;
-use App\Models\Cashflow;
+use App\Models\Article;
+use App\Models\DepartureSchedule;
+use App\Models\PageContent;
+use App\Models\Testimonial;
+use App\Models\TravelPackage;
 use App\Traits\ApiResponse;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DashboardController extends Controller
 {
     use ApiResponse;
-    public function index()
+
+    private function localizedValue(mixed $value, string $locale = 'id'): string
+    {
+        if (is_array($value)) {
+            return (string) ($value[$locale] ?? $value['id'] ?? $value['en'] ?? '');
+        }
+
+        return (string) $value;
+    }
+
+    public function index(): Response
     {
         return Inertia::render('dashboard');
     }
 
-    public function getStats()
+    public function getStats(): JsonResponse
     {
         try {
-            // Total Users
-            $totalUsers = User::count();
-            $previousMonthUsers = User::where('created_at', '<', Carbon::now()->startOfMonth())->count();
+            $totalUsers = DB::table('users')->count();
+            $previousMonthUsers = DB::table('users')
+                ->where('created_at', '<', Carbon::now()->startOfMonth())
+                ->count();
             $userGrowth = $previousMonthUsers > 0
                 ? round((($totalUsers - $previousMonthUsers) / $previousMonthUsers) * 100, 1)
                 : 0;
 
-            // Active Employees - menggunakan is_active = true
-            $activeEmployees = MasterKaryawan::where('is_active', true)->count();
-            $newEmployeesThisMonth = MasterKaryawan::where('is_active', true)
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
+            $activePackages = TravelPackage::query()->where('is_active', true)->count();
+            $upcomingDepartures = DepartureSchedule::query()
+                ->where('is_active', true)
+                ->whereDate('departure_date', '>=', Carbon::today())
                 ->count();
-
-            // Departments
-            $totalDepartments = Department::count();
-
-            // Today's Activity - menggunakan kolom 'tanggal' untuk izin keluar
-            $todayActivity = IzinKeluarKaryawan::whereDate('tanggal', Carbon::today())->count() +
-                SlipGaji::whereDate('updated_at', Carbon::today())->count();
+            $publishedContent = PageContent::query()->where('is_active', true)->count()
+                + Article::query()->where('is_active', true)->count();
 
             return $this->successResponse([
                 'totalUsers' => [
                     'value' => $totalUsers,
                     'growth' => $userGrowth,
-                    'description' => $userGrowth >= 0
-                        ? "+{$userGrowth}% dari bulan lalu"
-                        : "{$userGrowth}% dari bulan lalu"
+                    'description' => $userGrowth >= 0 ? "+{$userGrowth}% dari bulan lalu" : "{$userGrowth}% dari bulan lalu",
                 ],
-                'activeEmployees' => [
-                    'value' => $activeEmployees,
-                    'newThisMonth' => $newEmployeesThisMonth,
-                    'description' => "+{$newEmployeesThisMonth} karyawan baru bulan ini"
+                'activePackages' => [
+                    'value' => $activePackages,
+                    'description' => 'Paket travel aktif',
                 ],
-                'departments' => [
-                    'value' => $totalDepartments,
-                    'description' => 'Total departemen'
+                'upcomingDepartures' => [
+                    'value' => $upcomingDepartures,
+                    'description' => 'Jadwal keberangkatan terjadwal',
                 ],
-                'todayActivity' => [
-                    'value' => $todayActivity,
-                    'description' => 'Aktivitas hari ini'
-                ]
+                'publishedContent' => [
+                    'value' => $publishedContent,
+                    'description' => 'Konten aktif di website',
+                ],
             ], 'Dashboard statistics retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve dashboard statistics', 500, null, $e);
+        } catch (\Throwable $throwable) {
+            return $this->errorResponse('Failed to retrieve dashboard statistics', 500, null, $throwable);
         }
     }
 
-    public function getMonthlyGrowth()
+    public function getMonthlyGrowth(): JsonResponse
     {
         try {
             $data = [];
 
-            for ($i = 5; $i >= 0; $i--) {
-                $date = Carbon::now()->subMonths($i);
-                $monthName = $date->locale('id')->isoFormat('MMM');
-
-                $userCount = User::whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->count();
-
-                $employeeCount = MasterKaryawan::where('is_active', true)
-                    ->whereYear('created_at', $date->year)
-                    ->whereMonth('created_at', $date->month)
-                    ->count();
+            for ($index = 5; $index >= 0; $index -= 1) {
+                $date = Carbon::now()->subMonths($index);
 
                 $data[] = [
-                    'month' => $monthName,
-                    'users' => $userCount,
-                    'karyawan' => $employeeCount
+                    'month' => $date->locale('id')->isoFormat('MMM'),
+                    'users' => DB::table('users')
+                        ->whereYear('created_at', $date->year)
+                        ->whereMonth('created_at', $date->month)
+                        ->count(),
+                    'departures' => DepartureSchedule::query()
+                        ->whereYear('departure_date', $date->year)
+                        ->whereMonth('departure_date', $date->month)
+                        ->count(),
                 ];
             }
 
             return $this->successResponse($data, 'Monthly growth data retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve monthly growth data', 500, null, $e);
+        } catch (\Throwable $throwable) {
+            return $this->errorResponse('Failed to retrieve monthly growth data', 500, null, $throwable);
         }
     }
 
-    public function getDepartmentDistribution()
+    public function getDepartmentDistribution(): JsonResponse
     {
         try {
-            $departments = Department::withCount(['karyawan' => function ($query) {
-                $query->where('is_active', true);
-            }])->get();
+            $colors = ['#0f766e', '#1d4ed8', '#d97706', '#475569', '#be123c'];
+            $distribution = TravelPackage::query()
+                ->select('package_type', DB::raw('count(*) as aggregate'))
+                ->where('is_active', true)
+                ->groupBy('package_type')
+                ->orderBy('package_type')
+                ->get()
+                ->values()
+                ->map(fn (TravelPackage $package, int $index): array => [
+                    'name' => ucfirst((string) $package->package_type),
+                    'value' => (int) $package->aggregate,
+                    'color' => $colors[$index % count($colors)],
+                ]);
 
-            $colors = [
-                '#ED1C24', '#FF4757', '#FF6B81', '#FFA07A',
-                '#FF8C94', '#FFAAA5', '#FFB6B9', '#FFC3A0',
-            ];
-
-            $data = $departments->map(function ($dept, $index) use ($colors) {
-                return [
-                    'name' => $dept->name,
-                    'value' => $dept->karyawan_count,
-                    'color' => $colors[$index % count($colors)]
-                ];
-            })->filter(fn($dept) => $dept['value'] > 0)->values();
-
-            return $this->successResponse($data, 'Department distribution retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve department distribution', 500, null, $e);
+            return $this->successResponse($distribution, 'Package distribution retrieved successfully');
+        } catch (\Throwable $throwable) {
+            return $this->errorResponse('Failed to retrieve package distribution', 500, null, $throwable);
         }
     }
 
-    public function getWeeklyActivity()
+    public function getWeeklyActivity(): JsonResponse
     {
         try {
             $data = [];
             $days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 
-            for ($i = 6; $i >= 0; $i--) {
-                $date = Carbon::now()->subDays($i);
-                $dayIndex = $date->dayOfWeek;
-
-                $izinCount = IzinKeluarKaryawan::whereDate('tanggal', $date)->count();
-                $documentCount = SlipGaji::whereDate('updated_at', $date)->count() +
-                    Cashflow::whereDate('created_at', $date)->count();
+            for ($index = 6; $index >= 0; $index -= 1) {
+                $date = Carbon::today()->subDays($index);
 
                 $data[] = [
-                    'day' => $days[$dayIndex],
-                    'logins' => $izinCount,
-                    'documents' => $documentCount
+                    'day' => $days[$date->dayOfWeek],
+                    'departures' => DepartureSchedule::query()->whereDate('created_at', $date)->count(),
+                    'contents' => PageContent::query()->whereDate('updated_at', $date)->count()
+                        + Article::query()->whereDate('updated_at', $date)->count(),
                 ];
             }
 
             return $this->successResponse($data, 'Weekly activity retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve weekly activity', 500, null, $e);
+        } catch (\Throwable $throwable) {
+            return $this->errorResponse('Failed to retrieve weekly activity', 500, null, $throwable);
         }
     }
 
-    public function getRecentActivity()
+    public function getRecentActivity(): JsonResponse
     {
         try {
-            $activities = [];
-
-            $newEmployees = MasterKaryawan::where('is_active', true)
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->count();
-
-            if ($newEmployees > 0) {
-                $activities[] = [
-                    'text' => "{$newEmployees} karyawan baru terdaftar",
-                    'color' => '#ED1C24'
-                ];
-            }
-
-            $slipGaji = SlipGaji::whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->count();
-
-            if ($slipGaji > 0) {
-                $activities[] = [
-                    'text' => "{$slipGaji} slip gaji dibuat",
-                    'color' => '#FF4757'
-                ];
-            }
-
-            $slipGajiSent = SlipGaji::whereNotNull('sent_at')
-                ->whereMonth('sent_at', Carbon::now()->month)
-                ->whereYear('sent_at', Carbon::now()->year)
-                ->count();
-
-            if ($slipGajiSent > 0) {
-                $activities[] = [
-                    'text' => "{$slipGajiSent} slip gaji dikirim via email",
-                    'color' => '#FF6B81'
-                ];
-            }
-
-            $izinToday = IzinKeluarKaryawan::whereDate('tanggal', Carbon::today())->count();
-
-            if ($izinToday > 0) {
-                $activities[] = [
-                    'text' => "{$izinToday} izin keluar hari ini",
-                    'color' => '#FFA07A'
-                ];
-            }
+            $activities = [
+                [
+                    'text' => TravelPackage::query()->where('is_featured', true)->count().' paket unggulan aktif',
+                    'color' => '#0f766e',
+                ],
+                [
+                    'text' => DepartureSchedule::query()->whereDate('departure_date', '>=', Carbon::today())->count().' jadwal keberangkatan siap dipasarkan',
+                    'color' => '#1d4ed8',
+                ],
+                [
+                    'text' => Testimonial::query()->where('is_active', true)->count().' testimoni aktif',
+                    'color' => '#d97706',
+                ],
+            ];
 
             return $this->successResponse($activities, 'Recent activity retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve recent activity', 500, null, $e);
+        } catch (\Throwable $throwable) {
+            return $this->errorResponse('Failed to retrieve recent activity', 500, null, $throwable);
         }
     }
 
-    public function getPendingTasks()
+    public function getPendingTasks(): JsonResponse
     {
         try {
-            $tasks = [];
-
-            $unsentSlipGaji = SlipGaji::whereNull('sent_at')->count();
-            $tasks[] = [
-                'label' => 'Slip Gaji Belum Terkirim',
-                'value' => $unsentSlipGaji,
-                'color' => '#ED1C24'
-            ];
-
-            $pendingIzin = IzinKeluarKaryawan::where('status', 'pending')->count();
-            $tasks[] = [
-                'label' => 'Izin Keluar Menunggu Approval',
-                'value' => $pendingIzin,
-                'color' => '#FF4757'
-            ];
-
-            $pendingPinjaman = PinjamanKaryawan::where('is_approve', false)
-                ->where('is_rejected', false)
-                ->count();
-            $tasks[] = [
-                'label' => 'Pinjaman Menunggu Approval',
-                'value' => $pendingPinjaman,
-                'color' => '#FF6B81'
-            ];
-
-            $newCandidates = Recruitment::where('status', 'kandidat')
-                ->whereMonth('created_at', Carbon::now()->month)
-                ->whereYear('created_at', Carbon::now()->year)
-                ->count();
-            $tasks[] = [
-                'label' => 'Kandidat Baru',
-                'value' => $newCandidates,
-                'color' => '#FFA07A'
+            $tasks = [
+                [
+                    'label' => 'Jadwal Seat Menipis',
+                    'value' => DepartureSchedule::query()
+                        ->where('seats_available', '<=', 10)
+                        ->whereDate('departure_date', '>=', Carbon::today())
+                        ->count(),
+                    'color' => '#0f766e',
+                ],
+                [
+                    'label' => 'Artikel Belum Dipublish',
+                    'value' => Article::query()->whereNull('published_at')->count(),
+                    'color' => '#1d4ed8',
+                ],
+                [
+                    'label' => 'Konten Belum Aktif',
+                    'value' => PageContent::query()->where('is_active', false)->count(),
+                    'color' => '#d97706',
+                ],
+                [
+                    'label' => 'Paket Nonaktif',
+                    'value' => TravelPackage::query()->where('is_active', false)->count(),
+                    'color' => '#475569',
+                ],
             ];
 
             return $this->successResponse($tasks, 'Pending tasks retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve pending tasks', 500, null, $e);
+        } catch (\Throwable $throwable) {
+            return $this->errorResponse('Failed to retrieve pending tasks', 500, null, $throwable);
         }
     }
 
-    public function getSystemStatus()
+    public function getSystemStatus(): JsonResponse
     {
         try {
             $statuses = [];
@@ -268,45 +217,54 @@ class DashboardController extends Controller
                 $statuses[] = [
                     'label' => 'Database',
                     'status' => 'Active',
-                    'color' => 'green'
+                    'color' => 'green',
                 ];
-            } catch (\Exception $e) {
+            } catch (\Throwable) {
                 $statuses[] = [
                     'label' => 'Database',
                     'status' => 'Error',
-                    'color' => 'red'
+                    'color' => 'red',
                 ];
             }
 
             $statuses[] = [
-                'label' => 'Email Service',
-                'status' => config('mail.mailers.smtp.host') ? 'Active' : 'Inactive',
-                'color' => config('mail.mailers.smtp.host') ? 'green' : 'yellow'
+                'label' => 'Storage',
+                'status' => 'Active',
+                'color' => 'green',
             ];
 
             $statuses[] = [
-                'label' => 'PDF Generator',
-                'status' => 'Active',
-                'color' => 'green'
+                'label' => 'Queue',
+                'status' => 'Ready',
+                'color' => 'green',
             ];
 
             return $this->successResponse($statuses, 'System status retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve system status', 500, null, $e);
+        } catch (\Throwable $throwable) {
+            return $this->errorResponse('Failed to retrieve system status', 500, null, $throwable);
         }
     }
 
-    public function getBirthdaysThisMonth()
+    public function getBirthdaysThisMonth(): JsonResponse
     {
         try {
-            $birthdays = MasterKaryawan::where('is_active', true)
-                ->whereMonth('tanggal_lahir', Carbon::now()->month)
-                ->orderBy(DB::raw('DAY(tanggal_lahir)'))
-                ->get(['nama_lengkap', 'tanggal_lahir', 'foto']);
+            $departures = DepartureSchedule::query()
+                ->with('travelPackage:id,name')
+                ->where('is_active', true)
+                ->whereDate('departure_date', '>=', Carbon::today())
+                ->orderBy('departure_date')
+                ->limit(5)
+                ->get()
+                ->map(fn (DepartureSchedule $schedule): array => [
+                    'title' => $this->localizedValue($schedule->travelPackage?->name, 'id') ?: 'Paket Umroh',
+                    'departure_date' => $schedule->departure_date?->toDateString(),
+                    'departure_city' => $schedule->departure_city,
+                    'seats_available' => $schedule->seats_available,
+                ]);
 
-            return $this->successResponse($birthdays, 'Birthdays for this month retrieved successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Failed to retrieve birthdays for this month', 500, null, $e);
+            return $this->successResponse($departures, 'Upcoming departures retrieved successfully');
+        } catch (\Throwable $throwable) {
+            return $this->errorResponse('Failed to retrieve upcoming departures', 500, null, $throwable);
         }
     }
 }

@@ -17,11 +17,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('settings/profile/personal-info', [ProfileController::class, 'updatePersonalInfo'])->name('profile.update.personal-info');
     Route::patch('settings/profile/account', [ProfileController::class, 'updateAccount'])->name('profile.update.account');
 
-    // Vehicle management routes
-    Route::post('settings/profile/kendaraan', [ProfileController::class, 'storeKendaraan'])->name('profile.kendaraan.store');
-    Route::patch('settings/profile/kendaraan/{id}', [ProfileController::class, 'updateKendaraan'])->name('profile.kendaraan.update');
-    Route::delete('settings/profile/kendaraan/{id}', [ProfileController::class, 'deleteKendaraan'])->name('profile.kendaraan.destroy');
-
     Route::get('settings/password', [PasswordController::class, 'edit'])->name('user-password.edit');
 
     Route::put('settings/password', [PasswordController::class, 'update'])

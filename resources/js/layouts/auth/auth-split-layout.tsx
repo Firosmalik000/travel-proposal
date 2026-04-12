@@ -1,8 +1,9 @@
-import AppLogoIcon from '@/components/app-logo-icon';
+import BrandThemeStyle from '@/components/brand-theme-style';
 import { home } from '@/routes';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { BadgeCheck, CalendarDays, ShieldCheck } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
+import { type SharedData } from '@/types';
 
 interface AuthSplitLayoutProps {
     title: string;
@@ -16,21 +17,25 @@ export default function AuthSplitLayout({
     children,
     title,
     description,
-    sideTitle = 'AMANAH HARMAIN',
+    sideTitle,
     sideHeadline = 'Umroh Profesional & Terpercaya',
     sideDescription = 'Kelola jadwal, paket, dan kebutuhan jamaah dengan layanan yang rapi dan transparan.',
 }: PropsWithChildren<AuthSplitLayoutProps>) {
+    const { branding } = usePage<SharedData>().props;
+    const resolvedSideTitle = sideTitle ?? branding.company_subtitle;
+
     return (
-        <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-[linear-gradient(180deg,#f5f8fd_0%,#eef3fa_50%,#f7f3ea_100%)] px-6 py-10 font-[var(--font-auth-sans)] text-[var(--ink-700)]">
+        <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-[var(--auth-shell)] px-6 py-10 font-[var(--font-auth-sans)] text-foreground dark:bg-[var(--auth-shell-dark)]">
+            <BrandThemeStyle />
             <div className="pointer-events-none absolute inset-0">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(43,69,112,0.12)_0%,_transparent_55%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(200,164,96,0.2)_0%,_transparent_60%)]" />
-                <div className="absolute inset-0 opacity-60 [background-image:radial-gradient(circle_at_1px_1px,rgba(43,69,112,0.08)_1px,transparent_0)] [background-size:36px_36px]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_color-mix(in_srgb,var(--brand-primary)_18%,transparent)_0%,_transparent_55%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_color-mix(in_srgb,var(--brand-accent)_22%,transparent)_0%,_transparent_60%)]" />
+                <div className="absolute inset-0 opacity-60 [background-image:radial-gradient(circle_at_1px_1px,color-mix(in_srgb,var(--brand-secondary)_10%,transparent)_1px,transparent_0)] [background-size:36px_36px]" />
             </div>
 
             <div className="relative w-full max-w-5xl">
-                <div className="grid overflow-hidden rounded-[36px] border border-white/70 bg-white text-slate-900 shadow-[0_40px_120px_-70px_rgba(31,47,77,0.45)] md:min-h-[520px] md:grid-cols-[1.05fr_1fr]">
-                    <div className="relative flex flex-col justify-between overflow-hidden bg-[linear-gradient(140deg,#1f2f4d_0%,#2b4570_55%,#0f766e_100%)] px-8 py-10 md:px-10">
+                <div className="grid overflow-hidden rounded-[32px] border border-white/70 bg-white/85 text-foreground shadow-[0_40px_120px_-70px_rgba(74,12,20,0.45)] md:min-h-[520px] md:grid-cols-[1.05fr_1fr] dark:border-white/10 dark:bg-card">
+                    <div className="relative flex flex-col justify-between overflow-hidden bg-[var(--auth-panel)] px-8 py-10 md:px-10">
                         <div className="pointer-events-none absolute inset-0">
                             <div className="absolute -top-20 -right-20 h-52 w-52 rounded-full bg-white/10" />
                             <div className="absolute bottom-10 right-10 h-24 w-24 rounded-full bg-white/15" />
@@ -39,18 +44,23 @@ export default function AuthSplitLayout({
 
                         <div className="relative z-10 flex items-center gap-3">
                             <Link href={home()} className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                                    <AppLogoIcon className="h-5 w-auto text-white" />
+                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 p-2">
+                                    <img src={branding.logo_white_path} alt={branding.company_name} className="h-full w-full object-contain" />
                                 </div>
-                                <span className="text-sm font-semibold tracking-wide text-white/90">
-                                    Amanah Haramain
-                                </span>
+                                <div className="space-y-0.5">
+                                    <span className="block text-sm font-semibold tracking-wide text-white/95">
+                                        {branding.company_name}
+                                    </span>
+                                    <span className="block text-[0.68rem] uppercase tracking-[0.24em] text-white/75">
+                                        {branding.company_subtitle}
+                                    </span>
+                                </div>
                             </Link>
                         </div>
 
                         <div className="relative z-10 mt-10 space-y-4">
                             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/75">
-                                {sideTitle}
+                                {resolvedSideTitle}
                             </p>
                             <h2 className="text-3xl font-[var(--font-auth-display)] font-semibold leading-tight text-white md:text-4xl">
                                 {sideHeadline}
@@ -94,17 +104,17 @@ export default function AuthSplitLayout({
                         </div>
                     </div>
 
-                    <div className="relative flex flex-col justify-center px-8 py-10 text-[var(--ink-700)] md:px-10">
+                    <div className="relative flex flex-col justify-center px-8 py-10 text-foreground md:px-10">
                         <div className="pointer-events-none absolute inset-0">
-                            <div className="absolute -right-24 top-10 h-44 w-44 rounded-full bg-[rgba(43,69,112,0.08)] blur-3xl" />
-                            <div className="absolute -left-20 bottom-10 h-36 w-36 rounded-full bg-[rgba(200,164,96,0.12)] blur-3xl" />
+                            <div className="absolute -right-24 top-10 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
+                            <div className="absolute -left-20 bottom-10 h-36 w-36 rounded-full bg-accent/15 blur-3xl" />
                         </div>
-                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[rgba(43,69,112,0.5)] via-[rgba(43,69,112,0.15)] to-transparent" />
+                        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/70 via-accent/30 to-transparent" />
                         <div className="space-y-2">
-                            <h1 className="text-2xl font-[var(--font-auth-display)] font-semibold text-[var(--emerald-900)] md:text-3xl">
+                            <h1 className="text-2xl font-[var(--font-auth-display)] font-semibold text-foreground md:text-3xl">
                                 {title}
                             </h1>
-                            <p className="text-sm text-[var(--ink-600)]">
+                            <p className="text-sm text-muted-foreground">
                                 {description}
                             </p>
                         </div>

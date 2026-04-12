@@ -1,47 +1,28 @@
 import { cn } from '@/lib/utils';
-import { SVGProps } from 'react';
+import { usePage } from '@inertiajs/react';
+import { type ComponentProps } from 'react';
+import { type SharedData } from '@/types';
 
 export default function AppLogoIcon({
     className,
     ...props
-}: SVGProps<SVGSVGElement>) {
+}: ComponentProps<'img'>) {
+    const { branding } = usePage<SharedData>().props;
+
     return (
-        <svg
-            viewBox="0 0 48 48"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className={cn('text-primary', className)}
-            aria-hidden="true"
-            {...props}
-        >
-            <rect
-                x="6"
-                y="8"
-                width="10"
-                height="32"
-                rx="4"
-                fill="currentColor"
+        <>
+            <img
+                src={branding.logo_path}
+                alt={branding.company_name}
+                className={cn('object-contain dark:hidden', className)}
+                {...props}
             />
-            <rect
-                x="32"
-                y="8"
-                width="10"
-                height="32"
-                rx="4"
-                fill="currentColor"
+            <img
+                src={branding.logo_white_path}
+                alt={branding.company_name}
+                className={cn('hidden object-contain dark:block', className)}
+                {...props}
             />
-            <path
-                d="M16 16c4-4 12-4 16 0v16c-4 4-12 4-16 0V16z"
-                fill="currentColor"
-                opacity="0.25"
-            />
-            <circle
-                cx="24"
-                cy="24"
-                r="6"
-                fill="currentColor"
-                opacity="0.6"
-            />
-        </svg>
+        </>
     );
 }

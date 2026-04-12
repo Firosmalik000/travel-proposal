@@ -38,7 +38,9 @@ import {
     LayoutGrid,
     LogOut,
     MessageSquare,
+    Palette,
     Package,
+    Search,
     Settings,
     Share2,
     Shield,
@@ -85,7 +87,9 @@ const iconMap: Record<string, any> = {
     LayoutGrid,
     LogOut,
     MessageSquare,
+    Palette,
     Package,
+    Search,
     Settings,
     Share2,
     Shield,
@@ -99,7 +103,7 @@ const iconMap: Record<string, any> = {
 export function DynamicSidebar() {
     const [menus, setMenus] = useState<MenuItem[]>([]);
     const [loading, setLoading] = useState(true);
-    const { auth } = usePage<SharedData>().props;
+    const { auth, branding } = usePage<SharedData>().props;
 
     useEffect(() => {
         fetch('/api/user-menus')
@@ -118,15 +122,15 @@ export function DynamicSidebar() {
         <Sidebar
             collapsible="icon"
             variant="inset"
-            className="border-r border-slate-200/70 bg-white text-slate-900 shadow-[0_24px_60px_-45px_rgba(15,23,42,0.25)] dark:border-white/10 dark:bg-[#0f1621] dark:text-slate-100 [&_[data-sidebar=sidebar]]:bg-transparent [&_[data-sidebar=sidebar]]:text-inherit"
+            className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-[0_24px_60px_-45px_rgba(74,12,20,0.18)] [&_[data-sidebar=sidebar]]:bg-transparent [&_[data-sidebar=sidebar]]:text-inherit"
         >
-            <SidebarHeader className="relative border-b border-black/5 bg-white/90 shadow-[inset_0_-1px_0_rgba(15,23,42,0.04)] backdrop-blur dark:border-white/10 dark:bg-white/5">
+            <SidebarHeader className="relative border-b border-sidebar-border bg-sidebar/95 shadow-[inset_0_-1px_0_rgba(140,10,22,0.05)] backdrop-blur">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             size="lg"
                             asChild
-                            className="rounded-xl border border-black/5 bg-white text-slate-900 shadow-[0_12px_30px_-22px_rgba(15,23,42,0.2)] transition hover:-translate-y-[1px] hover:bg-slate-50 dark:border-white/10 dark:bg-white/10 dark:text-white"
+                            className="rounded-xl border border-border bg-card text-card-foreground shadow-[0_12px_30px_-22px_rgba(140,10,22,0.16)] transition hover:-translate-y-[1px] hover:bg-card/90"
                         >
                             <Link href={dashboard()} prefetch>
                                 <AppLogo />
@@ -138,7 +142,7 @@ export function DynamicSidebar() {
             </SidebarHeader>
 
             <SidebarContent className="px-2 py-4">
-                <div className="mb-4 rounded-2xl border border-slate-200/70 bg-slate-50/90 p-4 shadow-sm dark:border-white/10 dark:bg-white/5">
+                <div className="mb-4 rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
                     <div className="flex items-center gap-3">
                         <Avatar className="h-12 w-12">
                             <AvatarImage src={auth.user.avatar} alt={auth.user.name} />
@@ -151,25 +155,25 @@ export function DynamicSidebar() {
                             </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                            <p className="truncate text-sm font-semibold text-foreground">
                                 {auth.user.name}
                             </p>
-                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                            <p className="truncate text-xs text-muted-foreground">
                                 {auth.user.email}
                             </p>
                         </div>
                     </div>
-                    <div className="mt-3 rounded-xl border border-slate-200/70 bg-white/80 px-3 py-2 text-xs font-medium text-slate-500 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-                        Access Admin
+                    <div className="mt-3 rounded-xl border border-border bg-background/70 px-3 py-2 text-xs font-medium text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+                        {branding.company_subtitle}
                     </div>
                 </div>
                 {loading ? (
-                    <div className="p-4 text-sm text-slate-500 dark:text-slate-400">
+                    <div className="p-4 text-sm text-muted-foreground">
                         Loading menus...
                     </div>
                 ) : (
                     <SidebarGroup>
-                        <SidebarGroupLabel className="text-[0.68rem] uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+                        <SidebarGroupLabel className="text-[0.68rem] uppercase tracking-[0.3em] text-muted-foreground/80">
                             Menu
                         </SidebarGroupLabel>
                         <SidebarGroupContent>

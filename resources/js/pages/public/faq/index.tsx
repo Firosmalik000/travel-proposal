@@ -1,6 +1,7 @@
 ﻿import { Head } from '@inertiajs/react';
 import PublicLayout from '@/layouts/PublicLayout';
 import { usePublicLocale } from '@/contexts/public-locale';
+import { localize, usePublicData } from '@/lib/public-content';
 
 const content = {
     id: {
@@ -69,7 +70,14 @@ const content = {
 
 export default function Faq() {
     const { locale } = usePublicLocale();
+    const publicData = usePublicData();
     const t = content[locale];
+    const faqs = Array.isArray(publicData.faqs) && publicData.faqs.length > 0
+        ? publicData.faqs.map((item: Record<string, unknown>) => ({
+            q: localize(item.question, locale),
+            a: localize(item.answer, locale),
+        }))
+        : t.faqs;
 
     return (
         <PublicLayout>
@@ -93,7 +101,7 @@ export default function Faq() {
 
             <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
                 <div className="space-y-3">
-                    {t.faqs.map((item) => (
+                    {faqs.map((item) => (
                         <details
                             key={item.q}
                             className="rounded-2xl border border-border bg-card/90 px-5 py-4 shadow-sm"

@@ -206,14 +206,14 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
             ]}
         >
             <div className="space-y-4 p-4 sm:space-y-6 sm:p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">User Access Management</h1>
+                        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">User Access Management</h1>
                         <p className="text-muted-foreground">
                             Kelola hak akses pengguna terhadap menu (JSON Structure)
                         </p>
                     </div>
-                    <Button onClick={openCreateDialog}>
+                    <Button onClick={openCreateDialog} className="w-full sm:w-auto">
                         <Plus className="mr-2 h-4 w-4" />
                         Tambah Akses
                     </Button>
@@ -236,7 +236,7 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
 
                 {/* Create/Edit Dialog */}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                    <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
                         <form onSubmit={handleSubmit}>
                             <DialogHeader>
                                 <DialogTitle>
@@ -274,7 +274,7 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <Label>Menu Permissions (Nested Structure)</Label>
                                         <div className="flex items-center gap-2">
                                             <Checkbox
@@ -287,10 +287,14 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
                                             </Label>
                                         </div>
                                     </div>
-                                    <div className="space-y-2 border rounded-lg p-4 max-h-96 overflow-y-auto">
+                                    <div className="max-h-96 space-y-2 overflow-y-auto rounded-lg border p-4">
                                         {menus.map((menu) => (
-                                            <div key={menu.menu_key} className={`space-y-2 border-b pb-3 last:border-b-0 ${menu.level > 0 ? 'ml-' + (menu.level * 4) : ''}`}>
-                                                <div className="flex items-center justify-between">
+                                            <div
+                                                key={menu.menu_key}
+                                                className="space-y-2 border-b pb-3 last:border-b-0"
+                                                style={{ marginLeft: menu.level * 16 }}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
                                                     <span className={`${menu.level === 0 ? 'font-bold' : menu.level === 1 ? 'font-medium' : 'font-normal'} text-sm`}>
                                                         {menu.name}
                                                     </span>
@@ -302,7 +306,7 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
                                                     />
                                                 </div>
                                                 {data.access[menu.menu_key] && (
-                                                    <div className="grid grid-cols-4 gap-2 pl-4">
+                                                    <div className="grid grid-cols-2 gap-2 pl-4 sm:grid-cols-4">
                                                         {['view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'reject'].map((permission) => (
                                                             <div key={permission} className="flex items-center space-x-2">
                                                                 <Checkbox
@@ -333,10 +337,11 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
                                     type="button"
                                     variant="outline"
                                     onClick={() => setIsDialogOpen(false)}
+                                    className="w-full sm:w-auto"
                                 >
                                     Batal
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <Button type="submit" disabled={processing} className="w-full sm:w-auto">
                                     {processing ? 'Menyimpan...' : 'Simpan'}
                                 </Button>
                             </DialogFooter>
@@ -360,6 +365,7 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
                                 type="button"
                                 variant="outline"
                                 onClick={() => setIsDeleteDialogOpen(false)}
+                                className="w-full sm:w-auto"
                             >
                                 Batal
                             </Button>
@@ -368,6 +374,7 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
                                 variant="destructive"
                                 onClick={handleDelete}
                                 disabled={processing}
+                                className="w-full sm:w-auto"
                             >
                                 {processing ? 'Menghapus...' : 'Hapus'}
                             </Button>

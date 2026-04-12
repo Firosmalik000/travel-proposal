@@ -2,11 +2,12 @@
 import PublicLayout from '@/layouts/PublicLayout';
 import { Star } from 'lucide-react';
 import { usePublicLocale } from '@/contexts/public-locale';
+import { localize, usePublicData } from '@/lib/public-content';
 
 const content = {
     id: {
         title: 'Testimoni',
-        meta: 'Cerita jamaah yang telah berangkat bersama Amanah Haramain Travel.',
+        meta: 'Cerita jamaah yang telah berangkat bersama Asfar Tour.',
         badge: 'Cerita Jamaah',
         heading: 'Testimoni & Kisah Perjalanan',
         desc: 'Cerita nyata dari jamaah yang telah berangkat bersama kami. Pendampingan rapi, informasi transparan, dan layanan yang menenangkan menjadi alasan mereka kembali merekomendasikan.',
@@ -46,7 +47,7 @@ const content = {
     },
     en: {
         title: 'Testimonials',
-        meta: 'Stories from pilgrims who traveled with Amanah Haramain Travel.',
+        meta: 'Stories from pilgrims who traveled with Asfar Tour.',
         badge: 'Pilgrim Stories',
         heading: 'Testimonials & Journey Stories',
         desc: 'Real stories from pilgrims who traveled with us. Clear guidance, transparent information, and calm service are why they keep recommending us.',
@@ -88,7 +89,16 @@ const content = {
 
 export default function Testimoni() {
     const { locale } = usePublicLocale();
+    const publicData = usePublicData();
     const t = content[locale];
+    const testimonials = Array.isArray(publicData.testimonials) && publicData.testimonials.length > 0
+        ? publicData.testimonials.map((item: Record<string, unknown>) => ({
+            quote: localize(item.quote, locale),
+            name: [item.name, item.origin_city].filter(Boolean).join(', '),
+            paket: localize(item.package_name, locale),
+            image: '/images/dummy.jpg',
+        }))
+        : t.testimonials;
 
     return (
         <PublicLayout>
@@ -143,7 +153,7 @@ export default function Testimoni() {
 
             <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
                 <div className="grid gap-6 sm:grid-cols-2">
-                    {t.testimonials.map((item) => (
+                    {testimonials.map((item) => (
                         <div
                             key={item.name}
                             className="group overflow-hidden rounded-2xl border border-border bg-card/90 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"

@@ -1,8 +1,10 @@
 ﻿import { Head, Link, usePage } from '@inertiajs/react';
+import BrandThemeStyle from '@/components/brand-theme-style';
 import { Moon, Sun } from 'lucide-react';
 import React, { useEffect, useMemo, useState, type PropsWithChildren } from 'react';
 import { useAppearance } from '@/hooks/use-appearance';
 import { PublicLocaleProvider, usePublicLocale, type PublicLocale } from '@/contexts/public-locale';
+import { whatsappLinkFromPhone } from '@/lib/public-content';
 
 const content = {
     id: {
@@ -101,9 +103,12 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
     const [scrolled, setScrolled] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const page = usePage();
+    const { branding, seoSettings } = usePage<any>().props;
     const { appearance, updateAppearance } = useAppearance();
     const { locale, setLocale } = usePublicLocale();
     const t = content[locale];
+    const seo = (seoSettings as Record<string, any>) ?? {};
+    const contactLink = whatsappLinkFromPhone(seo.contact?.phone);
 
     const isDark = useMemo(() => {
         if (appearance === 'dark') {
@@ -147,6 +152,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
 
     return (
         <div className="bg-background font-sans text-foreground antialiased">
+            <BrandThemeStyle />
             <Head>
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -158,8 +164,6 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
             <style>{`
                 :root { 
                     scroll-behavior: smooth; 
-                    --flygo-primary: #2563eb; /* Blue-600 */
-                    --flygo-dark: #1e293b; /* Slate-800 */
                 }
                 .font-heading { font-family: 'Plus Jakarta Sans', sans-serif; }
                 .font-sans { font-family: 'Inter', sans-serif; }
@@ -170,13 +174,12 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
             >
                 <div className="container mx-auto flex items-center justify-between p-4">
                     <Link href="/" className="flex items-center gap-2">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-                            AH
-                        </div>
+                        <img src={branding.logo_path} alt={branding.company_name} className="h-10 w-10 object-contain" />
                         <div>
                             <p className="font-heading text-lg font-bold text-foreground">
-                                Amanah Haramain
+                                {branding.company_name}
                             </p>
+                            <p className="text-[0.68rem] uppercase tracking-[0.2em] text-muted-foreground">{branding.company_subtitle}</p>
                         </div>
                     </Link>
                     <nav className="hidden lg:flex items-center gap-6 text-sm font-medium text-muted-foreground">
@@ -216,7 +219,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                         </Link>
                         <a
                             className="inline-flex items-center justify-center rounded-lg bg-foreground px-5 py-2.5 text-sm font-semibold text-background transition hover:bg-foreground/90"
-                            href="https://wa.me/6281234567890"
+                            href={contactLink}
                             target="_blank"
                             rel="noopener noreferrer"
                         >
@@ -293,7 +296,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                             </Link>
                             <a
                                 className="inline-flex items-center justify-center rounded-xl bg-foreground px-3 py-2 text-sm font-semibold text-background transition hover:bg-foreground/90"
-                                href="https://wa.me/6281234567890"
+                                href={contactLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={() => setMobileOpen(false)}
@@ -320,12 +323,13 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                 <div className="container mx-auto grid gap-12 px-6 py-16 lg:grid-cols-4">
                     <div className="lg:col-span-1">
                         <Link href="/" className="flex items-center gap-2">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-                                AH
+                            <img src={branding.logo_path} alt={branding.company_name} className="h-10 w-10 object-contain" />
+                            <div>
+                                <p className="font-heading text-lg font-bold text-foreground">
+                                    {branding.company_name}
+                                </p>
+                                <p className="text-[0.68rem] uppercase tracking-[0.2em] text-muted-foreground">{branding.company_subtitle}</p>
                             </div>
-                            <p className="font-heading text-lg font-bold text-foreground">
-                                Amanah Haramain
-                            </p>
                         </Link>
                         <p className="mt-4 text-sm text-muted-foreground">
                            {t.footerIntro}
@@ -350,7 +354,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                 </div>
                  <div className="border-t border-border py-6">
                     <div className="container mx-auto text-center text-sm text-muted-foreground">
-                       {t.copyright(new Date().getFullYear())}
+                       {t.copyright(new Date().getFullYear()).replace('Amanah Haramain Travel', branding.company_name)}
                     </div>
                 </div>
             </footer>

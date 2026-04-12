@@ -7,7 +7,6 @@ use App\Actions\Fortify\ResetUserPassword;
 use Illuminate\Auth\Events\Authenticated;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
@@ -107,7 +106,13 @@ class FortifyServiceProvider extends ServiceProvider
             }
 
             $user = $event->user;
-            $currentSessionId = request()->session()->getId();
+            $request = request();
+
+            if (! $request->hasSession()) {
+                return;
+            }
+
+            $currentSessionId = $request->session()->getId();
 
             // Delete all other sessions for this user except the current one
             DB::table('sessions')

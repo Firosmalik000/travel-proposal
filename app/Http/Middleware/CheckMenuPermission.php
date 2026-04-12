@@ -20,32 +20,33 @@ class CheckMenuPermission
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login');
         }
 
         // Get current path
-        $currentPath = $request->path();
+        $currentPath = '/'.$request->path();
+        $candidatePaths = $this->candidatePaths($currentPath);
 
         // Find menu by path - check both exact path and nested paths
-        $menu = Menu::where('path', '/' . $currentPath)->first();
+        $menu = Menu::query()->whereIn('path', $candidatePaths)->first();
 
-        if (!$menu) {
+        if (! $menu) {
             // If exact path not found, try to find by checking all menus and their children
             $allMenus = Menu::all();
             foreach ($allMenus as $menuItem) {
                 // Check if path matches
-                if ($menuItem->path === '/' . $currentPath) {
+                if (in_array($menuItem->path, $candidatePaths, true)) {
                     $menu = $menuItem;
                     break;
                 }
 
                 // Check children (level 1)
-                if (!empty($menuItem->children)) {
+                if (! empty($menuItem->children)) {
                     foreach ($menuItem->children as $child) {
-                        if (isset($child['path']) && $child['path'] === '/' . $currentPath) {
+                        if (isset($child['path']) && in_array($child['path'], $candidatePaths, true)) {
                             // Found in children, use child's menu_key
-                            $menu = (object)[
+                            $menu = (object) [
                                 'menu_key' => $child['menu_key'] ?? null,
                                 'path' => $child['path'],
                             ];
@@ -53,10 +54,10 @@ class CheckMenuPermission
                         }
 
                         // Check grandchildren (level 2)
-                        if (!empty($child['children'])) {
+                        if (! empty($child['children'])) {
                             foreach ($child['children'] as $grandChild) {
-                                if (isset($grandChild['path']) && $grandChild['path'] === '/' . $currentPath) {
-                                    $menu = (object)[
+                                if (isset($grandChild['path']) && in_array($grandChild['path'], $candidatePaths, true)) {
+                                    $menu = (object) [
                                         'menu_key' => $grandChild['menu_key'] ?? null,
                                         'path' => $grandChild['path'],
                                     ];
@@ -69,7 +70,7 @@ class CheckMenuPermission
             }
         }
 
-        if (!$menu || !isset($menu->menu_key)) {
+        if (! $menu || ! isset($menu->menu_key)) {
             // Menu not found in database, allow access (might be a dynamic route or public route)
             return $next($request);
         }
@@ -77,13 +78,13 @@ class CheckMenuPermission
         // Check if user has the required permission using new JSON structure
         $hasPermission = UserAccess::hasPermission($user->id, $menu->menu_key, $permission);
 
-        if (!$hasPermission) {
+        if (! $hasPermission) {
             // Return JSON response for API requests, redirect for web requests
             if ($request->expectsJson()) {
-                abort(403, 'Anda tidak memiliki permission "' . $permission . '" untuk mengakses resource ini.');
+                abort(403, 'Anda tidak memiliki permission "'.$permission.'" untuk mengakses resource ini.');
             }
 
-            abort(403, 'Anda tidak memiliki akses untuk ' . $this->getPermissionLabel($permission) . ' pada halaman ini.');
+            abort(403, 'Anda tidak memiliki akses untuk '.$this->getPermissionLabel($permission).' pada halaman ini.');
         }
 
         return $next($request);
@@ -106,5 +107,23 @@ class CheckMenuPermission
         ];
 
         return $labels[$permission] ?? $permission;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function candidatePaths(string $currentPath): array
+    {
+        $paths = [$currentPath];
+
+        if ($currentPath === '/dashboard/product-management/products') {
+            $paths[] = '/dashboard/website-management/products';
+        }
+
+        if ($currentPath === '/dashboard/product-management/packages') {
+            $paths[] = '/dashboard/website-management/packages';
+        }
+
+        return $paths;
     }
 }

@@ -6,49 +6,33 @@ use App\Http\Controllers\Controller;
 use App\Models\Menu;
 use App\Models\User;
 use App\Models\UserAccess;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\DB;  
 
 class UserAccessController extends Controller
 {
-    /**
-     * Display a listing of user accesses.
-     */
     public function index(): Response
     {
-        // Get all users with their access data
-        $userAccesses = UserAccess::with('user')
+        $userAccesses = UserAccess::query()
+            ->with('user')
             ->get()
-            ->map(function ($access) {
-                // Transform access from object format to array format for frontend
-                // From: { menu_key: { view: true, create: true } }
-                // To: { menu_key: ['view', 'create'] }
-                $transformedAccess = [];
-                if ($access->access) {
-                    foreach ($access->access as $menuKey => $permissions) {
-                        $transformedAccess[$menuKey] = array_keys(array_filter($permissions, fn($value) => $value === true));
-                    }
-                }
+            ->map(fn (UserAccess $access): array => [
+                'id' => $access->id,
+                'user_id' => $access->user_id,
+                'user_name' => $access->user->name,
+                'user_email' => $access->user->email,
+                'access' => $access->access ?? [],
+            ]);
 
-                return [
-                    'id' => $access->id,
-                    'user_id' => $access->user_id,
-                    'user_name' => $access->user->name,
-                    'user_email' => $access->user->email,
-                    'access' => $transformedAccess, // JSON array with menu_key => [permissions]
-                ];
-            });
-
-        $users = User::select('id', 'name', 'email')->get();
-
-        // Get all menus with flattened structure for selection
-        $menus = Menu::orderBy('order')->get();
+        $users = User::query()->select('id', 'name', 'email')->get();
+        $menus = Menu::query()->orderBy('order')->get();
         $flattenedMenus = [];
 
         foreach ($menus as $menu) {
-            // Add parent menu
             $flattenedMenus[] = [
                 'id' => $menu->id,
                 'name' => $menu->name,
@@ -57,29 +41,23 @@ class UserAccessController extends Controller
                 'level' => 0,
             ];
 
-            // Add children (level 1)
-            if (!empty($menu->children)) {
-                foreach ($menu->children as $child) {
+            foreach ($menu->children ?? [] as $child) {
+                $flattenedMenus[] = [
+                    'id' => null,
+                    'name' => '  -> '.($child['name'] ?? ''),
+                    'menu_key' => $child['menu_key'] ?? '',
+                    'path' => $child['path'] ?? '',
+                    'level' => 1,
+                ];
+
+                foreach ($child['children'] ?? [] as $grandChild) {
                     $flattenedMenus[] = [
                         'id' => null,
-                        'name' => '  ↳ ' . ($child['name'] ?? ''),
-                        'menu_key' => $child['menu_key'] ?? '',
-                        'path' => $child['path'] ?? '',
-                        'level' => 1,
+                        'name' => '    -> '.($grandChild['name'] ?? ''),
+                        'menu_key' => $grandChild['menu_key'] ?? '',
+                        'path' => $grandChild['path'] ?? '',
+                        'level' => 2,
                     ];
-
-                    // Add grandchildren (level 2)
-                    if (!empty($child['children'])) {
-                        foreach ($child['children'] as $grandChild) {
-                            $flattenedMenus[] = [
-                                'id' => null,
-                                'name' => '    ↳ ' . ($grandChild['name'] ?? ''),
-                                'menu_key' => $grandChild['menu_key'] ?? '',
-                                'path' => $grandChild['path'] ?? '',
-                                'level' => 2,
-                            ];
-                        }
-                    }
                 }
             }
         }
@@ -87,125 +65,82 @@ class UserAccessController extends Controller
         return Inertia::render('Dashboard/Administrator/UserAccess/Index', [
             'userAccesses' => $userAccesses,
             'users' => $users,
-            'menus' => $flattenedMenus, // Send flattened menu list with indentation
+            'menus' => $flattenedMenus,
         ]);
     }
 
-    /**
-     * Store or update user access (entire JSON access object).
-     */
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'access' => 'required|array', // JSON object: { menu_key: [permissions] }
+            'access' => 'required|array',
         ]);
 
-        // Transform access from array format to object format
-        // From: { menu_key: ['view', 'create'] }
-        // To: { menu_key: { view: true, create: true } }
-        $transformedAccess = [];
-        foreach ($validated['access'] as $menuKey => $permissions) {
-            $transformedAccess[$menuKey] = [];
-            foreach ($permissions as $permission) {
-                $transformedAccess[$menuKey][$permission] = true;
-            }
-        }
-
-        // Update or create user access record
-        UserAccess::updateOrCreate(
+        UserAccess::query()->updateOrCreate(
             ['user_id' => $validated['user_id']],
-            ['access' => $transformedAccess]
+            ['access' => $this->normalizeAccess($validated['access'])],
         );
 
         return redirect()->back()->with('success', 'Hak akses berhasil disimpan');
     }
 
-    /**
-     * Update the specified user access.
-     */
-    public function update(Request $request, UserAccess $userAccess)
+    public function update(Request $request, UserAccess $userAccess): RedirectResponse|JsonResponse
     {
         DB::beginTransaction();
+
         try {
-        $validated = $request->validate([
-            'access' => 'required|array',
-        ]);
+            $validated = $request->validate([
+                'access' => 'required|array',
+            ]);
 
-        // Transform access from array format to object format
-        // From: { menu_key: ['view', 'create'] }
-        // To: { menu_key: { view: true, create: true } }
-        $transformedAccess = [];
-        foreach ($validated['access'] as $menuKey => $permissions) {
-            $transformedAccess[$menuKey] = [];
-            foreach ($permissions as $permission) {
-                $transformedAccess[$menuKey][$permission] = true;
-            }
-        }
+            $userAccess->update([
+                'access' => $this->normalizeAccess($validated['access']),
+            ]);
 
-        $userAccess->update(['access' => $transformedAccess]);
+            DB::commit();
 
-        DB::commit();
-
-        return redirect()->back()->with('success', 'Hak akses berhasil diperbarui');
-        } catch (\Exception $e) {
+            return redirect()->back()->with('success', 'Hak akses berhasil diperbarui');
+        } catch (\Throwable $throwable) {
             DB::rollBack();
+
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile()
+                'message' => $throwable->getMessage(),
             ], 500);
         }
-
     }
 
-    /**
-     * Remove the specified user access.
-     */
-    public function destroy(UserAccess $userAccess)
+    public function destroy(UserAccess $userAccess): RedirectResponse
     {
         $userAccess->delete();
 
         return redirect()->back()->with('success', 'Hak akses berhasil dihapus');
     }
 
-    /**
-     * Check if user has permission for a specific menu and action.
-     */
-    public function checkPermission(Request $request)
+    public function checkPermission(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'menu_key' => 'required|string',
             'permission' => 'required|in:view,create,edit,delete,import,export,approve,reject',
         ]);
 
-        $hasPermission = UserAccess::hasPermission(
-            $request->user()->id,
-            $validated['menu_key'],
-            $validated['permission']
-        );
-
-        return response()->json(['has_permission' => $hasPermission]);
+        return response()->json([
+            'has_permission' => UserAccess::hasPermission(
+                $request->user()->id,
+                $validated['menu_key'],
+                $validated['permission'],
+            ),
+        ]);
     }
 
-    /**
-     * Get user's access for a specific menu.
-     */
-    public function getUserMenuAccess(Request $request, string $menuKey)
+    public function getUserMenuAccess(Request $request, string $menuKey): JsonResponse
     {
-        $permissions = UserAccess::getMenuPermissions(
-            $request->user()->id,
-            $menuKey
-        );
-
-        return response()->json(['permissions' => $permissions]);
+        return response()->json([
+            'permissions' => UserAccess::getMenuPermissions($request->user()->id, $menuKey),
+        ]);
     }
 
-    /**
-     * Grant or update permissions for a specific menu.
-     */
-    public function grantMenuPermission(Request $request)
+    public function grantMenuPermission(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
@@ -217,27 +152,36 @@ class UserAccessController extends Controller
         UserAccess::grantPermission(
             $validated['user_id'],
             $validated['menu_key'],
-            $validated['permissions']
+            $validated['permissions'],
         );
 
         return redirect()->back()->with('success', 'Permission untuk menu berhasil diperbarui');
     }
 
-    /**
-     * Revoke all permissions for a specific menu.
-     */
-    public function revokeMenuPermission(Request $request)
+    public function revokeMenuPermission(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'menu_key' => 'required|string',
         ]);
 
-        UserAccess::revokePermission(
-            $validated['user_id'],
-            $validated['menu_key']
-        );
+        UserAccess::revokePermission($validated['user_id'], $validated['menu_key']);
 
         return redirect()->back()->with('success', 'Permission untuk menu berhasil dihapus');
+    }
+
+    private function normalizeAccess(array $access): array
+    {
+        $normalized = [];
+
+        foreach ($access as $menuKey => $permissions) {
+            if (! is_array($permissions)) {
+                continue;
+            }
+
+            $normalized[$menuKey] = array_values(array_unique($permissions));
+        }
+
+        return $normalized;
     }
 }

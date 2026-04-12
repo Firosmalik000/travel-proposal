@@ -1,19 +1,46 @@
 ﻿import { Head, Link } from '@inertiajs/react';
 import PublicLayout from '@/layouts/PublicLayout';
+import { usePage } from '@inertiajs/react';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { Facebook, Instagram, Mail, MapPin, MessageCircle, Phone, Twitter, Youtube } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { usePublicLocale } from '@/contexts/public-locale';
+import { type SharedData } from '@/types';
+import { formatPrice, localize, usePublicData, usePublicPageContent, whatsappLinkFromPhone } from '@/lib/public-content';
 
 gsap.registerPlugin(ScrollTrigger);
 
+type StatItem = {
+    value: string;
+    label: string;
+};
+
+type PackageItem = {
+    title: string;
+    destination: string;
+    image: string;
+    price: string;
+    duration: string;
+};
+
+type ServiceItem = {
+    number: string;
+    title: string;
+    description: string;
+};
+
+type GalleryImage = {
+    src: string;
+    alt: string;
+};
+
 const content = {
     id: {
-        pageTitle: 'Amanah Haramain - Umroh Profesional & Terpercaya',
+        pageTitle: ':brand - Umroh Profesional & Terpercaya',
         hero: {
-            label: 'PT Amanah Haramain',
+            label: ':brand',
             title: 'Jelajahi Tanah Suci',
             desc: 'Pengalaman ibadah umroh yang khusyuk, nyaman, dan tak terlupakan dengan layanan profesional.',
             imageAlt: 'Kaaba',
@@ -95,7 +122,7 @@ const content = {
         },
         gallery: {
             title: 'Galeri Perjalanan',
-            desc: 'Momen-momen tak terlupakan bersama jamaah Amanah Haramain.',
+            desc: 'Momen-momen tak terlupakan bersama jamaah :brand.',
             images: [
                 { src: '/images/dummy.jpg', alt: 'Detail arsitektur Masjid Nabawi' },
                 { src: '/images/dummy.jpg', alt: 'Pemandangan kota Madinah' },
@@ -108,7 +135,7 @@ const content = {
         contact: {
             label: 'Kontak Cepat',
             title: 'Siap berangkat? Konsultasi gratis dulu.',
-            desc: 'Tim Amanah Haramain siap membantu memilih paket terbaik, jadwal keberangkatan, dan kebutuhan dokumen Anda.',
+            desc: 'Tim :brand siap membantu memilih paket terbaik, jadwal keberangkatan, dan kebutuhan dokumen Anda.',
             whatsapp: 'Konsultasi WhatsApp',
             fullContact: 'Lihat Kontak Lengkap',
             phoneLabel: 'Telepon',
@@ -118,9 +145,9 @@ const content = {
         },
     },
     en: {
-        pageTitle: 'Amanah Haramain - Professional & Trusted Umrah',
+        pageTitle: ':brand - Professional & Trusted Umrah',
         hero: {
-            label: 'PT Amanah Haramain',
+            label: ':brand',
             title: 'Journey to the Holy Land',
             desc: 'A focused, comfortable, and memorable umrah experience with professional guidance.',
             imageAlt: 'Kaaba',
@@ -202,7 +229,7 @@ const content = {
         },
         gallery: {
             title: 'Travel Gallery',
-            desc: 'Memorable moments with Amanah Haramain pilgrims.',
+            desc: 'Memorable moments with :brand pilgrims.',
             images: [
                 { src: '/images/dummy.jpg', alt: 'Masjid Nabawi architecture detail' },
                 { src: '/images/dummy.jpg', alt: 'Madinah city view' },
@@ -228,9 +255,67 @@ const content = {
 
 export default function Home() {
     const { locale } = usePublicLocale();
-    const t = content[locale];
+    const { branding, seoSettings } = usePage<SharedData>().props;
+    const seo = (seoSettings as Record<string, any>) ?? {};
+    const publicData = usePublicData();
+    const homePage = usePublicPageContent('home');
+    const t = JSON.parse(JSON.stringify(content[locale]).replaceAll(':brand', branding.company_name));
     const mainRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const heroTitle = localize(homePage?.content?.hero?.title, locale, t.hero.title);
+    const heroDescription = localize(homePage?.content?.hero?.description, locale, t.hero.desc);
+    const heroImage = homePage?.content?.hero?.image || '/images/dummy.jpg';
+    const aboutTitle = localize(homePage?.content?.about?.title, locale, t.about.title);
+    const aboutDescription = localize(homePage?.content?.about?.description, locale, t.about.desc);
+    const aboutCta = localize(homePage?.content?.about?.cta, locale, t.about.cta);
+    const aboutLabel = localize(homePage?.content?.about?.label, locale, t.about.label);
+    const aboutPrimaryImage = homePage?.content?.about?.image_primary || '/images/dummy.jpg';
+    const aboutSecondaryImage = homePage?.content?.about?.image_secondary || '/images/dummy.jpg';
+    const packagesTitle = localize(homePage?.content?.packages?.title, locale, t.packages.title);
+    const pricePrefix = localize(homePage?.content?.packages?.price_prefix, locale, t.packages.pricePrefix);
+    const servicesLabel = localize(homePage?.content?.services?.label, locale, t.services.label);
+    const servicesTitle = localize(homePage?.content?.services?.title, locale, t.services.title);
+    const servicesDescription = localize(homePage?.content?.services?.description, locale, t.services.desc);
+    const galleryTitle = localize(homePage?.content?.gallery?.title, locale, t.gallery.title);
+    const galleryDescription = localize(homePage?.content?.gallery?.description, locale, t.gallery.desc);
+    const contactLabel = localize(homePage?.content?.contact?.label, locale, t.contact.label);
+    const contactTitle = localize(homePage?.content?.contact?.title, locale, t.contact.title);
+    const contactDescription = localize(homePage?.content?.contact?.description, locale, t.contact.desc);
+    const contactWhatsapp = localize(homePage?.content?.contact?.whatsapp_label, locale, t.contact.whatsapp);
+    const contactFull = localize(homePage?.content?.contact?.contact_label, locale, t.contact.fullContact);
+    const contactPhone = seo.contact?.phone ?? '(021) 555-1234';
+    const contactEmail = seo.contact?.email ?? 'info@asfartour.co.id';
+    const contactAddress = localize(seo.contact?.address?.full, locale, 'Jl. Asfar No. 12, Jakarta Pusat');
+    const contactSocials = Array.isArray(seo.contact?.socials) ? seo.contact.socials : [];
+    const whatsappLink = whatsappLinkFromPhone(seo.contact?.phone);
+    const stats: StatItem[] = Array.isArray(homePage?.content?.stats) && homePage.content.stats.length > 0
+        ? homePage.content.stats.map((item: Record<string, unknown>) => ({
+            value: String(item.value ?? ''),
+            label: localize(item.label, locale),
+        }))
+        : t.stats;
+    const packageItems: PackageItem[] = Array.isArray(publicData.packages) && publicData.packages.length > 0
+        ? publicData.packages.map((pkg: Record<string, any>) => ({
+            title: localize(pkg.name, locale),
+            destination: pkg.departure_city,
+            image: pkg.image_path || '/images/dummy.jpg',
+            price: formatPrice(pkg.price, locale, pkg.currency),
+            duration: `${pkg.duration_days} ${locale === 'id' ? 'Hari' : 'Days'}`,
+        }))
+        : t.packages.items;
+    const serviceItems: ServiceItem[] = Array.isArray(publicData.services) && publicData.services.length > 0
+        ? publicData.services.map((item: Record<string, any>, index: number) => ({
+            number: String(index + 1).padStart(2, '0'),
+            title: localize(item.title, locale),
+            description: localize(item.description, locale),
+        }))
+        : t.services.items;
+    const galleryImages: GalleryImage[] = Array.isArray(publicData.gallery) && publicData.gallery.length > 0
+        ? publicData.gallery.map((item: Record<string, any>) => ({
+            src: item.image_path || '/images/dummy.jpg',
+            alt: localize(item.title, locale),
+        }))
+        : t.gallery.images;
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -266,15 +351,15 @@ export default function Home() {
                         <div className="relative z-10 lg:w-1/2 text-white">
                             <p className="font-medium">{t.hero.label}</p>
                             <h1 className="font-heading mt-2 text-4xl font-extrabold sm:text-5xl md:text-6xl lg:text-7xl">
-                                {t.hero.title}
+                                {heroTitle}
                             </h1>
                             <p className="mt-4 text-base text-white/70 sm:text-lg">
-                                {t.hero.desc}
+                                {heroDescription}
                             </p>
                         </div>
                         <div className="relative mt-2 h-56 w-full sm:mt-6 sm:h-64 md:h-72 lg:mt-0 lg:h-auto lg:w-1/2">
                             <img
-                                src="/images/dummy.jpg"
+                                src={heroImage}
                                 alt={t.hero.imageAlt}
                                 className="h-full w-full rounded-2xl object-cover lg:absolute lg:-right-1/4 lg:top-1/2 lg:h-auto lg:max-w-2xl lg:-translate-y-1/2"
                             />
@@ -285,7 +370,7 @@ export default function Home() {
                 {/* Stats Section */}
                 <section className="container mx-auto px-4 sm:px-6 py-14 sm:py-16 md:py-20 fade-in-section">
                     <div className="grid grid-cols-2 gap-6 text-center sm:gap-8 md:grid-cols-4">
-                        {t.stats.map((stat) => (
+                        {stats.map((stat: StatItem) => (
                             <div key={stat.label}>
                                 <p className="font-heading text-3xl font-bold text-primary sm:text-4xl md:text-5xl">{stat.value}</p>
                                 <p className="mt-2 text-xs text-muted-foreground sm:text-sm">{stat.label}</p>
@@ -297,24 +382,24 @@ export default function Home() {
                 {/* Introduction Section */}
                 <section className="container mx-auto grid items-center gap-10 px-4 py-14 sm:px-6 sm:py-16 md:gap-12 md:py-20 lg:grid-cols-2 fade-in-section">
                     <div className="text-sm text-muted-foreground">
-                        <p className="font-medium uppercase tracking-wider">{t.about.label}</p>
+                        <p className="font-medium uppercase tracking-wider">{aboutLabel}</p>
                         <h2 className="font-heading mt-4 text-3xl font-bold text-foreground sm:text-4xl">
-                            {t.about.title}
+                            {aboutTitle}
                         </h2>
                         <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-                            {t.about.desc}
+                            {aboutDescription}
                         </p>
                         <Link
                             href="/tentang-kami"
                             className="mt-6 inline-flex w-full items-center justify-center rounded-lg border border-border px-6 py-3 font-semibold text-foreground transition hover:bg-muted sm:w-auto"
                         >
-                            {t.about.cta}
+                            {aboutCta}
                         </Link>
                     </div>
                     <div className="relative h-64 sm:h-72 md:h-80">
-                        <img src="/images/dummy.jpg" alt={t.about.imageAltOne} className="h-full w-full rounded-2xl object-cover shadow-lg sm:w-2/3" />
+                        <img src={aboutPrimaryImage} alt={t.about.imageAltOne} className="h-full w-full rounded-2xl object-cover shadow-lg sm:w-2/3" />
                         <img
-                            src="/images/dummy.jpg"
+                            src={aboutSecondaryImage}
                             alt={t.about.imageAltTwo}
                             className="absolute bottom-0 right-0 w-2/3 rounded-2xl border-4 border-background shadow-xl sm:w-1/2 sm:border-8 md:translate-y-1/4"
                         />
@@ -325,7 +410,7 @@ export default function Home() {
                 <section className="py-14 sm:py-16 md:py-20 fade-in-section">
                     <div className="container mx-auto px-4 sm:px-6">
                         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{t.packages.title}</h2>
+                            <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{packagesTitle}</h2>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => handleScroll('left')}
@@ -348,7 +433,7 @@ export default function Home() {
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                         <div className="flex-shrink-0 w-4 md:w-auto" />
-                        {t.packages.items.map((pkg) => (
+                        {packageItems.map((pkg: PackageItem) => (
                             <div
                                 key={pkg.title}
                                 className="group relative h-[360px] w-64 flex-shrink-0 overflow-hidden rounded-3xl sm:h-[420px] sm:w-72 md:h-[450px]"
@@ -359,7 +444,7 @@ export default function Home() {
                                     <p className="text-sm">{pkg.destination}</p>
                                     <h3 className="font-heading mt-1 text-xl font-bold">{pkg.title}</h3>
                                     <p className="mt-2 text-sm">
-                                        {t.packages.pricePrefix} {pkg.price} / {pkg.duration}
+                                        {pricePrefix} {pkg.price} / {pkg.duration}
                                     </p>
                                 </div>
                             </div>
@@ -371,16 +456,16 @@ export default function Home() {
                 {/* Services Section */}
                 <section className="container mx-auto grid items-center gap-10 px-4 py-14 sm:px-6 sm:py-16 md:gap-12 md:py-20 md:grid-cols-2 fade-in-section">
                     <div>
-                        <p className="font-medium uppercase tracking-wider text-muted-foreground">{t.services.label}</p>
+                        <p className="font-medium uppercase tracking-wider text-muted-foreground">{servicesLabel}</p>
                         <h2 className="font-heading mt-4 text-3xl font-bold text-foreground sm:text-4xl">
-                            {t.services.title}
+                            {servicesTitle}
                         </h2>
                         <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-                            {t.services.desc}
+                            {servicesDescription}
                         </p>
                     </div>
                     <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                        {t.services.items.map((item) => (
+                        {serviceItems.map((item: ServiceItem) => (
                             <div key={item.number} className="rounded-2xl bg-card p-6 shadow-sm transition-shadow hover:shadow-lg">
                                 <p className="font-heading text-2xl font-bold text-primary/40">{item.number}</p>
                                 <h3 className="font-heading mt-4 text-lg font-bold text-foreground">{item.title}</h3>
@@ -394,11 +479,11 @@ export default function Home() {
                 <section className="bg-muted/40 py-16 sm:py-20 md:py-24 fade-in-section">
                     <div className="container mx-auto px-4 sm:px-6">
                         <div className="mb-12 text-center">
-                            <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{t.gallery.title}</h2>
-                            <p className="mt-3 text-base text-muted-foreground">{t.gallery.desc}</p>
+                            <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{galleryTitle}</h2>
+                            <p className="mt-3 text-base text-muted-foreground">{galleryDescription}</p>
                         </div>
                         <div className="grid auto-rows-[120px] grid-cols-2 gap-3 sm:auto-rows-[150px] sm:gap-4 md:auto-rows-[180px] md:grid-cols-4 lg:auto-rows-[200px]">
-                            {t.gallery.images.map((img, index) => {
+                            {galleryImages.map((img: GalleryImage, index: number) => {
                                 const spans = [
                                     'md:col-span-2 md:row-span-2',
                                     'md:col-span-1',
@@ -429,24 +514,24 @@ export default function Home() {
                 <section className="container mx-auto px-4 pb-16 sm:px-6 sm:pb-20 md:pb-24 fade-in-section">
                     <div className="grid gap-8 rounded-3xl bg-foreground px-6 py-8 text-background shadow-2xl sm:px-8 sm:py-10 lg:grid-cols-[1.1fr_0.9fr]">
                         <div>
-                            <p className="text-sm uppercase tracking-[0.25em] text-background/70">{t.contact.label}</p>
-                            <h2 className="font-heading mt-3 text-3xl font-bold sm:text-4xl">{t.contact.title}</h2>
+                            <p className="text-sm uppercase tracking-[0.25em] text-background/70">{contactLabel}</p>
+                            <h2 className="font-heading mt-3 text-3xl font-bold sm:text-4xl">{contactTitle}</h2>
                             <p className="mt-3 text-background/70 leading-relaxed">
-                                {t.contact.desc}
+                                {contactDescription}
                             </p>
                             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                                 <a
-                                    href="https://wa.me/6281234567890"
+                                    href={whatsappLink}
                                     className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-xs font-semibold text-primary-foreground sm:w-auto"
                                 >
                                     <MessageCircle className="h-4 w-4" />
-                                    {t.contact.whatsapp}
+                                    {contactWhatsapp}
                                 </a>
                                 <Link
                                     href="/kontak"
                                     className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-background/40 px-5 py-3 text-xs font-semibold text-background/90 transition hover:border-background/70 hover:bg-background/10 sm:w-auto"
                                 >
-                                    {t.contact.fullContact}
+                                    {contactFull}
                                     <ArrowRightIcon className="h-4 w-4" />
                                 </Link>
                             </div>
@@ -459,7 +544,7 @@ export default function Home() {
                                 </span>
                                 <div>
                                     <p className="text-xs uppercase tracking-[0.2em] text-background/50">{t.contact.phoneLabel}</p>
-                                    <p className="font-semibold">(021) 555-1234</p>
+                                    <p className="font-semibold">{contactPhone}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-background/80">
@@ -468,7 +553,7 @@ export default function Home() {
                                 </span>
                                 <div>
                                     <p className="text-xs uppercase tracking-[0.2em] text-background/50">{t.contact.emailLabel}</p>
-                                    <p className="font-semibold">info@amanahharamain.com</p>
+                                    <p className="font-semibold">{contactEmail}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3 text-sm text-background/80">
@@ -477,48 +562,32 @@ export default function Home() {
                                 </span>
                                 <div>
                                     <p className="text-xs uppercase tracking-[0.2em] text-background/50">{t.contact.addressLabel}</p>
-                                    <p className="font-semibold">Jl. Amanah No. 12, Jakarta Pusat</p>
+                                    <p className="font-semibold">{contactAddress}</p>
                                 </div>
                             </div>
                             <div className="pt-2">
                                 <p className="text-xs uppercase tracking-[0.2em] text-background/50">{t.contact.socialLabel}</p>
                                 <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-background/80">
-                                    <a
-                                        className="inline-flex items-center gap-2 rounded-full border border-background/20 px-3 py-2 transition hover:border-background/50 hover:bg-background/10"
-                                        href="https://instagram.com/amanahharamain"
-                                        rel="noreferrer"
-                                        target="_blank"
-                                    >
-                                        <Instagram className="h-4 w-4" />
-                                        Instagram
-                                    </a>
-                                    <a
-                                        className="inline-flex items-center gap-2 rounded-full border border-background/20 px-3 py-2 transition hover:border-background/50 hover:bg-background/10"
-                                        href="https://facebook.com/amanahharamain"
-                                        rel="noreferrer"
-                                        target="_blank"
-                                    >
-                                        <Facebook className="h-4 w-4" />
-                                        Facebook
-                                    </a>
-                                    <a
-                                        className="inline-flex items-center gap-2 rounded-full border border-background/20 px-3 py-2 transition hover:border-background/50 hover:bg-background/10"
-                                        href="https://youtube.com/@amanahharamain"
-                                        rel="noreferrer"
-                                        target="_blank"
-                                    >
-                                        <Youtube className="h-4 w-4" />
-                                        YouTube
-                                    </a>
-                                    <a
-                                        className="inline-flex items-center gap-2 rounded-full border border-background/20 px-3 py-2 transition hover:border-background/50 hover:bg-background/10"
-                                        href="https://x.com/amanahharamain"
-                                        rel="noreferrer"
-                                        target="_blank"
-                                    >
-                                        <Twitter className="h-4 w-4" />
-                                        X (Twitter)
-                                    </a>
+                                    {(contactSocials.length > 0 ? contactSocials : [
+                                        { label: 'Instagram', url: 'https://instagram.com/asfartour' },
+                                        { label: 'YouTube', url: 'https://youtube.com/@asfartour' },
+                                    ]).map((social: Record<string, unknown>, index: number) => {
+                                        const icons = [Instagram, Facebook, Youtube, Twitter];
+                                        const Icon = icons[index % icons.length];
+
+                                        return (
+                                            <a
+                                                key={`${social.label}_${index}`}
+                                                className="inline-flex items-center gap-2 rounded-full border border-background/20 px-3 py-2 transition hover:border-background/50 hover:bg-background/10"
+                                                href={String(social.url ?? '#')}
+                                                rel="noreferrer"
+                                                target="_blank"
+                                            >
+                                                <Icon className="h-4 w-4" />
+                                                {String(social.label ?? `Social ${index + 1}`)}
+                                            </a>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>

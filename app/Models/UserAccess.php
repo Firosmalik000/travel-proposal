@@ -9,13 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UserAccess extends Model
 {
-    use HasFactory, HasAuditTrail;
+    use HasAuditTrail;
+    use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'user_id',
         'access',
@@ -23,129 +19,88 @@ class UserAccess extends Model
         'updated_by',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'access' => 'array', // Cast JSON to array
-    ];
+    protected function casts(): array
+    {
+        return [
+            'access' => 'array',
+        ];
+    }
 
-    /**
-     * Get the user that owns the access.
-     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Check if user has specific permission for a menu.
-     *
-     * @param int $userId
-     * @param string $menuKey (e.g., 'master_karyawan', 'master_jabatan')
-     * @param string $permission (e.g., 'view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'reject')
-     * @return bool
-     */
     public static function hasPermission(int $userId, string $menuKey, string $permission): bool
     {
-        $userAccess = static::where('user_id', $userId)->first();
+        if (static::isSuperAdmin($userId)) {
+            return true;
+        }
 
-        if (!$userAccess || !$userAccess->access) {
+        $userAccess = static::query()->where('user_id', $userId)->first();
+
+        if (! $userAccess || ! is_array($userAccess->access[$menuKey] ?? null)) {
             return false;
         }
 
-        // Check if menu key exists in access array
-        if (!isset($userAccess->access[$menuKey])) {
-            return false;
-        }
-
-        // Check if permission exists and is true in the menu's permission object
-        return $userAccess->access[$menuKey][$permission] ?? false;
+        return in_array($permission, $userAccess->access[$menuKey], true);
     }
 
-    /**
-     * Get all accessible menu keys for a user.
-     *
-     * @param int $userId
-     * @return array
-     */
     public static function getAccessibleMenus(int $userId): array
     {
-        $userAccess = static::where('user_id', $userId)->first();
-        \Log::info('🔐 UserAccess::getAccessibleMenus', [
-            'user_id' => $userId,
-            'found' => $userAccess ? 'yes' : 'no',
-            'access_data' => $userAccess ? $userAccess->access : null
-        ]);
+        if (static::isSuperAdmin($userId)) {
+            return Menu::query()
+                ->orderBy('order')
+                ->get()
+                ->flatMap(fn (Menu $menu): array => $menu->getAllMenuKeys())
+                ->values()
+                ->unique()
+                ->all();
+        }
 
-        if (!$userAccess || !$userAccess->access) {
-            \Log::warning('⚠️ No user access found or access is null');
+        $userAccess = static::query()->where('user_id', $userId)->first();
+
+        if (! $userAccess || ! is_array($userAccess->access)) {
             return [];
         }
 
-        // Return only menus that have 'view' permission
-        $accessibleMenus = [];
-        foreach ($userAccess->access as $menuKey => $permissions) {
-            if (in_array('view', $permissions)) {
-                $accessibleMenus[] = $menuKey;
-            }
-        }
-
-        \Log::info('✅ Accessible menus extracted:', ['menus' => $accessibleMenus]);
-        return $accessibleMenus;
+        return collect($userAccess->access)
+            ->filter(fn (mixed $permissions): bool => is_array($permissions) && in_array('view', $permissions, true))
+            ->keys()
+            ->values()
+            ->all();
     }
 
-    /**
-     * Get user's permissions for a specific menu.
-     *
-     * @param int $userId
-     * @param string $menuKey
-     * @return array
-     */
     public static function getMenuPermissions(int $userId, string $menuKey): array
     {
-        $userAccess = static::where('user_id', $userId)->first();
+        if (static::isSuperAdmin($userId)) {
+            return ['view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'reject'];
+        }
 
-        if (!$userAccess || !$userAccess->access || !isset($userAccess->access[$menuKey])) {
+        $userAccess = static::query()->where('user_id', $userId)->first();
+
+        if (! $userAccess || ! isset($userAccess->access[$menuKey]) || ! is_array($userAccess->access[$menuKey])) {
             return [];
         }
 
         return $userAccess->access[$menuKey];
     }
 
-    /**
-     * Grant or update permissions for a user.
-     *
-     * @param int $userId
-     * @param string $menuKey
-     * @param array $permissions
-     * @return void
-     */
     public static function grantPermission(int $userId, string $menuKey, array $permissions): void
     {
-        $userAccess = static::firstOrNew(['user_id' => $userId]);
-
+        $userAccess = static::query()->firstOrNew(['user_id' => $userId]);
         $currentAccess = $userAccess->access ?? [];
-        $currentAccess[$menuKey] = $permissions;
+        $currentAccess[$menuKey] = array_values(array_unique($permissions));
 
         $userAccess->access = $currentAccess;
         $userAccess->save();
     }
 
-    /**
-     * Revoke all permissions for a menu.
-     *
-     * @param int $userId
-     * @param string $menuKey
-     * @return void
-     */
     public static function revokePermission(int $userId, string $menuKey): void
     {
-        $userAccess = static::where('user_id', $userId)->first();
+        $userAccess = static::query()->where('user_id', $userId)->first();
 
-        if (!$userAccess) {
+        if (! $userAccess) {
             return;
         }
 
@@ -156,20 +111,28 @@ class UserAccess extends Model
         $userAccess->save();
     }
 
-    /**
-     * Get all access data for a user (formatted for display).
-     *
-     * @param int $userId
-     * @return array
-     */
     public static function getAllAccessForUser(int $userId): array
     {
-        $userAccess = static::where('user_id', $userId)->first();
+        if (static::isSuperAdmin($userId)) {
+            $allPermissions = ['view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'reject'];
 
-        if (!$userAccess || !$userAccess->access) {
-            return [];
+            return Menu::query()
+                ->orderBy('order')
+                ->get()
+                ->flatMap(fn (Menu $menu): array => $menu->getAllMenuKeys())
+                ->values()
+                ->unique()
+                ->mapWithKeys(fn (string $menuKey): array => [$menuKey => $allPermissions])
+                ->all();
         }
 
-        return $userAccess->access;
+        $userAccess = static::query()->where('user_id', $userId)->first();
+
+        return is_array($userAccess?->access) ? $userAccess->access : [];
+    }
+
+    private static function isSuperAdmin(int $userId): bool
+    {
+        return User::query()->whereKey($userId)->first()?->isSuperAdmin() ?? false;
     }
 }

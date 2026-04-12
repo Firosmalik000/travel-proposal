@@ -2,14 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Article;
+use App\Models\DepartureSchedule;
+use App\Models\PageContent;
+use App\Models\TravelPackage;
 use App\Models\User;
-use App\Models\MasterKaryawan;
-use App\Models\Department;
-use App\Models\Jabatan;
-use App\Models\SlipGaji;
-use App\Models\IzinKeluarKaryawan;
-use App\Models\PinjamanKaryawan;
-use App\Models\Recruitment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,206 +14,132 @@ class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected $user;
+    protected User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+
         $this->user = User::factory()->create();
     }
 
-    public function test_guests_are_redirected_to_the_login_page()
+    public function test_guests_are_redirected_to_login_page(): void
     {
         $this->get(route('dashboard'))->assertRedirect(route('login'));
     }
 
-    public function test_authenticated_users_can_visit_the_dashboard()
+    public function test_authenticated_users_can_visit_dashboard(): void
     {
-        $this->actingAs($this->user);
-
-        $this->get(route('dashboard'))->assertOk();
+        $this->actingAs($this->user)
+            ->get(route('dashboard'))
+            ->assertOk();
     }
 
-    public function test_dashboard_stats_endpoint_returns_correct_structure()
+    public function test_dashboard_stats_return_travel_summary(): void
     {
-        $this->actingAs($this->user);
-
-        $response = $this->getJson('/api/dashboard/stats');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                'totalUsers' => ['value', 'growth', 'description'],
-                'activeEmployees' => ['value', 'newThisMonth', 'description'],
-                'departments' => ['value', 'description'],
-                'todayActivity' => ['value', 'description']
-            ]);
-    }
-
-    public function test_dashboard_monthly_growth_endpoint_returns_array()
-    {
-        $this->actingAs($this->user);
-
-        $response = $this->getJson('/api/dashboard/monthly-growth');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                '*' => ['month', 'users', 'karyawan']
-            ]);
-
-        $data = $response->json();
-        $this->assertCount(6, $data); // Should return 6 months
-    }
-
-    public function test_dashboard_department_distribution_endpoint()
-    {
-        $this->actingAs($this->user);
-
-        // Create department with employees
-        $department = Department::factory()->create();
-        $jabatan = Jabatan::factory()->create(['department_id' => $department->id]);
-
-        MasterKaryawan::factory()->create([
-            'user_id' => $this->user->id,
-            'department_id' => $department->id,
-            'jabatan_id' => $jabatan->id,
-            'is_active' => true
+        TravelPackage::query()->create([
+            'code' => 'PKG-001',
+            'slug' => 'umroh-reguler',
+            'name' => ['id' => 'Umroh Reguler', 'en' => 'Regular Umrah'],
+            'package_type' => 'reguler',
+            'departure_city' => 'Jakarta',
+            'duration_days' => 10,
+            'price' => 35000000,
+            'currency' => 'IDR',
+            'is_active' => true,
         ]);
 
-        $response = $this->getJson('/api/dashboard/department-distribution');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                '*' => ['name', 'value', 'color']
-            ]);
-    }
-
-    public function test_dashboard_weekly_activity_endpoint()
-    {
-        $this->actingAs($this->user);
-
-        $response = $this->getJson('/api/dashboard/weekly-activity');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                '*' => ['day', 'logins', 'documents']
-            ]);
-
-        $data = $response->json();
-        $this->assertCount(7, $data); // Should return 7 days
-    }
-
-    public function test_dashboard_recent_activity_endpoint()
-    {
-        $this->actingAs($this->user);
-
-        $response = $this->getJson('/api/dashboard/recent-activity');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                '*' => ['text', 'color']
-            ]);
-    }
-
-    public function test_dashboard_pending_tasks_endpoint()
-    {
-        $this->actingAs($this->user);
-
-        $response = $this->getJson('/api/dashboard/pending-tasks');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                '*' => ['label', 'value', 'color']
-            ]);
-
-        $data = $response->json();
-        $this->assertCount(4, $data); // Should return 4 task types
-    }
-
-    public function test_dashboard_system_status_endpoint()
-    {
-        $this->actingAs($this->user);
-
-        $response = $this->getJson('/api/dashboard/system-status');
-
-        $response->assertStatus(200)
-            ->assertJsonStructure([
-                '*' => ['label', 'status', 'color']
-            ]);
-    }
-
-    public function test_dashboard_stats_calculates_user_growth_correctly()
-    {
-        $this->actingAs($this->user);
-
-        // Create additional users
-        User::factory()->count(5)->create();
-
-        $response = $this->getJson('/api/dashboard/stats');
-
-        $response->assertStatus(200);
-
-        $data = $response->json();
-        $this->assertGreaterThanOrEqual(6, $data['totalUsers']['value']); // At least 6 users (1 auth + 5 created)
-    }
-
-    public function test_dashboard_counts_active_employees_correctly()
-    {
-        $this->actingAs($this->user);
-
-        $department = Department::factory()->create();
-        $jabatan = Jabatan::factory()->create(['department_id' => $department->id]);
-
-        // Create active employees
-        MasterKaryawan::factory()->count(3)->create([
-            'department_id' => $department->id,
-            'jabatan_id' => $jabatan->id,
-            'is_active' => true
+        DepartureSchedule::query()->create([
+            'departure_date' => now()->addMonth()->toDateString(),
+            'departure_city' => 'Jakarta',
+            'seats_total' => 40,
+            'seats_available' => 9,
+            'status' => 'open',
+            'is_active' => true,
         ]);
 
-        // Create inactive employee
-        MasterKaryawan::factory()->create([
-            'department_id' => $department->id,
-            'jabatan_id' => $jabatan->id,
-            'is_active' => false
+        PageContent::query()->create([
+            'slug' => 'home',
+            'category' => 'page',
+            'title' => ['id' => 'Home', 'en' => 'Home'],
+            'is_active' => true,
         ]);
 
-        $response = $this->getJson('/api/dashboard/stats');
+        Article::query()->create([
+            'title' => ['id' => 'Artikel', 'en' => 'Article'],
+            'slug' => 'artikel',
+            'is_active' => true,
+        ]);
 
-        $response->assertStatus(200);
+        $response = $this->actingAs($this->user)->getJson('/api/dashboard/stats');
 
-        $data = $response->json();
-        $this->assertEquals(3, $data['activeEmployees']['value']);
+        $response->assertSuccessful()
+            ->assertJsonPath('data.activePackages.value', 1)
+            ->assertJsonPath('data.upcomingDepartures.value', 1)
+            ->assertJsonPath('data.publishedContent.value', 2);
     }
 
-    public function test_dashboard_counts_pending_tasks_correctly()
+    public function test_dashboard_monthly_growth_and_weekly_activity_have_expected_shape(): void
     {
-        $this->actingAs($this->user);
+        $this->actingAs($this->user)
+            ->getJson('/api/dashboard/monthly-growth')
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => ['month', 'users', 'departures'],
+                ],
+            ]);
 
-        // Create pending izin keluar
-        IzinKeluarKaryawan::factory()->create([
-            'user_id' => $this->user->id,
-            'status' => 'pending'
+        $this->actingAs($this->user)
+            ->getJson('/api/dashboard/weekly-activity')
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => ['day', 'departures', 'contents'],
+                ],
+            ]);
+    }
+
+    public function test_dashboard_distribution_and_upcoming_departures_are_returned(): void
+    {
+        $package = TravelPackage::query()->create([
+            'code' => 'PKG-002',
+            'slug' => 'umroh-premium',
+            'name' => ['id' => 'Umroh Premium', 'en' => 'Premium Umrah'],
+            'package_type' => 'premium',
+            'departure_city' => 'Surabaya',
+            'duration_days' => 12,
+            'price' => 45000000,
+            'currency' => 'IDR',
+            'is_active' => true,
         ]);
 
-        // Create pending pinjaman
-        PinjamanKaryawan::factory()->create([
-            'user_id' => $this->user->id,
-            'is_approve' => false,
-            'is_rejected' => false
+        DepartureSchedule::query()->create([
+            'travel_package_id' => $package->id,
+            'departure_date' => now()->addDays(10)->toDateString(),
+            'departure_city' => 'Surabaya',
+            'seats_total' => 30,
+            'seats_available' => 7,
+            'status' => 'open',
+            'is_active' => true,
         ]);
 
-        $response = $this->getJson('/api/dashboard/pending-tasks');
+        $this->actingAs($this->user)
+            ->getJson('/api/dashboard/department-distribution')
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => ['name', 'value', 'color'],
+                ],
+            ]);
 
-        $response->assertStatus(200);
-
-        $data = $response->json();
-
-        // Find pending izin keluar
-        $pendingIzin = collect($data)->firstWhere('label', 'Izin Keluar Menunggu Approval');
-        $this->assertEquals(1, $pendingIzin['value']);
-
-        // Find pending pinjaman
-        $pendingPinjaman = collect($data)->firstWhere('label', 'Pinjaman Menunggu Approval');
-        $this->assertEquals(1, $pendingPinjaman['value']);
+        $this->actingAs($this->user)
+            ->getJson('/api/dashboard/birthdays')
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                'data' => [
+                    '*' => ['title', 'departure_date', 'departure_city', 'seats_available'],
+                ],
+            ]);
     }
 }

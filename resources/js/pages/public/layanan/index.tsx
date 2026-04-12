@@ -1,11 +1,12 @@
 ﻿import { Head } from '@inertiajs/react';
 import PublicLayout from '@/layouts/PublicLayout';
 import { usePublicLocale } from '@/contexts/public-locale';
+import { localize, usePublicData } from '@/lib/public-content';
 
 const content = {
     id: {
         title: 'Layanan Kami',
-        meta: 'Layanan tambahan Amanah Haramain Travel untuk perjalanan umroh.',
+        meta: 'Layanan tambahan Asfar Tour untuk perjalanan umroh.',
         subtitle: 'Layanan tambahan yang membuat perjalanan lebih nyaman.',
         services: [
             {
@@ -28,7 +29,7 @@ const content = {
     },
     en: {
         title: 'Our Services',
-        meta: 'Additional services by Amanah Haramain Travel for umrah journeys.',
+        meta: 'Additional services by Asfar Tour for umrah journeys.',
         subtitle: 'Extra services that make your journey more comfortable.',
         services: [
             {
@@ -53,7 +54,14 @@ const content = {
 
 export default function Layanan() {
     const { locale } = usePublicLocale();
+    const publicData = usePublicData();
     const t = content[locale];
+    const services = Array.isArray(publicData.services) && publicData.services.length > 0
+        ? publicData.services.map((item: Record<string, unknown>) => ({
+            title: localize(item.title, locale),
+            desc: localize(item.description, locale),
+        }))
+        : t.services;
 
     return (
         <PublicLayout>
@@ -75,7 +83,7 @@ export default function Layanan() {
 
             <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
                 <div className="grid gap-4 md:grid-cols-2">
-                    {t.services.map((item, idx) => (
+                    {services.map((item, idx) => (
                         <div
                             key={item.title}
                             className="flex items-start gap-4 rounded-2xl border border-border bg-card/90 px-5 py-4 shadow-sm"

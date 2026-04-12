@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\Administrator\BrandingController;
+use App\Http\Controllers\Administrator\ContentController;
 use App\Http\Controllers\Administrator\MenuController;
+use App\Http\Controllers\Administrator\SeoController;
 use App\Http\Controllers\Administrator\UserAccessController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
@@ -14,8 +17,25 @@ Route::get('paket-umroh', function () {
     return Inertia::render('public/paket/index');
 })->name('public.paket');
 
-Route::get('paket-umroh/detail', function () {
-    return Inertia::render('public/paket/detail/index');
+Route::get('paket-umroh/{travelPackage:slug}', function (\App\Models\TravelPackage $travelPackage) {
+    return Inertia::render('public/paket/detail/index', [
+        'travelPackage' => [
+            'id' => $travelPackage->id,
+            'code' => $travelPackage->code,
+            'slug' => $travelPackage->slug,
+            'name' => $travelPackage->name,
+            'package_type' => $travelPackage->package_type,
+            'departure_city' => $travelPackage->departure_city,
+            'duration_days' => $travelPackage->duration_days,
+            'price' => $travelPackage->price,
+            'currency' => $travelPackage->currency,
+            'image_path' => $travelPackage->image_path,
+            'summary' => $travelPackage->summary,
+            'content' => $travelPackage->content,
+            'products' => $travelPackage->products()->get(['name', 'slug'])->toArray(),
+            'schedules' => $travelPackage->schedules()->get(['departure_date', 'return_date', 'departure_city', 'seats_total', 'seats_available', 'status', 'notes'])->toArray(),
+        ],
+    ]);
 })->name('public.paket-detail');
 
 Route::get('tentang-kami', function () {
@@ -82,6 +102,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Get user menus (for sidebar)
     Route::get('api/user-menus', [MenuController::class, 'getUserMenus'])->name('user.menus');
+
+    Route::prefix('dashboard/website-management')->group(function () {
+        Route::get('branding', [BrandingController::class, 'index'])->name('branding.index');
+        Route::patch('branding', [BrandingController::class, 'update'])->name('branding.update');
+        Route::get('landing', [ContentController::class, 'landing'])->name('landing.index');
+        Route::get('content', [ContentController::class, 'index'])->name('content.index');
+        Route::redirect('products', '/dashboard/product-management/products');
+        Route::redirect('packages', '/dashboard/product-management/packages');
+        Route::patch('content/{pageContent}', [ContentController::class, 'update'])->name('content.update');
+        Route::post('content/resources/{resource}', [ContentController::class, 'storeResource'])->name('content.resources.store');
+        Route::patch('content/resources/{resource}/{id}', [ContentController::class, 'updateResource'])->name('content.resources.update');
+        Route::delete('content/resources/{resource}/{id}', [ContentController::class, 'destroyResource'])->name('content.resources.destroy');
+        Route::get('seo', [SeoController::class, 'index'])->name('seo.index');
+        Route::patch('seo', [SeoController::class, 'update'])->name('seo.update');
+    });
+
+    Route::prefix('dashboard/product-management')->group(function () {
+        Route::get('products', [ContentController::class, 'products'])->name('products.index');
+        Route::get('packages', [ContentController::class, 'packages'])->name('packages.index');
+    });
 
     // Administrator Routes
     Route::prefix('dashboard/administrator')->group(function () {

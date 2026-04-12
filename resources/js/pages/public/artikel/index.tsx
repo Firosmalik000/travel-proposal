@@ -1,6 +1,7 @@
 ﻿import { Head } from '@inertiajs/react';
 import PublicLayout from '@/layouts/PublicLayout';
 import { usePublicLocale } from '@/contexts/public-locale';
+import { localize, usePublicData } from '@/lib/public-content';
 
 const content = {
     id: {
@@ -47,7 +48,14 @@ const content = {
 
 export default function Artikel() {
     const { locale } = usePublicLocale();
+    const publicData = usePublicData();
     const t = content[locale];
+    const articles = Array.isArray(publicData.articles) && publicData.articles.length > 0
+        ? publicData.articles.map((item: Record<string, unknown>) => ({
+            title: localize(item.title, locale),
+            desc: localize(item.excerpt, locale),
+        }))
+        : t.articles;
 
     return (
         <PublicLayout>
@@ -71,7 +79,7 @@ export default function Artikel() {
 
             <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
                 <div className="grid gap-6 md:grid-cols-3">
-                    {t.articles.map((item) => (
+                    {articles.map((item) => (
                         <div
                             key={item.title}
                             className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"

@@ -6,77 +6,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Loader2 } from 'lucide-react';
 import { useForm } from '@inertiajs/react';
-import { useState, FormEvent } from 'react';
-import { router } from '@inertiajs/react';
+import { FormEvent, useState } from 'react';
 import { toast } from 'sonner';
 
-interface Department {
+interface ProfileData {
     id: number;
-    name: string;
-}
-
-interface Jabatan {
-    id: number;
-    name: string;
-}
-
-interface Karyawan {
-    id: number;
-    nik: string;
-    nama_lengkap: string;
-    nama_panggilan: string;
-    gender: string;
-    tempat_lahir: string;
-    tanggal_lahir: string;
-    alamat: string;
-    agama: string;
-    status_pernikahan: string;
-    email: string;
-    no_telp: string;
-    foto?: string;
-    foto_url?: string;
-    department?: Department;
-    jabatan?: Jabatan;
+    full_name: string | null;
+    phone: string | null;
+    gender: string | null;
+    birth_place: string | null;
+    birth_date: string | null;
+    address: string | null;
+    photo_path: string | null;
 }
 
 interface Props {
-    karyawan?: Karyawan;
+    profile?: ProfileData;
 }
 
-export default function PersonalInfoTab({ karyawan }: Props) {
-    const [fotoPreview, setFotoPreview] = useState<string | null>(
-        karyawan?.foto_url || null
-    );
+export default function PersonalInfoTab({ profile }: Props) {
+    const [photoPreview, setPhotoPreview] = useState<string | null>(profile?.photo_path ? `/storage/${profile.photo_path}` : null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const { data, setData, post, processing, errors, reset } = useForm({
-        nama_lengkap: karyawan?.nama_lengkap || '',
-        nama_panggilan: karyawan?.nama_panggilan || '',
-        gender: karyawan?.gender || 'L',
-        tempat_lahir: karyawan?.tempat_lahir || '',
-        tanggal_lahir: karyawan?.tanggal_lahir || '',
-        alamat: karyawan?.alamat || '',
-        agama: karyawan?.agama || '',
-        status_pernikahan: karyawan?.status_pernikahan || 'Belum Menikah',
-        no_telp: karyawan?.no_telp || '',
-        foto: null as File | null,
+    const { data, setData, post, processing, errors } = useForm({
+        full_name: profile?.full_name || '',
+        phone: profile?.phone || '',
+        gender: profile?.gender || '',
+        birth_place: profile?.birth_place || '',
+        birth_date: profile?.birth_date || '',
+        address: profile?.address || '',
+        photo: null as File | null,
         _method: 'PATCH',
     });
 
-    const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setData('foto', file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFotoPreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+    const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+
+        if (!file) {
+            return;
         }
+
+        setData('photo', file);
+        const reader = new FileReader();
+        reader.onloadend = () => setPhotoPreview(reader.result as string);
+        reader.readAsDataURL(file);
     };
 
-    const handleSubmit = (e: FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = (event: FormEvent) => {
+        event.preventDefault();
         setIsSubmitting(true);
 
         post('/settings/profile/personal-info', {
@@ -86,8 +63,7 @@ export default function PersonalInfoTab({ karyawan }: Props) {
                 toast.success('Informasi pribadi berhasil diperbarui');
                 setIsSubmitting(false);
             },
-            onError: (errors) => {
-                console.error(errors);
+            onError: () => {
                 toast.error('Gagal memperbarui informasi pribadi');
                 setIsSubmitting(false);
             },
@@ -96,206 +72,106 @@ export default function PersonalInfoTab({ karyawan }: Props) {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Foto Profil */}
             <div className="flex justify-center">
                 <div className="relative">
                     <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                        <AvatarImage src={fotoPreview || undefined} />
-                        <AvatarFallback className="text-4xl bg-gradient-to-br from-primary/20 to-primary/10">
-                            {data.nama_lengkap?.charAt(0) || 'K'}
+                        <AvatarImage src={photoPreview || undefined} />
+                        <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-4xl">
+                            {data.full_name?.charAt(0) || 'U'}
                         </AvatarFallback>
                     </Avatar>
                     <label
-                        htmlFor="foto"
-                        className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors shadow-md"
+                        htmlFor="photo"
+                        className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-primary p-2 text-primary-foreground shadow-md transition-colors hover:bg-primary/90"
                     >
                         <Camera className="h-4 w-4" />
                         <input
+                            id="photo"
                             type="file"
-                            id="foto"
                             accept="image/*"
                             className="hidden"
-                            onChange={handleFotoChange}
+                            onChange={handlePhotoChange}
                         />
                     </label>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* NIK - Read only */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                    <Label htmlFor="nik">NIK</Label>
+                    <Label htmlFor="full_name">Nama Lengkap</Label>
                     <Input
-                        id="nik"
-                        value={karyawan?.nik || ''}
-                        disabled
-                        className="bg-muted"
+                        id="full_name"
+                        value={data.full_name}
+                        onChange={(event) => setData('full_name', event.target.value)}
+                        placeholder="Nama lengkap"
                     />
-                    <p className="text-xs text-muted-foreground">NIK tidak dapat diubah</p>
+                    {errors.full_name && <p className="text-sm text-destructive">{errors.full_name}</p>}
                 </div>
 
-                {/* Nama Lengkap */}
                 <div className="space-y-2">
-                    <Label htmlFor="nama_lengkap">
-                        Nama Lengkap <span className="text-destructive">*</span>
-                    </Label>
+                    <Label htmlFor="phone">No. Telepon</Label>
                     <Input
-                        id="nama_lengkap"
-                        value={data.nama_lengkap}
-                        onChange={(e) => setData('nama_lengkap', e.target.value)}
-                        placeholder="Nama Lengkap"
-                        required
+                        id="phone"
+                        value={data.phone}
+                        onChange={(event) => setData('phone', event.target.value)}
+                        placeholder="08123456789"
                     />
-                    {errors.nama_lengkap && (
-                        <p className="text-sm text-destructive">{errors.nama_lengkap}</p>
-                    )}
+                    {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
                 </div>
 
-                {/* Nama Panggilan */}
                 <div className="space-y-2">
-                    <Label htmlFor="nama_panggilan">Nama Panggilan</Label>
-                    <Input
-                        id="nama_panggilan"
-                        value={data.nama_panggilan}
-                        onChange={(e) => setData('nama_panggilan', e.target.value)}
-                        placeholder="Nama Panggilan"
-                    />
-                    {errors.nama_panggilan && (
-                        <p className="text-sm text-destructive">{errors.nama_panggilan}</p>
-                    )}
-                </div>
-
-                {/* Gender */}
-                <div className="space-y-2">
-                    <Label htmlFor="gender">
-                        Jenis Kelamin <span className="text-destructive">*</span>
-                    </Label>
-                    <Select
-                        value={data.gender}
-                        onValueChange={(value) => setData('gender', value)}
-                    >
+                    <Label htmlFor="gender">Jenis Kelamin</Label>
+                    <Select value={data.gender || 'none'} onValueChange={(value) => setData('gender', value === 'none' ? '' : value)}>
                         <SelectTrigger>
-                            <SelectValue placeholder="Pilih Jenis Kelamin" />
+                            <SelectValue placeholder="Pilih jenis kelamin" />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="none">Belum disetel</SelectItem>
                             <SelectItem value="L">Laki-laki</SelectItem>
                             <SelectItem value="P">Perempuan</SelectItem>
                         </SelectContent>
                     </Select>
-                    {errors.gender && (
-                        <p className="text-sm text-destructive">{errors.gender}</p>
-                    )}
+                    {errors.gender && <p className="text-sm text-destructive">{errors.gender}</p>}
                 </div>
 
-                {/* Tempat Lahir */}
                 <div className="space-y-2">
-                    <Label htmlFor="tempat_lahir">Tempat Lahir</Label>
+                    <Label htmlFor="birth_place">Tempat Lahir</Label>
                     <Input
-                        id="tempat_lahir"
-                        value={data.tempat_lahir}
-                        onChange={(e) => setData('tempat_lahir', e.target.value)}
-                        placeholder="Tempat Lahir"
+                        id="birth_place"
+                        value={data.birth_place}
+                        onChange={(event) => setData('birth_place', event.target.value)}
+                        placeholder="Tempat lahir"
                     />
-                    {errors.tempat_lahir && (
-                        <p className="text-sm text-destructive">{errors.tempat_lahir}</p>
-                    )}
+                    {errors.birth_place && <p className="text-sm text-destructive">{errors.birth_place}</p>}
                 </div>
 
-                {/* Tanggal Lahir */}
                 <div className="space-y-2">
-                    <Label htmlFor="tanggal_lahir">Tanggal Lahir</Label>
+                    <Label htmlFor="birth_date">Tanggal Lahir</Label>
                     <Input
-                        id="tanggal_lahir"
+                        id="birth_date"
                         type="date"
-                        value={data.tanggal_lahir}
-                        onChange={(e) => setData('tanggal_lahir', e.target.value)}
+                        value={data.birth_date}
+                        onChange={(event) => setData('birth_date', event.target.value)}
                     />
-                    {errors.tanggal_lahir && (
-                        <p className="text-sm text-destructive">{errors.tanggal_lahir}</p>
-                    )}
+                    {errors.birth_date && <p className="text-sm text-destructive">{errors.birth_date}</p>}
                 </div>
 
-                {/* Agama */}
-                <div className="space-y-2">
-                    <Label htmlFor="agama">Agama</Label>
-                    <Select
-                        value={data.agama || 'none'}
-                        onValueChange={(value) => setData('agama', value === 'none' ? '' : value)}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Pilih agama" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="none">-- Pilih Agama --</SelectItem>
-                            <SelectItem value="Islam">Islam</SelectItem>
-                            <SelectItem value="Kristen">Kristen</SelectItem>
-                            <SelectItem value="Katolik">Katolik</SelectItem>
-                            <SelectItem value="Hindu">Hindu</SelectItem>
-                            <SelectItem value="Buddha">Buddha</SelectItem>
-                            <SelectItem value="Konghucu">Konghucu</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {errors.agama && (
-                        <p className="text-sm text-destructive">{errors.agama}</p>
-                    )}
-                </div>
-
-                {/* Status Pernikahan */}
-                <div className="space-y-2">
-                    <Label htmlFor="status_pernikahan">Status Pernikahan</Label>
-                    <Select
-                        value={data.status_pernikahan}
-                        onValueChange={(value) => setData('status_pernikahan', value)}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Pilih Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Belum Menikah">Belum Menikah</SelectItem>
-                            <SelectItem value="Menikah">Menikah</SelectItem>
-                            <SelectItem value="Cerai">Cerai</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {errors.status_pernikahan && (
-                        <p className="text-sm text-destructive">{errors.status_pernikahan}</p>
-                    )}
-                </div>
-
-                {/* No Telepon */}
                 <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="no_telp">No. Telepon</Label>
-                    <Input
-                        id="no_telp"
-                        value={data.no_telp}
-                        onChange={(e) => setData('no_telp', e.target.value)}
-                        placeholder="08123456789"
-                    />
-                    {errors.no_telp && (
-                        <p className="text-sm text-destructive">{errors.no_telp}</p>
-                    )}
-                </div>
-
-                {/* Alamat */}
-                <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="alamat">Alamat</Label>
+                    <Label htmlFor="address">Alamat</Label>
                     <Textarea
-                        id="alamat"
-                        value={data.alamat}
-                        onChange={(e) => setData('alamat', e.target.value)}
+                        id="address"
+                        value={data.address}
+                        onChange={(event) => setData('address', event.target.value)}
                         placeholder="Alamat lengkap"
                         rows={3}
                     />
-                    {errors.alamat && (
-                        <p className="text-sm text-destructive">{errors.alamat}</p>
-                    )}
+                    {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
                 </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t">
+            <div className="flex justify-end border-t pt-4">
                 <Button type="submit" disabled={isSubmitting || processing}>
-                    {(isSubmitting || processing) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
+                    {(isSubmitting || processing) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Simpan Perubahan
                 </Button>
             </div>

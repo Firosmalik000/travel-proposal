@@ -27,6 +27,22 @@ export interface SharedData {
     name: string;
     quote: { message: string; author: string };
     auth: Auth;
+    branding: {
+        company_name: string;
+        company_subtitle: string;
+        logo_path: string;
+        logo_white_path: string;
+        palette: {
+            primary: string;
+            secondary: string;
+            accent: string;
+            accent_soft: string;
+            surface: string;
+        };
+    };
+    seoSettings?: Record<string, unknown>;
+    publicData?: Record<string, unknown>;
+    url?: string;
     sidebarOpen: boolean;
     [key: string]: unknown;
 }

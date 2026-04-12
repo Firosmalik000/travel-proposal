@@ -14,15 +14,16 @@ return new class extends Migration
         Schema::create('menus', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('menu_key')->unique(); // Key untuk JSON access
+            $table->string('menu_key')->unique();
             $table->string('path');
             $table->string('icon')->default('MenuIcon');
-            $table->json('children')->nullable(); // JSON array untuk nested submenu (max level 2)
+            $table->json('children')->nullable();
             $table->integer('order')->default(0);
             $table->boolean('is_active')->default(true);
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
 
-            // Indexes
             $table->index('order');
             $table->index('menu_key');
             $table->index('is_active');

@@ -27,7 +27,6 @@ export default function Login({
         <AuthSplitLayout
             title="Masuk Akun"
             description="Masukkan email dan kata sandi untuk melanjutkan."
-            sideTitle="AMANAH HARMAIN"
             sideHeadline="Perjalanan Umroh Tertata"
             sideDescription="Akses dashboard internal untuk mengelola paket, jadwal, dan komunikasi jamaah."
         >
@@ -51,8 +50,8 @@ export default function Login({
                                 <span className="rounded-full bg-[rgba(43,69,112,0.1)] px-3 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.24em] text-[var(--emerald-900)]">
                                     Portal Internal
                                 </span>
-                                <span className="text-[0.65rem] text-[var(--ink-500)]">
-                                    Amanah Haramain Travel
+                                <span className="text-[0.65rem] text-muted-foreground">
+                                    Branding mengikuti pengaturan portal
                                 </span>
                             </div>
                             <div className="grid gap-5">

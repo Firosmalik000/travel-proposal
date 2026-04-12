@@ -38,15 +38,15 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 interface Stats {
     totalUsers: { value: number; growth: number; description: string };
-    activeEmployees: { value: number; newThisMonth: number; description: string };
-    departments: { value: number; description: string };
-    todayActivity: { value: number; description: string };
+    activePackages: { value: number; description: string };
+    upcomingDepartures: { value: number; description: string };
+    publishedContent: { value: number; description: string };
 }
 
 interface MonthlyGrowthData {
     month: string;
     users: number;
-    karyawan: number;
+    departures: number;
 }
 
 interface DepartmentData {
@@ -57,15 +57,15 @@ interface DepartmentData {
 
 interface WeeklyActivityData {
     day: string;
-    logins: number;
-    documents: number;
+    departures: number;
+    contents: number;
 }
 
-interface BirthdayData {
-    nama_lengkap: string;
-    tanggal_lahir: string;
-    foto?: string;
-    foto_url?: string;
+interface UpcomingDepartureData {
+    title: string;
+    departure_date: string;
+    departure_city: string;
+    seats_available: number;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -108,7 +108,7 @@ export default function Dashboard() {
     const [monthlyGrowth, setMonthlyGrowth] = useState<MonthlyGrowthData[]>([]);
     const [departmentData, setDepartmentData] = useState<DepartmentData[]>([]);
     const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivityData[]>([]);
-    const [birthdays, setBirthdays] = useState<BirthdayData[]>([]);
+    const [upcomingDepartures, setUpcomingDepartures] = useState<UpcomingDepartureData[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
@@ -135,7 +135,7 @@ export default function Dashboard() {
                 setMonthlyGrowth(monthlyRes.data.data || monthlyRes.data);
                 setDepartmentData(deptRes.data.data || deptRes.data);
                 setWeeklyActivity(weeklyRes.data.data || weeklyRes.data);
-                setBirthdays(birthdaysRes.data.data || birthdaysRes.data);
+                setUpcomingDepartures(birthdaysRes.data.data || birthdaysRes.data);
                 setLastUpdatedAt(new Date());
             } catch (error) {
                 console.error('Error fetching dashboard data:', error);
@@ -169,7 +169,7 @@ export default function Dashboard() {
             setMonthlyGrowth(monthlyRes.data.data || monthlyRes.data);
             setDepartmentData(deptRes.data.data || deptRes.data);
             setWeeklyActivity(weeklyRes.data.data || weeklyRes.data);
-            setBirthdays(birthdaysRes.data.data || birthdaysRes.data);
+            setUpcomingDepartures(birthdaysRes.data.data || birthdaysRes.data);
             setLastUpdatedAt(new Date());
         } catch (error) {
             console.error('Error refreshing dashboard data:', error);
@@ -190,25 +190,25 @@ export default function Dashboard() {
             color: statPalette[0],
         },
         {
-            title: "Karyawan Aktif",
-            value: stats?.activeEmployees.value || 0,
-            description: stats?.activeEmployees.description || "Loading...",
-            icon: UserCheck,
+            title: "Paket Aktif",
+            value: stats?.activePackages.value || 0,
+            description: stats?.activePackages.description || "Loading...",
+            icon: FolderTree,
             trend: "up",
             color: statPalette[1],
         },
         {
-            title: "Departemen",
-            value: stats?.departments.value || 0,
-            description: stats?.departments.description || "Loading...",
+            title: "Jadwal Berangkat",
+            value: stats?.upcomingDepartures.value || 0,
+            description: stats?.upcomingDepartures.description || "Loading...",
             icon: Building2,
             trend: "stable",
             color: statPalette[2],
         },
         {
-            title: "Aktivitas Hari Ini",
-            value: stats?.todayActivity.value || 0,
-            description: stats?.todayActivity.description || "Loading...",
+            title: "Konten Aktif",
+            value: stats?.publishedContent.value || 0,
+            description: stats?.publishedContent.description || "Loading...",
             icon: Activity,
             trend: "up",
             color: statPalette[3],
@@ -254,7 +254,7 @@ export default function Dashboard() {
                                 Dashboard
                             </h1>
                             <p className="text-sm text-slate-500 sm:text-base">
-                                Ringkasan kontrol akses, aktivitas tim, dan kesehatan sistem hari ini.
+                                Ringkasan paket, jadwal keberangkatan, dan status konten travel.
                             </p>
                         </div>
 
@@ -348,18 +348,18 @@ export default function Dashboard() {
                             <div className="grid gap-3 sm:grid-cols-3">
                                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 shadow-sm">
                                     <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Aktivitas</p>
-                                    <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.todayActivity.value ?? 0}</p>
-                                    <p className="mt-1 text-xs text-muted-foreground">Aktivitas tercatat hari ini.</p>
+                                    <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.publishedContent.value ?? 0}</p>
+                                    <p className="mt-1 text-xs text-muted-foreground">Konten aktif yang tampil.</p>
                                 </div>
                                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 shadow-sm">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Departemen</p>
-                                    <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.departments.value ?? 0}</p>
-                                    <p className="mt-1 text-xs text-muted-foreground">Distribusi tim per unit.</p>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Paket</p>
+                                    <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.activePackages.value ?? 0}</p>
+                                    <p className="mt-1 text-xs text-muted-foreground">Jumlah paket aktif saat ini.</p>
                                 </div>
                                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 shadow-sm">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Karyawan Aktif</p>
-                                    <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.activeEmployees.value ?? 0}</p>
-                                    <p className="mt-1 text-xs text-muted-foreground">Status aktif saat ini.</p>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Keberangkatan</p>
+                                    <p className="mt-2 text-2xl font-semibold text-foreground">{stats?.upcomingDepartures.value ?? 0}</p>
+                                    <p className="mt-1 text-xs text-muted-foreground">Jadwal siap dipasarkan.</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -409,10 +409,10 @@ export default function Dashboard() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground">
                                 <Cake className="h-6 w-6 text-primary" />
-                                Ulang Tahun Bulan Ini
+                                Keberangkatan Terdekat
                             </CardTitle>
                             <CardDescription>
-                                Karyawan yang merayakan ulang tahun di bulan {format(new Date(), "MMMM", { locale: id })}.
+                                Jadwal keberangkatan yang perlu dipantau dalam waktu dekat.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -434,29 +434,29 @@ export default function Dashboard() {
                                             </div>
                                         </div>
                                     </>
-                                ) : birthdays.length > 0 ? (
-                                    birthdays.map((karyawan, index) => (
+                                ) : upcomingDepartures.length > 0 ? (
+                                    upcomingDepartures.map((departure, index) => (
                                         <div key={index} className="flex items-center">
                                             <Avatar className="h-10 w-10">
-                                                <AvatarImage src={karyawan.foto_url || undefined} alt={karyawan.nama_lengkap} />
                                                 <AvatarFallback>
-                                                    {karyawan.nama_lengkap
+                                                    {departure.title
                                                         .split(" ")
-                                                        .map((n) => n[0])
+                                                        .slice(0, 2)
+                                                        .map((part) => part[0])
                                                         .join("")}
                                                 </AvatarFallback>
                                             </Avatar>
                                             <div className="ml-4 space-y-1">
-                                                <p className="text-sm font-medium leading-none">{karyawan.nama_lengkap}</p>
+                                                <p className="text-sm font-medium leading-none">{departure.title}</p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {format(new Date(karyawan.tanggal_lahir), "dd MMMM", { locale: id })}
+                                                    {format(new Date(departure.departure_date), "dd MMMM yyyy", { locale: id })} • {departure.departure_city} • {departure.seats_available} seat
                                                 </p>
                                             </div>
                                         </div>
                                     ))
                                 ) : (
                                     <p className="text-sm text-muted-foreground text-center py-4">
-                                        Tidak ada karyawan yang berulang tahun bulan ini.
+                                        Belum ada jadwal keberangkatan terdekat.
                                     </p>
                                 )}
                             </div>
@@ -471,10 +471,10 @@ export default function Dashboard() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground">
                                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: "#3b82f6" }}></div>
-                                Aktivitas User
+                                Pertumbuhan Data
                             </CardTitle>
                             <CardDescription>
-                                Aktivitas user dan karyawan per bulan
+                                User baru dan jadwal keberangkatan per bulan
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -485,7 +485,7 @@ export default function Dashboard() {
                                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
                                             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                                         </linearGradient>
-                                        <linearGradient id="colorKaryawan" x1="0" y1="0" x2="0" y2="1">
+                                        <linearGradient id="colorDepartures" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
                                             <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                                         </linearGradient>
@@ -515,14 +515,14 @@ export default function Dashboard() {
                                     />
                                     <Line
                                         type="monotone"
-                                        dataKey="karyawan"
+                                        dataKey="departures"
                                         stroke="#f97316"
                                         strokeWidth={3}
-                                        name="Karyawan"
+                                        name="Keberangkatan"
                                         dot={false}
                                         activeDot={{ r: 6 }}
                                         fillOpacity={1}
-                                        fill="url(#colorKaryawan)"
+                                        fill="url(#colorDepartures)"
                                     />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -534,22 +534,22 @@ export default function Dashboard() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground">
                                 <div className="h-2 w-2 rounded-full" style={{ backgroundColor: "#3b82f6" }}></div>
-                                Distribusi Tim
+                                Distribusi Paket
                             </CardTitle>
                             <CardDescription>
-                                Sebaran karyawan per departemen
+                                Sebaran paket berdasarkan tipe layanan
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
                                     <Pie
-                                        data={departmentData}
+                                        data={departmentData as any}
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
                                         label={({ name, percent }) =>
-                                            `${name}: ${(percent * 100).toFixed(0)}%`
+                                            `${String(name)}: ${(Number(percent) * 100).toFixed(0)}%`
                                         }
                                         outerRadius={100}
                                         fill="#8884d8"
@@ -578,18 +578,18 @@ export default function Dashboard() {
                                 Aktivitas Mingguan
                             </CardTitle>
                             <CardDescription>
-                                Izin keluar dan dokumen yang diproses minggu ini
+                                Jadwal dan konten yang diperbarui minggu ini
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ResponsiveContainer width="100%" height={300}>
                                 <BarChart data={weeklyActivity}>
                                     <defs>
-                                        <linearGradient id="colorLogins" x1="0" y1="0" x2="0" y2="1">
+                                        <linearGradient id="colorDeparturesWeekly" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
                                             <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                                         </linearGradient>
-                                        <linearGradient id="colorDocuments" x1="0" y1="0" x2="0" y2="1">
+                                        <linearGradient id="colorContents" x1="0" y1="0" x2="0" y2="1">
                                             <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
                                             <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                                         </linearGradient>
@@ -607,15 +607,15 @@ export default function Dashboard() {
                                     <Tooltip content={<CustomTooltip />} />
                                     <Legend />
                                     <Bar
-                                        dataKey="logins"
-                                        fill="url(#colorLogins)"
-                                        name="Izin Keluar"
+                                        dataKey="departures"
+                                        fill="url(#colorDeparturesWeekly)"
+                                        name="Jadwal"
                                         radius={[8, 8, 0, 0]}
                                     />
                                     <Bar
-                                        dataKey="documents"
-                                        fill="url(#colorDocuments)"
-                                        name="Dokumen"
+                                        dataKey="contents"
+                                        fill="url(#colorContents)"
+                                        name="Konten"
                                         radius={[8, 8, 0, 0]}
                                     />
                                 </BarChart>

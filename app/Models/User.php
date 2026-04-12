@@ -62,72 +62,28 @@ class User extends Authenticatable
         return $this->hasMany(UserAccess::class);
     }
 
-    /**
-     * Get user's accessible menus.
-     */
-    public function accessibleMenus()
+    public function profile(): HasOne
     {
-        return $this->hasMany(UserAccess::class)
-            ->where('can_view', true)
-            ->with(['menu' => function ($query) {
-                $query->active()->orderBy('order');
-            }]);
+        return $this->hasOne(UserProfile::class);
     }
 
-    /**
-     * Get user's kendaraan (vehicles).
-     */
-    public function kendaraan(): HasMany
-    {
-        return $this->hasMany(KendaraanKaryawan::class);
-    }
-
-    /**
-     * Get user's pengalaman karyawan (work experience).
-     */
-    public function pengalamanKaryawan(): HasMany
-    {
-        return $this->hasMany(PengalamanKaryawan::class);
-    }
-
-    /**
-     * Get user's arsip data karyawan.
-     */
-    public function arsipDataKaryawan(): HasOne
-    {
-        return $this->hasOne(ArsipDataKaryawan::class);
-    }
-
-    /**
-     * Get user's karyawan data.
-     */
-    public function karyawan(): HasOne
-    {
-        return $this->hasOne(MasterKaryawan::class);
-    }
-
-    /**
-     * Get avatar attribute from karyawan photo.
-     */
     public function getAvatarAttribute(): ?string
     {
-        // Load karyawan relation if not loaded
-        if (!$this->relationLoaded('karyawan')) {
-            $this->load('karyawan');
+        if (! $this->relationLoaded('profile')) {
+            $this->load('profile');
         }
 
-        // Return foto path with /storage/ prefix if exists
-        if ($this->karyawan && $this->karyawan->foto) {
-            return '/storage/' . $this->karyawan->foto;
+        if ($this->profile?->photo_path) {
+            return '/storage/'.$this->profile->photo_path;
         }
 
         return null;
     }
 
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array
-     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->email === 'admin@asfartour.co.id' || $this->username === 'admin';
+    }
+
     protected $appends = ['avatar'];
 }

@@ -1,7 +1,9 @@
+import BrandThemeStyle from '@/components/brand-theme-style';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { home } from '@/routes';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
+import { type SharedData } from '@/types';
 
 interface AuthLayoutProps {
     name?: string;
@@ -14,12 +16,15 @@ export default function AuthSimpleLayout({
     title,
     description,
 }: PropsWithChildren<AuthLayoutProps>) {
+    const { branding } = usePage<SharedData>().props;
+
     return (
-        <div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-[linear-gradient(120deg,#f5f6f2_0%,#f7fbfb_45%,#f2f7f8_100%)] dark:bg-[linear-gradient(120deg,#0b1116_0%,#101620_55%,#111b24_100%)] px-6 py-10 font-[var(--font-auth-sans)]">
+        <div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-[var(--auth-shell)] px-6 py-10 font-[var(--font-auth-sans)] dark:bg-[var(--auth-shell-dark)]">
+            <BrandThemeStyle />
             <div className="pointer-events-none absolute inset-0">
-                <div className="absolute -top-56 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,_rgba(15,118,110,0.24)_0%,_rgba(15,118,110,0.12)_45%,_transparent_70%)] blur-3xl opacity-80 dark:opacity-35" />
-                <div className="absolute -bottom-52 -right-32 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,_rgba(224,168,88,0.2)_0%,_rgba(224,168,88,0.1)_45%,_transparent_70%)] blur-3xl opacity-70 dark:opacity-30" />
-                <div className="absolute top-24 -left-32 h-[340px] w-[340px] rounded-full bg-[radial-gradient(circle,_rgba(29,78,216,0.16)_0%,_rgba(29,78,216,0.06)_50%,_transparent_75%)] blur-2xl opacity-70 dark:opacity-35" />
+                <div className="absolute -top-56 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-primary)_26%,transparent)_0%,color-mix(in_srgb,var(--brand-primary)_12%,transparent)_45%,transparent_70%)] blur-3xl opacity-80 dark:opacity-35" />
+                <div className="absolute -bottom-52 -right-32 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-accent)_22%,transparent)_0%,color-mix(in_srgb,var(--brand-accent)_10%,transparent)_45%,transparent_70%)] blur-3xl opacity-70 dark:opacity-30" />
+                <div className="absolute top-24 -left-32 h-[340px] w-[340px] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-secondary)_16%,transparent)_0%,color-mix(in_srgb,var(--brand-secondary)_6%,transparent)_50%,transparent_75%)] blur-2xl opacity-70 dark:opacity-35" />
             </div>
 
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(15,23,42,0.08)_1px,_transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.06)_1px,_transparent_0)] [background-size:22px_22px] opacity-60 [mask-image:radial-gradient(ellipse_at_center,_rgba(0,0,0,0.7)_0%,_transparent_68%)]" />
@@ -32,14 +37,18 @@ export default function AuthSimpleLayout({
                             className="group flex flex-col items-center gap-3 font-medium transition-transform duration-300 hover:scale-[1.03]"
                         >
                             <div className="relative flex h-16 w-16 items-center justify-center">
-                                <div className="absolute -inset-4 rounded-3xl bg-[radial-gradient(circle,_rgba(237,28,36,0.28)_0%,_transparent_70%)] blur-xl opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
+                                <div className="absolute -inset-4 rounded-3xl bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-primary)_28%,transparent)_0%,_transparent_70%)] blur-xl opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
                                 <div className="relative flex h-full w-full items-center justify-center rounded-2xl bg-white/75 dark:bg-slate-950/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur">
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#0f766e] to-[#0b5f54] shadow-[0_18px_40px_-20px_rgba(15,118,110,0.55)]">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--auth-panel)] p-2 shadow-[0_18px_40px_-20px_rgba(140,10,22,0.5)]">
                                         <AppLogoIcon className="h-7 w-auto text-white drop-shadow-sm" />
                                     </div>
                                 </div>
                             </div>
-                            <span className="sr-only">{title}</span>
+                            <div className="text-center">
+                                <span className="sr-only">{title}</span>
+                                <p className="text-sm font-semibold text-foreground">{branding.company_name}</p>
+                                <p className="text-[0.68rem] uppercase tracking-[0.24em] text-muted-foreground">{branding.company_subtitle}</p>
+                            </div>
                         </Link>
 
                         <div className="space-y-3 text-center">

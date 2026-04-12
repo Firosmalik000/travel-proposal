@@ -27,6 +27,82 @@ class MenuSeeder extends Seeder
                 'is_active' => true,
             ],
 
+            // Website Management - Has children (level 1)
+            [
+                'name' => 'Website Management',
+                'menu_key' => 'website_management',
+                'path' => '/dashboard/website-management',
+                'icon' => 'Globe',
+                'children' => [
+                    [
+                        'name' => 'Landing Page',
+                        'menu_key' => 'landing_page',
+                        'path' => '/dashboard/website-management/landing',
+                        'icon' => 'FileText',
+                        'order' => 1,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Content Management',
+                        'menu_key' => 'content_management',
+                        'path' => '/dashboard/website-management/content',
+                        'icon' => 'ScrollText',
+                        'order' => 2,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'SEO Settings',
+                        'menu_key' => 'seo_settings',
+                        'path' => '/dashboard/website-management/seo',
+                        'icon' => 'Search',
+                        'order' => 3,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Branding',
+                        'menu_key' => 'branding',
+                        'path' => '/dashboard/website-management/branding',
+                        'icon' => 'Palette',
+                        'order' => 4,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                ],
+                'order' => 2,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Product Management',
+                'menu_key' => 'product_management',
+                'path' => '/dashboard/product-management/products',
+                'icon' => 'Package',
+                'children' => [
+                    [
+                        'name' => 'Product',
+                        'menu_key' => 'product',
+                        'path' => '/dashboard/product-management/products',
+                        'icon' => 'Package',
+                        'order' => 1,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Package',
+                        'menu_key' => 'package',
+                        'path' => '/dashboard/product-management/packages',
+                        'icon' => 'Boxes',
+                        'order' => 2,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                ],
+                'order' => 3,
+                'is_active' => true,
+            ],
+
             // Administrator - Has children (level 1)
             [
                 'name' => 'Administrator',
@@ -53,7 +129,7 @@ class MenuSeeder extends Seeder
                         'children' => null, // No level 2, navigable
                     ],
                 ],
-                'order' => 2,
+                'order' => 4,
                 'is_active' => true,
             ],
         ];
@@ -64,6 +140,8 @@ class MenuSeeder extends Seeder
 
         $this->command->info('Menus seeded successfully with simplified structure.');
         $this->command->info('  - Dashboard: Direct navigation');
-        $this->command->info('  - Administrator: 2 submenus (navigable)');
+        $this->command->info('  - Website Management: landing, content, SEO, branding');
+        $this->command->info('  - Product Management: 2 submenus (product, package)');
+        $this->command->info('  - Administrator: 2 submenus (menu management, user access)');
     }
 }

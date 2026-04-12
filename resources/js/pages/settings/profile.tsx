@@ -7,50 +7,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Briefcase, Car, IdCard, Mail, MapPin, Shield, User } from 'lucide-react';
+import { Mail, MapPin, Shield, User } from 'lucide-react';
 
 import PersonalInfoTab from './components/PersonalInfoTab';
-import EmployeeInfoTab from './components/EmployeeInfoTab';
-import VehiclesTab from './components/VehiclesTab';
 import AccountTab from './components/AccountTab';
 
-interface Department {
+interface ProfileData {
     id: number;
-    name: string;
-}
-
-interface Jabatan {
-    id: number;
-    name: string;
-}
-
-interface Karyawan {
-    id: number;
-    nik: string;
-    nama_lengkap: string;
-    nama_panggilan: string;
-    gender: string;
-    tempat_lahir: string;
-    tanggal_lahir: string;
-    alamat: string;
-    agama: string;
-    status_pernikahan: string;
-    email: string;
-    no_telp: string;
-    foto?: string;
-    department?: Department;
-    jabatan?: Jabatan;
-    tanggal_mulai_bekerja: string;
-    status_karyawan: string;
-}
-
-interface Kendaraan {
-    id: number;
-    user_id: number;
-    plat: string;
-    merk: string;
-    warna: string;
-    cc: string;
+    full_name: string | null;
+    phone: string | null;
+    gender: string | null;
+    birth_place: string | null;
+    birth_date: string | null;
+    address: string | null;
+    photo_path: string | null;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -63,21 +33,23 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function Profile({
     mustVerifyEmail,
     status,
-    karyawan,
-    kendaraan = [],
+    profile,
 }: {
     mustVerifyEmail: boolean;
     status?: string;
-    karyawan?: Karyawan;
-    kendaraan?: Kendaraan[];
+    profile?: ProfileData;
 }) {
     const { auth } = usePage<SharedData>().props;
-    const displayName = karyawan?.nama_lengkap || auth.user.name;
+    const displayName = String(profile?.full_name || auth.user.full_name || auth.user.name || '');
+    const avatar = typeof auth.user.avatar === 'string' ? auth.user.avatar : undefined;
+    const phoneBadge = profile?.phone ? String(profile.phone) : 'Kontak belum diisi';
+    const genderBadge =
+        profile?.gender === 'P' ? 'Perempuan' : profile?.gender === 'L' ? 'Laki-laki' : 'Belum disetel';
     const initials = displayName
         .split(' ')
         .filter(Boolean)
         .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
+        .map((part: string) => part[0]?.toUpperCase())
         .join('');
 
     return (
@@ -96,7 +68,7 @@ export default function Profile({
                                 <div className="flex items-center gap-4">
                                     <Avatar className="h-14 w-14 ring-1 ring-border/60">
                                         <AvatarImage
-                                            src={(karyawan as any)?.foto_url || undefined}
+                                            src={avatar}
                                             alt={displayName}
                                         />
                                         <AvatarFallback className="bg-primary/10 text-primary">
@@ -108,19 +80,16 @@ export default function Profile({
                                             Profile
                                         </CardTitle>
                                         <CardDescription>
-                                            Kelola informasi pribadi, pekerjaan, dan kendaraan Anda.
+                                            Kelola identitas akun dan informasi kontak untuk operasional travel.
                                         </CardDescription>
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
                                     <Badge variant="secondary" className="rounded-full">
-                                        {karyawan?.department?.name || '—'}
+                                        {phoneBadge}
                                     </Badge>
                                     <Badge variant="outline" className="rounded-full">
-                                        {karyawan?.jabatan?.name || '—'}
-                                    </Badge>
-                                    <Badge className="rounded-full">
-                                        {karyawan?.status_karyawan || 'Aktif'}
+                                        {genderBadge}
                                     </Badge>
                                 </div>
                             </div>
@@ -128,13 +97,13 @@ export default function Profile({
                         <CardContent className="pt-0">
                             <div className="grid gap-3 sm:grid-cols-3">
                                 <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/70 p-4 shadow-sm backdrop-blur">
-                                    <IdCard className="h-4 w-4 text-primary" />
+                                    <User className="h-4 w-4 text-primary" />
                                     <div className="min-w-0">
                                         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                                            NIK
+                                            Nama
                                         </p>
                                         <p className="truncate text-sm font-medium text-foreground">
-                                            {karyawan?.nik || '—'}
+                                            {displayName}
                                         </p>
                                     </div>
                                 </div>
@@ -145,7 +114,7 @@ export default function Profile({
                                             Email
                                         </p>
                                         <p className="truncate text-sm font-medium text-foreground">
-                                            {karyawan?.email || auth.user.email}
+                                            {auth.user.email}
                                         </p>
                                     </div>
                                 </div>
@@ -153,10 +122,10 @@ export default function Profile({
                                     <MapPin className="h-4 w-4 text-primary" />
                                     <div className="min-w-0">
                                         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                                            Lokasi
+                                            Alamat
                                         </p>
                                         <p className="truncate text-sm font-medium text-foreground">
-                                            {karyawan?.alamat || '—'}
+                                            {profile?.address || 'Belum diisi'}
                                         </p>
                                     </div>
                                 </div>
@@ -165,26 +134,14 @@ export default function Profile({
                     </Card>
 
                     <Tabs defaultValue="personal" className="w-full">
-                        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-2xl bg-muted/60 p-2 sm:grid-cols-4">
+                        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-2xl bg-muted/60 p-2">
                             <TabsTrigger value="personal" className="flex items-center gap-2 rounded-xl">
                                 <User className="h-4 w-4" />
-                                <span className="hidden sm:inline">Informasi Pribadi</span>
-                                <span className="sm:hidden">Pribadi</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="employee" className="flex items-center gap-2 rounded-xl">
-                                <Briefcase className="h-4 w-4" />
-                                <span className="hidden sm:inline">Info Pekerjaan</span>
-                                <span className="sm:hidden">Pekerjaan</span>
-                            </TabsTrigger>
-                            <TabsTrigger value="vehicles" className="flex items-center gap-2 rounded-xl">
-                                <Car className="h-4 w-4" />
-                                <span className="hidden sm:inline">Kendaraan</span>
-                                <span className="sm:hidden">Kendaraan</span>
+                                <span>Informasi Pribadi</span>
                             </TabsTrigger>
                             <TabsTrigger value="account" className="flex items-center gap-2 rounded-xl">
                                 <Shield className="h-4 w-4" />
-                                <span className="hidden sm:inline">Akun</span>
-                                <span className="sm:hidden">Akun</span>
+                                <span>Akun</span>
                             </TabsTrigger>
                         </TabsList>
 
@@ -193,39 +150,11 @@ export default function Profile({
                                 <CardHeader>
                                     <CardTitle>Informasi Pribadi</CardTitle>
                                     <CardDescription>
-                                        Update informasi pribadi Anda seperti nama, alamat, dan kontak
+                                        Update nama, kontak, dan alamat yang dipakai dalam operasional.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <PersonalInfoTab karyawan={karyawan} />
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="employee" className="mt-6">
-                            <Card className="bg-card/90 shadow-sm ring-1 ring-border/60 backdrop-blur">
-                                <CardHeader>
-                                    <CardTitle>Informasi Pekerjaan</CardTitle>
-                                    <CardDescription>
-                                        Informasi terkait pekerjaan Anda di perusahaan
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <EmployeeInfoTab karyawan={karyawan} />
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-
-                        <TabsContent value="vehicles" className="mt-6">
-                            <Card className="bg-card/90 shadow-sm ring-1 ring-border/60 backdrop-blur">
-                                <CardHeader>
-                                    <CardTitle>Kendaraan</CardTitle>
-                                    <CardDescription>
-                                        Kelola data kendaraan yang terdaftar untuk parkir di perusahaan
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <VehiclesTab kendaraan={kendaraan} />
+                                    <PersonalInfoTab profile={profile} />
                                 </CardContent>
                             </Card>
                         </TabsContent>

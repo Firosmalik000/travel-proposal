@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\Models;
 
-use App\Models\SlipGaji;
-use App\Models\User;
+use App\Models\DepartureSchedule;
+use App\Models\TravelPackage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,100 +11,46 @@ class SlipGajiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_slip_gaji_belongs_to_user()
+    public function test_departure_schedule_belongs_to_package(): void
     {
-        $user = User::factory()->create();
-        $slipGaji = SlipGaji::factory()->create(['user_id' => $user->id]);
-
-        $this->assertInstanceOf(User::class, $slipGaji->user);
-        $this->assertEquals($user->id, $slipGaji->user->id);
-    }
-
-    public function test_slip_gaji_calculates_totals_correctly()
-    {
-        $slipGaji = new SlipGaji([
-            'pendapatan' => [
-                ['name' => 'Gaji Pokok', 'amount' => 5000000],
-                ['name' => 'Tunjangan', 'amount' => 1000000]
-            ],
-            'potongan' => [
-                ['name' => 'BPJS', 'amount' => 100000],
-                ['name' => 'PPh', 'amount' => 200000]
-            ]
+        $package = TravelPackage::query()->create([
+            'code' => 'PKG-200',
+            'title' => 'Umroh Gold',
+            'slug' => 'umroh-gold',
+            'package_type' => 'gold',
+            'departure_city' => 'Jakarta',
+            'duration_days' => 10,
+            'price_from' => 38500000,
+            'is_active' => true,
         ]);
 
-        $slipGaji->calculateTotals();
-
-        $this->assertEquals(6000000, $slipGaji->total_pendapatan);
-        $this->assertEquals(300000, $slipGaji->total_potongan);
-        $this->assertEquals(5700000, $slipGaji->gaji_bersih);
-    }
-
-    public function test_slip_gaji_has_draft_scope()
-    {
-        SlipGaji::factory()->count(3)->create(['status' => 'draft']);
-        SlipGaji::factory()->count(2)->create(['status' => 'approved']);
-
-        $draftSlips = SlipGaji::draft()->get();
-
-        $this->assertCount(3, $draftSlips);
-    }
-
-    public function test_slip_gaji_has_approved_scope()
-    {
-        SlipGaji::factory()->count(3)->create(['status' => 'draft']);
-        SlipGaji::factory()->count(2)->create(['status' => 'approved']);
-
-        $approvedSlips = SlipGaji::approved()->get();
-
-        $this->assertCount(2, $approvedSlips);
-    }
-
-    public function test_slip_gaji_has_sent_scope()
-    {
-        SlipGaji::factory()->count(3)->create(['status' => 'sent']);
-        SlipGaji::factory()->count(2)->create(['status' => 'draft']);
-
-        $sentSlips = SlipGaji::sent()->get();
-
-        $this->assertCount(3, $sentSlips);
-    }
-
-    public function test_slip_gaji_casts_dates_correctly()
-    {
-        $slipGaji = SlipGaji::factory()->create([
-            'period_start' => '2024-01-01',
-            'period_end' => '2024-01-31'
+        $schedule = DepartureSchedule::query()->create([
+            'travel_package_id' => $package->id,
+            'departure_date' => now()->addWeeks(2)->toDateString(),
+            'departure_city' => 'Jakarta',
+            'seats_total' => 40,
+            'seats_available' => 10,
+            'price' => 38500000,
+            'status' => 'open',
+            'is_active' => true,
         ]);
 
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $slipGaji->period_start);
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $slipGaji->period_end);
+        $this->assertTrue($schedule->travelPackage?->is($package));
     }
 
-    public function test_slip_gaji_casts_pendapatan_to_array()
+    public function test_departure_schedule_casts_dates_correctly(): void
     {
-        $pendapatan = [
-            ['name' => 'Gaji Pokok', 'amount' => 5000000],
-            ['name' => 'Tunjangan', 'amount' => 1000000]
-        ];
+        $schedule = DepartureSchedule::query()->create([
+            'departure_date' => '2026-04-15',
+            'return_date' => '2026-04-24',
+            'departure_city' => 'Surabaya',
+            'seats_total' => 40,
+            'seats_available' => 8,
+            'status' => 'open',
+            'is_active' => true,
+        ]);
 
-        $slipGaji = SlipGaji::factory()->create(['pendapatan' => $pendapatan]);
-
-        $this->assertIsArray($slipGaji->pendapatan);
-        $this->assertCount(2, $slipGaji->pendapatan);
-    }
-
-    public function test_slip_gaji_has_correct_fillable_attributes()
-    {
-        $slipGaji = new SlipGaji();
-
-        $fillable = $slipGaji->getFillable();
-
-        $this->assertContains('user_id', $fillable);
-        $this->assertContains('period_start', $fillable);
-        $this->assertContains('period_end', $fillable);
-        $this->assertContains('pendapatan', $fillable);
-        $this->assertContains('potongan', $fillable);
-        $this->assertContains('status', $fillable);
+        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $schedule->departure_date);
+        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $schedule->return_date);
     }
 }

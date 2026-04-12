@@ -251,14 +251,14 @@ export default function MenusIndex({ menus }: Props) {
             ]}
         >
             <div className="space-y-4 p-4 sm:space-y-6 sm:p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Menu Management</h1>
+                        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Menu Management</h1>
                         <p className="text-muted-foreground">
                             Kelola menu sistem dan struktur navigasi
                         </p>
                     </div>
-                    <Button onClick={openCreateDialog}>
+                    <Button onClick={openCreateDialog} className="w-full sm:w-auto">
                         <Plus className="mr-2 h-4 w-4" />
                         Tambah Menu
                     </Button>
@@ -280,7 +280,7 @@ export default function MenusIndex({ menus }: Props) {
 
                 {/* Create/Edit Dialog */}
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
                         <form onSubmit={handleSubmit}>
                             <DialogHeader>
                                 <DialogTitle>
@@ -414,7 +414,7 @@ export default function MenusIndex({ menus }: Props) {
                                                         </Button>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-3">
+                                                    <div className="grid gap-3 sm:grid-cols-2">
                                                         <div className="grid gap-2">
                                                             <Label className="text-xs">Nama</Label>
                                                             <Input
@@ -511,7 +511,7 @@ export default function MenusIndex({ menus }: Props) {
                                                                                 <Trash2 className="h-3 w-3 text-destructive" />
                                                                             </Button>
                                                                         </div>
-                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                        <div className="grid gap-2 sm:grid-cols-2">
                                                                             <div className="grid gap-1">
                                                                                 <Label className="text-xs">Nama</Label>
                                                                                 <Input
@@ -606,10 +606,11 @@ export default function MenusIndex({ menus }: Props) {
                                     type="button"
                                     variant="outline"
                                     onClick={() => setIsDialogOpen(false)}
+                                    className="w-full sm:w-auto"
                                 >
                                     Batal
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <Button type="submit" disabled={processing} className="w-full sm:w-auto">
                                     {processing ? 'Menyimpan...' : 'Simpan'}
                                 </Button>
                             </DialogFooter>
@@ -688,6 +689,7 @@ export default function MenusIndex({ menus }: Props) {
                                 type="button"
                                 variant="outline"
                                 onClick={() => setIsDeleteDialogOpen(false)}
+                                className="w-full sm:w-auto"
                             >
                                 Batal
                             </Button>
@@ -696,6 +698,7 @@ export default function MenusIndex({ menus }: Props) {
                                 variant="destructive"
                                 onClick={handleDelete}
                                 disabled={processing || (menuToDelete?.has_children && !forceDelete)}
+                                className="w-full sm:w-auto"
                             >
                                 {processing ? 'Menghapus...' : forceDelete ? 'Hapus Semua' : 'Hapus'}
                             </Button>

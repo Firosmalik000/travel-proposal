@@ -1,6 +1,7 @@
 ﻿import { Head, Link } from '@inertiajs/react';
 import PublicLayout from '@/layouts/PublicLayout';
 import { usePublicLocale } from '@/contexts/public-locale';
+import { formatDate, usePublicData } from '@/lib/public-content';
 
 const content = {
     id: {
@@ -43,7 +44,16 @@ const content = {
 
 export default function Jadwal() {
     const { locale } = usePublicLocale();
+    const publicData = usePublicData();
     const t = content[locale];
+    const schedules = Array.isArray(publicData.schedules) && publicData.schedules.length > 0
+        ? publicData.schedules.map((item: Record<string, any>) => ({
+            date: formatDate(item.departure_date, locale),
+            duration: `${item.package?.duration_days ?? 0} ${locale === 'id' ? 'Hari' : 'Days'}`,
+            city: item.departure_city,
+            seat: String(item.seats_available ?? 0),
+        }))
+        : t.schedules;
 
     return (
         <PublicLayout>
@@ -77,7 +87,7 @@ export default function Jadwal() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {t.schedules.map((item) => (
+                                {schedules.map((item) => (
                                     <tr key={item.date} className="border-t border-border">
                                         <td className="px-4 py-3 text-foreground">{item.date}</td>
                                         <td className="px-4 py-3 text-muted-foreground">{item.duration}</td>
@@ -85,7 +95,7 @@ export default function Jadwal() {
                                         <td className="px-4 py-3 text-muted-foreground">{item.seat}</td>
                                         <td className="px-4 py-3">
                                             <Link
-                                                href="/paket-umroh/detail"
+                                                href={schedule.package?.slug ? `/paket-umroh/${schedule.package.slug}` : '/paket-umroh'}
                                                 className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground transition hover:bg-muted"
                                             >
                                                 {t.table.cta}
