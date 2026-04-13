@@ -1,3 +1,4 @@
+import { AdminLocaleSwitch } from '@/components/admin-locale-switch';
 import AppearanceSwitch from '@/components/appearance-switch';
 import { useInitials } from '@/hooks/use-initials';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -7,12 +8,11 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserMenuContent } from '@/components/user-menu-content';
 import { type BreadcrumbItem as BreadcrumbItemType, type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { Bell, Filter, Search, Settings } from 'lucide-react';
+import { Languages } from 'lucide-react';
 
 export function AppSidebarHeader({
     breadcrumbs = [],
@@ -37,42 +37,18 @@ export function AppSidebarHeader({
                 </div>
             </div>
 
-            <div className="hidden flex-1 items-center gap-3 lg:flex">
-                <div className="relative w-full max-w-lg">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                        placeholder="Cari menu, paket, atau konten..."
-                        className="h-10 rounded-full border border-border bg-card pl-9 text-sm text-foreground shadow-[inset_0_1px_2px_rgba(140,10,22,0.05)] transition focus-visible:ring-2 focus-visible:ring-primary/25"
-                    />
-                </div>
-                <div className="flex items-center gap-4 text-sm font-medium text-muted-foreground">
-                    <button className="transition hover:text-foreground">Paket</button>
-                    <button className="transition hover:text-foreground">Keberangkatan</button>
-                    <button className="transition hover:text-foreground">Konten</button>
-                    <button className="transition hover:text-foreground">Branding</button>
+            <div className="hidden flex-1 items-center justify-center lg:flex">
+                <div className="rounded-full border border-dashed border-border bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
+                    Mode input konten mengikuti bahasa yang dipilih
                 </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hidden h-9 w-9 rounded-full border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-card/90 md:inline-flex"
-                >
-                    <Bell className="h-5 w-5" />
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hidden h-9 w-9 rounded-full border border-border bg-card text-muted-foreground shadow-sm transition hover:bg-card/90 md:inline-flex"
-                >
-                    <Settings className="h-5 w-5" />
-                </Button>
+                <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-2 py-1 shadow-sm sm:flex">
+                    <Languages className="h-4 w-4 text-muted-foreground" />
+                    <AdminLocaleSwitch />
+                </div>
                 <AppearanceSwitch />
-                <Button className="hidden h-9 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-[0_12px_30px_-20px_rgba(140,10,22,0.4)] transition hover:-translate-y-[1px] xl:inline-flex">
-                    <Filter className="h-4 w-4" />
-                    Filter Jadwal
-                </Button>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button

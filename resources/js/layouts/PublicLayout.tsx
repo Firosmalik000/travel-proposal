@@ -151,22 +151,18 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
     }, [mobileOpen]);
 
     return (
-        <div className="bg-background font-sans text-foreground antialiased">
+        <div className="public-shell bg-background font-sans text-foreground antialiased">
             <BrandThemeStyle />
             <Head>
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-                <link
-                    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap"
-                    rel="stylesheet"
-                />
+                <link rel="icon" href="/favicon.ico" sizes="any" />
+                <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
             </Head>
             <style>{`
                 :root { 
                     scroll-behavior: smooth; 
                 }
-                .font-heading { font-family: 'Plus Jakarta Sans', sans-serif; }
-                .font-sans { font-family: 'Inter', sans-serif; }
+                .font-heading { font-family: 'Trebuchet MS', 'Segoe UI', Arial, sans-serif; }
+                .font-sans { font-family: 'Segoe UI', Arial, sans-serif; }
             `}</style>
             
             <header 

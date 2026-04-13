@@ -8,12 +8,15 @@ export interface LocalizedField {
 
 export function localize(value: unknown, locale: 'id' | 'en', fallback = ''): string {
     if (typeof value === 'string') {
-        return value;
+        return value || fallback;
     }
 
     if (value && typeof value === 'object') {
         const localized = value as LocalizedField;
-        return localized[locale] ?? localized.id ?? localized.en ?? fallback;
+        const preferredValue = locale === 'id' ? localized.id : localized.en;
+        const alternateValue = locale === 'id' ? localized.en : localized.id;
+
+        return preferredValue || fallback || alternateValue || '';
     }
 
     return fallback;

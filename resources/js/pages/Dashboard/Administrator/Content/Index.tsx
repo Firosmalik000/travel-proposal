@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -39,9 +40,10 @@ type Option = {
 type FieldDefinition = {
     path: string;
     label: string;
-    type: 'text' | 'textarea' | 'number' | 'checkbox' | 'select' | 'localized-text' | 'localized-textarea' | 'localized-list' | 'code-list' | 'product-selector' | 'itinerary';
+    type: 'text' | 'date' | 'textarea' | 'number' | 'checkbox' | 'select' | 'localized-text' | 'localized-textarea' | 'localized-list' | 'code-list' | 'product-selector' | 'itinerary';
     description?: string;
     options?: Option[];
+    optionsKey?: string;
     min?: number;
     step?: number;
 };
@@ -111,9 +113,9 @@ const resourceFieldDefinitions: Record<string, FieldDefinition[]> = {
         { path: 'is_active', label: 'Package Aktif', type: 'checkbox' },
     ],
     schedules: [
-        { path: 'travel_package_code', label: 'Kode Package', type: 'text' },
-        { path: 'departure_date', label: 'Tanggal Berangkat', type: 'text' },
-        { path: 'return_date', label: 'Tanggal Pulang', type: 'text' },
+        { path: 'travel_package_code', label: 'Pilih Package', type: 'select', optionsKey: 'package_options' },
+        { path: 'departure_date', label: 'Tanggal Berangkat', type: 'date' },
+        { path: 'return_date', label: 'Tanggal Pulang', type: 'date' },
         { path: 'departure_city', label: 'Kota Keberangkatan', type: 'text' },
         { path: 'seats_total', label: 'Total Seat', type: 'number', min: 0, step: 1 },
         { path: 'seats_available', label: 'Seat Tersedia', type: 'number', min: 0, step: 1 },
@@ -363,7 +365,11 @@ function ResourceSectionPanel({ resource }: { resource: ResourceSection }) {
                         </Card>
                     </div>
 
-                    <DataTable columns={columns} data={rows} searchKey="title" searchPlaceholder={`Cari ${resource.label.toLowerCase()}...`} />
+                    {resource.key === 'schedules' ? (
+                        <SchedulesTable rows={rows} onEdit={(item) => setEditingItem(item)} onDelete={(item) => destroyResourceItem(resource.key, resource.label, item.id)} />
+                    ) : (
+                        <DataTable columns={columns} data={rows} searchKey="title" searchPlaceholder={`Cari ${resource.label.toLowerCase()}...`} />
+                    )}
                 </CardContent>
             </Card>
 
@@ -757,6 +763,15 @@ function FieldRenderer({
     }
 
     if (field.type === 'select') {
+        const dynamicOptions =
+            field.optionsKey === 'package_options'
+                ? ((resourceMeta.package_options as PackageOption[] | undefined)?.map((option) => ({
+                      value: option.code,
+                      label: `${option.code} • ${localizedValue(option.name)} • ${option.departure_city} • ${option.duration_days} hari`,
+                  })) ?? [])
+                : [];
+        const selectOptions = field.options ?? dynamicOptions;
+
         return (
             <div className="space-y-2">
                 <Label>{field.label}</Label>
@@ -765,7 +780,7 @@ function FieldRenderer({
                         <SelectValue placeholder={`Pilih ${field.label.toLowerCase()}`} />
                     </SelectTrigger>
                     <SelectContent>
-                        {field.options?.map((option) => (
+                        {selectOptions.map((option) => (
                             <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                             </SelectItem>
@@ -776,7 +791,7 @@ function FieldRenderer({
         );
     }
 
-    const inputType = field.type === 'number' ? 'number' : 'text';
+    const inputType = field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text';
 
     return (
         <div className="space-y-2">
@@ -920,6 +935,93 @@ interface ProductOption {
     is_active: boolean;
 }
 
+interface PackageOption {
+    code: string;
+    name: Record<string, unknown> | string;
+    departure_city: string;
+    duration_days: number;
+    is_active: boolean;
+}
+
+function SchedulesTable({
+    rows,
+    onEdit,
+    onDelete,
+}: {
+    rows: ResourceTableRow[];
+    onEdit: (item: ResourceItem) => void;
+    onDelete: (item: ResourceItem) => void;
+}) {
+    return (
+        <div className="overflow-hidden rounded-2xl border border-border">
+            <Table>
+                <TableHeader className="bg-muted/50">
+                    <TableRow>
+                        <TableHead className="w-14">No</TableHead>
+                        <TableHead>Package</TableHead>
+                        <TableHead>Kota</TableHead>
+                        <TableHead>Berangkat</TableHead>
+                        <TableHead>Pulang</TableHead>
+                        <TableHead>Total Seat</TableHead>
+                        <TableHead>Seat Tersedia</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Aksi</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {rows.length > 0 ? (
+                        rows.map((row) => (
+                            <TableRow key={row.id}>
+                                <TableCell className="font-medium">{row.number}</TableCell>
+                                <TableCell>
+                                    <div className="space-y-1">
+                                        <div className="font-medium text-foreground">{stringValue(row.payload.travel_package_code) || '-'}</div>
+                                        <div className="text-xs text-muted-foreground">{row.title}</div>
+                                    </div>
+                                </TableCell>
+                                <TableCell>{stringValue(row.payload.departure_city) || '-'}</TableCell>
+                                <TableCell>{formatDateLabel(row.payload.departure_date)}</TableCell>
+                                <TableCell>{formatDateLabel(row.payload.return_date)}</TableCell>
+                                <TableCell>{stringValue(row.payload.seats_total) || '0'}</TableCell>
+                                <TableCell>{stringValue(row.payload.seats_available) || '0'}</TableCell>
+                                <TableCell>
+                                    <span
+                                        className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                                            row.payload.status === 'open'
+                                                ? 'bg-green-100 text-green-800'
+                                                : row.payload.status === 'full'
+                                                  ? 'bg-amber-100 text-amber-700'
+                                                  : 'bg-slate-100 text-slate-700'
+                                        }`}
+                                    >
+                                        {stringValue(row.payload.status) || 'open'}
+                                    </span>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex justify-end gap-1">
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => onEdit(row.item)}>
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => onDelete(row.item)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                        </Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    ) : (
+                        <TableRow>
+                            <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                                Belum ada jadwal keberangkatan.
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </div>
+    );
+}
+
 function destroyResourceItem(resourceKey: string, label: string, itemId: number): void {
     router.delete(`/dashboard/website-management/content/resources/${resourceKey}/${itemId}`, {
         preserveScroll: true,
@@ -936,7 +1038,13 @@ function summarizeResourceItem(resourceKey: string, payload: Record<string, any>
             stringValue(payload.duration_days) ? `${stringValue(payload.duration_days)} hari` : '',
             stringValue(payload.price) ? `Rp ${Number(payload.price).toLocaleString('id-ID')}` : '',
         ],
-        schedules: [stringValue(payload.travel_package_code), stringValue(payload.departure_date), stringValue(payload.status)],
+        schedules: [
+            stringValue(payload.travel_package_code),
+            stringValue(payload.departure_city),
+            formatDateLabel(payload.departure_date),
+            stringValue(payload.seats_available) ? `${stringValue(payload.seats_available)} seat` : '',
+            stringValue(payload.status),
+        ],
         services: [localizedValue(payload.title), stringValue(payload.sort_order)],
         faqs: [localizedValue(payload.question)],
         articles: [stringValue(payload.slug), stringValue(payload.published_at)],
@@ -965,6 +1073,26 @@ function localizedValue(value: unknown): string {
     }
 
     return '';
+}
+
+function formatDateLabel(value: unknown): string {
+    const rawValue = stringValue(value);
+
+    if (!rawValue) {
+        return '-';
+    }
+
+    const parsedDate = new Date(`${rawValue}T00:00:00`);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return rawValue;
+    }
+
+    return new Intl.DateTimeFormat('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    }).format(parsedDate);
 }
 
 function buildIncludedFromSelectedProducts(selectedCodes: string[], productOptions: ProductOption[]): { id: string[]; en: string[] } {

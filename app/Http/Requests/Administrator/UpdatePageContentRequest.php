@@ -20,6 +20,8 @@ class UpdatePageContentRequest extends FormRequest
             'excerpt_en' => ['nullable', 'string'],
             'content' => ['nullable', 'array'],
             'content_json' => ['nullable', 'json'],
+            'media' => ['nullable', 'array'],
+            'media.*' => ['nullable', 'file', 'image', 'max:5120'],
             'is_active' => ['required', 'boolean'],
         ];
     }

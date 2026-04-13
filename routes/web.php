@@ -107,7 +107,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('branding', [BrandingController::class, 'index'])->name('branding.index');
         Route::patch('branding', [BrandingController::class, 'update'])->name('branding.update');
         Route::get('landing', [ContentController::class, 'landing'])->name('landing.index');
-        Route::get('content', [ContentController::class, 'index'])->name('content.index');
+        Route::get('schedules', [ContentController::class, 'schedules'])->name('schedules.index');
+        Route::redirect('content', '/dashboard/website-management/landing')->name('content.index');
         Route::redirect('products', '/dashboard/product-management/products');
         Route::redirect('packages', '/dashboard/product-management/packages');
         Route::patch('content/{pageContent}', [ContentController::class, 'update'])->name('content.update');

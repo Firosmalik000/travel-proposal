@@ -21,6 +21,7 @@ use App\Models\TravelService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -41,6 +42,11 @@ class ContentController extends Controller
     {
         return Inertia::render('Dashboard/WebsiteManagement/Landing/Index', [
             'pages' => $this->landingPageSections(),
+            'defaultFaqs' => Faq::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->get(['question', 'answer'])
+                ->toArray(),
         ]);
     }
 
@@ -66,11 +72,23 @@ class ContentController extends Controller
         );
     }
 
+    public function schedules(): Response
+    {
+        return $this->renderContentPage(
+            heading: 'Schedule Management',
+            description: 'Pilih package lalu atur jadwal keberangkatan, seat, dan statusnya.',
+            breadcrumbHref: '/dashboard/website-management/schedules',
+            pages: [],
+            resources: ['schedules'],
+        );
+    }
+
     public function update(UpdatePageContentRequest $request, PageContent $pageContent): RedirectResponse
     {
         $content = $request->has('content')
             ? $request->input('content', [])
             : json_decode($request->string('content_json')->value() ?: '{}', true, 512, JSON_THROW_ON_ERROR);
+        $content = $this->applyUploadedMedia($request, is_array($content) ? $content : []);
 
         $pageContent->update([
             'title' => [
@@ -222,11 +240,33 @@ class ContentController extends Controller
      */
     private function resourceMeta(string $resource): array
     {
-        if ($resource !== 'packages') {
+        if (! in_array($resource, ['packages', 'schedules'], true)) {
             return [];
         }
 
+        $packageOptions = TravelPackage::query()
+            ->orderBy('code')
+            ->get(['code', 'name', 'departure_city', 'duration_days', 'is_active'])
+            ->map(fn (TravelPackage $package): array => [
+                'code' => $package->code,
+                'name' => $package->name,
+                'departure_city' => $package->departure_city,
+                'duration_days' => $package->duration_days,
+                'is_active' => $package->is_active,
+            ])
+            ->values()
+            ->all();
+
+        $meta = [
+            'package_options' => $packageOptions,
+        ];
+
+        if ($resource === 'schedules') {
+            return $meta;
+        }
+
         return [
+            ...$meta,
             'product_options' => TravelProduct::query()
                 ->orderBy('code')
                 ->get(['code', 'product_type', 'name', 'is_active'])
@@ -674,5 +714,34 @@ class ContentController extends Controller
             ->all();
 
         $model->products()->sync($productIds);
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, mixed>
+     */
+    private function applyUploadedMedia(UpdatePageContentRequest $request, array $content): array
+    {
+        $uploadedMedia = $request->file('media', []);
+
+        if (! is_array($uploadedMedia)) {
+            return $content;
+        }
+
+        foreach ($uploadedMedia as $path => $file) {
+            if (! $file) {
+                continue;
+            }
+
+            $currentPath = Arr::get($content, $path);
+            if (is_string($currentPath) && str_starts_with($currentPath, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $currentPath));
+            }
+
+            $storedPath = $file->store('landing', 'public');
+            Arr::set($content, $path, '/storage/'.$storedPath);
+        }
+
+        return $content;
     }
 }

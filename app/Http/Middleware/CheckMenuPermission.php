@@ -76,7 +76,8 @@ class CheckMenuPermission
         }
 
         // Check if user has the required permission using new JSON structure
-        $hasPermission = UserAccess::hasPermission($user->id, $menu->menu_key, $permission);
+        $menuKey = $this->normalizeMenuKey((string) $menu->menu_key);
+        $hasPermission = UserAccess::hasPermission($user->id, $menuKey, $permission);
 
         if (! $hasPermission) {
             // Return JSON response for API requests, redirect for web requests
@@ -116,6 +117,18 @@ class CheckMenuPermission
     {
         $paths = [$currentPath];
 
+        if ($currentPath === '/dashboard/website-management/landing') {
+            $paths[] = '/dashboard/website-management/content';
+        }
+
+        if ($currentPath === '/dashboard/website-management/content') {
+            $paths[] = '/dashboard/website-management/landing';
+        }
+
+        if ($currentPath === '/dashboard/website-management/schedules') {
+            $paths[] = '/dashboard/product-management/packages';
+        }
+
         if ($currentPath === '/dashboard/product-management/products') {
             $paths[] = '/dashboard/website-management/products';
         }
@@ -125,5 +138,14 @@ class CheckMenuPermission
         }
 
         return $paths;
+    }
+
+    private function normalizeMenuKey(string $menuKey): string
+    {
+        return match ($menuKey) {
+            'content_management' => 'landing_page',
+            'schedule_management' => 'package',
+            default => $menuKey,
+        };
     }
 }

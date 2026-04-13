@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DepartureSchedule;
 use App\Models\PageContent;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
@@ -59,6 +60,44 @@ class TravelContentResourceManagementTest extends TestCase
                 ->where('heading', 'Package Management')
                 ->has('resources.0.meta.product_options', 1)
                 ->where('resources.0.meta.product_options.0.code', 'PRD-VISA'),
+            );
+    }
+
+    public function test_it_shows_schedule_management_with_package_options(): void
+    {
+        $user = User::factory()->create();
+
+        TravelPackage::query()->create([
+            'code' => 'ASF-REG-10',
+            'slug' => 'umroh-reguler-10-hari',
+            'name' => ['id' => 'Umroh Reguler 10 Hari', 'en' => 'Regular Umrah 10 Days'],
+            'package_type' => 'reguler',
+            'departure_city' => 'Jakarta',
+            'duration_days' => 10,
+            'price' => 34900000,
+            'currency' => 'IDR',
+            'is_active' => true,
+        ]);
+
+        DepartureSchedule::query()->create([
+            'travel_package_id' => TravelPackage::query()->where('code', 'ASF-REG-10')->value('id'),
+            'departure_date' => '2026-08-01',
+            'return_date' => '2026-08-10',
+            'departure_city' => 'Jakarta',
+            'seats_total' => 45,
+            'seats_available' => 12,
+            'status' => 'open',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('schedules.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Administrator/Content/Index')
+                ->where('heading', 'Schedule Management')
+                ->has('resources.0.meta.package_options', 1)
+                ->where('resources.0.meta.package_options.0.code', 'ASF-REG-10'),
             );
     }
 

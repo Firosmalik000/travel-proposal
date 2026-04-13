@@ -36,6 +36,11 @@ type GalleryImage = {
     alt: string;
 };
 
+type FaqItem = {
+    question: string;
+    answer: string;
+};
+
 const content = {
     id: {
         pageTitle: ':brand - Umroh Profesional & Terpercaya',
@@ -130,6 +135,24 @@ const content = {
                 { src: '/images/dummy.jpg', alt: 'Anak-anak di pelataran masjid' },
                 { src: '/images/dummy.jpg', alt: 'Suasana malam di Masjid' },
                 { src: '/images/dummy.jpg', alt: 'Interior Masjid yang megah' },
+            ],
+        },
+        faq: {
+            title: 'Pertanyaan yang Sering Ditanyakan',
+            desc: 'Jawaban singkat untuk hal-hal yang paling sering ditanyakan calon jamaah.',
+            items: [
+                {
+                    question: 'Biaya paket umroh sudah termasuk apa saja?',
+                    answer: 'Umumnya sudah termasuk tiket, hotel, visa, konsumsi, transportasi, manasik, dan pendamping ibadah.',
+                },
+                {
+                    question: 'Dokumen apa yang perlu disiapkan?',
+                    answer: 'Biasanya paspor, KTP, KK, foto, dan dokumen tambahan lain jika ada kebutuhan khusus.',
+                },
+                {
+                    question: 'Apakah tersedia cicilan atau pembayaran bertahap?',
+                    answer: 'Bisa disesuaikan dengan kebijakan pembayaran yang berlaku pada package yang dipilih.',
+                },
             ],
         },
         contact: {
@@ -239,6 +262,24 @@ const content = {
                 { src: '/images/dummy.jpg', alt: 'Grand mosque interior' },
             ],
         },
+        faq: {
+            title: 'Frequently Asked Questions',
+            desc: 'Short answers to the questions prospective pilgrims ask most often.',
+            items: [
+                {
+                    question: 'What is usually included in the umrah package price?',
+                    answer: 'It usually covers flights, hotel, visa, meals, transportation, manasik, and worship assistance.',
+                },
+                {
+                    question: 'Which documents should be prepared?',
+                    answer: 'Usually a passport, ID card, family card, photo, and any additional documents for special cases.',
+                },
+                {
+                    question: 'Is installment payment available?',
+                    answer: 'It can be adjusted based on the payment policy of the selected package.',
+                },
+            ],
+        },
         contact: {
             label: 'Quick Contact',
             title: 'Ready to go? Get a free consultation.',
@@ -262,6 +303,7 @@ export default function Home() {
     const t = JSON.parse(JSON.stringify(content[locale]).replaceAll(':brand', branding.company_name));
     const mainRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const heroLabel = localize(homePage?.content?.hero?.label, locale, t.hero.label);
     const heroTitle = localize(homePage?.content?.hero?.title, locale, t.hero.title);
     const heroDescription = localize(homePage?.content?.hero?.description, locale, t.hero.desc);
     const heroImage = homePage?.content?.hero?.image || '/images/dummy.jpg';
@@ -278,6 +320,8 @@ export default function Home() {
     const servicesDescription = localize(homePage?.content?.services?.description, locale, t.services.desc);
     const galleryTitle = localize(homePage?.content?.gallery?.title, locale, t.gallery.title);
     const galleryDescription = localize(homePage?.content?.gallery?.description, locale, t.gallery.desc);
+    const faqTitle = localize(homePage?.content?.faq?.title, locale, t.faq.title);
+    const faqDescription = localize(homePage?.content?.faq?.description, locale, t.faq.desc);
     const contactLabel = localize(homePage?.content?.contact?.label, locale, t.contact.label);
     const contactTitle = localize(homePage?.content?.contact?.title, locale, t.contact.title);
     const contactDescription = localize(homePage?.content?.contact?.description, locale, t.contact.desc);
@@ -310,12 +354,38 @@ export default function Home() {
             description: localize(item.description, locale),
         }))
         : t.services.items;
-    const galleryImages: GalleryImage[] = Array.isArray(publicData.gallery) && publicData.gallery.length > 0
+    const landingGalleryImages = Array.isArray(homePage?.content?.gallery?.images) && homePage.content.gallery.images.length > 0
+        ? homePage.content.gallery.images
+            .map((item: Record<string, any>) => ({
+                src: item?.src || '/images/dummy.jpg',
+                alt: localize(item?.alt, locale, galleryTitle),
+            }))
+            .filter((item: GalleryImage) => Boolean(item.src))
+        : [];
+    const galleryImages: GalleryImage[] = landingGalleryImages.length > 0
+        ? landingGalleryImages
+        : Array.isArray(publicData.gallery) && publicData.gallery.length > 0
         ? publicData.gallery.map((item: Record<string, any>) => ({
             src: item.image_path || '/images/dummy.jpg',
             alt: localize(item.title, locale),
         }))
         : t.gallery.images;
+    const customFaqItems = Array.isArray(homePage?.content?.faq?.items)
+        ? homePage.content.faq.items
+            .map((item: Record<string, any>) => ({
+                question: localize(item?.question, locale),
+                answer: localize(item?.answer, locale),
+            }))
+            .filter((item: FaqItem) => item.question && item.answer)
+        : [];
+    const faqItems: FaqItem[] = customFaqItems.length > 0
+        ? customFaqItems
+        : Array.isArray(publicData.faqs) && publicData.faqs.length > 0
+        ? publicData.faqs.map((item: Record<string, unknown>) => ({
+            question: localize(item.question, locale),
+            answer: localize(item.answer, locale),
+        }))
+        : t.faq.items;
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -347,21 +417,36 @@ export default function Home() {
             <main ref={mainRef} className="bg-background pt-6 sm:pt-8">
                 {/* Hero Section */}
                 <section className="container mx-auto px-4 sm:px-6 fade-in-section">
-                    <div className="relative flex flex-col items-center gap-8 overflow-hidden rounded-3xl bg-slate-800 p-6 sm:p-8 md:p-12 lg:flex-row lg:p-16">
-                        <div className="relative z-10 lg:w-1/2 text-white">
-                            <p className="font-medium">{t.hero.label}</p>
+                    <div className="relative flex flex-col items-center gap-8 overflow-hidden rounded-3xl border border-border bg-linear-to-br from-white via-white to-secondary/45 p-6 shadow-[0_24px_70px_-40px_rgba(122,21,32,0.22)] sm:p-8 md:p-12 lg:flex-row lg:p-16">
+                        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-radial-[circle_at_top_right] from-secondary/45 via-secondary/10 to-transparent lg:block" />
+                        <div className="relative z-10 lg:w-1/2 text-foreground">
+                            <p className="font-medium text-primary">{heroLabel}</p>
                             <h1 className="font-heading mt-2 text-4xl font-extrabold sm:text-5xl md:text-6xl lg:text-7xl">
                                 {heroTitle}
                             </h1>
-                            <p className="mt-4 text-base text-white/70 sm:text-lg">
+                            <p className="mt-4 text-base text-muted-foreground sm:text-lg">
                                 {heroDescription}
                             </p>
+                            <div className="mt-6 flex flex-wrap gap-3">
+                                <Link
+                                    href="/paket-umroh"
+                                    className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+                                >
+                                    {locale === 'id' ? 'Lihat Paket Umroh' : 'View Umrah Packages'}
+                                </Link>
+                                <Link
+                                    href="/jadwal-keberangkatan"
+                                    className="inline-flex items-center justify-center rounded-full border border-border bg-white px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
+                                >
+                                    {locale === 'id' ? 'Cek Jadwal' : 'Check Schedule'}
+                                </Link>
+                            </div>
                         </div>
                         <div className="relative mt-2 h-56 w-full sm:mt-6 sm:h-64 md:h-72 lg:mt-0 lg:h-auto lg:w-1/2">
                             <img
                                 src={heroImage}
                                 alt={t.hero.imageAlt}
-                                className="h-full w-full rounded-2xl object-cover lg:absolute lg:-right-1/4 lg:top-1/2 lg:h-auto lg:max-w-2xl lg:-translate-y-1/2"
+                                className="h-full w-full rounded-2xl object-cover shadow-2xl lg:absolute lg:-right-1/4 lg:top-1/2 lg:h-auto lg:max-w-2xl lg:-translate-y-1/2"
                             />
                         </div>
                     </div>
@@ -476,7 +561,7 @@ export default function Home() {
                 </section>
 
                 {/* Gallery Section */}
-                <section className="bg-muted/40 py-16 sm:py-20 md:py-24 fade-in-section">
+                <section className="bg-secondary/18 py-16 sm:py-20 md:py-24 fade-in-section">
                     <div className="container mx-auto px-4 sm:px-6">
                         <div className="mb-12 text-center">
                             <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{galleryTitle}</h2>
@@ -493,10 +578,7 @@ export default function Home() {
                                     'md:col-span-1',
                                 ];
                                 return (
-                                    <div
-                                        key={index}
-                                        className={`group relative overflow-hidden rounded-2xl shadow-lg ${spans[index % spans.length]}`}
-                                    >
+                                    <div key={index} className={`group relative overflow-hidden rounded-2xl border border-white/70 bg-white shadow-lg ${spans[index % spans.length]}`}>
                                         <img
                                             src={img.src}
                                             alt={img.alt}
@@ -510,9 +592,26 @@ export default function Home() {
                     </div>
                 </section>
 
+                {/* FAQ Section */}
+                <section className="container mx-auto px-4 py-16 sm:px-6 sm:py-20 md:py-24 fade-in-section">
+                    <div className="mx-auto max-w-3xl text-center">
+                        <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{faqTitle}</h2>
+                        <p className="mt-3 text-base text-muted-foreground">{faqDescription}</p>
+                    </div>
+
+                    <div className="mx-auto mt-10 grid max-w-4xl gap-3">
+                        {faqItems.map((item: FaqItem, index: number) => (
+                            <details key={`${item.question}_${index}`} className="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
+                                <summary className="cursor-pointer text-sm font-semibold text-foreground">{item.question}</summary>
+                                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
+                            </details>
+                        ))}
+                    </div>
+                </section>
+
                 {/* Contact Section */}
                 <section className="container mx-auto px-4 pb-16 sm:px-6 sm:pb-20 md:pb-24 fade-in-section">
-                    <div className="grid gap-8 rounded-3xl bg-foreground px-6 py-8 text-background shadow-2xl sm:px-8 sm:py-10 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="grid gap-8 rounded-3xl bg-linear-to-br from-foreground via-foreground to-primary px-6 py-8 text-background shadow-2xl sm:px-8 sm:py-10 lg:grid-cols-[1.1fr_0.9fr]">
                         <div>
                             <p className="text-sm uppercase tracking-[0.25em] text-background/70">{contactLabel}</p>
                             <h2 className="font-heading mt-3 text-3xl font-bold sm:text-4xl">{contactTitle}</h2>

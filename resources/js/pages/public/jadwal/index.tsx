@@ -17,9 +17,9 @@ const content = {
             cta: 'Detail Paket',
         },
         schedules: [
-            { date: '10 Maret 2026', duration: '9 Hari', city: 'Jakarta', seat: '12' },
-            { date: '15 April 2026', duration: '10 Hari', city: 'Surabaya', seat: '8' },
-            { date: '05 Mei 2026', duration: '12 Hari', city: 'Jakarta', seat: '20' },
+            { date: '10 Maret 2026', duration: '9 Hari', city: 'Jakarta', seat: '12', href: '/paket-umroh' },
+            { date: '15 April 2026', duration: '10 Hari', city: 'Surabaya', seat: '8', href: '/paket-umroh' },
+            { date: '05 Mei 2026', duration: '12 Hari', city: 'Jakarta', seat: '20', href: '/paket-umroh' },
         ],
     },
     en: {
@@ -35,9 +35,9 @@ const content = {
             cta: 'Package Details',
         },
         schedules: [
-            { date: '10 March 2026', duration: '9 Days', city: 'Jakarta', seat: '12' },
-            { date: '15 April 2026', duration: '10 Days', city: 'Surabaya', seat: '8' },
-            { date: '05 May 2026', duration: '12 Days', city: 'Jakarta', seat: '20' },
+            { date: '10 March 2026', duration: '9 Days', city: 'Jakarta', seat: '12', href: '/paket-umroh' },
+            { date: '15 April 2026', duration: '10 Days', city: 'Surabaya', seat: '8', href: '/paket-umroh' },
+            { date: '05 May 2026', duration: '12 Days', city: 'Jakarta', seat: '20', href: '/paket-umroh' },
         ],
     },
 };
@@ -52,6 +52,7 @@ export default function Jadwal() {
             duration: `${item.package?.duration_days ?? 0} ${locale === 'id' ? 'Hari' : 'Days'}`,
             city: item.departure_city,
             seat: String(item.seats_available ?? 0),
+            href: item.package?.slug ? `/paket-umroh/${item.package.slug}` : '/paket-umroh',
         }))
         : t.schedules;
 
@@ -95,7 +96,7 @@ export default function Jadwal() {
                                         <td className="px-4 py-3 text-muted-foreground">{item.seat}</td>
                                         <td className="px-4 py-3">
                                             <Link
-                                                href={schedule.package?.slug ? `/paket-umroh/${schedule.package.slug}` : '/paket-umroh'}
+                                                href={item.href}
                                                 className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground transition hover:bg-muted"
                                             >
                                                 {t.table.cta}

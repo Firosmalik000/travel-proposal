@@ -262,7 +262,7 @@ class MenuController extends Controller
                 $children = collect($menuArray['children'] ?? []);
                 $productManagementMenu = $children->firstWhere('menu_key', 'product_management');
                 $menuArray['children'] = $children
-                    ->reject(fn (array $child): bool => ($child['menu_key'] ?? null) === 'product_management')
+                    ->reject(fn (array $child): bool => in_array($child['menu_key'] ?? null, ['product_management', 'content_management'], true))
                     ->values()
                     ->all();
             }

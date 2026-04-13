@@ -44,10 +44,10 @@ class MenuSeeder extends Seeder
                         'children' => null,
                     ],
                     [
-                        'name' => 'Content Management',
-                        'menu_key' => 'content_management',
-                        'path' => '/dashboard/website-management/content',
-                        'icon' => 'ScrollText',
+                        'name' => 'Schedule Management',
+                        'menu_key' => 'schedule_management',
+                        'path' => '/dashboard/website-management/schedules',
+                        'icon' => 'CalendarDays',
                         'order' => 2,
                         'is_active' => true,
                         'children' => null,
@@ -140,7 +140,7 @@ class MenuSeeder extends Seeder
 
         $this->command->info('Menus seeded successfully with simplified structure.');
         $this->command->info('  - Dashboard: Direct navigation');
-        $this->command->info('  - Website Management: landing, content, SEO, branding');
+        $this->command->info('  - Website Management: landing, schedules, SEO, branding');
         $this->command->info('  - Product Management: 2 submenus (product, package)');
         $this->command->info('  - Administrator: 2 submenus (menu management, user access)');
     }
