@@ -19,7 +19,7 @@ export default function AuthSimpleLayout({
     const { branding } = usePage<SharedData>().props;
 
     return (
-        <div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-[var(--auth-shell)] px-6 py-10 font-[var(--font-auth-sans)] dark:bg-[var(--auth-shell-dark)]">
+        <div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-[var(--auth-shell)] px-6 py-10 font-[var(--font-auth-sans)] text-[var(--auth-card-foreground)] dark:bg-[var(--auth-shell-dark)]">
             <BrandThemeStyle />
             <div className="pointer-events-none absolute inset-0">
                 <div className="absolute -top-56 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-primary)_26%,transparent)_0%,color-mix(in_srgb,var(--brand-primary)_12%,transparent)_45%,transparent_70%)] blur-3xl opacity-80 dark:opacity-35" />
@@ -38,7 +38,7 @@ export default function AuthSimpleLayout({
                         >
                             <div className="relative flex h-16 w-16 items-center justify-center">
                                 <div className="absolute -inset-4 rounded-3xl bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-primary)_28%,transparent)_0%,_transparent_70%)] blur-xl opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
-                                <div className="relative flex h-full w-full items-center justify-center rounded-2xl bg-white/75 dark:bg-slate-950/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur">
+                                <div className="relative flex h-full w-full items-center justify-center rounded-2xl bg-[var(--auth-card-bg)] ring-1 ring-[var(--auth-card-border)] backdrop-blur">
                                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--auth-panel)] p-2 shadow-[0_18px_40px_-20px_rgba(140,10,22,0.5)]">
                                         <AppLogoIcon className="h-7 w-auto text-white drop-shadow-sm" />
                                     </div>
@@ -46,16 +46,16 @@ export default function AuthSimpleLayout({
                             </div>
                             <div className="text-center">
                                 <span className="sr-only">{title}</span>
-                                <p className="text-sm font-semibold text-foreground">{branding.company_name}</p>
-                                <p className="text-[0.68rem] uppercase tracking-[0.24em] text-muted-foreground">{branding.company_subtitle}</p>
+                                <p className="text-sm font-semibold text-[var(--auth-card-foreground)]">{branding.company_name}</p>
+                                <p className="text-[0.68rem] uppercase tracking-[0.24em] text-[var(--auth-card-muted)]">{branding.company_subtitle}</p>
                             </div>
                         </Link>
 
                         <div className="space-y-3 text-center">
-                            <h1 className="text-3xl font-[var(--font-auth-display)] font-semibold tracking-tight text-slate-900 dark:text-white md:text-4xl">
+                            <h1 className="text-3xl font-[var(--font-auth-display)] font-semibold tracking-tight text-[var(--auth-card-foreground)] md:text-4xl">
                                 {title}
                             </h1>
-                            <p className="text-sm text-slate-600 dark:text-slate-400 max-w-sm">
+                            <p className="max-w-sm text-sm text-[var(--auth-card-muted)]">
                                 {description}
                             </p>
                         </div>
@@ -64,7 +64,7 @@ export default function AuthSimpleLayout({
                     <div className="relative group/card">
                         <div className="absolute -inset-1 rounded-[32px] bg-gradient-to-r from-primary/20 via-amber-200/30 to-primary/10 opacity-70 blur-2xl transition-opacity duration-300 group-hover/card:opacity-90 dark:from-primary/25 dark:via-amber-500/10 dark:to-primary/20" />
 
-                        <div className="relative rounded-[32px] border border-black/5 dark:border-white/10 bg-white/80 dark:bg-slate-950/75 backdrop-blur-2xl p-8 shadow-[0_30px_90px_-60px_rgba(15,23,42,0.6)]">
+                        <div className="relative rounded-[32px] border border-[var(--auth-card-border)] bg-[var(--auth-card-bg)] p-8 text-[var(--auth-card-foreground)] shadow-[0_30px_90px_-60px_rgba(15,23,42,0.6)] backdrop-blur-2xl">
                             <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
 
                             {children}

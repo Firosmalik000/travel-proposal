@@ -78,6 +78,10 @@ const content = {
 type PackageCard = {
     slug?: string;
     title: string;
+    originalPrice?: string;
+    discountLabel?: string;
+    ratingAvg?: number | null;
+    ratingCount?: number;
     price: string;
     numericPrice: number;
     date: string;
@@ -112,6 +116,10 @@ export default function Paket() {
                 title: localize(item.name, locale),
                 price: formatPrice(item.price, locale, item.currency),
                 numericPrice: Number(item.price ?? 0),
+                originalPrice: item.original_price ? formatPrice(item.original_price, locale, item.currency) : undefined,
+                discountLabel: item.discount_label ?? (item.discount_percent ? `HEMAT ${item.discount_percent}%` : undefined),
+                ratingAvg: item.rating_avg ?? null,
+                ratingCount: Number(item.rating_count ?? 0),
                 date: formatDate(departureDate, locale),
                 departureMonth: departureDate ? formatMonthYear(departureDate, locale) : '',
                 city: String(item.departure_city ?? ''),
@@ -272,45 +280,95 @@ export default function Paket() {
                         {filteredPackages.map((item) => (
                             <div
                                 key={item.title + item.date}
-                                className="group overflow-hidden rounded-2xl border border-border bg-card/95 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                                className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
                             >
-                                <div
-                                    className="parallax-frame relative h-40 overflow-hidden bg-muted/40 sm:h-44"
-                                    data-parallax
-                                    data-speed="0.26"
-                                >
+                                {/* Image */}
+                                <div className="relative h-48 overflow-hidden bg-muted/40">
                                     <img
                                         src={item.image}
                                         alt={item.title}
-                                        className="parallax-img h-full w-full object-cover transition duration-700 ease-out group-hover:scale-105"
+                                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                                         loading="lazy"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
-                                    <span className="absolute bottom-3 left-3 rounded-full border border-border bg-card/90 px-3 py-1 text-xs font-semibold text-foreground backdrop-blur">
-                                        {item.city}
-                                    </span>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+
+                                    {/* Discount badge */}
+                                    {item.discountLabel && (
+                                        <span className="absolute right-3 top-3 rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow">
+                                            {item.discountLabel}
+                                        </span>
+                                    )}
+
+                                    {/* City + duration overlay */}
+                                    <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                                        <span className="rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                                            📍 {item.city}
+                                        </span>
+                                        <span className="rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                                            🕐 {item.durationLabel}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="p-5 sm:p-6">
-                                    <h3 className="public-heading text-lg font-semibold text-foreground">{item.title}</h3>
-                                    <p className="mt-2 text-2xl font-semibold text-primary">{item.price}</p>
-                                    <p className="mt-2 text-sm text-muted-foreground">
-                                        {item.date} • {item.city}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">{item.hotel}</p>
-                                    <p className="text-sm text-muted-foreground">{item.notes}</p>
-                                    <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+
+                                {/* Content */}
+                                <div className="flex flex-1 flex-col p-5">
+                                    {/* Title */}
+                                    <h3 className="public-heading line-clamp-2 text-base font-bold leading-snug text-foreground">
+                                        {item.title}
+                                    </h3>
+
+                                    {/* Rating */}
+                                    {item.ratingAvg && (
+                                        <div className="mt-1.5 flex items-center gap-1">
+                                            {[1, 2, 3, 4, 5].map((s) => (
+                                                <span key={s} className={`text-sm ${s <= Math.round(item.ratingAvg!) ? 'text-amber-400' : 'text-muted-foreground/30'}`}>★</span>
+                                            ))}
+                                            <span className="ml-1 text-xs font-medium text-foreground">{item.ratingAvg}</span>
+                                            <span className="text-xs text-muted-foreground">({item.ratingCount} ulasan)</span>
+                                        </div>
+                                    )}
+
+                                    {/* Meta info */}
+                                    <div className="mt-3 space-y-1.5">
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span className="w-4 text-center">✈</span>
+                                            <span>{item.airline}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span className="w-4 text-center">🏨</span>
+                                            <span>{item.hotel}</span>
+                                        </div>
+                                        {item.date && (
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                <span className="w-4 text-center">📅</span>
+                                                <span>Berangkat {item.date}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Divider */}
+                                    <div className="my-4 border-t border-border" />
+
+                                    {/* Price */}
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-2xl font-extrabold text-primary">{item.price}</span>
+                                        {item.originalPrice && (
+                                            <span className="text-sm text-muted-foreground line-through">{item.originalPrice}</span>
+                                        )}
+                                    </div>
+                                    <p className="mt-0.5 text-xs text-muted-foreground">per jamaah</p>
+
+                                    {/* CTA buttons — pushed to bottom */}
+                                    <div className="mt-4 flex gap-2">
                                         <Link
                                             href={item.slug ? `/paket-umroh/${item.slug}` : '/paket-umroh'}
-                                            className="inline-flex w-full items-center justify-center rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-muted sm:w-auto"
+                                            className="flex-1 rounded-xl border border-border py-2.5 text-center text-xs font-semibold text-foreground transition hover:bg-muted"
                                         >
                                             {detailLabel}
                                         </Link>
                                         <a
-                                            href={whatsappLinkFromPhone(
-                                                seo.contact?.phone,
-                                                buildPackageInquiryMessage(locale, item),
-                                            )}
-                                            className="inline-flex w-full items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground sm:w-auto"
+                                            href={whatsappLinkFromPhone(seo.contact?.phone, buildPackageInquiryMessage(locale, item))}
+                                            className="flex-1 rounded-xl bg-primary py-2.5 text-center text-xs font-semibold text-primary-foreground transition hover:opacity-90"
                                         >
                                             {askLabel}
                                         </a>

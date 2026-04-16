@@ -303,6 +303,7 @@ class MenuController extends Controller
     private function normalizeMenuPath(?string $menuKey, ?string $path): string
     {
         return match ($menuKey) {
+            'product_category' => '/dashboard/product-management/categories',
             'product_management', 'product' => '/dashboard/product-management/products',
             'package' => '/dashboard/product-management/packages',
             default => (string) $path,

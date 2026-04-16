@@ -44,10 +44,10 @@ class MenuSeeder extends Seeder
                         'children' => null,
                     ],
                     [
-                        'name' => 'Schedule Management',
-                        'menu_key' => 'schedule_management',
-                        'path' => '/dashboard/website-management/schedules',
-                        'icon' => 'CalendarDays',
+                        'name' => 'Content',
+                        'menu_key' => 'content_management',
+                        'path' => '/dashboard/website-management/content',
+                        'icon' => 'ClipboardList',
                         'order' => 2,
                         'is_active' => true,
                         'children' => null,
@@ -81,11 +81,20 @@ class MenuSeeder extends Seeder
                 'icon' => 'Package',
                 'children' => [
                     [
+                        'name' => 'Product Category',
+                        'menu_key' => 'product_category',
+                        'path' => '/dashboard/product-management/categories',
+                        'icon' => 'Tags',
+                        'order' => 1,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
                         'name' => 'Product',
                         'menu_key' => 'product',
                         'path' => '/dashboard/product-management/products',
                         'icon' => 'Package',
-                        'order' => 1,
+                        'order' => 2,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -94,7 +103,7 @@ class MenuSeeder extends Seeder
                         'menu_key' => 'package',
                         'path' => '/dashboard/product-management/packages',
                         'icon' => 'Boxes',
-                        'order' => 2,
+                        'order' => 3,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -141,7 +150,7 @@ class MenuSeeder extends Seeder
         $this->command->info('Menus seeded successfully with simplified structure.');
         $this->command->info('  - Dashboard: Direct navigation');
         $this->command->info('  - Website Management: landing, schedules, SEO, branding');
-        $this->command->info('  - Product Management: 2 submenus (product, package)');
+        $this->command->info('  - Product Management: 3 submenus (product category, product, package)');
         $this->command->info('  - Administrator: 2 submenus (menu management, user access)');
     }
 }

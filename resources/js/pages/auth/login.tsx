@@ -11,6 +11,8 @@ import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
 import { Mail, Lock, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
     status?: string;
@@ -23,6 +25,8 @@ export default function Login({
     canResetPassword,
     canRegister,
 }: LoginProps) {
+    const [showPassword, setShowPassword] = useState(false);
+
     return (
         <AuthSplitLayout
             title="Masuk Akun"
@@ -33,7 +37,7 @@ export default function Login({
             <Head title="Masuk" />
 
             {status && (
-                <div className="mb-6 rounded-xl border border-[rgba(43,69,112,0.2)] bg-white/90 px-4 py-3 text-center text-sm font-medium text-[var(--emerald-900)] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="animate-in slide-in-from-top-2 mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] fade-in duration-300 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
                     {status}
                 </div>
             )}
@@ -45,12 +49,12 @@ export default function Login({
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="rounded-2xl border border-[rgba(43,69,112,0.12)] bg-white/85 p-5 shadow-[0_18px_40px_rgba(31,47,77,0.08)]">
+                        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-950/80">
                             <div className="mb-5 flex items-center justify-between">
-                                <span className="rounded-full bg-[rgba(43,69,112,0.1)] px-3 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.24em] text-[var(--emerald-900)]">
+                                <span className="rounded-full bg-primary/10 px-3 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.24em] text-primary">
                                     Portal Internal
                                 </span>
-                                <span className="text-[0.65rem] text-muted-foreground">
+                                <span className="text-[0.65rem] text-slate-500 dark:text-slate-400">
                                     Branding mengikuti pengaturan portal
                                 </span>
                             </div>
@@ -58,13 +62,13 @@ export default function Login({
                                 <div className="grid gap-2.5 group/input">
                                     <Label
                                         htmlFor="email"
-                                        className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--emerald-900)] flex items-center gap-2"
+                                        className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-100"
                                     >
-                                        <Mail className="h-4 w-4 text-[var(--emerald-700)]" />
+                                        <Mail className="h-4 w-4 text-primary" />
                                         Email
                                     </Label>
                                     <div className="relative">
-                                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-500)]" />
+                                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                                         <Input
                                             id="email"
                                             type="email"
@@ -74,7 +78,7 @@ export default function Login({
                                             tabIndex={1}
                                             autoComplete="email"
                                             placeholder="nama@email.com"
-                                            className="h-11 rounded-xl border border-[rgba(31,47,77,0.18)] bg-white px-10 text-sm text-[var(--emerald-900)] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all duration-200 placeholder:text-[var(--ink-500)] focus-visible:border-[var(--emerald-500)] focus-visible:ring-2 focus-visible:ring-[rgba(43,69,112,0.2)]"
+                                            className="h-11 rounded-xl border-slate-300 bg-white px-10 text-sm font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-500"
                                         />
                                     </div>
                                     <InputError message={errors.email} />
@@ -84,15 +88,15 @@ export default function Login({
                                     <div className="flex items-center justify-between">
                                         <Label
                                             htmlFor="password"
-                                            className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--emerald-900)] flex items-center gap-2"
+                                            className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-800 dark:text-slate-100"
                                         >
-                                            <Lock className="h-4 w-4 text-[var(--emerald-700)]" />
+                                            <Lock className="h-4 w-4 text-primary" />
                                             Kata sandi
                                         </Label>
                                         {canResetPassword && (
                                             <TextLink
                                                 href={request()}
-                                                className="text-xs font-semibold text-[var(--ink-600)] hover:text-[var(--emerald-700)] transition-colors duration-200"
+                                                className="text-xs font-semibold text-primary transition-colors duration-200 hover:text-primary/80 dark:text-amber-300 dark:hover:text-amber-200"
                                                 tabIndex={5}
                                             >
                                                 Lupa kata sandi?
@@ -100,17 +104,25 @@ export default function Login({
                                         )}
                                     </div>
                                     <div className="relative">
-                                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-500)]" />
+                                        <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                                         <Input
                                             id="password"
-                                            type="password"
+                                            type={showPassword ? 'text' : 'password'}
                                             name="password"
                                             required
                                             tabIndex={2}
                                             autoComplete="current-password"
                                             placeholder="Masukkan kata sandi"
-                                            className="h-11 rounded-xl border border-[rgba(31,47,77,0.18)] bg-white px-10 text-sm text-[var(--emerald-900)] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-all duration-200 placeholder:text-[var(--ink-500)] focus-visible:border-[var(--emerald-500)] focus-visible:ring-2 focus-visible:ring-[rgba(43,69,112,0.2)]"
+                                            className="h-11 rounded-xl border-slate-300 bg-white px-10 pr-11 text-sm font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50 dark:placeholder:text-slate-500"
                                         />
+                                        <button
+                                            type="button"
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
+                                            onClick={() => setShowPassword((value) => !value)}
+                                            aria-label={showPassword ? 'Sembunyikan password' : 'Lihat password'}
+                                        >
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
                                     </div>
                                     <InputError message={errors.password} />
                                 </div>
@@ -120,21 +132,21 @@ export default function Login({
                                         id="remember"
                                         name="remember"
                                         tabIndex={3}
-                                        className="border-[rgba(31,47,77,0.3)] shadow-[0_1px_2px_rgba(31,47,77,0.08)] transition-all duration-200 data-[state=checked]:bg-[var(--emerald-700)] data-[state=checked]:border-[var(--emerald-700)]"
+                                        className="border-slate-300 shadow-[0_1px_2px_rgba(31,47,77,0.08)] transition-all duration-200 data-[state=checked]:border-primary data-[state=checked]:bg-primary dark:border-slate-700"
                                     />
                                     <Label
                                         htmlFor="remember"
-                                        className="text-sm font-medium text-[var(--ink-700)] cursor-pointer select-none transition-colors duration-200 group-hover/check:text-[var(--emerald-900)]"
+                                        className="cursor-pointer select-none text-sm font-medium text-slate-600 transition-colors duration-200 group-hover/check:text-slate-900 dark:text-slate-300 dark:group-hover/check:text-slate-100"
                                     >
                                         Ingat saya
                                     </Label>
                                 </div>
 
                                 <div className="relative group/button pt-2">
-                                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-[rgba(43,69,112,0.35)] via-[rgba(43,69,112,0.15)] to-transparent opacity-70 blur-xl transition-all duration-300 group-hover/button:opacity-100" />
+                                    <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-primary/35 via-primary/15 to-transparent opacity-70 blur-xl transition-all duration-300 group-hover/button:opacity-100" />
                                     <Button
                                         type="submit"
-                                        className="relative flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--emerald-700)] text-sm font-semibold text-white shadow-[0_18px_40px_-22px_rgba(31,47,77,0.45)] transition-all duration-300 hover:translate-y-[-1px] hover:bg-[var(--emerald-800)] hover:shadow-[0_22px_50px_-24px_rgba(31,47,77,0.55)] active:translate-y-0 active:shadow-[0_12px_30px_-20px_rgba(31,47,77,0.4)]"
+                                        className="relative flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-semibold text-primary-foreground shadow-[0_18px_40px_-22px_rgba(31,47,77,0.45)] transition-all duration-300 hover:translate-y-[-1px] hover:bg-primary/90 hover:shadow-[0_22px_50px_-24px_rgba(31,47,77,0.55)] active:translate-y-0 active:shadow-[0_12px_30px_-20px_rgba(31,47,77,0.4)]"
                                         tabIndex={4}
                                         disabled={processing}
                                         data-test="login-button"
@@ -147,12 +159,12 @@ export default function Login({
                             </div>
                         </div>
                         {canRegister && (
-                            <div className="text-center text-xs text-[var(--ink-600)]">
+                            <div className="text-center text-xs text-slate-600 dark:text-slate-300">
                                 Belum punya akun?{' '}
                                 <TextLink
                                     href={register()}
                                     tabIndex={6}
-                                    className="font-semibold text-[var(--emerald-700)] hover:text-[var(--emerald-800)] transition-colors duration-200"
+                                    className="font-semibold text-primary transition-colors duration-200 hover:text-primary/80 dark:text-amber-300 dark:hover:text-amber-200"
                                 >
                                     Daftar
                                 </TextLink>

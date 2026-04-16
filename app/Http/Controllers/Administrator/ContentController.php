@@ -13,6 +13,7 @@ use App\Models\GalleryItem;
 use App\Models\LegalDocument;
 use App\Models\PageContent;
 use App\Models\Partner;
+use App\Models\ProductCategory;
 use App\Models\TeamMember;
 use App\Models\Testimonial;
 use App\Models\TravelPackage;
@@ -20,6 +21,7 @@ use App\Models\TravelProduct;
 use App\Models\TravelService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -58,6 +60,17 @@ class ContentController extends Controller
             breadcrumbHref: '/dashboard/product-management/products',
             pages: [],
             resources: ['products'],
+        );
+    }
+
+    public function productCategories(): Response
+    {
+        return $this->renderContentPage(
+            heading: 'Product Category',
+            description: 'Kelola kategori product yang dipakai sebagai tipe product travel.',
+            breadcrumbHref: '/dashboard/product-management/categories',
+            pages: [],
+            resources: ['product_categories'],
         );
     }
 
@@ -115,6 +128,7 @@ class ContentController extends Controller
         $modelClass = $definition['model'];
         $model = new $modelClass;
         $payload = $this->requestPayload($request);
+        $payload = $this->applyResourceUploads($request, $resource, null, $payload);
         $model->fill($this->normalizePayload($resource, $payload));
         $model->save();
         $this->afterResourceSaved($resource, $model, $payload);
@@ -131,6 +145,7 @@ class ContentController extends Controller
         /** @var Model $model */
         $model = $definition['model']::query()->findOrFail($id);
         $payload = $this->requestPayload($request);
+        $payload = $this->applyResourceUploads($request, $resource, $model, $payload);
         $model->fill($this->normalizePayload($resource, $payload));
         $model->save();
         $this->afterResourceSaved($resource, $model, $payload);
@@ -240,10 +255,6 @@ class ContentController extends Controller
      */
     private function resourceMeta(string $resource): array
     {
-        if (! in_array($resource, ['packages', 'schedules'], true)) {
-            return [];
-        }
-
         $packageOptions = TravelPackage::query()
             ->orderBy('code')
             ->get(['code', 'name', 'departure_city', 'duration_days', 'is_active'])
@@ -259,7 +270,31 @@ class ContentController extends Controller
 
         $meta = [
             'package_options' => $packageOptions,
+            'product_category_options' => ProductCategory::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('key')
+                ->get(['key', 'name', 'description', 'is_active'])
+                ->map(fn (ProductCategory $category): array => [
+                    'key' => $category->key,
+                    'name' => $category->name,
+                    'description' => $category->description,
+                    'default_unit' => $this->productCategoryDefaultUnit($category->key),
+                    'is_active' => $category->is_active,
+                ])
+                ->values()
+                ->all(),
         ];
+
+        if ($resource === 'products') {
+            return [
+                'product_category_options' => $meta['product_category_options'],
+            ];
+        }
+
+        if (! in_array($resource, ['packages', 'schedules'], true)) {
+            return [];
+        }
 
         if ($resource === 'schedules') {
             return $meta;
@@ -287,6 +322,19 @@ class ContentController extends Controller
     private function resourceDefinitions(): array
     {
         return [
+            'product_categories' => [
+                'label' => 'Kategori Product',
+                'description' => 'Kategori sederhana untuk mengelompokkan product travel.',
+                'model' => ProductCategory::class,
+                'order_by' => ['sort_order', 'asc'],
+                'template' => [
+                    'key' => 'dokumen',
+                    'name' => ['id' => 'Dokumen', 'en' => 'Documents'],
+                    'description' => ['id' => 'Kategori product dokumen', 'en' => 'Document product category'],
+                    'sort_order' => 1,
+                    'is_active' => true,
+                ],
+            ],
             'products' => [
                 'label' => 'Produk Travel',
                 'description' => 'Komponen layanan yang bisa digabungkan ke package. Harga tetap ditentukan di package.',
@@ -497,6 +545,7 @@ class ContentController extends Controller
     {
         return match ($resource) {
             'products' => Arr::only($item->toArray(), ['code', 'slug', 'name', 'product_type', 'description', 'content', 'is_active']),
+            'product_categories' => Arr::only($item->toArray(), ['key', 'name', 'description', 'sort_order', 'is_active']),
             'packages' => [
                 ...Arr::only($item->toArray(), ['code', 'slug', 'name', 'package_type', 'departure_city', 'duration_days', 'price', 'currency', 'image_path', 'summary', 'content', 'is_featured', 'is_active']),
                 'product_codes' => $item->products->pluck('code')->values()->all(),
@@ -531,6 +580,13 @@ class ContentController extends Controller
     private function normalizePayload(string $resource, array $payload): array
     {
         return match ($resource) {
+            'product_categories' => [
+                'key' => (string) ($payload['key'] ?? ''),
+                'name' => $this->localizedValue($payload['name'] ?? []),
+                'description' => $this->localizedValue($payload['description'] ?? []),
+                'sort_order' => (int) ($payload['sort_order'] ?? 0),
+                'is_active' => (bool) ($payload['is_active'] ?? true),
+            ],
             'products' => [
                 'code' => (string) ($payload['code'] ?? ''),
                 'slug' => (string) ($payload['slug'] ?? ''),
@@ -684,11 +740,24 @@ class ContentController extends Controller
     private function resourceItemTitle(string $resource, Model $item): string
     {
         return match ($resource) {
+            'product_categories' => (string) ($item->getAttribute('key') ?? $item->getKey()),
             'products', 'packages' => (string) ($item->getAttribute('code') ?? $item->getKey()),
             'schedules' => (string) ($item->travelPackage?->code.' - '.$item->getAttribute('departure_date')),
             'articles' => (string) ($item->getAttribute('slug') ?? $item->getKey()),
             'testimonials', 'team', 'partners' => (string) ($item->getAttribute('name') ?? $item->getKey()),
             default => (string) ($item->getKey()),
+        };
+    }
+
+    private function productCategoryDefaultUnit(string $categoryKey): array
+    {
+        return match ($categoryKey) {
+            'dokumen' => ['id' => 'per jamaah', 'en' => 'per pilgrim'],
+            'transportasi' => ['id' => 'per paket', 'en' => 'per package'],
+            'akomodasi' => ['id' => 'per kamar', 'en' => 'per room'],
+            'layanan' => ['id' => 'per paket', 'en' => 'per package'],
+            'perlengkapan' => ['id' => 'per jamaah', 'en' => 'per pilgrim'],
+            default => ['id' => 'per paket', 'en' => 'per package'],
         };
     }
 
@@ -743,5 +812,28 @@ class ContentController extends Controller
         }
 
         return $content;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function applyResourceUploads(ManageTravelResourceRequest $request, string $resource, ?Model $existingModel, array $payload): array
+    {
+        if ($resource !== 'packages' || ! $request->hasFile('image')) {
+            return $payload;
+        }
+
+        $currentImagePath = $existingModel?->getAttribute('image_path');
+        if (is_string($currentImagePath) && str_starts_with($currentImagePath, '/storage/')) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $currentImagePath));
+        }
+
+        /** @var UploadedFile $image */
+        $image = $request->file('image');
+        $storedPath = $image->store('packages', 'public');
+        $payload['image_path'] = '/storage/'.$storedPath;
+
+        return $payload;
     }
 }

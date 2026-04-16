@@ -30,9 +30,9 @@ export default function Register() {
                             <div className="grid gap-2.5 group/input">
                                 <Label
                                     htmlFor="name"
-                                    className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                    className="flex items-center gap-2 text-sm font-semibold text-[var(--auth-card-foreground)]"
                                 >
-                                    <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                    <User className="h-4 w-4 text-primary" />
                                     Full Name
                                 </Label>
                                 <Input
@@ -44,7 +44,7 @@ export default function Register() {
                                     autoComplete="name"
                                     name="name"
                                     placeholder="John Doe"
-                                    className="h-12 pl-4 pr-4 text-base bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-gray-700 transition-all duration-200 focus:ring-2 focus:ring-blue-500/40 dark:focus:ring-blue-500/40 focus:border-blue-500 dark:focus:border-blue-500 hover:border-blue-400 dark:hover:border-blue-600 rounded-xl"
+                                    className="h-12 rounded-xl border-[var(--auth-field-border)] bg-[var(--auth-field-bg)] px-4 text-base text-[var(--auth-field-foreground)] placeholder:text-[var(--auth-field-placeholder)] transition-all duration-200 focus-visible:border-primary focus-visible:ring-primary/20"
                                 />
                                 <InputError
                                     message={errors.name}
@@ -55,9 +55,9 @@ export default function Register() {
                             <div className="grid gap-2.5 group/input">
                                 <Label
                                     htmlFor="email"
-                                    className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                    className="flex items-center gap-2 text-sm font-semibold text-[var(--auth-card-foreground)]"
                                 >
-                                    <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                    <Mail className="h-4 w-4 text-primary" />
                                     Email address
                                 </Label>
                                 <Input
@@ -68,7 +68,7 @@ export default function Register() {
                                     autoComplete="email"
                                     name="email"
                                     placeholder="email@example.com"
-                                    className="h-12 pl-4 pr-4 text-base bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-gray-700 transition-all duration-200 focus:ring-2 focus:ring-blue-500/40 dark:focus:ring-blue-500/40 focus:border-blue-500 dark:focus:border-blue-500 hover:border-blue-400 dark:hover:border-blue-600 rounded-xl"
+                                    className="h-12 rounded-xl border-[var(--auth-field-border)] bg-[var(--auth-field-bg)] px-4 text-base text-[var(--auth-field-foreground)] placeholder:text-[var(--auth-field-placeholder)] transition-all duration-200 focus-visible:border-primary focus-visible:ring-primary/20"
                                 />
                                 <InputError message={errors.email} />
                             </div>
@@ -76,9 +76,9 @@ export default function Register() {
                             <div className="grid gap-2.5 group/input">
                                 <Label
                                     htmlFor="password"
-                                    className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                    className="flex items-center gap-2 text-sm font-semibold text-[var(--auth-card-foreground)]"
                                 >
-                                    <Lock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                    <Lock className="h-4 w-4 text-primary" />
                                     Password
                                 </Label>
                                 <Input
@@ -89,7 +89,7 @@ export default function Register() {
                                     autoComplete="new-password"
                                     name="password"
                                     placeholder="Create a strong password"
-                                    className="h-12 pl-4 pr-4 text-base bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-gray-700 transition-all duration-200 focus:ring-2 focus:ring-blue-500/40 dark:focus:ring-blue-500/40 focus:border-blue-500 dark:focus:border-blue-500 hover:border-blue-400 dark:hover:border-blue-600 rounded-xl"
+                                    className="h-12 rounded-xl border-[var(--auth-field-border)] bg-[var(--auth-field-bg)] px-4 text-base text-[var(--auth-field-foreground)] placeholder:text-[var(--auth-field-placeholder)] transition-all duration-200 focus-visible:border-primary focus-visible:ring-primary/20"
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -97,9 +97,9 @@ export default function Register() {
                             <div className="grid gap-2.5 group/input">
                                 <Label
                                     htmlFor="password_confirmation"
-                                    className="text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-2"
+                                    className="flex items-center gap-2 text-sm font-semibold text-[var(--auth-card-foreground)]"
                                 >
-                                    <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                    <CheckCircle2 className="h-4 w-4 text-primary" />
                                     Confirm password
                                 </Label>
                                 <Input
@@ -110,7 +110,7 @@ export default function Register() {
                                     autoComplete="new-password"
                                     name="password_confirmation"
                                     placeholder="Re-enter your password"
-                                    className="h-12 pl-4 pr-4 text-base bg-gray-50 dark:bg-slate-800/50 border-gray-200 dark:border-gray-700 transition-all duration-200 focus:ring-2 focus:ring-blue-500/40 dark:focus:ring-blue-500/40 focus:border-blue-500 dark:focus:border-blue-500 hover:border-blue-400 dark:hover:border-blue-600 rounded-xl"
+                                    className="h-12 rounded-xl border-[var(--auth-field-border)] bg-[var(--auth-field-bg)] px-4 text-base text-[var(--auth-field-foreground)] placeholder:text-[var(--auth-field-placeholder)] transition-all duration-200 focus-visible:border-primary focus-visible:ring-primary/20"
                                 />
                                 <InputError
                                     message={errors.password_confirmation}
@@ -118,10 +118,10 @@ export default function Register() {
                             </div>
 
                             <div className="relative group/button pt-3">
-                                <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-xl opacity-75 blur transition-all duration-300 group-hover/button:opacity-100 group-hover/button:blur-md" />
+                                <div className="absolute -inset-0.5 rounded-xl bg-gradient-to-r from-primary via-primary/75 to-accent opacity-75 blur transition-all duration-300 group-hover/button:opacity-100 group-hover/button:blur-md" />
                                 <Button
                                     type="submit"
-                                    className="relative w-full h-12 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                                    className="relative flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground shadow-lg transition-all duration-300 hover:scale-[1.01] hover:bg-primary/90 active:scale-[0.99]"
                                     tabIndex={5}
                                     data-test="register-user-button"
                                 >
@@ -134,10 +134,10 @@ export default function Register() {
 
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+                                <div className="w-full border-t border-[var(--auth-card-border)]" />
                             </div>
                             <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-white dark:bg-slate-900 px-3 text-gray-500 dark:text-gray-400 font-medium">
+                                <span className="bg-[var(--auth-card-bg)] px-3 font-medium text-[var(--auth-card-muted)]">
                                     Already have an account?
                                 </span>
                             </div>
@@ -147,7 +147,7 @@ export default function Register() {
                             <TextLink
                                 href={login()}
                                 tabIndex={6}
-                                className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 border border-blue-200 dark:border-blue-500/30 rounded-xl transition-all duration-200 hover:scale-105"
+                                className="inline-flex items-center gap-2 rounded-xl border border-[var(--auth-field-border)] bg-[var(--auth-field-bg)] px-6 py-2.5 text-sm font-semibold text-[var(--auth-link)] transition-all duration-200 hover:scale-105 hover:text-[var(--auth-link-hover)]"
                             >
                                 Sign in instead
                                 <ChevronRight className="h-4 w-4" />

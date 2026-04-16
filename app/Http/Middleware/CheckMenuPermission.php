@@ -133,6 +133,10 @@ class CheckMenuPermission
             $paths[] = '/dashboard/website-management/products';
         }
 
+        if ($currentPath === '/dashboard/product-management/categories') {
+            $paths[] = '/dashboard/product-management/products';
+        }
+
         if ($currentPath === '/dashboard/product-management/packages') {
             $paths[] = '/dashboard/website-management/packages';
         }
@@ -145,6 +149,7 @@ class CheckMenuPermission
         return match ($menuKey) {
             'content_management' => 'landing_page',
             'schedule_management' => 'package',
+            'product_category' => 'product',
             default => $menuKey,
         };
     }

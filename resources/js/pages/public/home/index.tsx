@@ -1,11 +1,12 @@
-﻿import { Head, Link } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import PublicLayout from '@/layouts/PublicLayout';
 import { usePage } from '@inertiajs/react';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { Facebook, Instagram, Mail, MapPin, MessageCircle, Phone, Twitter, Youtube } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { CheckCircle, Clock, MapPin as MapPinIcon, Shield, Star, Users } from 'lucide-react';
 import { usePublicLocale } from '@/contexts/public-locale';
 import { type SharedData } from '@/types';
 import { formatPrice, localize, usePublicData, usePublicPageContent, whatsappLinkFromPhone } from '@/lib/public-content';
@@ -41,295 +42,42 @@ type FaqItem = {
     answer: string;
 };
 
-const content = {
-    id: {
-        pageTitle: ':brand - Umroh Profesional & Terpercaya',
-        hero: {
-            label: ':brand',
-            title: 'Jelajahi Tanah Suci',
-            desc: 'Pengalaman ibadah umroh yang khusyuk, nyaman, dan tak terlupakan dengan layanan profesional.',
-            imageAlt: 'Kaaba',
-        },
-        stats: [
-            { value: '15+', label: 'Tahun Melayani' },
-            { value: '98%', label: 'Kepuasan Jamaah' },
-            { value: '20K+', label: 'Jamaah Berangkat' },
-            { value: '50+', label: 'Mitra Terpercaya' },
-        ],
-        about: {
-            label: 'Tentang Kami',
-            title: 'Mengakselerasi Perubahan dengan Pelayanan Terbaik',
-            desc: 'Kami adalah travel umroh yang berizin resmi dan terpercaya, berkomitmen untuk membawa standar baru dalam industri dengan mengutamakan transparansi, kenyamanan, dan bimbingan ibadah yang berkualitas.',
-            cta: 'Baca Selengkapnya',
-            imageAltOne: 'Islamic Architecture',
-            imageAltTwo: 'Jamaah',
-        },
-        packages: {
-            title: 'Paket Unggulan',
-            pricePrefix: 'Mulai',
-            items: [
-                {
-                    title: 'Paket Silver',
-                    destination: 'Makkah & Madinah',
-                    image: '/images/dummy.jpg',
-                    price: '29,9 Jt',
-                    duration: '9 Hari',
-                },
-                {
-                    title: 'Paket Gold',
-                    destination: 'Makkah & Madinah',
-                    image: '/images/dummy.jpg',
-                    price: '38,5 Jt',
-                    duration: '12 Hari',
-                },
-                {
-                    title: 'Paket Platinum',
-                    destination: 'Makkah & Madinah',
-                    image: '/images/dummy.jpg',
-                    price: 'Call Us',
-                    duration: 'by Request',
-                },
-                {
-                    title: 'Umroh Plus Turki',
-                    destination: 'Makkah, Madinah, Istanbul',
-                    image: '/images/dummy.jpg',
-                    price: '45 Jt',
-                    duration: '14 Hari',
-                },
-            ],
-        },
-        services: {
-            label: 'Layanan Kami',
-            title: 'Apa yang Kami Tawarkan?',
-            desc: 'Kami menyediakan layanan umroh yang lengkap dan terintegrasi untuk memastikan perjalanan ibadah Anda berjalan lancar, aman, dan penuh makna.',
-            items: [
-                {
-                    number: '01',
-                    title: 'Legalitas Terjamin',
-                    description: 'Kami adalah travel berizin resmi Kemenag, memastikan keamanan dan kepastian keberangkatan Anda.',
-                },
-                {
-                    number: '02',
-                    title: 'Pembimbing Profesional',
-                    description: 'Dibimbing oleh ustadz berpengalaman dan amanah yang siap mendampingi ibadah Anda dari awal hingga akhir.',
-                },
-                {
-                    number: '03',
-                    title: 'Akomodasi Terbaik',
-                    description: 'Pilihan hotel bintang 4 & 5 yang strategis dekat Masjidil Haram dan Masjid Nabawi.',
-                },
-                {
-                    number: '04',
-                    title: 'Layanan Menyeluruh',
-                    description: 'Kami urus semua kebutuhan Anda: visa, tiket pesawat, manasik, hingga perlengkapan umroh.',
-                },
-            ],
-        },
-        gallery: {
-            title: 'Galeri Perjalanan',
-            desc: 'Momen-momen tak terlupakan bersama jamaah :brand.',
-            images: [
-                { src: '/images/dummy.jpg', alt: 'Detail arsitektur Masjid Nabawi' },
-                { src: '/images/dummy.jpg', alt: 'Pemandangan kota Madinah' },
-                { src: '/images/dummy.jpg', alt: 'Jamaah sedang berdoa' },
-                { src: '/images/dummy.jpg', alt: 'Anak-anak di pelataran masjid' },
-                { src: '/images/dummy.jpg', alt: 'Suasana malam di Masjid' },
-                { src: '/images/dummy.jpg', alt: 'Interior Masjid yang megah' },
-            ],
-        },
-        faq: {
-            title: 'Pertanyaan yang Sering Ditanyakan',
-            desc: 'Jawaban singkat untuk hal-hal yang paling sering ditanyakan calon jamaah.',
-            items: [
-                {
-                    question: 'Biaya paket umroh sudah termasuk apa saja?',
-                    answer: 'Umumnya sudah termasuk tiket, hotel, visa, konsumsi, transportasi, manasik, dan pendamping ibadah.',
-                },
-                {
-                    question: 'Dokumen apa yang perlu disiapkan?',
-                    answer: 'Biasanya paspor, KTP, KK, foto, dan dokumen tambahan lain jika ada kebutuhan khusus.',
-                },
-                {
-                    question: 'Apakah tersedia cicilan atau pembayaran bertahap?',
-                    answer: 'Bisa disesuaikan dengan kebijakan pembayaran yang berlaku pada package yang dipilih.',
-                },
-            ],
-        },
-        contact: {
-            label: 'Kontak Cepat',
-            title: 'Siap berangkat? Konsultasi gratis dulu.',
-            desc: 'Tim :brand siap membantu memilih paket terbaik, jadwal keberangkatan, dan kebutuhan dokumen Anda.',
-            whatsapp: 'Konsultasi WhatsApp',
-            fullContact: 'Lihat Kontak Lengkap',
-            phoneLabel: 'Telepon',
-            emailLabel: 'Email',
-            addressLabel: 'Alamat Kantor',
-            socialLabel: 'Sosial Media',
-        },
-    },
-    en: {
-        pageTitle: ':brand - Professional & Trusted Umrah',
-        hero: {
-            label: ':brand',
-            title: 'Journey to the Holy Land',
-            desc: 'A focused, comfortable, and memorable umrah experience with professional guidance.',
-            imageAlt: 'Kaaba',
-        },
-        stats: [
-            { value: '15+', label: 'Years of Service' },
-            { value: '98%', label: 'Pilgrim Satisfaction' },
-            { value: '20K+', label: 'Pilgrims Departed' },
-            { value: '50+', label: 'Trusted Partners' },
-        ],
-        about: {
-            label: 'About Us',
-            title: 'Raising the Bar with Trusted Service',
-            desc: 'We are a licensed and trusted umrah travel partner, committed to higher standards through transparency, comfort, and quality guidance.',
-            cta: 'Read More',
-            imageAltOne: 'Islamic Architecture',
-            imageAltTwo: 'Pilgrims',
-        },
-        packages: {
-            title: 'Featured Packages',
-            pricePrefix: 'From',
-            items: [
-                {
-                    title: 'Silver Package',
-                    destination: 'Makkah & Madinah',
-                    image: '/images/dummy.jpg',
-                    price: '29.9 M',
-                    duration: '9 Days',
-                },
-                {
-                    title: 'Gold Package',
-                    destination: 'Makkah & Madinah',
-                    image: '/images/dummy.jpg',
-                    price: '38.5 M',
-                    duration: '12 Days',
-                },
-                {
-                    title: 'Platinum Package',
-                    destination: 'Makkah & Madinah',
-                    image: '/images/dummy.jpg',
-                    price: 'Call Us',
-                    duration: 'By Request',
-                },
-                {
-                    title: 'Umrah + Turkey',
-                    destination: 'Makkah, Madinah, Istanbul',
-                    image: '/images/dummy.jpg',
-                    price: '45 M',
-                    duration: '14 Days',
-                },
-            ],
-        },
-        services: {
-            label: 'Our Services',
-            title: 'What We Offer',
-            desc: 'We deliver a complete and integrated umrah service to keep your journey smooth, safe, and meaningful.',
-            items: [
-                {
-                    number: '01',
-                    title: 'Verified Licenses',
-                    description: 'Officially licensed by the Ministry of Religious Affairs for secure departures.',
-                },
-                {
-                    number: '02',
-                    title: 'Professional Guides',
-                    description: 'Experienced ustadz and mentors support your worship from start to finish.',
-                },
-                {
-                    number: '03',
-                    title: 'Top Accommodations',
-                    description: 'Carefully selected 4-5 star hotels near Masjid al-Haram and Masjid Nabawi.',
-                },
-                {
-                    number: '04',
-                    title: 'All-in Service',
-                    description: 'We handle visas, flights, manasik, and essential kits for your umrah.',
-                },
-            ],
-        },
-        gallery: {
-            title: 'Travel Gallery',
-            desc: 'Memorable moments with :brand pilgrims.',
-            images: [
-                { src: '/images/dummy.jpg', alt: 'Masjid Nabawi architecture detail' },
-                { src: '/images/dummy.jpg', alt: 'Madinah city view' },
-                { src: '/images/dummy.jpg', alt: 'Pilgrims praying' },
-                { src: '/images/dummy.jpg', alt: 'Children at the mosque courtyard' },
-                { src: '/images/dummy.jpg', alt: 'Night atmosphere at the mosque' },
-                { src: '/images/dummy.jpg', alt: 'Grand mosque interior' },
-            ],
-        },
-        faq: {
-            title: 'Frequently Asked Questions',
-            desc: 'Short answers to the questions prospective pilgrims ask most often.',
-            items: [
-                {
-                    question: 'What is usually included in the umrah package price?',
-                    answer: 'It usually covers flights, hotel, visa, meals, transportation, manasik, and worship assistance.',
-                },
-                {
-                    question: 'Which documents should be prepared?',
-                    answer: 'Usually a passport, ID card, family card, photo, and any additional documents for special cases.',
-                },
-                {
-                    question: 'Is installment payment available?',
-                    answer: 'It can be adjusted based on the payment policy of the selected package.',
-                },
-            ],
-        },
-        contact: {
-            label: 'Quick Contact',
-            title: 'Ready to go? Get a free consultation.',
-            desc: 'Our team helps you pick the right package, schedule, and documents with clarity.',
-            whatsapp: 'WhatsApp Consultation',
-            fullContact: 'View Full Contact',
-            phoneLabel: 'Phone',
-            emailLabel: 'Email',
-            addressLabel: 'Office Address',
-            socialLabel: 'Social Media',
-        },
-    },
-};
 
 export default function Home() {
     const { locale } = usePublicLocale();
-    const { branding, seoSettings } = usePage<SharedData>().props;
+    const { seoSettings } = usePage<SharedData>().props;
     const seo = (seoSettings as Record<string, any>) ?? {};
     const publicData = usePublicData();
     const homePage = usePublicPageContent('home');
-    const t = JSON.parse(JSON.stringify(content[locale]).replaceAll(':brand', branding.company_name));
     const mainRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const heroLabel = localize(homePage?.content?.hero?.label, locale, t.hero.label);
-    const heroTitle = localize(homePage?.content?.hero?.title, locale, t.hero.title);
-    const heroDescription = localize(homePage?.content?.hero?.description, locale, t.hero.desc);
+    const heroLabel = localize(homePage?.content?.hero?.label, locale);
+    const heroTitle = localize(homePage?.content?.hero?.title, locale);
+    const heroDescription = localize(homePage?.content?.hero?.description, locale);
     const heroImage = homePage?.content?.hero?.image || '/images/dummy.jpg';
-    const aboutTitle = localize(homePage?.content?.about?.title, locale, t.about.title);
-    const aboutDescription = localize(homePage?.content?.about?.description, locale, t.about.desc);
-    const aboutCta = localize(homePage?.content?.about?.cta, locale, t.about.cta);
-    const aboutLabel = localize(homePage?.content?.about?.label, locale, t.about.label);
+    const aboutTitle = localize(homePage?.content?.about?.title, locale);
+    const aboutDescription = localize(homePage?.content?.about?.description, locale);
+    const aboutCta = localize(homePage?.content?.about?.cta, locale);
+    const aboutLabel = localize(homePage?.content?.about?.label, locale);
     const aboutPrimaryImage = homePage?.content?.about?.image_primary || '/images/dummy.jpg';
     const aboutSecondaryImage = homePage?.content?.about?.image_secondary || '/images/dummy.jpg';
-    const packagesTitle = localize(homePage?.content?.packages?.title, locale, t.packages.title);
-    const pricePrefix = localize(homePage?.content?.packages?.price_prefix, locale, t.packages.pricePrefix);
-    const servicesLabel = localize(homePage?.content?.services?.label, locale, t.services.label);
-    const servicesTitle = localize(homePage?.content?.services?.title, locale, t.services.title);
-    const servicesDescription = localize(homePage?.content?.services?.description, locale, t.services.desc);
-    const galleryTitle = localize(homePage?.content?.gallery?.title, locale, t.gallery.title);
-    const galleryDescription = localize(homePage?.content?.gallery?.description, locale, t.gallery.desc);
-    const faqTitle = localize(homePage?.content?.faq?.title, locale, t.faq.title);
-    const faqDescription = localize(homePage?.content?.faq?.description, locale, t.faq.desc);
-    const contactLabel = localize(homePage?.content?.contact?.label, locale, t.contact.label);
-    const contactTitle = localize(homePage?.content?.contact?.title, locale, t.contact.title);
-    const contactDescription = localize(homePage?.content?.contact?.description, locale, t.contact.desc);
-    const contactWhatsapp = localize(homePage?.content?.contact?.whatsapp_label, locale, t.contact.whatsapp);
-    const contactFull = localize(homePage?.content?.contact?.contact_label, locale, t.contact.fullContact);
-    const contactPhone = seo.contact?.phone ?? '(021) 555-1234';
-    const contactEmail = seo.contact?.email ?? 'info@asfartour.co.id';
-    const contactAddress = localize(seo.contact?.address?.full, locale, 'Jl. Asfar No. 12, Jakarta Pusat');
+    const packagesTitle = localize(homePage?.content?.packages?.title, locale);
+    const pricePrefix = localize(homePage?.content?.packages?.price_prefix, locale);
+    const servicesLabel = localize(homePage?.content?.services?.label, locale);
+    const servicesTitle = localize(homePage?.content?.services?.title, locale);
+    const servicesDescription = localize(homePage?.content?.services?.description, locale);
+    const galleryTitle = localize(homePage?.content?.gallery?.title, locale);
+    const galleryDescription = localize(homePage?.content?.gallery?.description, locale);
+    const faqTitle = localize(homePage?.content?.faq?.title, locale);
+    const faqDescription = localize(homePage?.content?.faq?.description, locale);
+    const contactLabel = localize(homePage?.content?.contact?.label, locale);
+    const contactTitle = localize(homePage?.content?.contact?.title, locale);
+    const contactDescription = localize(homePage?.content?.contact?.description, locale);
+    const contactWhatsapp = localize(homePage?.content?.contact?.whatsapp_label, locale);
+    const contactFull = localize(homePage?.content?.contact?.contact_label, locale);
+    const contactPhone = seo.contact?.phone ?? '';
+    const contactEmail = seo.contact?.email ?? '';
+    const contactAddress = localize(seo.contact?.address?.full, locale);
     const contactSocials = Array.isArray(seo.contact?.socials) ? seo.contact.socials : [];
     const whatsappLink = whatsappLinkFromPhone(seo.contact?.phone);
     const stats: StatItem[] = Array.isArray(homePage?.content?.stats) && homePage.content.stats.length > 0
@@ -337,7 +85,7 @@ export default function Home() {
             value: String(item.value ?? ''),
             label: localize(item.label, locale),
         }))
-        : t.stats;
+        : [];
     const packageItems: PackageItem[] = Array.isArray(publicData.packages) && publicData.packages.length > 0
         ? publicData.packages.map((pkg: Record<string, any>) => ({
             title: localize(pkg.name, locale),
@@ -346,14 +94,24 @@ export default function Home() {
             price: formatPrice(pkg.price, locale, pkg.currency),
             duration: `${pkg.duration_days} ${locale === 'id' ? 'Hari' : 'Days'}`,
         }))
-        : t.packages.items;
-    const serviceItems: ServiceItem[] = Array.isArray(publicData.services) && publicData.services.length > 0
-        ? publicData.services.map((item: Record<string, any>, index: number) => ({
-            number: String(index + 1).padStart(2, '0'),
-            title: localize(item.title, locale),
-            description: localize(item.description, locale),
-        }))
-        : t.services.items;
+        : [];
+    const serviceItems: ServiceItem[] = (() => {
+        const cmsItems = homePage?.content?.services?.items;
+        if (Array.isArray(cmsItems) && cmsItems.length > 0) {
+            return cmsItems.map((item: Record<string, any>, index: number) => ({
+                number: String(index + 1).padStart(2, '0'),
+                title: localize(item.title, locale),
+                description: localize(item.description, locale),
+            }));
+        }
+        return Array.isArray(publicData.services) && publicData.services.length > 0
+            ? publicData.services.map((item: Record<string, any>, index: number) => ({
+                number: String(index + 1).padStart(2, '0'),
+                title: localize(item.title, locale),
+                description: localize(item.description, locale),
+            }))
+            : [];
+    })();
     const landingGalleryImages = Array.isArray(homePage?.content?.gallery?.images) && homePage.content.gallery.images.length > 0
         ? homePage.content.gallery.images
             .map((item: Record<string, any>) => ({
@@ -369,7 +127,7 @@ export default function Home() {
             src: item.image_path || '/images/dummy.jpg',
             alt: localize(item.title, locale),
         }))
-        : t.gallery.images;
+        : [];
     const customFaqItems = Array.isArray(homePage?.content?.faq?.items)
         ? homePage.content.faq.items
             .map((item: Record<string, any>) => ({
@@ -385,19 +143,93 @@ export default function Home() {
             question: localize(item.question, locale),
             answer: localize(item.answer, locale),
         }))
-        : t.faq.items;
+        : [];
+
+    const [openFaq, setOpenFaq] = useState<number | null>(null);
 
     useEffect(() => {
         const ctx = gsap.context(() => {
-            const sections = gsap.utils.toArray('.fade-in-section');
-            sections.forEach((section: any) => {
-                gsap.from(section, {
-                    scrollTrigger: { trigger: section, start: 'top 85%', toggleActions: 'play none none none' },
-                    opacity: 0,
-                    y: 40,
-                    duration: 1,
-                    ease: 'power3.out',
-                });
+            // -- Hero: stagger badge ? h1 ? p ? buttons
+            const heroTl = gsap.timeline({ delay: 0.2 });
+            heroTl
+                .from('.hero-badge', { opacity: 0, y: -20, duration: 0.6, ease: 'back.out(1.7)' })
+                .from('.hero-title', { opacity: 0, y: 60, duration: 0.9, ease: 'power4.out' }, '-=0.3')
+                .from('.hero-desc', { opacity: 0, y: 30, duration: 0.7, ease: 'power3.out' }, '-=0.5')
+                .from('.hero-cta', { opacity: 0, y: 20, stagger: 0.15, duration: 0.6, ease: 'power3.out' }, '-=0.4')
+                .from('.hero-stat', { opacity: 0, y: 30, stagger: 0.1, duration: 0.5, ease: 'power3.out' }, '-=0.3');
+
+            // -- Hero parallax on scroll
+            gsap.to('.hero-bg', {
+                scrollTrigger: { trigger: '.hero-section', start: 'top top', end: 'bottom top', scrub: true },
+                y: '30%',
+                ease: 'none',
+            });
+
+            // -- Stats counter animation
+            gsap.utils.toArray<HTMLElement>('.stat-number').forEach((el) => {
+                const raw = el.dataset.value ?? '';
+                const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+                const suffix = raw.replace(/[0-9.]/g, '');
+                if (!isNaN(num)) {
+                    gsap.from({ val: 0 }, {
+                        scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none none' },
+                        val: 0,
+                        duration: 2,
+                        ease: 'power2.out',
+                        onUpdate: function () {
+                            el.textContent = Math.round((this as any).targets()[0].val) + suffix;
+                        },
+                        onComplete: () => { el.textContent = raw; },
+                    });
+                }
+            });
+
+            // -- About: slide left text, slide right image
+            gsap.from('.about-text', {
+                scrollTrigger: { trigger: '.about-section', start: 'top 80%', toggleActions: 'play none none none' },
+                opacity: 0, x: -60, duration: 0.9, ease: 'power3.out', immediateRender: false,
+            });
+            gsap.from('.about-img-primary', {
+                scrollTrigger: { trigger: '.about-section', start: 'top 80%', toggleActions: 'play none none none' },
+                opacity: 0, x: 60, duration: 0.9, ease: 'power3.out', immediateRender: false,
+            });
+            gsap.from('.about-img-secondary', {
+                scrollTrigger: { trigger: '.about-section', start: 'top 75%', toggleActions: 'play none none none' },
+                opacity: 0, scale: 0.8, y: 40, duration: 0.8, ease: 'back.out(1.4)', delay: 0.3, immediateRender: false,
+            });
+
+            // -- Packages: stagger cards from bottom
+            gsap.from('.pkg-card', {
+                scrollTrigger: { trigger: '.packages-section', start: 'top 80%', toggleActions: 'play none none none' },
+                opacity: 0, y: 80, stagger: 0.12, duration: 0.7, ease: 'power3.out', immediateRender: false,
+            });
+
+            // -- Services: label ? title ? desc ? cards stagger
+            gsap.from('.services-header > *', {
+                scrollTrigger: { trigger: '.services-section', start: 'top 80%', toggleActions: 'play none none none' },
+                opacity: 0, y: 30, stagger: 0.15, duration: 0.7, ease: 'power3.out', immediateRender: false,
+            });
+            gsap.from('.service-card', {
+                scrollTrigger: { trigger: '.services-section', start: 'top 75%', toggleActions: 'play none none none' },
+                opacity: 0, y: 50, stagger: 0.1, duration: 0.6, ease: 'power3.out', immediateRender: false,
+            });
+
+            // -- Gallery: scale up stagger
+            gsap.from('.gallery-item', {
+                scrollTrigger: { trigger: '.gallery-section', start: 'top 80%', toggleActions: 'play none none none' },
+                opacity: 0, scale: 0.85, stagger: 0.08, duration: 0.6, ease: 'back.out(1.2)', immediateRender: false,
+            });
+
+            // -- FAQ: slide from right stagger
+            gsap.from('.faq-item', {
+                scrollTrigger: { trigger: '.faq-section', start: 'top 80%', toggleActions: 'play none none none' },
+                opacity: 0, x: 40, stagger: 0.1, duration: 0.6, ease: 'power3.out', immediateRender: false,
+            });
+
+            // -- Contact: scale up
+            gsap.from('.contact-section > div', {
+                scrollTrigger: { trigger: '.contact-section', start: 'top 80%', toggleActions: 'play none none none' },
+                opacity: 0, scale: 0.95, y: 40, duration: 0.8, ease: 'power3.out', immediateRender: false,
             });
         }, mainRef);
         return () => ctx.revert();
@@ -410,181 +242,197 @@ export default function Home() {
         }
     };
 
+
     return (
         <PublicLayout>
-            <Head title={t.pageTitle} />
+            <Head title={localize(homePage?.title, locale)} />
 
-            <main ref={mainRef} className="bg-background pt-6 sm:pt-8">
-                {/* Hero Section */}
-                <section className="container mx-auto px-4 sm:px-6 fade-in-section">
-                    <div className="relative flex flex-col items-center gap-8 overflow-hidden rounded-3xl border border-border bg-linear-to-br from-white via-white to-secondary/45 p-6 shadow-[0_24px_70px_-40px_rgba(122,21,32,0.22)] sm:p-8 md:p-12 lg:flex-row lg:p-16">
-                        <div className="absolute inset-y-0 right-0 hidden w-1/3 bg-radial-[circle_at_top_right] from-secondary/45 via-secondary/10 to-transparent lg:block" />
-                        <div className="relative z-10 lg:w-1/2 text-foreground">
-                            <p className="font-medium text-primary">{heroLabel}</p>
-                            <h1 className="font-heading mt-2 text-4xl font-extrabold sm:text-5xl md:text-6xl lg:text-7xl">
+            <main ref={mainRef} className="bg-background">
+                {/* ── Hero ── */}
+                <section className="hero-section relative min-h-[92vh] flex flex-col justify-end overflow-hidden">
+                    <div className="hero-bg absolute inset-0">
+                        <img src={heroImage} alt={heroTitle} className="h-full w-full object-cover" />
+                        <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/45 to-black/10" />
+                        <div className="absolute inset-0 bg-linear-to-r from-black/60 via-black/10 to-transparent" />
+                    </div>
+                    <div className="absolute top-0 left-0 h-1 w-full bg-linear-to-r from-primary via-accent to-transparent" />
+
+                    <div className="relative z-10 container mx-auto px-4 sm:px-6">
+                        <div className="max-w-3xl py-24 sm:py-28 md:py-32">
+                            <div className="hero-badge mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-sm">
+                                <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
+                                <span className="text-sm font-medium text-white">{heroLabel}</span>
+                            </div>
+                            <h1 className="hero-title font-heading text-5xl font-extrabold leading-[1.05] text-white sm:text-6xl md:text-7xl lg:text-8xl">
                                 {heroTitle}
                             </h1>
-                            <p className="mt-4 text-base text-muted-foreground sm:text-lg">
+                            <p className="hero-desc mt-5 max-w-xl text-base text-white/70 sm:text-lg md:text-xl leading-relaxed">
                                 {heroDescription}
                             </p>
-                            <div className="mt-6 flex flex-wrap gap-3">
-                                <Link
-                                    href="/paket-umroh"
-                                    className="inline-flex items-center justify-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-                                >
+                            <div className="mt-8 flex flex-wrap gap-3">
+                                <Link href="/paket-umroh" className="hero-cta inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-primary/40 transition-all hover:bg-primary/90 hover:scale-105 active:scale-95">
                                     {locale === 'id' ? 'Lihat Paket Umroh' : 'View Umrah Packages'}
+                                    <ArrowRightIcon className="h-4 w-4" />
                                 </Link>
-                                <Link
-                                    href="/jadwal-keberangkatan"
-                                    className="inline-flex items-center justify-center rounded-full border border-border bg-white px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
-                                >
+                                <Link href="/jadwal-keberangkatan" className="hero-cta inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:scale-105 active:scale-95">
                                     {locale === 'id' ? 'Cek Jadwal' : 'Check Schedule'}
                                 </Link>
                             </div>
                         </div>
-                        <div className="relative mt-2 h-56 w-full sm:mt-6 sm:h-64 md:h-72 lg:mt-0 lg:h-auto lg:w-1/2">
-                            <img
-                                src={heroImage}
-                                alt={t.hero.imageAlt}
-                                className="h-full w-full rounded-2xl object-cover shadow-2xl lg:absolute lg:-right-1/4 lg:top-1/2 lg:h-auto lg:max-w-2xl lg:-translate-y-1/2"
-                            />
+                    </div>
+
+                    <div className="relative z-10 border-t border-white/10 bg-black/50 backdrop-blur-md">
+                        <div className="container mx-auto px-4 sm:px-6">
+                            <div className="grid grid-cols-2 divide-x divide-white/10 md:grid-cols-4">
+                                {stats.map((stat: StatItem) => (
+                                    <div key={stat.label} className="hero-stat px-6 py-5 text-center">
+                                        <p className="stat-number font-heading text-2xl font-bold text-white sm:text-3xl" data-value={stat.value}>
+                                            {stat.value}
+                                        </p>
+                                        <p className="mt-1 text-xs text-white/55 sm:text-sm">{stat.label}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                {/* Stats Section */}
-                <section className="container mx-auto px-4 sm:px-6 py-14 sm:py-16 md:py-20 fade-in-section">
-                    <div className="grid grid-cols-2 gap-6 text-center sm:gap-8 md:grid-cols-4">
-                        {stats.map((stat: StatItem) => (
-                            <div key={stat.label}>
-                                <p className="font-heading text-3xl font-bold text-primary sm:text-4xl md:text-5xl">{stat.value}</p>
-                                <p className="mt-2 text-xs text-muted-foreground sm:text-sm">{stat.label}</p>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                {/* Introduction Section */}
-                <section className="container mx-auto grid items-center gap-10 px-4 py-14 sm:px-6 sm:py-16 md:gap-12 md:py-20 lg:grid-cols-2 fade-in-section">
-                    <div className="text-sm text-muted-foreground">
-                        <p className="font-medium uppercase tracking-wider">{aboutLabel}</p>
-                        <h2 className="font-heading mt-4 text-3xl font-bold text-foreground sm:text-4xl">
+                {/* ── About ── */}
+                <section className="about-section container mx-auto grid items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 md:gap-16 lg:grid-cols-2">
+                    <div className="about-text">
+                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
+                            {aboutLabel}
+                        </span>
+                        <h2 className="font-heading mt-5 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl leading-tight">
                             {aboutTitle}
                         </h2>
-                        <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-                            {aboutDescription}
-                        </p>
-                        <Link
-                            href="/tentang-kami"
-                            className="mt-6 inline-flex w-full items-center justify-center rounded-lg border border-border px-6 py-3 font-semibold text-foreground transition hover:bg-muted sm:w-auto"
-                        >
+                        <p className="mt-5 text-base text-muted-foreground leading-relaxed">{aboutDescription}</p>
+                        <div className="mt-6 flex flex-wrap gap-3">
+                            {[
+                                { icon: Shield, label: locale === 'id' ? 'Izin Resmi Kemenag' : 'Official License' },
+                                { icon: Users, label: locale === 'id' ? '20K+ Jamaah' : '20K+ Pilgrims' },
+                                { icon: Star, label: 'Rating 4.9/5' },
+                            ].map(({ icon: Icon, label }) => (
+                                <div key={label} className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground shadow-sm">
+                                    <Icon className="h-3.5 w-3.5 text-primary" />
+                                    {label}
+                                </div>
+                            ))}
+                        </div>
+                        <Link href="/tentang-kami" className="mt-8 inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-bold text-background transition-all hover:bg-foreground/85 hover:scale-105 active:scale-95">
                             {aboutCta}
+                            <ArrowRightIcon className="h-4 w-4" />
                         </Link>
                     </div>
-                    <div className="relative h-64 sm:h-72 md:h-80">
-                        <img src={aboutPrimaryImage} alt={t.about.imageAltOne} className="h-full w-full rounded-2xl object-cover shadow-lg sm:w-2/3" />
-                        <img
-                            src={aboutSecondaryImage}
-                            alt={t.about.imageAltTwo}
-                            className="absolute bottom-0 right-0 w-2/3 rounded-2xl border-4 border-background shadow-xl sm:w-1/2 sm:border-8 md:translate-y-1/4"
-                        />
+                    <div className="relative h-72 sm:h-80 md:h-96">
+                        <img src={aboutPrimaryImage} alt={aboutTitle} className="about-img-primary h-full w-full rounded-3xl object-cover shadow-2xl sm:w-3/4" />
+                        <img src={aboutSecondaryImage} alt={aboutTitle} className="about-img-secondary absolute -bottom-6 right-0 w-2/3 rounded-2xl border-4 border-background shadow-2xl sm:w-1/2 sm:border-8" />
+                        <div className="absolute -top-4 right-4 sm:right-8 flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 shadow-lg shadow-primary/30">
+                            <CheckCircle className="h-4 w-4 text-white" />
+                            <span className="text-xs font-bold text-white">{locale === 'id' ? 'Terpercaya Sejak 2009' : 'Trusted Since 2009'}</span>
+                        </div>
                     </div>
                 </section>
 
-                {/* Packages Section */}
-                <section className="py-14 sm:py-16 md:py-20 fade-in-section">
+                {/* ── Packages ── */}
+                <section className="packages-section py-20 sm:py-24 bg-secondary/30">
                     <div className="container mx-auto px-4 sm:px-6">
-                        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{packagesTitle}</h2>
+                        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
+                                    {locale === 'id' ? 'Pilihan Terbaik' : 'Best Picks'}
+                                </span>
+                                <h2 className="font-heading mt-3 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl">{packagesTitle}</h2>
+                            </div>
                             <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleScroll('left')}
-                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition hover:bg-muted"
-                                >
-                                    &larr;
-                                </button>
-                                <button
-                                    onClick={() => handleScroll('right')}
-                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-border text-foreground transition hover:bg-muted"
-                                >
-                                    &rarr;
-                                </button>
+                                <button onClick={() => handleScroll('left')} className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-background text-foreground transition-all hover:border-primary hover:text-primary hover:scale-110">←</button>
+                                <button onClick={() => handleScroll('right')} className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-background text-foreground transition-all hover:border-primary hover:text-primary hover:scale-110">→</button>
                             </div>
                         </div>
                     </div>
-                    <div
-                        ref={scrollContainerRef}
-                        className="flex gap-6 overflow-x-auto px-4 sm:px-6"
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                    >
-                        <div className="flex-shrink-0 w-4 md:w-auto" />
-                        {packageItems.map((pkg: PackageItem) => (
-                            <div
-                                key={pkg.title}
-                                className="group relative h-[360px] w-64 flex-shrink-0 overflow-hidden rounded-3xl sm:h-[420px] sm:w-72 md:h-[450px]"
-                            >
-                                <img src={pkg.image} alt={pkg.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                                <div className="absolute bottom-0 left-0 p-6 text-white">
-                                    <p className="text-sm">{pkg.destination}</p>
-                                    <h3 className="font-heading mt-1 text-xl font-bold">{pkg.title}</h3>
-                                    <p className="mt-2 text-sm">
-                                        {pricePrefix} {pkg.price} / {pkg.duration}
-                                    </p>
+                    <div ref={scrollContainerRef} className="flex gap-5 overflow-x-auto px-4 pb-4 sm:px-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                        <div className="flex-shrink-0 w-2" />
+                        {packageItems.map((pkg: PackageItem, i: number) => (
+                            <Link key={pkg.title} href="/paket-umroh" className="pkg-card group relative h-[400px] w-64 flex-shrink-0 overflow-hidden rounded-3xl sm:h-[460px] sm:w-72 md:h-[480px] cursor-pointer">
+                                <img src={pkg.image} alt={pkg.title} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
+                                {i === 0 && (
+                                    <div className="absolute top-4 left-4 rounded-full bg-accent px-3 py-1 text-xs font-bold text-white shadow">
+                                        {locale === 'id' ? 'Terlaris' : 'Best Seller'}
+                                    </div>
+                                )}
+                                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                                    <div className="flex items-center gap-1.5 text-xs text-white/70">
+                                        <MapPinIcon className="h-3 w-3" />
+                                        {pkg.destination}
+                                    </div>
+                                    <h3 className="font-heading mt-1.5 text-xl font-bold">{pkg.title}</h3>
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-xs text-white/60">{pricePrefix}</p>
+                                            <p className="text-lg font-extrabold text-accent">{pkg.price}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs backdrop-blur-sm">
+                                            <Clock className="h-3 w-3" />
+                                            {pkg.duration}
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-bold opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0">
+                                        {locale === 'id' ? 'Lihat Detail' : 'View Detail'}
+                                        <ArrowRightIcon className="h-3 w-3" />
+                                    </div>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
-                        <div className="flex-shrink-0 w-4 md:w-auto" />
+                        <div className="flex-shrink-0 w-2" />
                     </div>
                 </section>
 
-                {/* Services Section */}
-                <section className="container mx-auto grid items-center gap-10 px-4 py-14 sm:px-6 sm:py-16 md:gap-12 md:py-20 md:grid-cols-2 fade-in-section">
-                    <div>
-                        <p className="font-medium uppercase tracking-wider text-muted-foreground">{servicesLabel}</p>
-                        <h2 className="font-heading mt-4 text-3xl font-bold text-foreground sm:text-4xl">
-                            {servicesTitle}
-                        </h2>
-                        <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-                            {servicesDescription}
-                        </p>
+                {/* ── Services ── */}
+                <section className="services-section container mx-auto grid items-start gap-12 px-4 py-20 sm:px-6 sm:py-24 md:gap-16 lg:grid-cols-2">
+                    <div className="services-header lg:sticky lg:top-24">
+                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">{servicesLabel}</span>
+                        <h2 className="font-heading mt-5 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl leading-tight">{servicesTitle}</h2>
+                        <p className="mt-5 text-base text-muted-foreground leading-relaxed">{servicesDescription}</p>
+                        <Link href="/layanan" className="mt-8 inline-flex items-center gap-2 rounded-full border-2 border-primary px-6 py-3 text-sm font-bold text-primary transition-all hover:bg-primary hover:text-white hover:scale-105">
+                            {locale === 'id' ? 'Semua Layanan' : 'All Services'}
+                            <ArrowRightIcon className="h-4 w-4" />
+                        </Link>
                     </div>
-                    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         {serviceItems.map((item: ServiceItem) => (
-                            <div key={item.number} className="rounded-2xl bg-card p-6 shadow-sm transition-shadow hover:shadow-lg">
-                                <p className="font-heading text-2xl font-bold text-primary/40">{item.number}</p>
-                                <h3 className="font-heading mt-4 text-lg font-bold text-foreground">{item.title}</h3>
-                                <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+                            <div key={item.number} className="service-card group relative overflow-hidden rounded-3xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:border-primary/30">
+                                <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:bg-primary/10 group-hover:scale-150" />
+                                <p className="font-heading text-4xl font-black text-primary/15 group-hover:text-primary/25 transition-colors">{item.number}</p>
+                                <h3 className="font-heading mt-3 text-lg font-bold text-foreground">{item.title}</h3>
+                                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{item.description}</p>
                             </div>
                         ))}
                     </div>
                 </section>
 
-                {/* Gallery Section */}
-                <section className="bg-secondary/18 py-16 sm:py-20 md:py-24 fade-in-section">
+                {/* ── Gallery ── */}
+                <section className="gallery-section bg-foreground py-20 sm:py-24">
                     <div className="container mx-auto px-4 sm:px-6">
-                        <div className="mb-12 text-center">
-                            <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{galleryTitle}</h2>
-                            <p className="mt-3 text-base text-muted-foreground">{galleryDescription}</p>
+                        <div className="mb-12 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-white/60">
+                                    {locale === 'id' ? 'Momen Bersama' : 'Our Moments'}
+                                </span>
+                                <h2 className="font-heading mt-3 text-3xl font-extrabold text-white sm:text-4xl md:text-5xl">{galleryTitle}</h2>
+                            </div>
+                            <p className="max-w-xs text-sm text-white/50">{galleryDescription}</p>
                         </div>
-                        <div className="grid auto-rows-[120px] grid-cols-2 gap-3 sm:auto-rows-[150px] sm:gap-4 md:auto-rows-[180px] md:grid-cols-4 lg:auto-rows-[200px]">
+                        <div className="grid auto-rows-[130px] grid-cols-2 gap-3 sm:auto-rows-[160px] sm:gap-4 md:auto-rows-[190px] md:grid-cols-4">
                             {galleryImages.map((img: GalleryImage, index: number) => {
-                                const spans = [
-                                    'md:col-span-2 md:row-span-2',
-                                    'md:col-span-1',
-                                    'md:col-span-1',
-                                    'md:col-span-2',
-                                    'md:col-span-1',
-                                    'md:col-span-1',
-                                ];
+                                const spans = ['md:col-span-2 md:row-span-2', 'md:col-span-1', 'md:col-span-1', 'md:col-span-2', 'md:col-span-1', 'md:col-span-1'];
                                 return (
-                                    <div key={index} className={`group relative overflow-hidden rounded-2xl border border-white/70 bg-white shadow-lg ${spans[index % spans.length]}`}>
-                                        <img
-                                            src={img.src}
-                                            alt={img.alt}
-                                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                        />
-                                        <div className="absolute inset-0 bg-black/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                                    <div key={index} className={`gallery-item group relative overflow-hidden rounded-2xl bg-white/5 ${spans[index % spans.length]}`}>
+                                        <img src={img.src} alt={img.alt} className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                        <div className="absolute inset-0 bg-black/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                                        <div className="absolute inset-0 flex items-end p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                                            <p className="text-xs font-semibold text-white drop-shadow">{img.alt}</p>
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -592,101 +440,82 @@ export default function Home() {
                     </div>
                 </section>
 
-                {/* FAQ Section */}
-                <section className="container mx-auto px-4 py-16 sm:px-6 sm:py-20 md:py-24 fade-in-section">
-                    <div className="mx-auto max-w-3xl text-center">
-                        <h2 className="font-heading text-3xl font-bold text-foreground sm:text-4xl">{faqTitle}</h2>
-                        <p className="mt-3 text-base text-muted-foreground">{faqDescription}</p>
+                {/* ── FAQ ── */}
+                <section className="faq-section container mx-auto px-4 py-20 sm:px-6 sm:py-24">
+                    <div className="mx-auto max-w-2xl text-center">
+                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">FAQ</span>
+                        <h2 className="font-heading mt-5 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl">{faqTitle}</h2>
+                        <p className="mt-4 text-base text-muted-foreground">{faqDescription}</p>
                     </div>
-
-                    <div className="mx-auto mt-10 grid max-w-4xl gap-3">
+                    <div className="mx-auto mt-12 max-w-3xl space-y-3">
                         {faqItems.map((item: FaqItem, index: number) => (
-                            <details key={`${item.question}_${index}`} className="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
-                                <summary className="cursor-pointer text-sm font-semibold text-foreground">{item.question}</summary>
-                                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
-                            </details>
+                            <div key={`${item.question}_${index}`} className="faq-item overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md">
+                                <button className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left" onClick={() => setOpenFaq(openFaq === index ? null : index)}>
+                                    <span className="text-sm font-semibold text-foreground">{item.question}</span>
+                                    <span className={`flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-border text-muted-foreground transition-all duration-300 ${openFaq === index ? 'rotate-45 border-primary text-primary bg-primary/10' : ''}`}>+</span>
+                                </button>
+                                <div className={`overflow-hidden transition-all duration-300 ${openFaq === index ? 'max-h-48' : 'max-h-0'}`}>
+                                    <p className="px-6 pb-5 text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </section>
 
-                {/* Contact Section */}
-                <section className="container mx-auto px-4 pb-16 sm:px-6 sm:pb-20 md:pb-24 fade-in-section">
-                    <div className="grid gap-8 rounded-3xl bg-linear-to-br from-foreground via-foreground to-primary px-6 py-8 text-background shadow-2xl sm:px-8 sm:py-10 lg:grid-cols-[1.1fr_0.9fr]">
-                        <div>
-                            <p className="text-sm uppercase tracking-[0.25em] text-background/70">{contactLabel}</p>
-                            <h2 className="font-heading mt-3 text-3xl font-bold sm:text-4xl">{contactTitle}</h2>
-                            <p className="mt-3 text-background/70 leading-relaxed">
-                                {contactDescription}
-                            </p>
-                            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                                <a
-                                    href={whatsappLink}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-xs font-semibold text-primary-foreground sm:w-auto"
-                                >
-                                    <MessageCircle className="h-4 w-4" />
-                                    {contactWhatsapp}
-                                </a>
-                                <Link
-                                    href="/kontak"
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-background/40 px-5 py-3 text-xs font-semibold text-background/90 transition hover:border-background/70 hover:bg-background/10 sm:w-auto"
-                                >
-                                    {contactFull}
-                                    <ArrowRightIcon className="h-4 w-4" />
-                                </Link>
-                            </div>
-                        </div>
-
-                        <div className="grid gap-4 rounded-2xl bg-background/10 p-5 sm:p-6">
-                            <div className="flex items-center gap-3 text-sm text-background/80">
-                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-background/10">
-                                    <Phone className="h-4 w-4" />
-                                </span>
-                                <div>
-                                    <p className="text-xs uppercase tracking-[0.2em] text-background/50">{t.contact.phoneLabel}</p>
-                                    <p className="font-semibold">{contactPhone}</p>
+                {/* ── Contact ── */}
+                <section className="contact-section container mx-auto px-4 pb-20 sm:px-6 sm:pb-24">
+                    <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-foreground via-foreground to-primary px-6 py-12 text-background shadow-2xl sm:px-10 sm:py-14 lg:px-14">
+                        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+                        <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-accent/10 blur-3xl" />
+                        <div className="relative grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
+                            <div>
+                                <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-background/60">{contactLabel}</span>
+                                <h2 className="font-heading mt-5 text-3xl font-extrabold sm:text-4xl md:text-5xl leading-tight">{contactTitle}</h2>
+                                <p className="mt-4 text-base text-background/65 leading-relaxed">{contactDescription}</p>
+                                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                                    <a href={whatsappLink} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/40 transition-all hover:bg-primary/90 hover:scale-105 active:scale-95">
+                                        <MessageCircle className="h-4 w-4" />
+                                        {contactWhatsapp}
+                                    </a>
+                                    <Link href="/kontak" className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-background/30 px-6 py-3.5 text-sm font-bold text-background/85 transition-all hover:border-background/60 hover:bg-background/10 hover:scale-105 active:scale-95">
+                                        {contactFull}
+                                        <ArrowRightIcon className="h-4 w-4" />
+                                    </Link>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 text-sm text-background/80">
-                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-background/10">
-                                    <Mail className="h-4 w-4" />
-                                </span>
-                                <div>
-                                    <p className="text-xs uppercase tracking-[0.2em] text-background/50">{t.contact.emailLabel}</p>
-                                    <p className="font-semibold">{contactEmail}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm text-background/80">
-                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-background/10">
-                                    <MapPin className="h-4 w-4" />
-                                </span>
-                                <div>
-                                    <p className="text-xs uppercase tracking-[0.2em] text-background/50">{t.contact.addressLabel}</p>
-                                    <p className="font-semibold">{contactAddress}</p>
-                                </div>
-                            </div>
-                            <div className="pt-2">
-                                <p className="text-xs uppercase tracking-[0.2em] text-background/50">{t.contact.socialLabel}</p>
-                                <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold text-background/80">
-                                    {(contactSocials.length > 0 ? contactSocials : [
-                                        { label: 'Instagram', url: 'https://instagram.com/asfartour' },
-                                        { label: 'YouTube', url: 'https://youtube.com/@asfartour' },
-                                    ]).map((social: Record<string, unknown>, index: number) => {
-                                        const icons = [Instagram, Facebook, Youtube, Twitter];
-                                        const Icon = icons[index % icons.length];
-
-                                        return (
-                                            <a
-                                                key={`${social.label}_${index}`}
-                                                className="inline-flex items-center gap-2 rounded-full border border-background/20 px-3 py-2 transition hover:border-background/50 hover:bg-background/10"
-                                                href={String(social.url ?? '#')}
-                                                rel="noreferrer"
-                                                target="_blank"
-                                            >
-                                                <Icon className="h-4 w-4" />
-                                                {String(social.label ?? `Social ${index + 1}`)}
-                                            </a>
-                                        );
-                                    })}
+                            <div className="grid gap-4 rounded-2xl bg-white/8 p-6 backdrop-blur-sm">
+                                {[
+                                    { icon: Phone, label: locale === 'id' ? 'Telepon' : 'Phone', value: contactPhone },
+                                    { icon: Mail, label: locale === 'id' ? 'Email' : 'Email', value: contactEmail },
+                                    { icon: MapPin, label: locale === 'id' ? 'Alamat Kantor' : 'Office Address', value: contactAddress },
+                                ].map(({ icon: Icon, label, value }) => (
+                                    <div key={label} className="flex items-center gap-4 text-sm text-background/80">
+                                        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/10">
+                                            <Icon className="h-4 w-4" />
+                                        </span>
+                                        <div>
+                                            <p className="text-xs uppercase tracking-widest text-background/45">{label}</p>
+                                            <p className="font-semibold">{value}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                                <div className="pt-2">
+                                    <p className="text-xs uppercase tracking-widest text-background/45">{locale === 'id' ? 'Sosial Media' : 'Social Media'}</p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {(contactSocials.length > 0 ? contactSocials : [
+                                            { label: 'Instagram', url: 'https://instagram.com/asfartour' },
+                                            { label: 'YouTube', url: 'https://youtube.com/@asfartour' },
+                                        ]).map((social: Record<string, unknown>, index: number) => {
+                                            const icons = [Instagram, Facebook, Youtube, Twitter];
+                                            const Icon = icons[index % icons.length];
+                                            return (
+                                                <a key={`${social.label}_${index}`} href={String(social.url ?? '#')} rel="noreferrer" target="_blank" className="inline-flex items-center gap-2 rounded-full border border-background/20 px-3 py-2 text-xs font-semibold text-background/75 transition-all hover:border-background/50 hover:bg-background/10 hover:scale-105">
+                                                    <Icon className="h-3.5 w-3.5" />
+                                                    {String(social.label ?? `Social ${index + 1}`)}
+                                                </a>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         </div>

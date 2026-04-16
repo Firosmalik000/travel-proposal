@@ -3,6 +3,7 @@
 use App\Http\Controllers\Administrator\BrandingController;
 use App\Http\Controllers\Administrator\ContentController;
 use App\Http\Controllers\Administrator\MenuController;
+use App\Http\Controllers\Administrator\PackageController;
 use App\Http\Controllers\Administrator\SeoController;
 use App\Http\Controllers\Administrator\UserAccessController;
 use App\Http\Controllers\DashboardController;
@@ -18,6 +19,8 @@ Route::get('paket-umroh', function () {
 })->name('public.paket');
 
 Route::get('paket-umroh/{travelPackage:slug}', function (\App\Models\TravelPackage $travelPackage) {
+    $travelPackage->load(['products:id,name,product_type', 'schedules', 'testimonials']);
+
     return Inertia::render('public/paket/detail/index', [
         'travelPackage' => [
             'id' => $travelPackage->id,
@@ -27,13 +30,37 @@ Route::get('paket-umroh/{travelPackage:slug}', function (\App\Models\TravelPacka
             'package_type' => $travelPackage->package_type,
             'departure_city' => $travelPackage->departure_city,
             'duration_days' => $travelPackage->duration_days,
-            'price' => $travelPackage->price,
+            'price' => (float) $travelPackage->price,
+            'original_price' => $travelPackage->original_price ? (float) $travelPackage->original_price : null,
+            'discount_label' => $travelPackage->discount_label,
+            'discount_percent' => $travelPackage->discountPercent(),
+            'discount_ends_at' => $travelPackage->discount_ends_at?->toDateTimeString(),
             'currency' => $travelPackage->currency,
             'image_path' => $travelPackage->image_path,
             'summary' => $travelPackage->summary,
             'content' => $travelPackage->content,
-            'products' => $travelPackage->products()->get(['name', 'slug'])->toArray(),
-            'schedules' => $travelPackage->schedules()->get(['departure_date', 'return_date', 'departure_city', 'seats_total', 'seats_available', 'status', 'notes'])->toArray(),
+            'is_featured' => $travelPackage->is_featured,
+            'rating_avg' => $travelPackage->testimonials->avg('rating') ? round($travelPackage->testimonials->avg('rating'), 1) : null,
+            'rating_count' => $travelPackage->testimonials->count(),
+            'products' => $travelPackage->products->map(fn ($p) => [
+                'name' => $p->name,
+                'product_type' => $p->product_type,
+            ])->values()->all(),
+            'schedules' => $travelPackage->schedules->map(fn ($s) => [
+                'departure_date' => $s->departure_date?->toDateString(),
+                'return_date' => $s->return_date?->toDateString(),
+                'departure_city' => $s->departure_city,
+                'seats_total' => $s->seats_total,
+                'seats_available' => $s->seats_available,
+                'status' => $s->status,
+                'notes' => $s->notes,
+            ])->values()->all(),
+            'testimonials' => $travelPackage->testimonials->where('is_active', true)->map(fn ($t) => [
+                'name' => $t->name,
+                'origin_city' => $t->origin_city,
+                'quote' => $t->quote,
+                'rating' => $t->rating,
+            ])->values()->all(),
         ],
     ]);
 })->name('public.paket-detail');
@@ -91,14 +118,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Dashboard API endpoints
-    Route::get('api/dashboard/stats', [DashboardController::class, 'getStats'])->name('dashboard.stats');
-    Route::get('api/dashboard/monthly-growth', [DashboardController::class, 'getMonthlyGrowth'])->name('dashboard.monthly-growth');
-    Route::get('api/dashboard/department-distribution', [DashboardController::class, 'getDepartmentDistribution'])->name('dashboard.department-distribution');
-    Route::get('api/dashboard/weekly-activity', [DashboardController::class, 'getWeeklyActivity'])->name('dashboard.weekly-activity');
-    Route::get('api/dashboard/recent-activity', [DashboardController::class, 'getRecentActivity'])->name('dashboard.recent-activity');
-    Route::get('api/dashboard/pending-tasks', [DashboardController::class, 'getPendingTasks'])->name('dashboard.pending-tasks');
-    Route::get('api/dashboard/system-status', [DashboardController::class, 'getSystemStatus'])->name('dashboard.system-status');
-    Route::get('api/dashboard/birthdays', [DashboardController::class, 'getBirthdaysThisMonth'])->name('dashboard.birthdays');
+    Route::get('dashboard/stats', [DashboardController::class, 'getStats'])->name('dashboard.stats');
+    Route::get('dashboard/monthly-growth', [DashboardController::class, 'getMonthlyGrowth'])->name('dashboard.monthly-growth');
+    Route::get('dashboard/package-distribution', [DashboardController::class, 'getDepartmentDistribution'])->name('dashboard.department-distribution');
+    Route::get('dashboard/weekly-activity', [DashboardController::class, 'getWeeklyActivity'])->name('dashboard.weekly-activity');
+    Route::get('dashboard/recent-activity', [DashboardController::class, 'getRecentActivity'])->name('dashboard.recent-activity');
+    Route::get('dashboard/pending-tasks', [DashboardController::class, 'getPendingTasks'])->name('dashboard.pending-tasks');
+    Route::get('dashboard/system-status', [DashboardController::class, 'getSystemStatus'])->name('dashboard.system-status');
+    Route::get('dashboard/upcoming-departures', [DashboardController::class, 'getBirthdaysThisMonth'])->name('dashboard.birthdays');
 
     // Get user menus (for sidebar)
     Route::get('api/user-menus', [MenuController::class, 'getUserMenus'])->name('user.menus');
@@ -107,8 +134,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('branding', [BrandingController::class, 'index'])->name('branding.index');
         Route::patch('branding', [BrandingController::class, 'update'])->name('branding.update');
         Route::get('landing', [ContentController::class, 'landing'])->name('landing.index');
-        Route::get('schedules', [ContentController::class, 'schedules'])->name('schedules.index');
-        Route::redirect('content', '/dashboard/website-management/landing')->name('content.index');
+        Route::redirect('schedules', '/dashboard/product-management/packages')->name('schedules.index');
+        Route::get('content', [ContentController::class, 'index'])->name('content.index');
         Route::redirect('products', '/dashboard/product-management/products');
         Route::redirect('packages', '/dashboard/product-management/packages');
         Route::patch('content/{pageContent}', [ContentController::class, 'update'])->name('content.update');
@@ -120,8 +147,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('dashboard/product-management')->group(function () {
+        Route::get('categories', [ContentController::class, 'productCategories'])->name('product-categories.index');
         Route::get('products', [ContentController::class, 'products'])->name('products.index');
-        Route::get('packages', [ContentController::class, 'packages'])->name('packages.index');
+
+        // Package Management (dedicated controller)
+        Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
+        Route::post('packages', [PackageController::class, 'store'])->name('packages.store');
+        Route::post('packages/{package}', [PackageController::class, 'update'])->name('packages.update');
+        Route::delete('packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
+
+        // Schedule management (nested under package)
+        Route::post('packages/{package}/schedules', [PackageController::class, 'storeSchedule'])->name('packages.schedules.store');
+        Route::post('packages/{package}/schedules/{schedule}', [PackageController::class, 'updateSchedule'])->name('packages.schedules.update');
+        Route::delete('packages/{package}/schedules/{schedule}', [PackageController::class, 'destroySchedule'])->name('packages.schedules.destroy');
     });
 
     // Administrator Routes
@@ -147,23 +185,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/settings.php';
-
-// MinIO Storage Routes
-Route::prefix('minio')->middleware(['auth'])->group(function () {
-    Route::post('upload', [App\Http\Controllers\MinioStorageController::class, 'upload'])->name('minio.upload');
-    Route::get('download/{path}', [App\Http\Controllers\MinioStorageController::class, 'download'])->name('minio.download')->where('path', '.*');
-    Route::delete('delete/{path}', [App\Http\Controllers\MinioStorageController::class, 'delete'])->name('minio.delete')->where('path', '.*');
-    Route::get('list/{directory?}', [App\Http\Controllers\MinioStorageController::class, 'listFiles'])->name('minio.list')->where('directory', '.*');
-    Route::post('temporary-url', [App\Http\Controllers\MinioStorageController::class, 'getTemporaryUrl'])->name('minio.temporary-url');
-    Route::get('info/{path}', [App\Http\Controllers\MinioStorageController::class, 'getFileInfo'])->name('minio.info')->where('path', '.*');
-});
-
-// MinIO Test Routes (untuk development/testing)
-Route::prefix('minio-test')->group(function () {
-    Route::get('/', [App\Http\Controllers\MinioTestController::class, 'index'])->name('minio-test.index');
-    Route::get('/connection', [App\Http\Controllers\MinioTestController::class, 'testConnection'])->name('minio-test.connection');
-    Route::get('/upload-dummy', [App\Http\Controllers\MinioTestController::class, 'testUploadDummy'])->name('minio-test.upload-dummy');
-    Route::get('/list-files', [App\Http\Controllers\MinioTestController::class, 'testListFiles'])->name('minio-test.list-files');
-    Route::post('/delete', [App\Http\Controllers\MinioTestController::class, 'testDelete'])->name('minio-test.delete');
-    Route::get('/system-info', [App\Http\Controllers\MinioTestController::class, 'systemInfo'])->name('minio-test.system-info');
-});

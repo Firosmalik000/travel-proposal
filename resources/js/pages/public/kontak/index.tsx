@@ -184,12 +184,44 @@ export default function Kontak() {
                                 {localize(pageContent?.content?.map?.badge, locale, t.map.badge)}
                             </span>
                         </div>
-                        <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/40 text-center text-sm font-semibold text-muted-foreground sm:h-80 lg:h-[420px]">
-                            {localize(pageContent?.content?.map?.placeholder, locale, t.map.placeholder)}
-                        </div>
-                        <p className="mt-3 text-xs text-muted-foreground">
-                            {localize(pageContent?.content?.map?.note, locale, t.map.note)}
-                        </p>
+                        {(() => {
+                            const mapLink: string = seo.contact?.address?.mapLink || seo.contact?.mapLink || seo.contact?.map_link || '';
+                            // Convert regular Google Maps URL to embed URL if needed
+                            let embedSrc = '';
+                            if (mapLink.includes('maps/embed')) {
+                                embedSrc = mapLink;
+                            } else if (mapLink && mapLink !== 'https://maps.google.com') {
+                                // Encode the URL as a q parameter for embed
+                                embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapLink)}&output=embed`;
+                            } else {
+                                // Fallback: embed by address
+                                embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
+                            }
+                            return (
+                                <div className="overflow-hidden rounded-2xl border border-border h-64 sm:h-80 lg:h-[420px]">
+                                    <iframe
+                                        src={embedSrc}
+                                        width="100%"
+                                        height="100%"
+                                        style={{ border: 0 }}
+                                        allowFullScreen
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                        title={t.map.title}
+                                    />
+                                </div>
+                            );
+                        })()}
+                        {(seo.contact?.address?.mapLink || seo.contact?.mapLink) && (
+                            <a
+                                href={seo.contact?.address?.mapLink || seo.contact?.mapLink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                            >
+                                {locale === 'id' ? 'Buka di Google Maps' : 'Open in Google Maps'} ↗
+                            </a>
+                        )}
                     </div>
                 </div>
             </section>

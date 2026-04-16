@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             MenuSeeder::class,
             UserSeeder::class,
             TravelContentSeeder::class,
+            PackageSeeder::class,
             AdminUserSeeder::class,
         ]);
     }

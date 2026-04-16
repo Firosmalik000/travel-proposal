@@ -50,6 +50,7 @@ class SeoController extends Controller
         $content['contact'] = [
             ...($content['contact'] ?? []),
             'phone' => $request->string('phone')->value(),
+            'whatsapp' => $request->string('whatsapp')->value(),
             'email' => $request->string('email')->value(),
             'address' => [
                 'full' => ['id' => $request->string('address_id')->value(), 'en' => $request->string('address_en')->value()],
@@ -60,11 +61,20 @@ class SeoController extends Controller
                 'weekend' => ['id' => $request->string('weekend_hours_id')->value(), 'en' => $request->string('weekend_hours_en')->value()],
             ],
         ];
+        $content['social'] = [
+            ...($content['social'] ?? []),
+            'accounts' => is_array($request->input('social_accounts'))
+                ? $request->input('social_accounts')
+                : json_decode($request->string('social_accounts')->value() ?: '[]', true) ?? [],
+            'ogTitle' => ['id' => $request->string('og_title_id')->value(), 'en' => $request->string('og_title_en')->value()],
+            'ogDescription' => ['id' => $request->string('og_description_id')->value(), 'en' => $request->string('og_description_en')->value()],
+        ];
         $content['advanced'] = [
             'robotsDefault' => $request->string('robots_default')->value(),
             'canonicalBase' => $request->string('canonical_base')->value(),
             'googleVerification' => $request->string('google_verification')->value(),
             'bingVerification' => $request->string('bing_verification')->value(),
+            'googleAnalyticsId' => $request->string('google_analytics_id')->value(),
         ];
         $content['colors'] = [
             'primary' => $request->string('primary')->value(),

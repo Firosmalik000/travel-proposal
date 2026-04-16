@@ -19,6 +19,9 @@ class TravelPackage extends Model
         'departure_city',
         'duration_days',
         'price',
+        'original_price',
+        'discount_label',
+        'discount_ends_at',
         'currency',
         'image_path',
         'summary',
@@ -34,9 +37,25 @@ class TravelPackage extends Model
             'summary' => 'array',
             'content' => 'array',
             'price' => 'decimal:2',
+            'original_price' => 'decimal:2',
+            'discount_ends_at' => 'datetime',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function hasDiscount(): bool
+    {
+        return $this->original_price !== null && $this->original_price > $this->price;
+    }
+
+    public function discountPercent(): ?int
+    {
+        if (! $this->hasDiscount()) {
+            return null;
+        }
+
+        return (int) round((1 - $this->price / $this->original_price) * 100);
     }
 
     public function schedules(): HasMany
@@ -50,5 +69,10 @@ class TravelPackage extends Model
             ->withPivot('sort_order')
             ->withTimestamps()
             ->orderByPivot('sort_order');
+    }
+
+    public function testimonials(): HasMany
+    {
+        return $this->hasMany(Testimonial::class);
     }
 }

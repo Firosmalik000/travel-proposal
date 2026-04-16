@@ -9,7 +9,10 @@ import { Toaster } from 'sonner';
 import { AdminLocaleProvider } from './contexts/admin-locale';
 import { PublicLocaleProvider } from './contexts/public-locale';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const rawAppName = import.meta.env.VITE_APP_NAME || 'Travel Proposal';
+const appName = rawAppName
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (character: string) => character.toUpperCase());
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

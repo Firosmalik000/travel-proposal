@@ -10,36 +10,36 @@ class MasterKaryawanTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_travel_package_stores_detail_content_as_array(): void
+    public function test_travel_package_stores_content_as_array(): void
     {
         $package = TravelPackage::query()->create([
             'code' => 'PKG-100',
-            'title' => 'Umroh Family',
             'slug' => 'umroh-family',
-            'package_type' => 'family',
+            'name' => ['id' => 'Umroh Family', 'en' => 'Family Umrah'],
+            'package_type' => 'reguler',
             'departure_city' => 'Makassar',
             'duration_days' => 10,
-            'price_from' => 36900000,
-            'detail_content' => [
-                'notes' => ['Pendampingan keluarga', 'Seat terbatas'],
-            ],
+            'price' => 36900000,
+            'currency' => 'IDR',
+            'content' => ['included' => ['id' => ['Tiket', 'Visa'], 'en' => ['Ticket', 'Visa']]],
             'is_active' => true,
         ]);
 
-        $this->assertIsArray($package->detail_content);
-        $this->assertCount(2, $package->detail_content['notes']);
+        $this->assertIsArray($package->content);
+        $this->assertCount(2, $package->content['included']['id']);
     }
 
     public function test_travel_package_has_many_schedules(): void
     {
         $package = TravelPackage::query()->create([
             'code' => 'PKG-101',
-            'title' => 'Umroh Plus',
             'slug' => 'umroh-plus',
-            'package_type' => 'plus',
+            'name' => ['id' => 'Umroh Plus', 'en' => 'Plus Umrah'],
+            'package_type' => 'vip',
             'departure_city' => 'Jakarta',
             'duration_days' => 12,
-            'price_from' => 39900000,
+            'price' => 39900000,
+            'currency' => 'IDR',
             'is_active' => true,
         ]);
 

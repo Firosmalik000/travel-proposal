@@ -10,6 +10,7 @@ use App\Models\GalleryItem;
 use App\Models\LegalDocument;
 use App\Models\PageContent;
 use App\Models\Partner;
+use App\Models\ProductCategory;
 use App\Models\TeamMember;
 use App\Models\Testimonial;
 use App\Models\TravelPackage;
@@ -25,11 +26,7 @@ class TravelContentSeeder extends Seeder
         $this->seedBrandingSettings();
         $this->seedSeoSettings();
         $this->seedPageContents();
-        $products = $this->seedProducts();
-        $packages = $this->seedPackages($products);
-        $this->seedSchedules($packages);
         $this->seedServices();
-        $this->seedTestimonials($packages);
         $this->seedFaqs();
         $this->seedArticles();
         $this->seedGallery();
@@ -218,6 +215,12 @@ class TravelContentSeeder extends Seeder
                         'title' => $this->localize('Tim Inti Kami', 'Our Core Team'),
                         'description' => $this->localize('Figur-figur yang mengawal pelayanan jamaah dari awal hingga akhir.', 'The people who guide pilgrim service from start to finish.'),
                     ],
+                    'stats' => [
+                        ['value' => '15+', 'label' => $this->localize('Tahun Melayani', 'Years Serving')],
+                        ['value' => '20K+', 'label' => $this->localize('Jamaah Berangkat', 'Pilgrims Departed')],
+                        ['value' => '98%', 'label' => $this->localize('Kepuasan Jamaah', 'Pilgrim Satisfaction')],
+                        ['value' => '50+', 'label' => $this->localize('Mitra Terpercaya', 'Trusted Partners')],
+                    ],
                 ],
             ],
             [
@@ -378,189 +381,6 @@ class TravelContentSeeder extends Seeder
         }
     }
 
-    private function seedProducts(): array
-    {
-        $rows = [
-            [
-                'code' => 'PRD-VISA',
-                'slug' => 'visa-umroh',
-                'name' => $this->localize('Visa Umroh', 'Umrah Visa'),
-                'product_type' => 'dokumen',
-                'description' => $this->localize('Pengurusan visa resmi untuk keberangkatan jamaah.', 'Official visa processing for pilgrim departures.'),
-                'content' => ['unit' => 'per jamaah'],
-            ],
-            [
-                'code' => 'PRD-TIKET',
-                'slug' => 'tiket-pesawat',
-                'name' => $this->localize('Tiket Pesawat', 'Flight Ticket'),
-                'product_type' => 'transportasi',
-                'description' => $this->localize('Tiket penerbangan internasional sesuai paket.', 'International flight ticket according to package.'),
-                'content' => ['unit' => 'round trip'],
-            ],
-            [
-                'code' => 'PRD-HOTEL',
-                'slug' => 'akomodasi-hotel',
-                'name' => $this->localize('Akomodasi Hotel', 'Hotel Accommodation'),
-                'product_type' => 'akomodasi',
-                'description' => $this->localize('Akomodasi hotel Makkah dan Madinah.', 'Hotel stay in Makkah and Madinah.'),
-                'content' => ['unit' => 'per kamar sharing'],
-            ],
-            [
-                'code' => 'PRD-MANASIK',
-                'slug' => 'manasik-dan-pembimbing',
-                'name' => $this->localize('Manasik dan Pembimbing', 'Manasik and Worship Guide'),
-                'product_type' => 'layanan',
-                'description' => $this->localize('Manasik sebelum berangkat dan pendampingan selama ibadah.', 'Pre-departure manasik and guidance during worship.'),
-                'content' => ['unit' => 'per paket'],
-            ],
-            [
-                'code' => 'PRD-TRANSPORT',
-                'slug' => 'transportasi-lokal',
-                'name' => $this->localize('Transportasi Lokal', 'Local Transportation'),
-                'product_type' => 'transportasi',
-                'description' => $this->localize('Transportasi bus selama perjalanan ibadah.', 'Bus transportation during the trip.'),
-                'content' => ['unit' => 'per paket'],
-            ],
-        ];
-
-        $products = [];
-
-        foreach ($rows as $row) {
-            $products[$row['code']] = TravelProduct::query()->updateOrCreate(['code' => $row['code']], $row + ['is_active' => true]);
-        }
-
-        return $products;
-    }
-
-    private function seedPackages(array $products): array
-    {
-        $rows = [
-            [
-                'code' => 'ASF-HEMAT-09',
-                'slug' => 'umroh-hemat-9-hari',
-                'name' => $this->localize('Umroh Hemat 9 Hari', 'Economy Umrah 9 Days'),
-                'package_type' => 'hemat',
-                'departure_city' => 'Jakarta',
-                'duration_days' => 9,
-                'price' => 29900000,
-                'currency' => 'IDR',
-                'image_path' => '/images/dummy.jpg',
-                'summary' => $this->localize(
-                    'Paket efisien untuk jamaah yang mengutamakan keberangkatan terjangkau dengan layanan inti lengkap.',
-                    'An efficient package for pilgrims seeking an affordable departure with complete core services.',
-                ),
-                'content' => [
-                    'airline' => $this->localize('Garuda Indonesia', 'Garuda Indonesia'),
-                    'hotel' => $this->localize('Setara bintang 3', 'Equivalent to 3-star hotel'),
-                ],
-                'products' => ['PRD-VISA', 'PRD-TIKET', 'PRD-HOTEL', 'PRD-MANASIK'],
-                'is_featured' => true,
-            ],
-            [
-                'code' => 'ASF-REG-10',
-                'slug' => 'umroh-reguler-10-hari',
-                'name' => $this->localize('Umroh Reguler 10 Hari', 'Regular Umrah 10 Days'),
-                'package_type' => 'reguler',
-                'departure_city' => 'Surabaya',
-                'duration_days' => 10,
-                'price' => 34900000,
-                'currency' => 'IDR',
-                'image_path' => '/images/dummy.jpg',
-                'summary' => $this->localize(
-                    'Paket paling seimbang untuk keluarga dan jamaah umum dengan hotel nyaman dan pembimbing berpengalaman.',
-                    'A balanced package for families and general pilgrims with comfortable hotels and experienced guides.',
-                ),
-                'content' => [
-                    'airline' => $this->localize('Saudia', 'Saudia'),
-                    'hotel' => $this->localize('Setara bintang 4', 'Equivalent to 4-star hotel'),
-                ],
-                'products' => ['PRD-VISA', 'PRD-TIKET', 'PRD-HOTEL', 'PRD-MANASIK', 'PRD-TRANSPORT'],
-                'is_featured' => true,
-            ],
-            [
-                'code' => 'ASF-PREM-12',
-                'slug' => 'umroh-premium-12-hari',
-                'name' => $this->localize('Umroh Premium 12 Hari', 'Premium Umrah 12 Days'),
-                'package_type' => 'premium',
-                'departure_city' => 'Jakarta',
-                'duration_days' => 12,
-                'price' => 44900000,
-                'currency' => 'IDR',
-                'image_path' => '/images/dummy.jpg',
-                'summary' => $this->localize(
-                    'Paket premium dengan lokasi hotel lebih strategis dan durasi lebih longgar untuk ibadah yang tenang.',
-                    'A premium package with more strategic hotel locations and a more relaxed duration for worship.',
-                ),
-                'content' => [
-                    'airline' => $this->localize('Garuda Indonesia', 'Garuda Indonesia'),
-                    'hotel' => $this->localize('Hotel dekat masjid', 'Hotels near the mosque'),
-                ],
-                'products' => ['PRD-VISA', 'PRD-TIKET', 'PRD-HOTEL', 'PRD-MANASIK', 'PRD-TRANSPORT'],
-                'is_featured' => true,
-            ],
-        ];
-
-        $packages = [];
-
-        foreach ($rows as $row) {
-            $productCodes = $row['products'];
-            unset($row['products']);
-
-            $package = TravelPackage::query()->updateOrCreate(['code' => $row['code']], $row + ['is_active' => true]);
-            $package->products()->sync(
-                collect($productCodes)->values()->mapWithKeys(
-                    fn (string $code, int $index): array => [$products[$code]->id => ['sort_order' => $index + 1]],
-                )->all(),
-            );
-
-            $packages[$row['code']] = $package;
-        }
-
-        return $packages;
-    }
-
-    private function seedSchedules(array $packages): void
-    {
-        $rows = [
-            [
-                'travel_package_id' => $packages['ASF-HEMAT-09']->id,
-                'departure_date' => '2026-05-10',
-                'return_date' => '2026-05-18',
-                'departure_city' => 'Jakarta',
-                'seats_total' => 45,
-                'seats_available' => 12,
-                'status' => 'open',
-                'notes' => 'Seat hemat tersisa terbatas.',
-            ],
-            [
-                'travel_package_id' => $packages['ASF-REG-10']->id,
-                'departure_date' => '2026-06-15',
-                'return_date' => '2026-06-24',
-                'departure_city' => 'Surabaya',
-                'seats_total' => 40,
-                'seats_available' => 8,
-                'status' => 'open',
-                'notes' => 'Paling cocok untuk jamaah keluarga.',
-            ],
-            [
-                'travel_package_id' => $packages['ASF-PREM-12']->id,
-                'departure_date' => '2026-07-05',
-                'return_date' => '2026-07-16',
-                'departure_city' => 'Jakarta',
-                'seats_total' => 50,
-                'seats_available' => 20,
-                'status' => 'open',
-                'notes' => 'Hotel lebih dekat dan ritme ibadah lebih longgar.',
-            ],
-        ];
-
-        foreach ($rows as $row) {
-            DepartureSchedule::query()->updateOrCreate(
-                ['travel_package_id' => $row['travel_package_id'], 'departure_date' => $row['departure_date']],
-                $row + ['is_active' => true],
-            );
-        }
-    }
 
     private function seedServices(): void
     {

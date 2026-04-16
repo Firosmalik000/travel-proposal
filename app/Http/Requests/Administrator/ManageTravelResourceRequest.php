@@ -16,6 +16,7 @@ class ManageTravelResourceRequest extends FormRequest
         return [
             'payload' => ['nullable', 'array'],
             'payload_json' => ['nullable', 'json'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
         ];
     }
 

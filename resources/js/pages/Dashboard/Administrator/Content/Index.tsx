@@ -1,7 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { FormEvent } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { useAdminLocale } from '@/contexts/admin-locale';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -40,7 +41,20 @@ type Option = {
 type FieldDefinition = {
     path: string;
     label: string;
-    type: 'text' | 'date' | 'textarea' | 'number' | 'checkbox' | 'select' | 'localized-text' | 'localized-textarea' | 'localized-list' | 'code-list' | 'product-selector' | 'itinerary';
+    type:
+        | 'text'
+        | 'date'
+        | 'textarea'
+        | 'number'
+        | 'checkbox'
+        | 'select'
+        | 'localized-text'
+        | 'localized-textarea'
+        | 'localized-list'
+        | 'code-list'
+        | 'product-selector'
+        | 'itinerary'
+        | 'image';
     description?: string;
     options?: Option[];
     optionsKey?: string;
@@ -48,18 +62,17 @@ type FieldDefinition = {
     step?: number;
 };
 
+type ResourceFilterDefinition = {
+    key: string;
+    label: string;
+    options: Option[];
+    getValue: (row: ResourceTableRow) => string;
+};
+
 const packageTypeOptions: Option[] = [
     { label: 'Reguler', value: 'reguler' },
     { label: 'VIP', value: 'vip' },
     { label: 'Private', value: 'private' },
-];
-
-const productTypeOptions: Option[] = [
-    { label: 'Layanan', value: 'layanan' },
-    { label: 'Dokumen', value: 'dokumen' },
-    { label: 'Transportasi', value: 'transportasi' },
-    { label: 'Akomodasi', value: 'akomodasi' },
-    { label: 'Perlengkapan', value: 'perlengkapan' },
 ];
 
 const partnerCategoryOptions: Option[] = [
@@ -76,10 +89,17 @@ const scheduleStatusOptions: Option[] = [
 ];
 
 const resourceFieldDefinitions: Record<string, FieldDefinition[]> = {
+    product_categories: [
+        { path: 'key', label: 'Key Kategori', type: 'text' },
+        { path: 'name', label: 'Nama Kategori', type: 'localized-text' },
+        { path: 'description', label: 'Deskripsi Kategori', type: 'localized-textarea' },
+        { path: 'sort_order', label: 'Urutan', type: 'number', min: 0, step: 1 },
+        { path: 'is_active', label: 'Kategori Aktif', type: 'checkbox' },
+    ],
     products: [
         { path: 'code', label: 'Kode Produk', type: 'text' },
         { path: 'slug', label: 'Slug', type: 'text' },
-        { path: 'product_type', label: 'Tipe Produk', type: 'select', options: productTypeOptions },
+        { path: 'product_type', label: 'Tipe Produk', type: 'select', optionsKey: 'product_category_options' },
         { path: 'name', label: 'Nama Produk', type: 'localized-text' },
         { path: 'description', label: 'Deskripsi Produk', type: 'localized-textarea' },
         { path: 'content.unit', label: 'Satuan / Unit', type: 'localized-text' },
@@ -93,7 +113,7 @@ const resourceFieldDefinitions: Record<string, FieldDefinition[]> = {
         { path: 'duration_days', label: 'Durasi (Hari)', type: 'number', min: 1, step: 1 },
         { path: 'price', label: 'Harga Package', type: 'number', min: 0, step: 1000 },
         { path: 'currency', label: 'Mata Uang', type: 'text' },
-        { path: 'image_path', label: 'Path Gambar', type: 'text' },
+        { path: 'image_path', label: 'Foto Package', type: 'image', description: 'Upload foto utama package. Preview akan langsung berubah setelah file dipilih.' },
         { path: 'name', label: 'Nama Package', type: 'localized-text' },
         { path: 'summary', label: 'Ringkasan Package', type: 'localized-textarea' },
         { path: 'content.badge', label: 'Badge', type: 'localized-text' },
@@ -244,19 +264,23 @@ export default function ContentIndex({
 function ResourceSectionPanel({ resource }: { resource: ResourceSection }) {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<ResourceItem | null>(null);
+    const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
     const createForm = useForm({
         payload: clonePayload(resource.template),
+        image: null as File | null,
     });
 
     const createItem = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         createForm.post(`/dashboard/website-management/content/resources/${resource.key}`, {
+            forceFormData: resource.key === 'packages',
             preserveScroll: true,
             onSuccess: () => {
                 toast.success(`${resource.label} berhasil ditambahkan`);
                 createForm.setData('payload', clonePayload(resource.template));
+                createForm.setData('image', null);
                 setIsCreateDialogOpen(false);
             },
         });
@@ -273,6 +297,25 @@ function ResourceSectionPanel({ resource }: { resource: ResourceSection }) {
             item,
         }));
     }, [resource.items, resource.key]);
+
+    const filterDefinitions = useMemo<ResourceFilterDefinition[]>(() => buildResourceFilters(resource.key, rows, resource.meta ?? {}), [resource.key, resource.meta, rows]);
+    const filteredRows = useMemo<ResourceTableRow[]>(() => {
+        if (filterDefinitions.length === 0) {
+            return rows;
+        }
+
+        return rows.filter((row) =>
+            filterDefinitions.every((filter) => {
+                const selectedValue = activeFilters[filter.key];
+
+                if (!selectedValue || selectedValue === 'all') {
+                    return true;
+                }
+
+                return filter.getValue(row) === selectedValue;
+            }),
+        );
+    }, [activeFilters, filterDefinitions, rows]);
 
     const columns = useMemo<ColumnDef<ResourceTableRow>[]>(
         () => [
@@ -348,27 +391,58 @@ function ResourceSectionPanel({ resource }: { resource: ResourceSection }) {
                         <Card className="border-dashed">
                             <CardContent className="p-4">
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Total Item</p>
-                                <p className="mt-2 text-2xl font-semibold text-foreground">{resource.items.length}</p>
+                                <p className="mt-2 text-2xl font-semibold text-foreground">{filteredRows.length}</p>
                             </CardContent>
                         </Card>
                         <Card className="border-dashed">
                             <CardContent className="p-4">
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Item Aktif</p>
-                                <p className="mt-2 text-2xl font-semibold text-foreground">{rows.filter((row) => row.status).length}</p>
+                                <p className="mt-2 text-2xl font-semibold text-foreground">{filteredRows.filter((row) => row.status).length}</p>
                             </CardContent>
                         </Card>
                         <Card className="border-dashed">
                             <CardContent className="p-4">
                                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Item Nonaktif</p>
-                                <p className="mt-2 text-2xl font-semibold text-foreground">{rows.filter((row) => !row.status).length}</p>
+                                <p className="mt-2 text-2xl font-semibold text-foreground">{filteredRows.filter((row) => !row.status).length}</p>
                             </CardContent>
                         </Card>
                     </div>
 
+                    {filterDefinitions.length > 0 ? (
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            {filterDefinitions.map((filter) => (
+                                <div key={filter.key} className="space-y-2">
+                                    <Label>{filter.label}</Label>
+                                    <Select
+                                        value={activeFilters[filter.key] ?? 'all'}
+                                        onValueChange={(value) =>
+                                            setActiveFilters((current) => ({
+                                                ...current,
+                                                [filter.key]: value,
+                                            }))
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder={`Semua ${filter.label.toLowerCase()}`} />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua</SelectItem>
+                                            {filter.options.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
+
                     {resource.key === 'schedules' ? (
-                        <SchedulesTable rows={rows} onEdit={(item) => setEditingItem(item)} onDelete={(item) => destroyResourceItem(resource.key, resource.label, item.id)} />
+                        <SchedulesTable rows={filteredRows} onEdit={(item) => setEditingItem(item)} onDelete={(item) => destroyResourceItem(resource.key, resource.label, item.id)} />
                     ) : (
-                        <DataTable columns={columns} data={rows} searchKey="title" searchPlaceholder={`Cari ${resource.label.toLowerCase()}...`} />
+                        <DataTable columns={columns} data={filteredRows} searchKey="title" searchPlaceholder={`Cari ${resource.label.toLowerCase()}...`} />
                     )}
                 </CardContent>
             </Card>
@@ -387,6 +461,8 @@ function ResourceSectionPanel({ resource }: { resource: ResourceSection }) {
                         resourceMeta={resource.meta ?? {}}
                         data={createForm.data.payload}
                         setData={(payload) => createForm.setData('payload', payload)}
+                        image={createForm.data.image}
+                        setImage={(image) => createForm.setData('image', image)}
                         errors={createForm.errors}
                         processing={createForm.processing}
                         onSubmit={createItem}
@@ -423,6 +499,7 @@ function EditResourceDialog({
 }) {
     const form = useForm({
         payload: clonePayload(item.payload),
+        image: null as File | null,
         _method: 'PATCH',
     });
 
@@ -430,9 +507,11 @@ function EditResourceDialog({
         event.preventDefault();
 
         form.post(`/dashboard/website-management/content/resources/${resourceKey}/${item.id}`, {
+            forceFormData: resourceKey === 'packages',
             preserveScroll: true,
             onSuccess: () => {
                 toast.success(`${label} berhasil diperbarui`);
+                form.setData('image', null);
                 onClose();
             },
         });
@@ -453,6 +532,8 @@ function EditResourceDialog({
                     resourceMeta={resourceMeta}
                     data={form.data.payload}
                     setData={(payload) => form.setData('payload', payload)}
+                    image={form.data.image}
+                    setImage={(image) => form.setData('image', image)}
                     errors={form.errors}
                     processing={form.processing}
                     onSubmit={submit}
@@ -470,6 +551,8 @@ function ResourceEditorForm({
     resourceMeta,
     data,
     setData,
+    image,
+    setImage,
     errors,
     processing,
     onSubmit,
@@ -480,25 +563,69 @@ function ResourceEditorForm({
     resourceMeta: Record<string, any>;
     data: Record<string, any>;
     setData: (payload: Record<string, any>) => void;
+    image: File | null;
+    setImage: (image: File | null) => void;
     errors: Record<string, string>;
     processing: boolean;
     onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+    const { locale } = useAdminLocale();
     const fields = resourceFieldDefinitions[resourceKey] ?? [];
+    const selectedProductCategoryKey = resourceKey === 'products' ? stringValue(getNestedValue(data, 'product_type')) : '';
 
     const updateValue = (path: string, value: any) => {
         setData(updateNestedValue(data, path, value));
     };
 
+    useEffect(() => {
+        if (resourceKey !== 'products' || !selectedProductCategoryKey) {
+            return;
+        }
+
+        const categoryOptions = Array.isArray(resourceMeta.product_category_options)
+            ? (resourceMeta.product_category_options as ProductCategoryOption[])
+            : [];
+        const selectedCategory = categoryOptions.find((category) => category.key === selectedProductCategoryKey);
+
+        if (!selectedCategory?.default_unit || typeof selectedCategory.default_unit !== 'object') {
+            return;
+        }
+
+        const currentUnit = getNestedValue(data, 'content.unit');
+        const currentUnitId = stringValue(currentUnit?.id);
+        const currentUnitEn = stringValue(currentUnit?.en);
+
+        if (currentUnitId || currentUnitEn) {
+            return;
+        }
+
+        setData(
+            updateNestedValue(
+                updateNestedValue(data, 'content.unit.id', stringValue(selectedCategory.default_unit.id)),
+                'content.unit.en',
+                stringValue(selectedCategory.default_unit.en),
+            ),
+        );
+    }, [data, resourceKey, resourceMeta.product_category_options, selectedProductCategoryKey, setData]);
+
     return (
         <form className="space-y-6" onSubmit={onSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
                 {fields.map((field) => (
-                    <FieldRenderer key={field.path} field={field} data={data} resourceMeta={resourceMeta} onChange={updateValue} />
+                    <FieldRenderer
+                        key={field.path}
+                        field={field}
+                        data={data}
+                        resourceMeta={resourceMeta}
+                        locale={locale}
+                        image={image}
+                        setImage={setImage}
+                        onChange={updateValue}
+                    />
                 ))}
             </div>
 
-            {(errors.payload || errors.payload_json) && <p className="text-sm text-destructive">{errors.payload ?? errors.payload_json}</p>}
+            {(errors.payload || errors.payload_json || errors.image) && <p className="text-sm text-destructive">{errors.payload ?? errors.payload_json ?? errors.image}</p>}
 
             <div className="flex justify-end">
                 <Button type="submit" disabled={processing} className="w-full sm:w-auto">
@@ -513,89 +640,92 @@ function FieldRenderer({
     field,
     data,
     resourceMeta,
+    locale,
+    image,
+    setImage,
     onChange,
 }: {
     field: FieldDefinition;
     data: Record<string, any>;
     resourceMeta: Record<string, any>;
+    locale: 'id' | 'en';
+    image: File | null;
+    setImage: (image: File | null) => void;
     onChange: (path: string, value: any) => void;
 }) {
+    if (field.type === 'image') {
+        return (
+            <ImageUploadField
+                label={field.label}
+                description={field.description}
+                value={stringValue(getNestedValue(data, field.path))}
+                file={image}
+                onChange={(nextImage) => setImage(nextImage)}
+            />
+        );
+    }
+
     if (field.type === 'localized-text' || field.type === 'localized-textarea') {
         const Component = field.type === 'localized-text' ? Input : Textarea;
+        const localeLabel = locale === 'id' ? 'Indonesia' : 'English';
 
         return (
             <div className="space-y-3 md:col-span-2">
                 <div>
                     <Label>{field.label}</Label>
                     {field.description && <p className="mt-1 text-xs text-muted-foreground">{field.description}</p>}
+                    <p className="mt-1 text-xs text-muted-foreground">Sedang mengedit bahasa {localeLabel}.</p>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label>{field.label} ID</Label>
-                        <Component value={stringValue(getNestedValue(data, `${field.path}.id`))} onChange={(event) => onChange(`${field.path}.id`, event.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>{field.label} EN</Label>
-                        <Component value={stringValue(getNestedValue(data, `${field.path}.en`))} onChange={(event) => onChange(`${field.path}.en`, event.target.value)} />
-                    </div>
+                <div className="space-y-2">
+                    <Label>{field.label} {locale === 'id' ? 'ID' : 'EN'}</Label>
+                    <Component value={stringValue(getNestedValue(data, `${field.path}.${locale}`))} onChange={(event) => onChange(`${field.path}.${locale}`, event.target.value)} />
                 </div>
             </div>
         );
     }
 
     if (field.type === 'localized-list') {
+        const localeLabel = locale === 'id' ? 'Indonesia' : 'English';
+
         return (
             <div className="space-y-3 md:col-span-2">
                 <div>
                     <Label>{field.label}</Label>
                     {field.description && <p className="mt-1 text-xs text-muted-foreground">{field.description}</p>}
+                    <p className="mt-1 text-xs text-muted-foreground">Sedang mengedit bahasa {localeLabel}.</p>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label>{field.label} ID</Label>
-                        <Textarea
-                            className="min-h-32"
-                            value={joinLines(getNestedValue(data, `${field.path}.id`))}
-                            onChange={(event) => onChange(`${field.path}.id`, splitLines(event.target.value))}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>{field.label} EN</Label>
-                        <Textarea
-                            className="min-h-32"
-                            value={joinLines(getNestedValue(data, `${field.path}.en`))}
-                            onChange={(event) => onChange(`${field.path}.en`, splitLines(event.target.value))}
-                        />
-                    </div>
+                <div className="space-y-2">
+                    <Label>{field.label} {locale === 'id' ? 'ID' : 'EN'}</Label>
+                    <Textarea
+                        className="min-h-32"
+                        value={joinLines(getNestedValue(data, `${field.path}.${locale}`))}
+                        onChange={(event) => onChange(`${field.path}.${locale}`, splitLines(event.target.value))}
+                    />
                 </div>
             </div>
         );
     }
 
     if (field.type === 'itinerary') {
+        const localeLabel = locale === 'id' ? 'Indonesia' : 'English';
+        const otherLocale = locale === 'id' ? 'en' : 'id';
+
         return (
             <div className="space-y-3 md:col-span-2">
                 <div>
                     <Label>{field.label}</Label>
                     {field.description && <p className="mt-1 text-xs text-muted-foreground">{field.description}</p>}
+                    <p className="mt-1 text-xs text-muted-foreground">Sedang mengedit bahasa {localeLabel}.</p>
                 </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label>{field.label} ID</Label>
-                        <Textarea
-                            className="min-h-40"
-                            value={serializeItinerary(getNestedValue(data, field.path), 'id')}
-                            onChange={(event) => onChange(field.path, parseItinerary(event.target.value, serializeItinerary(getNestedValue(data, field.path), 'en'), 'id'))}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>{field.label} EN</Label>
-                        <Textarea
-                            className="min-h-40"
-                            value={serializeItinerary(getNestedValue(data, field.path), 'en')}
-                            onChange={(event) => onChange(field.path, parseItinerary(event.target.value, serializeItinerary(getNestedValue(data, field.path), 'id'), 'en'))}
-                        />
-                    </div>
+                <div className="space-y-2">
+                    <Label>{field.label} {locale === 'id' ? 'ID' : 'EN'}</Label>
+                    <Textarea
+                        className="min-h-40"
+                        value={serializeItinerary(getNestedValue(data, field.path), locale)}
+                        onChange={(event) =>
+                            onChange(field.path, parseItinerary(event.target.value, serializeItinerary(getNestedValue(data, field.path), otherLocale), locale))
+                        }
+                    />
                 </div>
             </div>
         );
@@ -769,12 +899,19 @@ function FieldRenderer({
                       value: option.code,
                       label: `${option.code} • ${localizedValue(option.name)} • ${option.departure_city} • ${option.duration_days} hari`,
                   })) ?? [])
-                : [];
+                : field.optionsKey === 'product_category_options'
+                  ? productCategoryOptions(resourceMeta.product_category_options)
+                  : [];
         const selectOptions = field.options ?? dynamicOptions;
+        const selectDescription =
+            field.optionsKey === 'product_category_options'
+                ? field.description ?? 'Saat kategori dipilih, satuan default product akan terisi otomatis.'
+                : field.description;
 
         return (
             <div className="space-y-2">
                 <Label>{field.label}</Label>
+                {selectDescription && <p className="text-xs text-muted-foreground">{selectDescription}</p>}
                 <Select value={stringValue(getNestedValue(data, field.path))} onValueChange={(value) => onChange(field.path, value)}>
                     <SelectTrigger>
                         <SelectValue placeholder={`Pilih ${field.label.toLowerCase()}`} />
@@ -804,6 +941,68 @@ function FieldRenderer({
                 value={stringValue(getNestedValue(data, field.path))}
                 onChange={(event) => onChange(field.path, field.type === 'number' ? parseNumber(event.target.value) : event.target.value)}
             />
+        </div>
+    );
+}
+
+function ImageUploadField({
+    label,
+    description,
+    value,
+    file,
+    onChange,
+}: {
+    label: string;
+    description?: string;
+    value: string;
+    file: File | null;
+    onChange: (file: File | null) => void;
+}) {
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!file) {
+            setPreviewUrl(null);
+
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        setPreviewUrl(objectUrl);
+
+        return () => URL.revokeObjectURL(objectUrl);
+    }, [file]);
+
+    return (
+        <div className="space-y-3 md:col-span-2">
+            <div>
+                <Label>{label}</Label>
+                {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+                <div className="overflow-hidden rounded-2xl border border-border bg-muted/30">
+                    <img src={previewUrl ?? value ?? '/images/dummy.jpg'} alt={label} className="h-44 w-full object-cover" />
+                </div>
+                <div className="space-y-3">
+                    <Input type="file" accept="image/png,image/jpeg,image/jpg,image/webp" onChange={(event) => onChange(event.target.files?.[0] ?? null)} />
+                    <div className="rounded-xl border border-dashed border-border bg-background px-3 py-3 text-xs text-muted-foreground">
+                        {file ? (
+                            <>
+                                File terpilih: <span className="font-mono text-foreground">{file.name}</span>
+                            </>
+                        ) : (
+                            <>
+                                Gambar saat ini: <span className="font-mono">{value || '-'}</span>
+                            </>
+                        )}
+                    </div>
+                    {file ? (
+                        <Button type="button" variant="outline" size="sm" onClick={() => onChange(null)}>
+                            Hapus Pilihan File
+                        </Button>
+                    ) : null}
+                </div>
+            </div>
         </div>
     );
 }
@@ -935,6 +1134,14 @@ interface ProductOption {
     is_active: boolean;
 }
 
+interface ProductCategoryOption {
+    key: string;
+    name: Record<string, unknown> | string;
+    description?: Record<string, unknown> | string | null;
+    default_unit?: Record<string, unknown> | string | null;
+    is_active: boolean;
+}
+
 interface PackageOption {
     code: string;
     name: Record<string, unknown> | string;
@@ -1031,6 +1238,7 @@ function destroyResourceItem(resourceKey: string, label: string, itemId: number)
 
 function summarizeResourceItem(resourceKey: string, payload: Record<string, any>): string {
     const summaryEntries: Record<string, string[]> = {
+        product_categories: [stringValue(payload.key), localizedValue(payload.name)],
         products: [stringValue(payload.code), stringValue(payload.product_type), localizedValue(payload.name)],
         packages: [
             stringValue(payload.code),
@@ -1073,6 +1281,117 @@ function localizedValue(value: unknown): string {
     }
 
     return '';
+}
+
+function productCategoryOptions(options: unknown): Option[] {
+    if (!Array.isArray(options)) {
+        return [];
+    }
+
+    return options.map((option) => {
+        const category = option as ProductCategoryOption;
+
+        return {
+            label: `${localizedValue(category.name)} (${category.key})`,
+            value: category.key,
+        };
+    });
+}
+
+function buildResourceFilters(resourceKey: string, rows: ResourceTableRow[], resourceMeta: Record<string, any>): ResourceFilterDefinition[] {
+    const uniqueOptions = (values: string[]): Option[] =>
+        Array.from(new Set(values.filter(Boolean)))
+            .sort((left, right) => left.localeCompare(right))
+            .map((value) => ({ label: value, value }));
+
+    const statusFilter: ResourceFilterDefinition = {
+        key: 'status',
+        label: 'Status',
+        options: [
+            { label: 'Aktif', value: 'active' },
+            { label: 'Nonaktif', value: 'inactive' },
+        ],
+        getValue: (row) => (row.status ? 'active' : 'inactive'),
+    };
+
+    if (resourceKey === 'product_categories') {
+        return [statusFilter];
+    }
+
+    if (resourceKey === 'products') {
+        const categoryOptions = Array.isArray(resourceMeta.product_category_options)
+            ? (resourceMeta.product_category_options as ProductCategoryOption[])
+            : [];
+
+        return [
+            {
+                key: 'product_type',
+                label: 'Kategori',
+                options:
+                    categoryOptions.length > 0
+                        ? categoryOptions.map((category) => ({
+                              label: localizedValue(category.name),
+                              value: category.key,
+                          }))
+                        : uniqueOptions(rows.map((row) => stringValue(row.payload.product_type))),
+                getValue: (row) => stringValue(row.payload.product_type),
+            },
+            statusFilter,
+        ];
+    }
+
+    if (resourceKey === 'packages') {
+        return [
+            {
+                key: 'package_type',
+                label: 'Tipe Package',
+                options: uniqueOptions(rows.map((row) => stringValue(row.payload.package_type))),
+                getValue: (row) => stringValue(row.payload.package_type),
+            },
+            {
+                key: 'departure_city',
+                label: 'Kota',
+                options: uniqueOptions(rows.map((row) => stringValue(row.payload.departure_city))),
+                getValue: (row) => stringValue(row.payload.departure_city),
+            },
+            {
+                key: 'featured',
+                label: 'Featured',
+                options: [
+                    { label: 'Featured', value: 'yes' },
+                    { label: 'Biasa', value: 'no' },
+                ],
+                getValue: (row) => (Boolean(row.payload.is_featured) ? 'yes' : 'no'),
+            },
+            statusFilter,
+        ];
+    }
+
+    if (resourceKey === 'schedules') {
+        return [
+            {
+                key: 'travel_package_code',
+                label: 'Package',
+                options: uniqueOptions(rows.map((row) => stringValue(row.payload.travel_package_code))),
+                getValue: (row) => stringValue(row.payload.travel_package_code),
+            },
+            {
+                key: 'departure_city',
+                label: 'Kota',
+                options: uniqueOptions(rows.map((row) => stringValue(row.payload.departure_city))),
+                getValue: (row) => stringValue(row.payload.departure_city),
+            },
+            {
+                key: 'schedule_status',
+                label: 'Status Jadwal',
+                options: uniqueOptions(rows.map((row) => stringValue(row.payload.status))),
+                getValue: (row) => stringValue(row.payload.status),
+            },
+            statusFilter,
+        ];
+    }
+
+    return [];
 }
 
 function formatDateLabel(value: unknown): string {

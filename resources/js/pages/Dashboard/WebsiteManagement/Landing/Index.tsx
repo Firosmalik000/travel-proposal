@@ -48,14 +48,25 @@ interface ExtraSectionField {
 const pageLabels: Record<string, string> = {
     home: 'Home',
     'tentang-kami': 'Tentang Kami',
-    'paket-umroh': 'Paket Umroh',
     kontak: 'Kontak',
     legalitas: 'Legalitas',
     galeri: 'Galeri',
     mitra: 'Mitra',
     karier: 'Karier',
     'custom-umroh': 'Custom Umroh',
-    'paket-detail': 'Detail Paket',
+};
+
+const hiddenLandingSlugs = new Set(['paket-umroh', 'paket-detail']);
+
+const landingSectionMap: Record<string, string[]> = {
+    home: ['hero', 'stats', 'about', 'packages', 'services', 'gallery', 'faq', 'contact'],
+    'tentang-kami': ['hero', 'profile', 'stats', 'values'],
+    kontak: ['heading', 'description', 'map'],
+    legalitas: ['hero', 'docs_title', 'bank_title', 'bank_lines', 'disclaimer_title', 'disclaimer'],
+    galeri: ['badge', 'description'],
+    mitra: ['badge', 'subtitle', 'description', 'cta'],
+    karier: ['badge', 'subtitle', 'cta'],
+    'custom-umroh': ['badge', 'description', 'subtitle', 'cta'],
 };
 
 const sectionLabels: Record<string, string> = {
@@ -97,7 +108,8 @@ const sectionLabels: Record<string, string> = {
 };
 
 export default function LandingIndex({ pages, defaultFaqs = [] }: { pages: LandingPageItem[]; defaultFaqs?: DefaultFaqItem[] }) {
-    const defaultTab = pages[0]?.slug ?? 'home';
+    const visiblePages = pages.filter((page) => !hiddenLandingSlugs.has(page.slug));
+    const defaultTab = visiblePages[0]?.slug ?? 'home';
 
     return (
         <AppSidebarLayout breadcrumbs={[{ title: 'Landing Page', href: '/dashboard/website-management/landing' }]}>
@@ -130,14 +142,14 @@ export default function LandingIndex({ pages, defaultFaqs = [] }: { pages: Landi
 
                 <Tabs defaultValue={defaultTab} className="space-y-6">
                     <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-2xl bg-muted/60 p-2">
-                        {pages.map((page) => (
+                        {visiblePages.map((page) => (
                             <TabsTrigger key={page.slug} value={page.slug} className="rounded-xl px-4 py-2 text-sm">
                                 {pageLabels[page.slug] ?? humanizeSegment(page.slug)}
                             </TabsTrigger>
                         ))}
                     </TabsList>
 
-                    {pages.map((page) => (
+                    {visiblePages.map((page) => (
                         <TabsContent key={page.slug} value={page.slug} className="space-y-6">
                             <LandingPageEditor page={page} defaultFaqs={defaultFaqs} />
                         </TabsContent>
@@ -221,6 +233,55 @@ function LandingPageEditor({ page, defaultFaqs }: { page: LandingPageItem; defau
                     </Card>
 
                     {contentSections.map(([sectionKey, sectionValue]) => {
+                        if (page.slug === 'tentang-kami' && sectionKey === 'stats') {
+                            return (
+                                <Card key={sectionKey}>
+                                    <CardHeader>
+                                        <CardTitle>Statistik</CardTitle>
+                                        <CardDescription>Angka-angka yang tampil di hero section halaman Tentang Kami.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <StatsSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
+                                    </CardContent>
+                                </Card>
+                            );
+                        }
+
+                        if (page.slug === 'tentang-kami' && sectionKey === 'values') {
+                            return (
+                                <Card key={sectionKey}>
+                                    <CardHeader>
+                                        <CardTitle>Nilai Perusahaan</CardTitle>
+                                        <CardDescription>Tambah, ubah, atau hapus nilai/keunggulan perusahaan yang tampil di halaman Tentang Kami.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ValuesSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
+                                    </CardContent>
+                                </Card>
+                            );
+                        }
+
+                        if (page.slug === 'home' && sectionKey === 'services') {
+                            return (
+                                <Card key={sectionKey}>
+                                    <CardHeader>
+                                        <CardTitle>Layanan</CardTitle>
+                                        <CardDescription>
+                                            Edit label, judul, dan deskripsi section layanan. Tambah item custom untuk override data default — kosongkan untuk pakai data dari Content Management.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-6">
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            {collectEditableFields({ label: data.content?.services?.label ?? {}, title: data.content?.services?.title ?? {}, description: data.content?.services?.description ?? {} }, 'services', locale).map((field) => (
+                                                <Field key={field.path} label={field.label} value={field.value} onChange={(value) => setData('content', updateNestedValue(data.content, field.path, value))} multiline={field.multiline} />
+                                            ))}
+                                        </div>
+                                        <ServiceItemsEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
+                                    </CardContent>
+                                </Card>
+                            );
+                        }
+
                         if (page.slug === 'home' && sectionKey === 'gallery') {
                             return (
                                 <Card key={sectionKey}>
@@ -321,6 +382,146 @@ function LandingPageEditor({ page, defaultFaqs }: { page: LandingPageItem; defau
                 </div>
             </div>
         </form>
+    );
+}
+
+function ServiceItemsEditor({
+    content,
+    locale,
+    setContent,
+}: {
+    content: Record<string, any>;
+    locale: 'id' | 'en';
+    setContent: (content: Record<string, any>) => void;
+}) {
+    const items = Array.isArray(content?.services?.items) ? content.services.items : [];
+
+    const addItem = () => {
+        const next = structuredClone(content ?? {});
+        next.services = { ...(next.services ?? {}), items: [...items, { title: { id: '', en: '' }, description: { id: '', en: '' } }] };
+        setContent(next);
+    };
+
+    const removeItem = (index: number) => {
+        const next = structuredClone(content ?? {});
+        next.services.items = items.filter((_: unknown, i: number) => i !== index);
+        setContent(next);
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-semibold text-foreground">Item Layanan Custom</p>
+                    <p className="text-xs text-muted-foreground">Kosongkan semua untuk memakai data dari Content Management → Services.</p>
+                </div>
+                <Button type="button" variant="outline" onClick={addItem}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Tambah Item
+                </Button>
+            </div>
+            <div className="space-y-4">
+                {items.map((_: unknown, index: number) => (
+                    <div key={`svc_${index}`} className="space-y-3 rounded-2xl border border-border p-4">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-foreground">Layanan {index + 1}</p>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-destructive hover:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus
+                            </Button>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Field
+                                label="Judul"
+                                value={String(getNestedValue(content, `services.items.${index}.title.${locale}`) ?? '')}
+                                onChange={(value) => setContent(updateNestedValue(content, `services.items.${index}.title.${locale}`, value))}
+                            />
+                            <Field
+                                label="Deskripsi"
+                                value={String(getNestedValue(content, `services.items.${index}.description.${locale}`) ?? '')}
+                                onChange={(value) => setContent(updateNestedValue(content, `services.items.${index}.description.${locale}`, value))}
+                                multiline
+                            />
+                        </div>
+                    </div>
+                ))}
+                {items.length === 0 && (
+                    <p className="rounded-2xl border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
+                        Pakai data default dari Content Management, atau tambah item custom di sini.
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ValuesSectionEditor({
+    content,
+    locale,
+    setContent,
+}: {
+    content: Record<string, any>;
+    locale: 'id' | 'en';
+    setContent: (content: Record<string, any>) => void;
+}) {
+    const values = Array.isArray(content?.values) ? content.values : [];
+
+    const addValue = () => {
+        const nextContent = structuredClone(content ?? {});
+        nextContent.values = [...values, { title: { id: '', en: '' }, description: { id: '', en: '' } }];
+        setContent(nextContent);
+    };
+
+    const removeValue = (index: number) => {
+        const nextContent = structuredClone(content ?? {});
+        nextContent.values = values.filter((_: unknown, i: number) => i !== index);
+        setContent(nextContent);
+    };
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+                <div>
+                    <p className="text-sm font-semibold text-foreground">Daftar Nilai Perusahaan</p>
+                    <p className="text-xs text-muted-foreground">Kosongkan semua untuk memakai nilai default bawaan sistem.</p>
+                </div>
+                <Button type="button" variant="outline" onClick={addValue}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Tambah Nilai
+                </Button>
+            </div>
+            <div className="space-y-4">
+                {values.map((_: unknown, index: number) => (
+                    <div key={`value_${index}`} className="space-y-3 rounded-2xl border border-border p-4">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-foreground">Nilai {index + 1}</p>
+                            <Button type="button" variant="ghost" size="sm" onClick={() => removeValue(index)} className="text-destructive hover:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus
+                            </Button>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <Field
+                                label="Judul"
+                                value={String(getNestedValue(content, `values.${index}.title.${locale}`) ?? '')}
+                                onChange={(value) => setContent(updateNestedValue(content, `values.${index}.title.${locale}`, value))}
+                            />
+                            <Field
+                                label="Deskripsi"
+                                value={String(getNestedValue(content, `values.${index}.description.${locale}`) ?? '')}
+                                onChange={(value) => setContent(updateNestedValue(content, `values.${index}.description.${locale}`, value))}
+                                multiline
+                            />
+                        </div>
+                    </div>
+                ))}
+                {values.length === 0 && (
+                    <p className="rounded-2xl border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
+                        Belum ada nilai. Klik "Tambah Nilai" atau biarkan kosong untuk memakai default.
+                    </p>
+                )}
+            </div>
+        </div>
     );
 }
 
@@ -522,14 +723,13 @@ function FaqSectionEditor({
 }
 
 function getOrderedContentSections(pageSlug: string, content: Record<string, any>): Array<[string, unknown]> {
-    if (pageSlug !== 'home') {
+    const allowedSections = landingSectionMap[pageSlug];
+
+    if (!allowedSections) {
         return Object.entries(content ?? {});
     }
 
-    const preferredOrder = ['hero', 'stats', 'about', 'packages', 'services', 'gallery', 'faq', 'contact'];
-    const orderedKeys = [...preferredOrder, ...Object.keys(content ?? {}).filter((key) => !preferredOrder.includes(key))];
-
-    return orderedKeys.map((key) => [key, content?.[key] ?? {}]);
+    return allowedSections.map((key) => [key, content?.[key] ?? {}]);
 }
 
 function SummaryItem({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
@@ -774,6 +974,14 @@ function collectEditableFields(value: unknown, path: string, locale: 'id' | 'en'
 }
 
 function buildExtraSectionFields(pageSlug: string, sectionKey: string, content: Record<string, any>, locale: 'id' | 'en'): EditableField[] {
+    // tentang-kami: profile images
+    if (pageSlug === 'tentang-kami' && sectionKey === 'profile') {
+        return [
+            { path: 'profile.image_primary', label: 'Foto Utama', multiline: false, value: String(getNestedValue(content, 'profile.image_primary') ?? '') },
+            { path: 'profile.image_secondary', label: 'Foto Kedua', multiline: false, value: String(getNestedValue(content, 'profile.image_secondary') ?? '') },
+        ];
+    }
+
     if (pageSlug !== 'home' || sectionKey !== 'gallery') {
         return [];
     }

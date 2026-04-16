@@ -123,11 +123,11 @@ export default function Dashboard() {
                     weeklyRes,
                     birthdaysRes,
                 ] = await Promise.all([
-                    axios.get('/api/dashboard/stats'),
-                    axios.get('/api/dashboard/monthly-growth'),
-                    axios.get('/api/dashboard/department-distribution'),
-                    axios.get('/api/dashboard/weekly-activity'),
-                    axios.get('/api/dashboard/birthdays'),
+                    axios.get('/dashboard/stats'),
+                    axios.get('/dashboard/monthly-growth'),
+                    axios.get('/dashboard/package-distribution'),
+                    axios.get('/dashboard/weekly-activity'),
+                    axios.get('/dashboard/upcoming-departures'),
                 ]);
 
                 // Extract data from success response
@@ -158,11 +158,11 @@ export default function Dashboard() {
                 weeklyRes,
                 birthdaysRes,
             ] = await Promise.all([
-                axios.get('/api/dashboard/stats'),
-                axios.get('/api/dashboard/monthly-growth'),
-                axios.get('/api/dashboard/department-distribution'),
-                axios.get('/api/dashboard/weekly-activity'),
-                axios.get('/api/dashboard/birthdays'),
+                axios.get('/dashboard/stats'),
+                axios.get('/dashboard/monthly-growth'),
+                axios.get('/dashboard/package-distribution'),
+                axios.get('/dashboard/weekly-activity'),
+                axios.get('/dashboard/upcoming-departures'),
             ]);
 
             setStats(statsRes.data.data || statsRes.data);

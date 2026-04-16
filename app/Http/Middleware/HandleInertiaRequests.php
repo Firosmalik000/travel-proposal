@@ -121,7 +121,7 @@ class HandleInertiaRequests extends Middleware
                 ])
                 ->all(),
             'packages' => TravelPackage::query()
-                ->with(['products:id,name,slug', 'schedules'])
+                ->with(['products:id,name,slug', 'schedules', 'testimonials:id,travel_package_id,rating'])
                 ->where('is_active', true)
                 ->orderByDesc('is_featured')
                 ->orderBy('price')
@@ -135,11 +135,16 @@ class HandleInertiaRequests extends Middleware
                     'departure_city' => $package->departure_city,
                     'duration_days' => $package->duration_days,
                     'price' => $package->price,
+                    'original_price' => $package->original_price,
+                    'discount_label' => $package->discount_label,
+                    'discount_percent' => $package->discountPercent(),
                     'currency' => $package->currency,
                     'image_path' => $package->image_path,
                     'summary' => $package->summary,
                     'content' => $package->content,
                     'is_featured' => $package->is_featured,
+                    'rating_avg' => $package->testimonials->avg('rating') ? round($package->testimonials->avg('rating'), 1) : null,
+                    'rating_count' => $package->testimonials->count(),
                     'products' => $package->products->map(fn ($product): array => [
                         'name' => $product->name,
                         'slug' => $product->slug,

@@ -33,6 +33,7 @@ class AdminUserSeeder extends Seeder
             'landing_page' => ['view', 'create', 'edit'],
             'content_management' => ['view', 'create', 'edit'],
             'product_management' => ['view'],
+            'product_category' => ['view', 'create', 'edit'],
             'product' => ['view', 'create', 'edit'],
             'package' => ['view', 'create', 'edit'],
             'seo_settings' => ['view', 'edit'],
@@ -45,6 +46,7 @@ class AdminUserSeeder extends Seeder
             'landing_page' => ['view', 'edit'],
             'content_management' => ['view', 'create', 'edit'],
             'product_management' => ['view'],
+            'product_category' => ['view'],
             'product' => ['view'],
             'package' => ['view'],
         ];

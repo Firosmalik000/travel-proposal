@@ -71,32 +71,28 @@ class DashboardTest extends TestCase
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($this->user)->getJson('/api/dashboard/stats');
+        $response = $this->actingAs($this->user)->getJson('/dashboard/stats');
 
         $response->assertSuccessful()
-            ->assertJsonPath('data.activePackages.value', 1)
-            ->assertJsonPath('data.upcomingDepartures.value', 1)
-            ->assertJsonPath('data.publishedContent.value', 2);
+            ->assertJsonPath('activePackages.value', 1)
+            ->assertJsonPath('upcomingDepartures.value', 1)
+            ->assertJsonPath('publishedContent.value', 2);
     }
 
     public function test_dashboard_monthly_growth_and_weekly_activity_have_expected_shape(): void
     {
         $this->actingAs($this->user)
-            ->getJson('/api/dashboard/monthly-growth')
+            ->getJson('/dashboard/monthly-growth')
             ->assertSuccessful()
             ->assertJsonStructure([
-                'data' => [
-                    '*' => ['month', 'users', 'departures'],
-                ],
+                '*' => ['month', 'users', 'departures'],
             ]);
 
         $this->actingAs($this->user)
-            ->getJson('/api/dashboard/weekly-activity')
+            ->getJson('/dashboard/weekly-activity')
             ->assertSuccessful()
             ->assertJsonStructure([
-                'data' => [
-                    '*' => ['day', 'departures', 'contents'],
-                ],
+                '*' => ['day', 'departures', 'contents'],
             ]);
     }
 
@@ -125,21 +121,17 @@ class DashboardTest extends TestCase
         ]);
 
         $this->actingAs($this->user)
-            ->getJson('/api/dashboard/department-distribution')
+            ->getJson('/dashboard/package-distribution')
             ->assertSuccessful()
             ->assertJsonStructure([
-                'data' => [
-                    '*' => ['name', 'value', 'color'],
-                ],
+                '*' => ['name', 'value', 'color'],
             ]);
 
         $this->actingAs($this->user)
-            ->getJson('/api/dashboard/birthdays')
+            ->getJson('/dashboard/upcoming-departures')
             ->assertSuccessful()
             ->assertJsonStructure([
-                'data' => [
-                    '*' => ['title', 'departure_date', 'departure_city', 'seats_available'],
-                ],
+                '*' => ['title', 'departure_date', 'departure_city', 'seats_available'],
             ]);
     }
 }

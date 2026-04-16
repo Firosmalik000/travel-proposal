@@ -15,12 +15,13 @@ class SlipGajiTest extends TestCase
     {
         $package = TravelPackage::query()->create([
             'code' => 'PKG-200',
-            'title' => 'Umroh Gold',
             'slug' => 'umroh-gold',
-            'package_type' => 'gold',
+            'name' => ['id' => 'Umroh Gold', 'en' => 'Gold Umrah'],
+            'package_type' => 'vip',
             'departure_city' => 'Jakarta',
             'duration_days' => 10,
-            'price_from' => 38500000,
+            'price' => 38500000,
+            'currency' => 'IDR',
             'is_active' => true,
         ]);
 
@@ -30,7 +31,6 @@ class SlipGajiTest extends TestCase
             'departure_city' => 'Jakarta',
             'seats_total' => 40,
             'seats_available' => 10,
-            'price' => 38500000,
             'status' => 'open',
             'is_active' => true,
         ]);
