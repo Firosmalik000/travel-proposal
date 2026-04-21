@@ -11,8 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('package_itineraries', 'activity_ids')) {
+            return;
+        }
+
         Schema::table('package_itineraries', function (Blueprint $table) {
-            $table->json('activity_ids')->nullable()->after('activity_id');
+            $table->json('activity_ids')->nullable()->after('travel_package_id');
         });
     }
 
@@ -21,6 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasColumn('package_itineraries', 'activity_ids')) {
+            return;
+        }
+
         Schema::table('package_itineraries', function (Blueprint $table) {
             $table->dropColumn('activity_ids');
         });
