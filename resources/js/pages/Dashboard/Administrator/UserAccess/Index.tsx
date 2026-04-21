@@ -156,7 +156,7 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
         console.log('Submitting data:', data);
 
         if (editingAccess) {
-            put(`/dashboard/administrator/user-access/${editingAccess.id}`, {
+            put(`/admin/administrator/user-access/${editingAccess.id}`, {
                 onSuccess: () => {
                     setIsDialogOpen(false);
                     reset();
@@ -167,7 +167,7 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
                 },
             });
         } else {
-            post('/dashboard/administrator/user-access', {
+            post('/admin/administrator/user-access', {
                 onSuccess: () => {
                     setIsDialogOpen(false);
                     reset();
@@ -182,7 +182,7 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
 
     const handleDelete = () => {
         if (accessToDelete) {
-            destroy(`/dashboard/administrator/user-access/${accessToDelete.id}`, {
+            destroy(`/admin/administrator/user-access/${accessToDelete.id}`, {
                 onSuccess: () => {
                     setIsDeleteDialogOpen(false);
                     setAccessToDelete(null);
@@ -200,9 +200,9 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
     return (
         <AppSidebarLayout
             breadcrumbs={[
-                { label: 'Dashboard', href: '/dashboard' },
-                { label: 'Administrator', href: '/dashboard/administrator' },
-                { label: 'User Access', href: '/dashboard/administrator/user-access' },
+                { label: 'Dashboard', href: '/admin' },
+                { label: 'Administrator', href: '/admin/administrator' },
+                { label: 'User Access', href: '/admin/administrator/user-access' },
             ]}
         >
             <div className="space-y-4 p-4 sm:space-y-6 sm:p-6">
@@ -385,3 +385,4 @@ export default function UserAccessIndex({ userAccesses, users, menus }: Props) {
         </AppSidebarLayout>
     );
 }
+

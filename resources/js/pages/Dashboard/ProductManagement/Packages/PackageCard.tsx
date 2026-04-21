@@ -22,8 +22,9 @@ const typeConfig: Record<string, { label: string; color: string; dot: string }> 
 export function PackageCard({ pkg, locale, onEdit, onDelete, onManageSchedules }: Props) {
     const name = pkg.name?.[locale] || pkg.name?.id || pkg.code;
     const type = typeConfig[pkg.package_type] ?? typeConfig.reguler;
-    const activeSchedules = pkg.schedules.filter((s) => s.is_active && s.status === 'open').length;
-    const nextDeparture = pkg.schedules.filter((s) => s.is_active && s.status === 'open').sort((a, b) => a.departure_date.localeCompare(b.departure_date))[0];
+    const schedules = Array.isArray(pkg.schedules) ? pkg.schedules : [];
+    const activeSchedules = schedules.filter((s) => s.is_active && s.status === 'open').length;
+    const nextDeparture = schedules.filter((s) => s.is_active && s.status === 'open').sort((a, b) => a.departure_date.localeCompare(b.departure_date))[0];
 
     return (
         <div className={`group relative overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${!pkg.is_active ? 'opacity-60' : ''}`}>

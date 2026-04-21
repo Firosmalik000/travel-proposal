@@ -1,7 +1,16 @@
-import { Head } from '@inertiajs/react';
-import PublicLayout from '@/layouts/PublicLayout';
+import {
+    MotionCard,
+    MotionGroup,
+    MotionSection,
+} from '@/components/public-motion';
 import { usePublicLocale } from '@/contexts/public-locale';
-import { localize, usePublicData, usePublicPageContent } from '@/lib/public-content';
+import PublicLayout from '@/layouts/PublicLayout';
+import {
+    localize,
+    usePublicData,
+    usePublicPageContent,
+} from '@/lib/public-content';
+import { Head } from '@inertiajs/react';
 
 export default function Galeri() {
     const { locale } = usePublicLocale();
@@ -12,27 +21,43 @@ export default function Galeri() {
     return (
         <PublicLayout>
             <Head title={localize(page?.title, locale, 'Galeri')}>
-                <meta name="description" content={localize(page?.excerpt, locale, 'Galeri perjalanan')} />
+                <meta
+                    name="description"
+                    content={localize(
+                        page?.excerpt,
+                        locale,
+                        'Galeri perjalanan',
+                    )}
+                />
             </Head>
 
-            <section className="mx-auto w-full max-w-6xl px-4 pb-10 pt-6 sm:px-6">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-10 sm:px-6">
                 <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
-                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
                         {localize(page?.content?.badge, locale, 'Gallery')}
                     </span>
                     <h1 className="public-heading mt-4 text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
                         {localize(page?.title, locale, 'Galeri Foto & Video')}
                     </h1>
-                    <p className="mt-2 text-muted-foreground">{localize(page?.content?.description, locale, '')}</p>
+                    <p className="mt-2 text-muted-foreground">
+                        {localize(page?.content?.description, locale, '')}
+                    </p>
                 </div>
-            </section>
+            </MotionSection>
 
-            <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
+                <MotionGroup className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                     {items.map((item: Record<string, unknown>) => (
-                        <div key={`${item.sort_order}_${localize(item.title, locale)}`} className="group relative h-36 overflow-hidden rounded-2xl border border-border shadow-sm parallax-frame sm:h-44" data-parallax data-speed="0.28">
+                        <MotionCard
+                            key={`${item.sort_order}_${localize(item.title, locale)}`}
+                            className="group parallax-frame relative h-36 overflow-hidden rounded-2xl border border-border shadow-sm sm:h-44"
+                            data-parallax
+                            data-speed="0.28"
+                        >
                             <img
-                                src={String(item.image_path || '/images/dummy.jpg')}
+                                src={String(
+                                    item.image_path || '/images/dummy.jpg',
+                                )}
                                 alt={localize(item.title, locale)}
                                 className="parallax-img h-full w-full object-cover transition duration-700 ease-out group-hover:scale-110 group-hover:brightness-110"
                                 loading="lazy"
@@ -41,10 +66,10 @@ export default function Galeri() {
                             <span className="absolute bottom-3 left-3 text-sm font-semibold text-white transition duration-500 group-hover:-translate-y-1">
                                 {localize(item.title, locale)}
                             </span>
-                        </div>
+                        </MotionCard>
                     ))}
-                </div>
-            </section>
+                </MotionGroup>
+            </MotionSection>
         </PublicLayout>
     );
 }

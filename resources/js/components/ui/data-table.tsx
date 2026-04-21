@@ -10,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowUpDown, ChevronDown, ChevronUp, Search } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,8 @@ export function DataTable<TData, TValue>({
     <div className="space-y-4">
       {searchKey && (
         <div className="flex items-center gap-2">
+          <div className="relative w-full sm:max-w-sm">
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder={searchPlaceholder}
@@ -78,8 +80,9 @@ export function DataTable<TData, TValue>({
             onChange={(event) =>
               table.getColumn(searchKey)?.setFilterValue(event.target.value)
             }
-            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:max-w-sm"
+            className="h-11 w-full rounded-xl border border-border bg-card/90 pr-3 pl-9 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0"
           />
+          </div>
         </div>
       )}
 
@@ -89,7 +92,7 @@ export function DataTable<TData, TValue>({
           table.getRowModel().rows.map((row) => (
             <div
               key={row.id}
-              className="rounded-md border p-3 bg-background shadow-sm"
+              className="rounded-2xl border border-border/70 bg-card/95 p-3 shadow-sm"
               data-state={row.getIsSelected() ? "selected" : undefined}
             >
               <div className="flex items-start justify-between gap-2">
@@ -129,19 +132,19 @@ export function DataTable<TData, TValue>({
             </div>
           ))
         ) : (
-          <div className="rounded-md border p-4 text-center text-sm">No results.</div>
+          <div className="rounded-2xl border border-dashed border-border bg-card/70 p-4 text-center text-sm">No results.</div>
         )}
       </div>
 
       {/* DESKTOP / TABLET: regular table (hidden on mobile) */}
-      <div className="hidden sm:block overflow-x-auto rounded-md border">
+      <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-sm sm:block">
         <Table className="min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="bg-muted/35 hover:bg-muted/35">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="whitespace-normal break-words">
+                    <TableHead key={header.id} className="h-12 whitespace-normal break-words px-4 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                       {header.isPlaceholder ? null : (
                         <div
                           className={
@@ -180,10 +183,11 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
+                  className="transition-colors hover:bg-muted/20"
                   data-state={row.getIsSelected() ? "selected" : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="whitespace-normal break-words max-w-[20rem]">
+                    <TableCell key={cell.id} className="max-w-[20rem] whitespace-normal break-words px-4 py-3 align-top">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -191,7 +195,7 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
                   No results.
                 </TableCell>
               </TableRow>
@@ -201,7 +205,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Responsive Pagination */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-card/90 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
           <span className="hidden sm:inline">Showing </span>
           {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{" "}
@@ -221,7 +225,7 @@ export function DataTable<TData, TValue>({
               onChange={(e) => {
                 table.setPageSize(Number(e.target.value));
               }}
-              className="h-8 w-[70px] rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-9 w-[78px] rounded-xl border border-border bg-background px-2 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
             >
               {[10, 20, 30, 40, 50].map((pageSize) => (
                 <option key={pageSize} value={pageSize}>

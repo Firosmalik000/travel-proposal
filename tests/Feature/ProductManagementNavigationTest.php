@@ -23,7 +23,7 @@ class ProductManagementNavigationTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/Administrator/Content/Index')
                 ->where('heading', 'Product Management')
-                ->where('breadcrumbHref', '/dashboard/product-management/products')
+                ->where('breadcrumbHref', '/admin/product-management/products')
             );
     }
 
@@ -37,7 +37,7 @@ class ProductManagementNavigationTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/Administrator/Content/Index')
                 ->where('heading', 'Product Category')
-                ->where('breadcrumbHref', '/dashboard/product-management/categories')
+                ->where('breadcrumbHref', '/admin/product-management/categories')
             );
     }
 
@@ -47,11 +47,17 @@ class ProductManagementNavigationTest extends TestCase
 
         $this->actingAs($user)
             ->get('/dashboard/website-management/products')
-            ->assertRedirect('/dashboard/product-management/products');
+            ->assertRedirect('/admin/product-management/products');
 
         $this->actingAs($user)
             ->get('/dashboard/website-management/packages')
-            ->assertRedirect('/dashboard/product-management/packages');
+            ->assertRedirect('/admin/product-management/packages');
+    }
+
+    public function test_dashboard_named_route_now_points_to_admin_prefix(): void
+    {
+        $this->assertSame('/admin', route('dashboard', absolute: false));
+        $this->assertSame('/admin/product-management/products', route('products.index', absolute: false));
     }
 
     public function test_sidebar_api_hoists_legacy_product_management_out_of_website_management(): void
@@ -61,13 +67,13 @@ class ProductManagementNavigationTest extends TestCase
         Menu::query()->create([
             'name' => 'Website Management',
             'menu_key' => 'website_management',
-            'path' => '/dashboard/website-management',
+            'path' => '/admin/website-management',
             'icon' => 'Globe',
             'children' => [
                 [
                     'name' => 'Landing Page',
                     'menu_key' => 'landing_page',
-                    'path' => '/dashboard/website-management/landing',
+                    'path' => '/admin/website-management/landing',
                     'icon' => 'FileText',
                     'order' => 1,
                     'is_active' => true,
@@ -76,7 +82,7 @@ class ProductManagementNavigationTest extends TestCase
                 [
                     'name' => 'Product Management',
                     'menu_key' => 'product_management',
-                    'path' => '/dashboard/website-management/products',
+                    'path' => '/admin/website-management/products',
                     'icon' => 'Package',
                     'order' => 2,
                     'is_active' => true,
@@ -84,7 +90,7 @@ class ProductManagementNavigationTest extends TestCase
                         [
                             'name' => 'Product Category',
                             'menu_key' => 'product_category',
-                            'path' => '/dashboard/product-management/categories',
+                            'path' => '/admin/product-management/categories',
                             'icon' => 'Tags',
                             'order' => 1,
                             'is_active' => true,
@@ -93,7 +99,7 @@ class ProductManagementNavigationTest extends TestCase
                         [
                             'name' => 'Product',
                             'menu_key' => 'product',
-                            'path' => '/dashboard/website-management/products',
+                            'path' => '/admin/website-management/products',
                             'icon' => 'Package',
                             'order' => 2,
                             'is_active' => true,
@@ -102,7 +108,7 @@ class ProductManagementNavigationTest extends TestCase
                         [
                             'name' => 'Package',
                             'menu_key' => 'package',
-                            'path' => '/dashboard/website-management/packages',
+                            'path' => '/admin/website-management/packages',
                             'icon' => 'Boxes',
                             'order' => 3,
                             'is_active' => true,
@@ -118,7 +124,7 @@ class ProductManagementNavigationTest extends TestCase
         Menu::query()->create([
             'name' => 'Administrator',
             'menu_key' => 'administrator',
-            'path' => '/dashboard/administrator',
+            'path' => '/admin/administrator',
             'icon' => 'Settings',
             'children' => null,
             'order' => 3,
@@ -144,11 +150,11 @@ class ProductManagementNavigationTest extends TestCase
         $this->assertSame('website_management', $menus[0]['menu_key']);
         $this->assertNotContains('product_management', collect($menus[0]['children'])->pluck('menu_key')->all());
         $this->assertSame('product_management', $menus[1]['menu_key']);
-        $this->assertSame('/dashboard/product-management/products', $menus[1]['path']);
+        $this->assertSame('/admin/product-management/products', $menus[1]['path']);
         $this->assertSame([
-            '/dashboard/product-management/categories',
-            '/dashboard/product-management/products',
-            '/dashboard/product-management/packages',
+            '/admin/product-management/categories',
+            '/admin/product-management/products',
+            '/admin/product-management/packages',
         ], collect($menus[1]['children'])->pluck('path')->all());
     }
 }

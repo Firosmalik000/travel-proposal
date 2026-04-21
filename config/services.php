@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'booking' => [
+        'notification_email' => env('BOOKING_NOTIFICATION_EMAIL', env('MAIL_FROM_ADDRESS')),
+        'whatsapp' => [
+            'endpoint' => env('BOOKING_NOTIFICATION_WHATSAPP_ENDPOINT', 'https://api.fonnte.com/send'),
+            'admin_number' => env('BOOKING_NOTIFICATION_WHATSAPP'),
+            'token' => env('BOOKING_NOTIFICATION_WHATSAPP_TOKEN'),
+        ],
+    ],
+
 ];

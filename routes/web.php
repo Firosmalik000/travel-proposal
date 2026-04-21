@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Administrator\ActivityController;
+use App\Http\Controllers\Administrator\ArticleController as AdministratorArticleController;
+use App\Http\Controllers\Administrator\BookingRegisterController;
 use App\Http\Controllers\Administrator\BrandingController;
 use App\Http\Controllers\Administrator\ContentController;
 use App\Http\Controllers\Administrator\MenuController;
@@ -7,6 +10,8 @@ use App\Http\Controllers\Administrator\PackageController;
 use App\Http\Controllers\Administrator\SeoController;
 use App\Http\Controllers\Administrator\UserAccessController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PackageRegistrationController;
+use App\Http\Controllers\Public\ArticleController as PublicArticleController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -19,7 +24,16 @@ Route::get('paket-umroh', function () {
 })->name('public.paket');
 
 Route::get('paket-umroh/{travelPackage:slug}', function (\App\Models\TravelPackage $travelPackage) {
-    $travelPackage->load(['products:id,name,product_type', 'schedules', 'testimonials']);
+    $travelPackage->load([
+        'products:id,name,product_type',
+        'schedules' => fn ($query) => $query->withSum(
+            ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
+            'passenger_count',
+        ),
+        'testimonials',
+        'itineraries.activity:id,code,name,description,sort_order,is_active',
+        'itineraries.products:id,name,product_type',
+    ]);
 
     return Inertia::render('public/paket/detail/index', [
         'travelPackage' => [
@@ -47,11 +61,12 @@ Route::get('paket-umroh/{travelPackage:slug}', function (\App\Models\TravelPacka
                 'product_type' => $p->product_type,
             ])->values()->all(),
             'schedules' => $travelPackage->schedules->map(fn ($s) => [
+                'id' => $s->id,
                 'departure_date' => $s->departure_date?->toDateString(),
                 'return_date' => $s->return_date?->toDateString(),
                 'departure_city' => $s->departure_city,
                 'seats_total' => $s->seats_total,
-                'seats_available' => $s->seats_available,
+                'seats_available' => $s->availableSeatsCount(),
                 'status' => $s->status,
                 'notes' => $s->notes,
             ])->values()->all(),
@@ -61,9 +76,61 @@ Route::get('paket-umroh/{travelPackage:slug}', function (\App\Models\TravelPacka
                 'quote' => $t->quote,
                 'rating' => $t->rating,
             ])->values()->all(),
+            'itineraries' => $travelPackage->itineraries->map(function ($itinerary) {
+                $activityIds = collect($itinerary->activity_ids ?? [])
+                    ->filter(fn ($activityId) => is_numeric($activityId))
+                    ->map(fn ($activityId) => (int) $activityId)
+                    ->values();
+
+                if ($activityIds->isEmpty() && $itinerary->activity_id) {
+                    $activityIds = collect([(int) $itinerary->activity_id]);
+                }
+
+                $activities = \App\Models\Activity::query()
+                    ->whereIn('id', $activityIds->all())
+                    ->orderBy('sort_order')
+                    ->orderBy('code')
+                    ->get(['id', 'code', 'name', 'description', 'sort_order'])
+                    ->map(fn ($activity) => [
+                        'id' => $activity->id,
+                        'code' => $activity->code,
+                        'name' => $activity->name,
+                        'description' => $activity->description,
+                        'sort_order' => $activity->sort_order,
+                    ])
+                    ->values()
+                    ->all();
+
+                return [
+                    'activity_id' => $itinerary->activity_id,
+                    'activity_ids' => $activityIds->all(),
+                    'day_number' => $itinerary->day_number,
+                    'sort_order' => $itinerary->sort_order,
+                    'title' => $itinerary->title,
+                    'description' => $itinerary->description,
+                    'activity' => $activities[0] ?? ($itinerary->activity ? [
+                        'id' => $itinerary->activity->id,
+                        'code' => $itinerary->activity->code,
+                        'name' => $itinerary->activity->name,
+                        'description' => $itinerary->activity->description,
+                    ] : null),
+                    'activities' => $activities,
+                    'product_ids' => $itinerary->products->pluck('id')->values()->all(),
+                    'products' => $itinerary->products->map(fn ($product) => [
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'product_type' => $product->product_type,
+                    ])->values()->all(),
+                ];
+            })->values()->all(),
         ],
     ]);
 })->name('public.paket-detail');
+
+Route::get('paket-umroh/{travelPackage:slug}/daftar', [PackageRegistrationController::class, 'create'])
+    ->name('public.paket-register');
+Route::post('paket-umroh/{travelPackage:slug}/daftar', [PackageRegistrationController::class, 'store'])
+    ->name('public.paket-register.store');
 
 Route::get('tentang-kami', function () {
     return Inertia::render('public/tentang/index');
@@ -89,9 +156,8 @@ Route::get('faq', function () {
     return Inertia::render('public/faq/index');
 })->name('public.faq');
 
-Route::get('artikel', function () {
-    return Inertia::render('public/artikel/index');
-})->name('public.artikel');
+Route::get('artikel', [PublicArticleController::class, 'index'])->name('public.artikel');
+Route::get('artikel/{article:slug}', [PublicArticleController::class, 'show'])->name('public.artikel.show');
 
 Route::get('kontak', function () {
     return Inertia::render('public/kontak/index');
@@ -114,74 +180,101 @@ Route::get('karier', function () {
 })->name('public.karier');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    // Dashboard Home
-    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-    // Dashboard API endpoints
-    Route::get('dashboard/stats', [DashboardController::class, 'getStats'])->name('dashboard.stats');
-    Route::get('dashboard/monthly-growth', [DashboardController::class, 'getMonthlyGrowth'])->name('dashboard.monthly-growth');
-    Route::get('dashboard/package-distribution', [DashboardController::class, 'getDepartmentDistribution'])->name('dashboard.department-distribution');
-    Route::get('dashboard/weekly-activity', [DashboardController::class, 'getWeeklyActivity'])->name('dashboard.weekly-activity');
-    Route::get('dashboard/recent-activity', [DashboardController::class, 'getRecentActivity'])->name('dashboard.recent-activity');
-    Route::get('dashboard/pending-tasks', [DashboardController::class, 'getPendingTasks'])->name('dashboard.pending-tasks');
-    Route::get('dashboard/system-status', [DashboardController::class, 'getSystemStatus'])->name('dashboard.system-status');
-    Route::get('dashboard/upcoming-departures', [DashboardController::class, 'getBirthdaysThisMonth'])->name('dashboard.birthdays');
-
     // Get user menus (for sidebar)
     Route::get('api/user-menus', [MenuController::class, 'getUserMenus'])->name('user.menus');
 
-    Route::prefix('dashboard/website-management')->group(function () {
-        Route::get('branding', [BrandingController::class, 'index'])->name('branding.index');
-        Route::patch('branding', [BrandingController::class, 'update'])->name('branding.update');
-        Route::get('landing', [ContentController::class, 'landing'])->name('landing.index');
-        Route::redirect('schedules', '/dashboard/product-management/packages')->name('schedules.index');
-        Route::get('content', [ContentController::class, 'index'])->name('content.index');
-        Route::redirect('products', '/dashboard/product-management/products');
-        Route::redirect('packages', '/dashboard/product-management/packages');
-        Route::patch('content/{pageContent}', [ContentController::class, 'update'])->name('content.update');
-        Route::post('content/resources/{resource}', [ContentController::class, 'storeResource'])->name('content.resources.store');
-        Route::patch('content/resources/{resource}/{id}', [ContentController::class, 'updateResource'])->name('content.resources.update');
-        Route::delete('content/resources/{resource}/{id}', [ContentController::class, 'destroyResource'])->name('content.resources.destroy');
-        Route::get('seo', [SeoController::class, 'index'])->name('seo.index');
-        Route::patch('seo', [SeoController::class, 'update'])->name('seo.update');
-    });
+    $registerAdminPortalRoutes = function (string $prefix, bool $withNames = true): void {
+        $nameRoute = static function ($route, string $name) use ($withNames) {
+            if ($withNames) {
+                $route->name($name);
+            }
 
-    Route::prefix('dashboard/product-management')->group(function () {
-        Route::get('categories', [ContentController::class, 'productCategories'])->name('product-categories.index');
-        Route::get('products', [ContentController::class, 'products'])->name('products.index');
+            return $route;
+        };
 
-        // Package Management (dedicated controller)
-        Route::get('packages', [PackageController::class, 'index'])->name('packages.index');
-        Route::post('packages', [PackageController::class, 'store'])->name('packages.store');
-        Route::post('packages/{package}', [PackageController::class, 'update'])->name('packages.update');
-        Route::delete('packages/{package}', [PackageController::class, 'destroy'])->name('packages.destroy');
+        $nameRoute(Route::get($prefix, [DashboardController::class, 'index']), 'dashboard');
+        $nameRoute(Route::get($prefix.'/stats', [DashboardController::class, 'getStats']), 'dashboard.stats');
+        $nameRoute(Route::get($prefix.'/monthly-growth', [DashboardController::class, 'getMonthlyGrowth']), 'dashboard.monthly-growth');
+        $nameRoute(Route::get($prefix.'/package-distribution', [DashboardController::class, 'getDepartmentDistribution']), 'dashboard.department-distribution');
+        $nameRoute(Route::get($prefix.'/weekly-activity', [DashboardController::class, 'getWeeklyActivity']), 'dashboard.weekly-activity');
+        $nameRoute(Route::get($prefix.'/recent-activity', [DashboardController::class, 'getRecentActivity']), 'dashboard.recent-activity');
+        $nameRoute(Route::get($prefix.'/pending-tasks', [DashboardController::class, 'getPendingTasks']), 'dashboard.pending-tasks');
+        $nameRoute(Route::get($prefix.'/system-status', [DashboardController::class, 'getSystemStatus']), 'dashboard.system-status');
+        $nameRoute(Route::get($prefix.'/upcoming-departures', [DashboardController::class, 'getBirthdaysThisMonth']), 'dashboard.birthdays');
 
-        // Schedule management (nested under package)
-        Route::post('packages/{package}/schedules', [PackageController::class, 'storeSchedule'])->name('packages.schedules.store');
-        Route::post('packages/{package}/schedules/{schedule}', [PackageController::class, 'updateSchedule'])->name('packages.schedules.update');
-        Route::delete('packages/{package}/schedules/{schedule}', [PackageController::class, 'destroySchedule'])->name('packages.schedules.destroy');
-    });
+        Route::prefix($prefix.'/website-management')->group(function () use ($nameRoute) {
+            $nameRoute(Route::get('branding', [BrandingController::class, 'index']), 'branding.index');
+            $nameRoute(Route::patch('branding', [BrandingController::class, 'update']), 'branding.update');
+            $nameRoute(Route::get('articles', [AdministratorArticleController::class, 'index']), 'articles.index');
+            $nameRoute(Route::get('articles/create', [AdministratorArticleController::class, 'create']), 'articles.create');
+            $nameRoute(Route::post('articles', [AdministratorArticleController::class, 'store']), 'articles.store');
+            $nameRoute(Route::get('articles/{article}/edit', [AdministratorArticleController::class, 'edit']), 'articles.edit');
+            $nameRoute(Route::patch('articles/{article}', [AdministratorArticleController::class, 'update']), 'articles.update');
+            $nameRoute(Route::delete('articles/{article}', [AdministratorArticleController::class, 'destroy']), 'articles.destroy');
+            $nameRoute(Route::get('landing', [ContentController::class, 'landing']), 'landing.index');
+            $nameRoute(Route::redirect('schedules', '/admin/product-management/packages'), 'schedules.index');
+            $nameRoute(Route::get('content', [ContentController::class, 'index']), 'content.index');
+            Route::redirect('products', '/admin/product-management/products');
+            Route::redirect('packages', '/admin/product-management/packages');
+            $nameRoute(Route::patch('content/{pageContent}', [ContentController::class, 'update']), 'content.update');
+            $nameRoute(Route::post('content/resources/{resource}', [ContentController::class, 'storeResource']), 'content.resources.store');
+            $nameRoute(Route::patch('content/resources/{resource}/{id}', [ContentController::class, 'updateResource']), 'content.resources.update');
+            $nameRoute(Route::delete('content/resources/{resource}/{id}', [ContentController::class, 'destroyResource']), 'content.resources.destroy');
+            $nameRoute(Route::get('seo', [SeoController::class, 'index']), 'seo.index');
+            $nameRoute(Route::patch('seo', [SeoController::class, 'update']), 'seo.update');
+        });
 
-    // Administrator Routes
-    Route::prefix('dashboard/administrator')->group(function () {
-        // Menu Management
-        Route::get('menus', [MenuController::class, 'index'])->name('menus.index');
-        Route::post('menus', [MenuController::class, 'store'])->name('menus.store');
-        Route::put('menus/{menu}', [MenuController::class, 'update'])->name('menus.update');
-        Route::delete('menus/{menu}', [MenuController::class, 'destroy'])->name('menus.destroy');
+        Route::prefix($prefix.'/product-management')->group(function () use ($nameRoute) {
+            $nameRoute(Route::get('categories', [ContentController::class, 'productCategories']), 'product-categories.index');
+            $nameRoute(Route::get('products', [ContentController::class, 'products']), 'products.index');
+            $nameRoute(Route::get('activities', [ActivityController::class, 'index']), 'activities.index');
+            $nameRoute(Route::post('activities', [ActivityController::class, 'store']), 'activities.store');
+            $nameRoute(Route::put('activities/{activity}', [ActivityController::class, 'update']), 'activities.update');
+            $nameRoute(Route::delete('activities/{activity}', [ActivityController::class, 'destroy']), 'activities.destroy');
 
-        // User Access Management
-        Route::get('user-access', [UserAccessController::class, 'index'])->name('user-access.index');
-        Route::post('user-access', [UserAccessController::class, 'store'])->name('user-access.store');
-        Route::put('user-access/{userAccess}', [UserAccessController::class, 'update'])->name('user-access.update');
-        Route::delete('user-access/{userAccess}', [UserAccessController::class, 'destroy'])->name('user-access.destroy');
+            $nameRoute(Route::get('packages', [PackageController::class, 'index']), 'packages.index');
+            $nameRoute(Route::post('packages', [PackageController::class, 'store']), 'packages.store');
+            $nameRoute(Route::post('packages/{package}', [PackageController::class, 'update']), 'packages.update');
+            $nameRoute(Route::delete('packages/{package}', [PackageController::class, 'destroy']), 'packages.destroy');
 
-        // Permission checking and management
-        Route::post('user-access/check-permission', [UserAccessController::class, 'checkPermission'])->name('user-access.check-permission');
-        Route::get('user-access/menu/{menuKey}', [UserAccessController::class, 'getUserMenuAccess'])->name('user-access.menu');
-        Route::post('user-access/grant', [UserAccessController::class, 'grantMenuPermission'])->name('user-access.grant');
-        Route::post('user-access/revoke', [UserAccessController::class, 'revokeMenuPermission'])->name('user-access.revoke');
-    });
+            $nameRoute(Route::post('packages/{package}/schedules', [PackageController::class, 'storeSchedule']), 'packages.schedules.store');
+            $nameRoute(Route::post('packages/{package}/schedules/{schedule}', [PackageController::class, 'updateSchedule']), 'packages.schedules.update');
+            $nameRoute(Route::delete('packages/{package}/schedules/{schedule}', [PackageController::class, 'destroySchedule']), 'packages.schedules.destroy');
+
+            $nameRoute(Route::post('packages/{package}/itineraries', [PackageController::class, 'storeItinerary']), 'packages.itineraries.store');
+            $nameRoute(Route::post('packages/{package}/itineraries/{itinerary}', [PackageController::class, 'updateItinerary']), 'packages.itineraries.update');
+            $nameRoute(Route::delete('packages/{package}/itineraries/{itinerary}', [PackageController::class, 'destroyItinerary']), 'packages.itineraries.destroy');
+        });
+
+        Route::prefix($prefix.'/booking-management')->group(function () use ($nameRoute) {
+            $nameRoute(Route::get('register', [BookingRegisterController::class, 'index']), 'booking.register.index');
+            $nameRoute(Route::put('register/{registration}/mark-registered', [BookingRegisterController::class, 'markRegistered']), 'booking.register.mark-registered');
+            $nameRoute(Route::delete('register/{registration}', [BookingRegisterController::class, 'destroy']), 'booking.register.destroy');
+            $nameRoute(Route::get('listing', [BookingRegisterController::class, 'listing']), 'booking.listing.index');
+            $nameRoute(Route::post('listing', [BookingRegisterController::class, 'store']), 'booking.listing.store');
+            $nameRoute(Route::put('listing/{registration}', [BookingRegisterController::class, 'update']), 'booking.listing.update');
+            $nameRoute(Route::delete('listing/{registration}', [BookingRegisterController::class, 'destroy']), 'booking.listing.destroy');
+        });
+
+        Route::prefix($prefix.'/administrator')->group(function () use ($nameRoute) {
+            $nameRoute(Route::get('menus', [MenuController::class, 'index']), 'menus.index');
+            $nameRoute(Route::post('menus', [MenuController::class, 'store']), 'menus.store');
+            $nameRoute(Route::put('menus/{menu}', [MenuController::class, 'update']), 'menus.update');
+            $nameRoute(Route::delete('menus/{menu}', [MenuController::class, 'destroy']), 'menus.destroy');
+
+            $nameRoute(Route::get('user-access', [UserAccessController::class, 'index']), 'user-access.index');
+            $nameRoute(Route::post('user-access', [UserAccessController::class, 'store']), 'user-access.store');
+            $nameRoute(Route::put('user-access/{userAccess}', [UserAccessController::class, 'update']), 'user-access.update');
+            $nameRoute(Route::delete('user-access/{userAccess}', [UserAccessController::class, 'destroy']), 'user-access.destroy');
+            $nameRoute(Route::post('user-access/check-permission', [UserAccessController::class, 'checkPermission']), 'user-access.check-permission');
+            $nameRoute(Route::get('user-access/menu/{menuKey}', [UserAccessController::class, 'getUserMenuAccess']), 'user-access.menu');
+            $nameRoute(Route::post('user-access/grant', [UserAccessController::class, 'grantMenuPermission']), 'user-access.grant');
+            $nameRoute(Route::post('user-access/revoke', [UserAccessController::class, 'revokeMenuPermission']), 'user-access.revoke');
+        });
+    };
+
+    $registerAdminPortalRoutes('admin', true);
+    $registerAdminPortalRoutes('dashboard', false);
 });
 
 require __DIR__.'/settings.php';

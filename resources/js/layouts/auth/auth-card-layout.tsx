@@ -1,4 +1,5 @@
 import AppLogoIcon from '@/components/app-logo-icon';
+import GlobalFaviconHead from '@/components/global-favicon-head';
 import {
     Card,
     CardContent,
@@ -20,8 +21,9 @@ export default function AuthCardLayout({
     description?: string;
 }>) {
     return (
-        <div className="relative flex min-h-svh flex-col items-center justify-center gap-6 overflow-hidden bg-[linear-gradient(120deg,#f5f6f2_0%,#f7fbfb_45%,#f2f7f8_100%)] dark:bg-[linear-gradient(120deg,#0b1116_0%,#101620_55%,#111b24_100%)] p-6 md:p-10">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(15,23,42,0.08)_1px,_transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.05)_1px,_transparent_0)] [background-size:22px_22px] opacity-60" />
+        <div className="relative flex min-h-svh flex-col items-center justify-center gap-6 overflow-hidden bg-[linear-gradient(120deg,#f5f6f2_0%,#f7fbfb_45%,#f2f7f8_100%)] p-6 md:p-10 dark:bg-[linear-gradient(120deg,#0b1116_0%,#101620_55%,#111b24_100%)]">
+            <GlobalFaviconHead />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(15,23,42,0.08)_1px,_transparent_0)] [background-size:22px_22px] opacity-60 dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.05)_1px,_transparent_0)]" />
             <div className="flex w-full max-w-md flex-col gap-6">
                 <Link
                     href={home()}

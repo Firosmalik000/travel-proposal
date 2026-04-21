@@ -84,6 +84,8 @@ class HandleInertiaRequests extends Middleware
                 is_array($brandingOverrides['palette'] ?? null) ? $brandingOverrides['palette'] : [],
             ),
         ];
+        $seoSettings = SeoController::getPublicSettings();
+        $publicLogoPath = data_get($seoSettings, 'contact.logo.url', $branding['logo_path']);
 
         return [
             ...parent::share($request),
@@ -94,7 +96,11 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $userPermissions,
             ],
             'branding' => $branding,
-            'seoSettings' => SeoController::getPublicSettings(),
+            'seoSettings' => $seoSettings,
+            'publicBranding' => [
+                'logo_path' => $publicLogoPath,
+                'favicon_path' => $publicLogoPath,
+            ],
             'publicData' => $this->getPublicData(),
             'url' => $request->url(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
@@ -121,7 +127,14 @@ class HandleInertiaRequests extends Middleware
                 ])
                 ->all(),
             'packages' => TravelPackage::query()
-                ->with(['products:id,name,slug', 'schedules', 'testimonials:id,travel_package_id,rating'])
+                ->with([
+                    'products:id,name,slug',
+                    'schedules' => fn ($query) => $query->withSum(
+                        ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
+                        'passenger_count',
+                    ),
+                    'testimonials:id,travel_package_id,rating',
+                ])
                 ->where('is_active', true)
                 ->orderByDesc('is_featured')
                 ->orderBy('price')
@@ -154,7 +167,7 @@ class HandleInertiaRequests extends Middleware
                         'return_date' => $schedule->return_date?->toDateString(),
                         'departure_city' => $schedule->departure_city,
                         'seats_total' => $schedule->seats_total,
-                        'seats_available' => $schedule->seats_available,
+                        'seats_available' => $schedule->availableSeatsCount(),
                         'status' => $schedule->status,
                         'notes' => $schedule->notes,
                     ])->values()->all(),
@@ -162,6 +175,10 @@ class HandleInertiaRequests extends Middleware
                 ->values()
                 ->all(),
             'schedules' => DepartureSchedule::query()
+                ->withSum(
+                    ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
+                    'passenger_count',
+                )
                 ->with('travelPackage:id,slug,name,duration_days,price,currency')
                 ->where('is_active', true)
                 ->orderBy('departure_date')
@@ -171,7 +188,7 @@ class HandleInertiaRequests extends Middleware
                     'return_date' => $schedule->return_date?->toDateString(),
                     'departure_city' => $schedule->departure_city,
                     'seats_total' => $schedule->seats_total,
-                    'seats_available' => $schedule->seats_available,
+                    'seats_available' => $schedule->availableSeatsCount(),
                     'status' => $schedule->status,
                     'notes' => $schedule->notes,
                     'package' => [
@@ -186,7 +203,12 @@ class HandleInertiaRequests extends Middleware
                 ->all(),
             'services' => TravelService::query()->where('is_active', true)->orderBy('sort_order')->get(['title', 'description', 'sort_order'])->toArray(),
             'faqs' => Faq::query()->where('is_active', true)->orderBy('sort_order')->get(['question', 'answer', 'sort_order'])->toArray(),
-            'articles' => Article::query()->where('is_active', true)->latest('published_at')->get(['title', 'slug', 'excerpt', 'body', 'image_path', 'published_at', 'is_featured'])->toArray(),
+            'articles' => Article::query()
+                ->visible()
+                ->latest('published_at')
+                ->limit(4)
+                ->get(['title', 'slug', 'excerpt', 'body', 'image_path', 'published_at', 'is_featured', 'reading_time_minutes'])
+                ->toArray(),
             'testimonials' => Testimonial::query()
                 ->with('travelPackage:id,name')
                 ->where('is_active', true)

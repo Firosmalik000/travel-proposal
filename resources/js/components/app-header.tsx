@@ -1,3 +1,4 @@
+import AppearanceSwitch from '@/components/appearance-switch';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Icon } from '@/components/icon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,7 +28,6 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { UserMenuContent } from '@/components/user-menu-content';
-import AppearanceSwitch from '@/components/appearance-switch';
 import { useInitials } from '@/hooks/use-initials';
 import { cn, isSameUrl, resolveUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
@@ -246,7 +246,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end">
-                                <UserMenuContent user={auth.user} />
+                                <UserMenuContent />
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
@@ -254,7 +254,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
             </div>
             {breadcrumbs.length > 0 && (
                 <div className="flex w-full border-b border-white/10 bg-[#101317] text-white shadow-[inset_0_-1px_0_rgba(255,255,255,0.04)]">
-                    <div className="relative mx-auto flex h-12 w-full items-center justify-between gap-3 px-4 text-white/80 md:max-w-7xl [&_[data-slot=breadcrumb-list]]:text-white/70 [&_[data-slot=breadcrumb-link]]:text-white/75 [&_[data-slot=breadcrumb-link]:hover]:text-white [&_[data-slot=breadcrumb-page]]:text-white">
+                    <div className="relative mx-auto flex h-12 w-full items-center justify-between gap-3 px-4 text-white/80 md:max-w-7xl [&_[data-slot=breadcrumb-link]]:text-white/75 [&_[data-slot=breadcrumb-link]:hover]:text-white [&_[data-slot=breadcrumb-list]]:text-white/70 [&_[data-slot=breadcrumb-page]]:text-white">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
                         <AppearanceSwitch />
                         <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-primary/40" />

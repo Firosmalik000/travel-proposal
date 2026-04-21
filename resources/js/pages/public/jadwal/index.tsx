@@ -1,7 +1,8 @@
-﻿import { Head, Link } from '@inertiajs/react';
-import PublicLayout from '@/layouts/PublicLayout';
+import { MotionCard, MotionSection } from '@/components/public-motion';
 import { usePublicLocale } from '@/contexts/public-locale';
+import PublicLayout from '@/layouts/PublicLayout';
 import { formatDate, usePublicData } from '@/lib/public-content';
+import { Head, Link } from '@inertiajs/react';
 
 const content = {
     id: {
@@ -17,9 +18,27 @@ const content = {
             cta: 'Detail Paket',
         },
         schedules: [
-            { date: '10 Maret 2026', duration: '9 Hari', city: 'Jakarta', seat: '12', href: '/paket-umroh' },
-            { date: '15 April 2026', duration: '10 Hari', city: 'Surabaya', seat: '8', href: '/paket-umroh' },
-            { date: '05 Mei 2026', duration: '12 Hari', city: 'Jakarta', seat: '20', href: '/paket-umroh' },
+            {
+                date: '10 Maret 2026',
+                duration: '9 Hari',
+                city: 'Jakarta',
+                seat: '12',
+                href: '/paket-umroh',
+            },
+            {
+                date: '15 April 2026',
+                duration: '10 Hari',
+                city: 'Surabaya',
+                seat: '8',
+                href: '/paket-umroh',
+            },
+            {
+                date: '05 Mei 2026',
+                duration: '12 Hari',
+                city: 'Jakarta',
+                seat: '20',
+                href: '/paket-umroh',
+            },
         ],
     },
     en: {
@@ -35,9 +54,27 @@ const content = {
             cta: 'Package Details',
         },
         schedules: [
-            { date: '10 March 2026', duration: '9 Days', city: 'Jakarta', seat: '12', href: '/paket-umroh' },
-            { date: '15 April 2026', duration: '10 Days', city: 'Surabaya', seat: '8', href: '/paket-umroh' },
-            { date: '05 May 2026', duration: '12 Days', city: 'Jakarta', seat: '20', href: '/paket-umroh' },
+            {
+                date: '10 March 2026',
+                duration: '9 Days',
+                city: 'Jakarta',
+                seat: '12',
+                href: '/paket-umroh',
+            },
+            {
+                date: '15 April 2026',
+                duration: '10 Days',
+                city: 'Surabaya',
+                seat: '8',
+                href: '/paket-umroh',
+            },
+            {
+                date: '05 May 2026',
+                duration: '12 Days',
+                city: 'Jakarta',
+                seat: '20',
+                href: '/paket-umroh',
+            },
         ],
     },
 };
@@ -46,15 +83,18 @@ export default function Jadwal() {
     const { locale } = usePublicLocale();
     const publicData = usePublicData();
     const t = content[locale];
-    const schedules = Array.isArray(publicData.schedules) && publicData.schedules.length > 0
-        ? publicData.schedules.map((item: Record<string, any>) => ({
-            date: formatDate(item.departure_date, locale),
-            duration: `${item.package?.duration_days ?? 0} ${locale === 'id' ? 'Hari' : 'Days'}`,
-            city: item.departure_city,
-            seat: String(item.seats_available ?? 0),
-            href: item.package?.slug ? `/paket-umroh/${item.package.slug}` : '/paket-umroh',
-        }))
-        : t.schedules;
+    const schedules =
+        Array.isArray(publicData.schedules) && publicData.schedules.length > 0
+            ? publicData.schedules.map((item: Record<string, any>) => ({
+                  date: formatDate(item.departure_date, locale),
+                  duration: `${item.package?.duration_days ?? 0} ${locale === 'id' ? 'Hari' : 'Days'}`,
+                  city: item.departure_city,
+                  seat: String(item.seats_available ?? 0),
+                  href: item.package?.slug
+                      ? `/paket-umroh/${item.package.slug}`
+                      : '/paket-umroh',
+              }))
+            : t.schedules;
 
     return (
         <PublicLayout>
@@ -62,9 +102,9 @@ export default function Jadwal() {
                 <meta name="description" content={t.meta} />
             </Head>
 
-            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-10 pt-6">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-10 sm:px-6">
                 <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
-                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
                         Schedule
                     </span>
                     <h1 className="public-heading mt-4 text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
@@ -72,28 +112,49 @@ export default function Jadwal() {
                     </h1>
                     <p className="mt-2 text-muted-foreground">{t.subtitle}</p>
                 </div>
-            </section>
+            </MotionSection>
 
-            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
-                <div className="rounded-2xl border border-border bg-card/90 shadow-sm">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
+                <MotionCard className="rounded-2xl border border-border bg-card/90 shadow-sm">
                     <div className="overflow-x-auto">
-                        <table className="min-w-[640px] w-full text-left text-sm">
+                        <table className="w-full min-w-[640px] text-left text-sm">
                             <thead className="bg-muted text-foreground">
                                 <tr>
-                                    <th className="px-4 py-3">{t.table.date}</th>
-                                    <th className="px-4 py-3">{t.table.duration}</th>
-                                    <th className="px-4 py-3">{t.table.city}</th>
-                                    <th className="px-4 py-3">{t.table.seat}</th>
-                                    <th className="px-4 py-3">{t.table.detail}</th>
+                                    <th className="px-4 py-3">
+                                        {t.table.date}
+                                    </th>
+                                    <th className="px-4 py-3">
+                                        {t.table.duration}
+                                    </th>
+                                    <th className="px-4 py-3">
+                                        {t.table.city}
+                                    </th>
+                                    <th className="px-4 py-3">
+                                        {t.table.seat}
+                                    </th>
+                                    <th className="px-4 py-3">
+                                        {t.table.detail}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {schedules.map((item) => (
-                                    <tr key={item.date} className="border-t border-border">
-                                        <td className="px-4 py-3 text-foreground">{item.date}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{item.duration}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{item.city}</td>
-                                        <td className="px-4 py-3 text-muted-foreground">{item.seat}</td>
+                                    <tr
+                                        key={item.date}
+                                        className="border-t border-border"
+                                    >
+                                        <td className="px-4 py-3 text-foreground">
+                                            {item.date}
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {item.duration}
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {item.city}
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground">
+                                            {item.seat}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <Link
                                                 href={item.href}
@@ -107,8 +168,8 @@ export default function Jadwal() {
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </section>
+                </MotionCard>
+            </MotionSection>
         </PublicLayout>
     );
 }

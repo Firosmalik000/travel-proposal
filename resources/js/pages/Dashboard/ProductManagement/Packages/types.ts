@@ -1,3 +1,5 @@
+import type { PackageHighlightItem } from '@/lib/package-highlights';
+
 export type Schedule = {
     id: number;
     departure_date: string;
@@ -10,12 +12,26 @@ export type Schedule = {
     is_active: boolean;
 };
 
+export type Itinerary = {
+    id: number;
+    activity_id: number | null;
+    activity_ids: number[];
+    day_number: number;
+    sort_order: number;
+    title: { id: string; en: string };
+    description: { id: string; en: string };
+    activity?: ActivityOption | null;
+    activities?: ActivityOption[];
+    product_ids: number[];
+    products?: ProductOption[];
+};
+
 export type Package = {
     id: number;
     code: string;
     slug: string;
     name: { id: string; en: string };
-    package_type: 'reguler' | 'vip' | 'private';
+    package_type: 'reguler' | 'hemat' | 'vip' | 'premium' | 'private';
     departure_city: string;
     duration_days: number;
     price: number;
@@ -26,11 +42,12 @@ export type Package = {
     currency: string;
     image_path: string | null;
     summary: { id: string; en: string };
-    content: Record<string, unknown>;
+    content: Record<string, any>;
     is_featured: boolean;
     is_active: boolean;
     product_ids: number[];
     schedules: Schedule[];
+    itineraries: Itinerary[];
     rating_avg: number | null;
     rating_count: number;
 };
@@ -42,8 +59,15 @@ export type ProductOption = {
     product_type: string;
 };
 
-export type PackageFormData = {
+export type ActivityOption = {
+    id: number;
     code: string;
+    name: { id: string; en: string };
+    description: { id: string; en: string };
+    sort_order: number;
+};
+
+export type PackageFormData = {
     slug: string;
     'name.id': string;
     'name.en': string;
@@ -52,24 +76,38 @@ export type PackageFormData = {
     duration_days: number;
     price: number;
     original_price: number | '';
+    discount_percent: number | '';
     discount_label: string;
     discount_ends_at: string;
     currency: string;
     image: File | null;
     'summary.id': string;
     'summary.en': string;
-    content: Record<string, unknown>;
+    content: Record<string, any>;
+    itineraries: ItineraryInput[];
     product_ids: number[];
     is_featured: boolean;
     is_active: boolean;
 };
+
+export type ItineraryInput = {
+    id?: number;
+    activity_id: number | null;
+    activity_ids: number[];
+    day_number: number;
+    sort_order: number;
+    title: { id: string; en: string };
+    description: { id: string; en: string };
+    product_ids: number[];
+};
+
+export type PackageHighlightInput = PackageHighlightItem;
 
 export type ScheduleFormData = {
     departure_date: string;
     return_date: string;
     departure_city: string;
     seats_total: number;
-    seats_available: number;
     status: string;
     notes: string;
     is_active: boolean;

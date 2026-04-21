@@ -82,6 +82,21 @@ const partnerCategoryOptions: Option[] = [
     { label: 'Bank', value: 'bank' },
 ];
 
+const productIconOptions: Option[] = [
+    { label: 'Package', value: 'Package' },
+    { label: 'Plane', value: 'Plane' },
+    { label: 'Hotel', value: 'Hotel' },
+    { label: 'BadgeCheck', value: 'BadgeCheck' },
+    { label: 'Sparkles', value: 'Sparkles' },
+    { label: 'FileText', value: 'FileText' },
+    { label: 'CreditCard', value: 'CreditCard' },
+    { label: 'Bus', value: 'Bus' },
+    { label: 'MapPin', value: 'MapPin' },
+    { label: 'ShieldCheck', value: 'ShieldCheck' },
+    { label: 'HeartHandshake', value: 'HeartHandshake' },
+    { label: 'Briefcase', value: 'Briefcase' },
+];
+
 const scheduleStatusOptions: Option[] = [
     { label: 'Open', value: 'open' },
     { label: 'Full', value: 'full' },
@@ -99,6 +114,7 @@ const resourceFieldDefinitions: Record<string, FieldDefinition[]> = {
     products: [
         { path: 'code', label: 'Kode Produk', type: 'text' },
         { path: 'slug', label: 'Slug', type: 'text' },
+        { path: 'icon', label: 'Icon Produk', type: 'select', options: productIconOptions, description: 'Pilih icon yang akan mewakili product ini di package.' },
         { path: 'product_type', label: 'Tipe Produk', type: 'select', optionsKey: 'product_category_options' },
         { path: 'name', label: 'Nama Produk', type: 'localized-text' },
         { path: 'description', label: 'Deskripsi Produk', type: 'localized-textarea' },
@@ -220,7 +236,7 @@ const resourceFieldDefinitions: Record<string, FieldDefinition[]> = {
 export default function ContentIndex({
     heading = 'Content Management',
     description = 'Kelola konten website.',
-    breadcrumbHref = '/dashboard/website-management/content',
+    breadcrumbHref = '/admin/website-management/content',
     resources,
 }: {
     heading?: string;
@@ -274,7 +290,7 @@ function ResourceSectionPanel({ resource }: { resource: ResourceSection }) {
     const createItem = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        createForm.post(`/dashboard/website-management/content/resources/${resource.key}`, {
+        createForm.post(`/admin/website-management/content/resources/${resource.key}`, {
             forceFormData: resource.key === 'packages',
             preserveScroll: true,
             onSuccess: () => {
@@ -448,7 +464,7 @@ function ResourceSectionPanel({ resource }: { resource: ResourceSection }) {
             </Card>
 
             <Sheet open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <SheetContent side="right" className="w-full overflow-y-auto border-l sm:max-w-3xl lg:max-w-5xl">
+                <SheetContent side="right" className="w-full overflow-y-auto border-l sm:max-w-4xl lg:max-w-6xl xl:max-w-[88vw]">
                     <SheetHeader className="border-b px-6 py-5">
                         <SheetTitle>Tambah {resource.label}</SheetTitle>
                         <SheetDescription>{resource.description}</SheetDescription>
@@ -506,7 +522,7 @@ function EditResourceDialog({
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        form.post(`/dashboard/website-management/content/resources/${resourceKey}/${item.id}`, {
+        form.post(`/admin/website-management/content/resources/${resourceKey}/${item.id}`, {
             forceFormData: resourceKey === 'packages',
             preserveScroll: true,
             onSuccess: () => {
@@ -519,7 +535,7 @@ function EditResourceDialog({
 
     return (
         <Sheet open onOpenChange={(open) => !open && onClose()}>
-            <SheetContent side="right" className="w-full overflow-y-auto border-l sm:max-w-3xl lg:max-w-5xl">
+            <SheetContent side="right" className="w-full overflow-y-auto border-l sm:max-w-4xl lg:max-w-6xl xl:max-w-[88vw]">
                 <SheetHeader className="border-b px-6 py-5">
                     <SheetTitle>{item.title}</SheetTitle>
                     <SheetDescription>ID: {item.id}</SheetDescription>
@@ -1230,7 +1246,7 @@ function SchedulesTable({
 }
 
 function destroyResourceItem(resourceKey: string, label: string, itemId: number): void {
-    router.delete(`/dashboard/website-management/content/resources/${resourceKey}/${itemId}`, {
+    router.delete(`/admin/website-management/content/resources/${resourceKey}/${itemId}`, {
         preserveScroll: true,
         onSuccess: () => toast.success(`${label} berhasil dihapus`),
     });
@@ -1361,7 +1377,7 @@ function buildResourceFilters(resourceKey: string, rows: ResourceTableRow[], res
                     { label: 'Featured', value: 'yes' },
                     { label: 'Biasa', value: 'no' },
                 ],
-                getValue: (row) => (Boolean(row.payload.is_featured) ? 'yes' : 'no'),
+                getValue: (row) => (row.payload.is_featured ? 'yes' : 'no'),
             },
             statusFilter,
         ];
@@ -1432,3 +1448,4 @@ function localizedRecordValue(value: Record<string, unknown> | string, locale: '
 
     return stringValue(value[locale]) || stringValue(value.id) || stringValue(value.en);
 }
+

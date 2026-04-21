@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\DepartureSchedule;
 use App\Models\PageContent;
 use App\Models\ProductCategory;
 use App\Models\TravelPackage;
@@ -157,6 +156,41 @@ class TravelContentResourceManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertTrue(TravelService::query()->where('sort_order', 2)->exists());
+    }
+
+    public function test_it_can_store_a_product_with_an_icon_from_content_management(): void
+    {
+        $user = User::factory()->create();
+
+        ProductCategory::query()->create([
+            'key' => 'layanan',
+            'name' => ['id' => 'Layanan', 'en' => 'Services'],
+            'description' => ['id' => 'Kategori layanan', 'en' => 'Service category'],
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        $payload = [
+            'code' => 'PRD-HOTEL',
+            'slug' => 'hotel-madinah',
+            'icon' => 'Hotel',
+            'name' => ['id' => 'Hotel Madinah', 'en' => 'Madinah Hotel'],
+            'product_type' => 'layanan',
+            'description' => ['id' => 'Hotel dekat masjid', 'en' => 'Hotel near the mosque'],
+            'content' => ['unit' => ['id' => 'per kamar', 'en' => 'per room']],
+            'is_active' => true,
+        ];
+
+        $this->actingAs($user)
+            ->post(route('content.resources.store', ['resource' => 'products']), [
+                'payload_json' => json_encode($payload, JSON_THROW_ON_ERROR),
+            ])
+            ->assertRedirect();
+
+        $product = TravelProduct::query()->where('code', 'PRD-HOTEL')->first();
+
+        $this->assertNotNull($product);
+        $this->assertSame('Hotel', $product->icon);
     }
 
     public function test_it_can_store_a_package_with_uploaded_image(): void

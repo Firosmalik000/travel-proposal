@@ -33,10 +33,10 @@ class ContentController extends Controller
     {
         return $this->renderContentPage(
             heading: 'Content Management',
-            description: 'FAQ, artikel, layanan, testimoni, galeri, tim, legalitas, mitra, dan karier.',
-            breadcrumbHref: '/dashboard/website-management/content',
+            description: 'FAQ, layanan, testimoni, galeri, tim, legalitas, mitra, dan karier. Artikel kini dikelola di menu Articles & News.',
+            breadcrumbHref: '/admin/website-management/content',
             pages: [],
-            resources: ['services', 'faqs', 'articles', 'testimonials', 'gallery', 'team', 'legal_documents', 'partners', 'career_openings'],
+            resources: ['services', 'faqs', 'testimonials', 'gallery', 'team', 'legal_documents', 'partners', 'career_openings'],
         );
     }
 
@@ -57,7 +57,7 @@ class ContentController extends Controller
         return $this->renderContentPage(
             heading: 'Product Management',
             description: 'Kelola product travel yang menjadi komponen package.',
-            breadcrumbHref: '/dashboard/product-management/products',
+            breadcrumbHref: '/admin/product-management/products',
             pages: [],
             resources: ['products'],
         );
@@ -68,7 +68,7 @@ class ContentController extends Controller
         return $this->renderContentPage(
             heading: 'Product Category',
             description: 'Kelola kategori product yang dipakai sebagai tipe product travel.',
-            breadcrumbHref: '/dashboard/product-management/categories',
+            breadcrumbHref: '/admin/product-management/categories',
             pages: [],
             resources: ['product_categories'],
         );
@@ -79,7 +79,7 @@ class ContentController extends Controller
         return $this->renderContentPage(
             heading: 'Package Management',
             description: 'Kelola package umroh beserta jadwal keberangkatan dan relasi product.',
-            breadcrumbHref: '/dashboard/product-management/packages',
+            breadcrumbHref: '/admin/product-management/packages',
             pages: [],
             resources: ['packages', 'schedules'],
         );
@@ -90,7 +90,7 @@ class ContentController extends Controller
         return $this->renderContentPage(
             heading: 'Schedule Management',
             description: 'Pilih package lalu atur jadwal keberangkatan, seat, dan statusnya.',
-            breadcrumbHref: '/dashboard/website-management/schedules',
+            breadcrumbHref: '/admin/website-management/schedules',
             pages: [],
             resources: ['schedules'],
         );
@@ -343,6 +343,7 @@ class ContentController extends Controller
                 'template' => [
                     'code' => 'PRD-BARU',
                     'slug' => 'produk-baru',
+                    'icon' => 'Package',
                     'name' => ['id' => 'Produk Baru', 'en' => 'New Product'],
                     'product_type' => 'layanan',
                     'description' => ['id' => 'Deskripsi produk', 'en' => 'Product description'],
@@ -544,7 +545,7 @@ class ContentController extends Controller
     private function serializeResource(string $resource, Model $item): array
     {
         return match ($resource) {
-            'products' => Arr::only($item->toArray(), ['code', 'slug', 'name', 'product_type', 'description', 'content', 'is_active']),
+            'products' => Arr::only($item->toArray(), ['code', 'slug', 'icon', 'name', 'product_type', 'description', 'content', 'is_active']),
             'product_categories' => Arr::only($item->toArray(), ['key', 'name', 'description', 'sort_order', 'is_active']),
             'packages' => [
                 ...Arr::only($item->toArray(), ['code', 'slug', 'name', 'package_type', 'departure_city', 'duration_days', 'price', 'currency', 'image_path', 'summary', 'content', 'is_featured', 'is_active']),
@@ -590,6 +591,7 @@ class ContentController extends Controller
             'products' => [
                 'code' => (string) ($payload['code'] ?? ''),
                 'slug' => (string) ($payload['slug'] ?? ''),
+                'icon' => (string) ($payload['icon'] ?? 'Package'),
                 'name' => $this->localizedValue($payload['name'] ?? []),
                 'product_type' => (string) ($payload['product_type'] ?? ''),
                 'description' => $this->localizedValue($payload['description'] ?? []),

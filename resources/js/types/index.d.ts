@@ -41,6 +41,10 @@ export interface SharedData {
         };
     };
     seoSettings?: Record<string, unknown>;
+    publicBranding?: {
+        logo_path: string;
+        favicon_path: string;
+    };
     publicData?: Record<string, unknown>;
     url?: string;
     sidebarOpen: boolean;

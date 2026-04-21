@@ -115,8 +115,18 @@ class DashboardController extends Controller
 
     public function getPendingTasks(): JsonResponse
     {
+        $thinSeatSchedules = DepartureSchedule::query()
+            ->withSum(
+                ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
+                'passenger_count',
+            )
+            ->whereDate('departure_date', '>=', Carbon::today())
+            ->get()
+            ->filter(fn (DepartureSchedule $schedule): bool => $schedule->availableSeatsCount() <= 10)
+            ->count();
+
         return response()->json([
-            ['label' => 'Jadwal Seat Menipis', 'value' => DepartureSchedule::query()->where('seats_available', '<=', 10)->whereDate('departure_date', '>=', Carbon::today())->count(), 'color' => '#0f766e'],
+            ['label' => 'Jadwal Seat Menipis', 'value' => $thinSeatSchedules, 'color' => '#0f766e'],
             ['label' => 'Artikel Belum Dipublish', 'value' => Article::query()->whereNull('published_at')->count(), 'color' => '#1d4ed8'],
             ['label' => 'Konten Belum Aktif', 'value' => PageContent::query()->where('is_active', false)->count(), 'color' => '#d97706'],
             ['label' => 'Paket Nonaktif', 'value' => TravelPackage::query()->where('is_active', false)->count(), 'color' => '#475569'],
@@ -142,6 +152,10 @@ class DashboardController extends Controller
     public function getBirthdaysThisMonth(): JsonResponse
     {
         $departures = DepartureSchedule::query()
+            ->withSum(
+                ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
+                'passenger_count',
+            )
             ->with('travelPackage:id,name')
             ->where('is_active', true)
             ->whereDate('departure_date', '>=', Carbon::today())
@@ -152,7 +166,7 @@ class DashboardController extends Controller
                 'title' => (string) ($schedule->travelPackage?->name['id'] ?? 'Paket Umroh'),
                 'departure_date' => $schedule->departure_date?->toDateString(),
                 'departure_city' => $schedule->departure_city,
-                'seats_available' => $schedule->seats_available,
+                'seats_available' => $schedule->availableSeatsCount(),
             ]);
 
         return response()->json($departures);

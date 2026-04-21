@@ -110,7 +110,7 @@ export default function MenusIndex({ menus }: Props) {
         // Use setTimeout to ensure state is updated before submit
         setTimeout(() => {
             if (editingMenu) {
-                put(`/dashboard/administrator/menus/${editingMenu.id}`, {
+                put(`/admin/administrator/menus/${editingMenu.id}`, {
                     onSuccess: () => {
                         setIsDialogOpen(false);
                         reset();
@@ -121,7 +121,7 @@ export default function MenusIndex({ menus }: Props) {
                     },
                 });
             } else {
-                post('/dashboard/administrator/menus', {
+                post('/admin/administrator/menus', {
                     onSuccess: () => {
                         setIsDialogOpen(false);
                         reset();
@@ -138,7 +138,7 @@ export default function MenusIndex({ menus }: Props) {
     const handleDelete = () => {
         if (menuToDelete) {
             console.log('Deleting menu:', menuToDelete, 'Force delete:', forceDelete);
-            destroy(`/dashboard/administrator/menus/${menuToDelete.id}`, {
+            destroy(`/admin/administrator/menus/${menuToDelete.id}`, {
                 data: {
                     force_delete: forceDelete,
                 },
@@ -245,9 +245,9 @@ export default function MenusIndex({ menus }: Props) {
     return (
         <AppSidebarLayout
             breadcrumbs={[
-                { label: 'Dashboard', href: '/dashboard' },
-                { label: 'Administrator', href: '/dashboard/administrator' },
-                { label: 'Menu Management', href: '/dashboard/administrator/menus' },
+                { label: 'Dashboard', href: '/admin' },
+                { label: 'Administrator', href: '/admin/administrator' },
+                { label: 'Menu Management', href: '/admin/administrator/menus' },
             ]}
         >
             <div className="space-y-4 p-4 sm:space-y-6 sm:p-6">
@@ -328,7 +328,7 @@ export default function MenusIndex({ menus }: Props) {
                                         id="path"
                                         value={data.path}
                                         onChange={(e) => setData('path', e.target.value)}
-                                        placeholder="/dashboard/administrator"
+                                        placeholder="/admin/administrator"
                                         required
                                     />
                                     {errors.path && (
@@ -709,3 +709,4 @@ export default function MenusIndex({ menus }: Props) {
         </AppSidebarLayout>
     );
 }
+

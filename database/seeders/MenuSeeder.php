@@ -107,8 +107,45 @@ class MenuSeeder extends Seeder
                         'is_active' => true,
                         'children' => null,
                     ],
+                    [
+                        'name' => 'Activity',
+                        'menu_key' => 'activity',
+                        'path' => '/dashboard/product-management/activities',
+                        'icon' => 'ListChecks',
+                        'order' => 4,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
                 ],
                 'order' => 3,
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Booking',
+                'menu_key' => 'booking_management',
+                'path' => '/dashboard/booking-management',
+                'icon' => 'BookOpen',
+                'children' => [
+                    [
+                        'name' => 'Register',
+                        'menu_key' => 'booking_register',
+                        'path' => '/dashboard/booking-management/register',
+                        'icon' => 'ClipboardList',
+                        'order' => 1,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Listing',
+                        'menu_key' => 'booking_listing',
+                        'path' => '/dashboard/booking-management/listing',
+                        'icon' => 'Users',
+                        'order' => 2,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                ],
+                'order' => 4,
                 'is_active' => true,
             ],
 
@@ -138,7 +175,7 @@ class MenuSeeder extends Seeder
                         'children' => null, // No level 2, navigable
                     ],
                 ],
-                'order' => 4,
+                'order' => 5,
                 'is_active' => true,
             ],
         ];
@@ -150,7 +187,8 @@ class MenuSeeder extends Seeder
         $this->command->info('Menus seeded successfully with simplified structure.');
         $this->command->info('  - Dashboard: Direct navigation');
         $this->command->info('  - Website Management: landing, schedules, SEO, branding');
-        $this->command->info('  - Product Management: 3 submenus (product category, product, package)');
+        $this->command->info('  - Product Management: 4 submenus (product category, product, package, activity)');
+        $this->command->info('  - Booking: 2 submenus (register, listing)');
         $this->command->info('  - Administrator: 2 submenus (menu management, user access)');
     }
 }

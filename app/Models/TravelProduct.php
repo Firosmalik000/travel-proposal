@@ -15,6 +15,7 @@ class TravelProduct extends Model
         'code',
         'name',
         'slug',
+        'icon',
         'product_type',
         'description',
         'content',
@@ -34,6 +35,14 @@ class TravelProduct extends Model
     public function packages(): BelongsToMany
     {
         return $this->belongsToMany(TravelPackage::class, 'travel_package_product')
+            ->withPivot('sort_order')
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
+    }
+
+    public function itineraries(): BelongsToMany
+    {
+        return $this->belongsToMany(PackageItinerary::class, 'package_itinerary_product')
             ->withPivot('sort_order')
             ->withTimestamps()
             ->orderByPivot('sort_order');

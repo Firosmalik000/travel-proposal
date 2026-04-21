@@ -41,6 +41,12 @@ class StorePackageRequest extends FormRequest
             $decoded = json_decode($content, true);
             $this->merge(['content' => is_array($decoded) ? $decoded : []]);
         }
+
+        $itineraries = $this->input('itineraries');
+        if (is_string($itineraries)) {
+            $decoded = json_decode($itineraries, true);
+            $this->merge(['itineraries' => is_array($decoded) ? $decoded : []]);
+        }
     }
 
     public function rules(): array
@@ -48,7 +54,6 @@ class StorePackageRequest extends FormRequest
         $packageId = $this->route('package')?->id;
 
         return [
-            'code' => ['required', 'string', 'max:50', Rule::unique('travel_packages', 'code')->ignore($packageId)],
             'slug' => ['required', 'string', 'max:100', Rule::unique('travel_packages', 'slug')->ignore($packageId)],
             'name.id' => ['required', 'string', 'max:200'],
             'name.en' => ['nullable', 'string', 'max:200'],
@@ -64,6 +69,18 @@ class StorePackageRequest extends FormRequest
             'summary.id' => ['nullable', 'string'],
             'summary.en' => ['nullable', 'string'],
             'content' => ['nullable', 'array'],
+            'itineraries' => ['nullable', 'array'],
+            'itineraries.*.activity_id' => ['nullable', 'integer', 'exists:activities,id'],
+            'itineraries.*.activity_ids' => ['nullable', 'array'],
+            'itineraries.*.activity_ids.*' => ['integer', 'exists:activities,id'],
+            'itineraries.*.day_number' => ['required', 'integer', 'min:1'],
+            'itineraries.*.sort_order' => ['nullable', 'integer', 'min:1'],
+            'itineraries.*.title.id' => ['nullable', 'string', 'max:255'],
+            'itineraries.*.title.en' => ['nullable', 'string', 'max:255'],
+            'itineraries.*.description.id' => ['nullable', 'string'],
+            'itineraries.*.description.en' => ['nullable', 'string'],
+            'itineraries.*.product_ids' => ['nullable', 'array'],
+            'itineraries.*.product_ids.*' => ['integer', 'exists:travel_products,id'],
             'product_ids' => ['nullable', 'array'],
             'product_ids.*' => ['integer', 'exists:travel_products,id'],
             'is_featured' => ['boolean'],
@@ -76,7 +93,6 @@ class StorePackageRequest extends FormRequest
         return [
             'name.id.required' => 'Nama package (Indonesia) wajib diisi.',
             'original_price.gt' => 'Harga asli harus lebih besar dari harga jual.',
-            'code.unique' => 'Kode package sudah digunakan.',
             'slug.unique' => 'Slug sudah digunakan.',
         ];
     }

@@ -75,4 +75,14 @@ class TravelPackage extends Model
     {
         return $this->hasMany(Testimonial::class);
     }
+
+    public function registrations(): HasMany
+    {
+        return $this->hasMany(PackageRegistration::class);
+    }
+
+    public function itineraries(): HasMany
+    {
+        return $this->hasMany(PackageItinerary::class)->orderBy('sort_order')->orderBy('day_number');
+    }
 }

@@ -1,7 +1,12 @@
-﻿import { Head } from '@inertiajs/react';
-import PublicLayout from '@/layouts/PublicLayout';
+import {
+    MotionCard,
+    MotionGroup,
+    MotionSection,
+} from '@/components/public-motion';
 import { usePublicLocale } from '@/contexts/public-locale';
+import PublicLayout from '@/layouts/PublicLayout';
 import { localize, usePublicData } from '@/lib/public-content';
+import { Head } from '@inertiajs/react';
 
 const content = {
     id: {
@@ -56,12 +61,13 @@ export default function Layanan() {
     const { locale } = usePublicLocale();
     const publicData = usePublicData();
     const t = content[locale];
-    const services = Array.isArray(publicData.services) && publicData.services.length > 0
-        ? publicData.services.map((item: Record<string, unknown>) => ({
-            title: localize(item.title, locale),
-            desc: localize(item.description, locale),
-        }))
-        : t.services;
+    const services =
+        Array.isArray(publicData.services) && publicData.services.length > 0
+            ? publicData.services.map((item: Record<string, unknown>) => ({
+                  title: localize(item.title, locale),
+                  desc: localize(item.description, locale),
+              }))
+            : t.services;
 
     return (
         <PublicLayout>
@@ -69,9 +75,9 @@ export default function Layanan() {
                 <meta name="description" content={t.meta} />
             </Head>
 
-            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-10 pt-6">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-10 sm:px-6">
                 <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
-                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
                         Services
                     </span>
                     <h1 className="public-heading mt-4 text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
@@ -79,12 +85,12 @@ export default function Layanan() {
                     </h1>
                     <p className="mt-2 text-muted-foreground">{t.subtitle}</p>
                 </div>
-            </section>
+            </MotionSection>
 
-            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
-                <div className="grid gap-4 md:grid-cols-2">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
+                <MotionGroup className="grid gap-4 md:grid-cols-2">
                     {services.map((item, idx) => (
-                        <div
+                        <MotionCard
                             key={item.title}
                             className="flex items-start gap-4 rounded-2xl border border-border bg-card/90 px-5 py-4 shadow-sm"
                         >
@@ -92,13 +98,17 @@ export default function Layanan() {
                                 L{idx + 1}
                             </div>
                             <div>
-                                <p className="public-heading text-base font-semibold text-foreground">{item.title}</p>
-                                <p className="text-sm text-muted-foreground">{item.desc}</p>
+                                <p className="public-heading text-base font-semibold text-foreground">
+                                    {item.title}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    {item.desc}
+                                </p>
                             </div>
-                        </div>
+                        </MotionCard>
                     ))}
-                </div>
-            </section>
+                </MotionGroup>
+            </MotionSection>
         </PublicLayout>
     );
 }

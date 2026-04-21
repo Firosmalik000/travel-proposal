@@ -18,7 +18,7 @@ class UpdateSeoSettingsRequest extends FormRequest
             $socialAccounts = json_decode($socialAccounts, true);
         }
         $filtered = is_array($socialAccounts)
-            ? array_values(array_filter($socialAccounts, fn($item) => !empty($item['url'])))
+            ? array_values(array_filter($socialAccounts, fn ($item) => ! empty($item['url'])))
             : [];
         $this->merge(['social_accounts' => $filtered]);
     }
@@ -26,8 +26,8 @@ class UpdateSeoSettingsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'site_name_id' => ['required', 'string', 'max:255'],
-            'site_name_en' => ['required', 'string', 'max:255'],
+            'site_name_id' => ['nullable', 'string', 'max:255'],
+            'site_name_en' => ['nullable', 'string', 'max:255'],
             'tagline_id' => ['nullable', 'string', 'max:255'],
             'tagline_en' => ['nullable', 'string', 'max:255'],
             'default_description_id' => ['nullable', 'string'],

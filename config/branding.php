@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'company_name' => 'ASFAR TOUR',
-    'company_subtitle' => 'HAJJ & UMRAH',
+    'company_name' => 'Asfar Tour',
+    'company_subtitle' => 'Jelas Rencananya, Terjamin Amanahnya.',
     'logo_path' => '/branding/asfar-logo-default.png',
     'logo_white_path' => '/branding/asfar-logo-white-default.png',
     'palette' => [

@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { MotionCard, MotionGroup, MotionSection } from '@/components/public-motion';
 import PublicLayout from '@/layouts/PublicLayout';
 import { usePublicLocale } from '@/contexts/public-locale';
 import { localize, usePublicData, usePublicPageContent } from '@/lib/public-content';
@@ -15,7 +16,7 @@ export default function Karier() {
                 <meta name="description" content={localize(page?.excerpt, locale, 'Lowongan kerja travel')} />
             </Head>
 
-            <section className="mx-auto w-full max-w-6xl px-4 pb-10 pt-6 sm:px-6">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-10 pt-6 sm:px-6">
                 <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
                     <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                         {localize(page?.content?.badge, locale, 'Career')}
@@ -25,7 +26,7 @@ export default function Karier() {
                     </h1>
                     <p className="mt-2 text-muted-foreground">{localize(page?.content?.subtitle, locale, '')}</p>
                 </div>
-            </section>
+            </MotionSection>
 
             <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
                 <div className="grid gap-6 md:grid-cols-3">

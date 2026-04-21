@@ -1,8 +1,13 @@
-﻿import { Head } from '@inertiajs/react';
-import PublicLayout from '@/layouts/PublicLayout';
-import { Star } from 'lucide-react';
+import {
+    MotionCard,
+    MotionGroup,
+    MotionSection,
+} from '@/components/public-motion';
 import { usePublicLocale } from '@/contexts/public-locale';
+import PublicLayout from '@/layouts/PublicLayout';
 import { localize, usePublicData } from '@/lib/public-content';
+import { Head } from '@inertiajs/react';
+import { Star } from 'lucide-react';
 
 const content = {
     id: {
@@ -91,14 +96,18 @@ export default function Testimoni() {
     const { locale } = usePublicLocale();
     const publicData = usePublicData();
     const t = content[locale];
-    const testimonials = Array.isArray(publicData.testimonials) && publicData.testimonials.length > 0
-        ? publicData.testimonials.map((item: Record<string, unknown>) => ({
-            quote: localize(item.quote, locale),
-            name: [item.name, item.origin_city].filter(Boolean).join(', '),
-            paket: localize(item.package_name, locale),
-            image: '/images/dummy.jpg',
-        }))
-        : t.testimonials;
+    const testimonials =
+        Array.isArray(publicData.testimonials) &&
+        publicData.testimonials.length > 0
+            ? publicData.testimonials.map((item: Record<string, unknown>) => ({
+                  quote: localize(item.quote, locale),
+                  name: [item.name, item.origin_city]
+                      .filter(Boolean)
+                      .join(', '),
+                  paket: localize(item.package_name, locale),
+                  image: '/images/dummy.jpg',
+              }))
+            : t.testimonials;
 
     return (
         <PublicLayout>
@@ -106,12 +115,12 @@ export default function Testimoni() {
                 <meta name="description" content={t.meta} />
             </Head>
 
-            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-12 pt-6">
-                <div className="relative overflow-hidden rounded-[32px] border border-border bg-card/90 p-6 shadow-lg sm:p-8 lg:rounded-[40px] lg:p-12">
-                    <div className="pointer-events-none absolute -right-24 -top-20 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-12 sm:px-6">
+                <MotionCard className="relative overflow-hidden rounded-[32px] border border-border bg-card/90 p-6 shadow-lg sm:p-8 lg:rounded-[40px] lg:p-12">
+                    <div className="pointer-events-none absolute -top-20 -right-24 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
                     <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
                         <div>
-                            <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                            <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
                                 {t.badge}
                             </span>
                             <h1 className="public-heading mt-6 text-[clamp(2rem,4vw,3.6rem)] font-semibold text-foreground">
@@ -120,9 +129,12 @@ export default function Testimoni() {
                             <p className="mt-4 max-w-2xl text-muted-foreground">
                                 {t.desc}
                             </p>
-                            <div className="mt-6 flex flex-wrap gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                            <div className="mt-6 flex flex-wrap gap-3 text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
                                 {t.stats.map((stat) => (
-                                    <span key={stat} className="rounded-full bg-muted px-3 py-2">
+                                    <span
+                                        key={stat}
+                                        className="rounded-full bg-muted px-3 py-2"
+                                    >
                                         {stat}
                                     </span>
                                 ))}
@@ -132,7 +144,7 @@ export default function Testimoni() {
                             {t.gallery.map((item) => (
                                 <div
                                     key={item.label}
-                                    className="group relative h-28 overflow-hidden rounded-2xl border border-border parallax-frame sm:h-36"
+                                    className="group parallax-frame relative h-28 overflow-hidden rounded-2xl border border-border sm:h-36"
                                     data-parallax
                                     data-speed="0.3"
                                 >
@@ -143,40 +155,61 @@ export default function Testimoni() {
                                         loading="lazy"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                                    <span className="absolute bottom-3 left-3 text-xs font-semibold text-white">{item.label}</span>
+                                    <span className="absolute bottom-3 left-3 text-xs font-semibold text-white">
+                                        {item.label}
+                                    </span>
                                 </div>
                             ))}
                         </div>
                     </div>
-                </div>
-            </section>
+                </MotionCard>
+            </MotionSection>
 
-            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
-                <div className="grid gap-6 sm:grid-cols-2">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
+                <MotionGroup className="grid gap-6 sm:grid-cols-2">
                     {testimonials.map((item) => (
-                        <div
+                        <MotionCard
                             key={item.name}
                             className="group overflow-hidden rounded-2xl border border-border bg-card/90 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                         >
                             <div className="flex items-center gap-4">
-                                <div className="parallax-frame h-14 w-14 overflow-hidden rounded-full border border-border" data-parallax data-speed="0.3">
-                                    <img src={item.image} alt={item.name} className="parallax-img h-full w-full object-cover" loading="lazy" />
+                                <div
+                                    className="parallax-frame h-14 w-14 overflow-hidden rounded-full border border-border"
+                                    data-parallax
+                                    data-speed="0.3"
+                                >
+                                    <img
+                                        src={item.image}
+                                        alt={item.name}
+                                        className="parallax-img h-full w-full object-cover"
+                                        loading="lazy"
+                                    />
                                 </div>
                                 <div>
-                                    <p className="public-heading text-base font-semibold text-foreground">{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">{item.paket}</p>
+                                    <p className="public-heading text-base font-semibold text-foreground">
+                                        {item.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {item.paket}
+                                    </p>
                                 </div>
                             </div>
-                            <p className="mt-4 text-sm text-muted-foreground">“{item.quote}”</p>
+                            <p className="mt-4 text-sm text-muted-foreground">
+                                “{item.quote}”
+                            </p>
                             <div className="mt-4 flex gap-1 text-amber-400">
                                 {Array.from({ length: 5 }).map((_, idx) => (
-                                    <Star key={idx} className="h-4 w-4" fill="currentColor" />
+                                    <Star
+                                        key={idx}
+                                        className="h-4 w-4"
+                                        fill="currentColor"
+                                    />
                                 ))}
                             </div>
-                        </div>
+                        </MotionCard>
                     ))}
-                </div>
-            </section>
+                </MotionGroup>
+            </MotionSection>
         </PublicLayout>
     );
 }

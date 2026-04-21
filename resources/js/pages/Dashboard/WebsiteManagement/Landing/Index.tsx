@@ -56,7 +56,9 @@ const pageLabels: Record<string, string> = {
     'custom-umroh': 'Custom Umroh',
 };
 
-const hiddenLandingSlugs = new Set(['paket-umroh', 'paket-detail']);
+const landingTabOrder = ['home', 'kontak', 'mitra', 'tentang-kami', 'legalitas', 'custom-umroh'] as const;
+
+const hiddenLandingSlugs = new Set(['paket-umroh', 'paket-detail', 'galeri', 'karier']);
 
 const landingSectionMap: Record<string, string[]> = {
     home: ['hero', 'stats', 'about', 'packages', 'services', 'gallery', 'faq', 'contact'],
@@ -108,11 +110,13 @@ const sectionLabels: Record<string, string> = {
 };
 
 export default function LandingIndex({ pages, defaultFaqs = [] }: { pages: LandingPageItem[]; defaultFaqs?: DefaultFaqItem[] }) {
-    const visiblePages = pages.filter((page) => !hiddenLandingSlugs.has(page.slug));
+    const visiblePages = pages
+        .filter((page) => !hiddenLandingSlugs.has(page.slug))
+        .sort((leftPage, rightPage) => landingTabOrder.indexOf(leftPage.slug as (typeof landingTabOrder)[number]) - landingTabOrder.indexOf(rightPage.slug as (typeof landingTabOrder)[number]));
     const defaultTab = visiblePages[0]?.slug ?? 'home';
 
     return (
-        <AppSidebarLayout breadcrumbs={[{ title: 'Landing Page', href: '/dashboard/website-management/landing' }]}>
+        <AppSidebarLayout breadcrumbs={[{ title: 'Landing Page', href: '/admin/website-management/landing' }]}>
             <Head title="Landing Page" />
 
             <div className="space-y-6 p-4 sm:p-6">
@@ -179,7 +183,7 @@ function LandingPageEditor({ page, defaultFaqs }: { page: LandingPageItem; defau
     const submit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        post(`/dashboard/website-management/content/${page.id}`, {
+        post(`/admin/website-management/content/${page.id}`, {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => toast.success(`Konten ${pageLabels[page.slug] ?? page.slug} berhasil diperbarui`),
@@ -188,78 +192,77 @@ function LandingPageEditor({ page, defaultFaqs }: { page: LandingPageItem; defau
 
     return (
         <form className="space-y-6" onSubmit={submit}>
-            <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-                <Card className="h-fit">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <Layers3 className="h-4 w-4 text-primary" />
-                            Ringkasan Halaman
-                        </CardTitle>
-                        <CardDescription>Fokus edit hanya untuk halaman yang sedang dipilih.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <SummaryItem label="Halaman" value={pageLabels[page.slug] ?? page.slug} />
-                        <SummaryItem label="Slug" value={page.slug} mono />
-                        <SummaryItem label="Mode Bahasa" value={localeLabel} />
-                        <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 px-4 py-3">
-                            <Checkbox checked={Boolean(data.is_active)} onCheckedChange={(checked) => setData('is_active', checked === true)} />
-                            <div>
-                                <p className="text-sm font-medium text-foreground">Halaman aktif</p>
-                                <p className="text-xs text-muted-foreground">Nonaktifkan jika halaman tidak ingin dipakai di public.</p>
-                            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <Layers3 className="h-4 w-4 text-primary" />
+                        Ringkasan Halaman
+                    </CardTitle>
+                    <CardDescription>Fokus edit hanya untuk halaman yang sedang dipilih.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.2fr)]">
+                    <SummaryItem label="Halaman" value={pageLabels[page.slug] ?? page.slug} />
+                    <SummaryItem label="Slug" value={page.slug} mono />
+                    <SummaryItem label="Mode Bahasa" value={localeLabel} />
+                    <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 px-4 py-3">
+                        <Checkbox checked={Boolean(data.is_active)} onCheckedChange={(checked) => setData('is_active', checked === true)} />
+                        <div>
+                            <p className="text-sm font-medium text-foreground">Halaman aktif</p>
+                            <p className="text-xs text-muted-foreground">Nonaktifkan jika halaman tidak ingin dipakai di public.</p>
                         </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Informasi Utama</CardTitle>
+                        <CardDescription>Bagian ini hanya menampilkan input untuk bahasa {localeLabel}.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 md:grid-cols-2">
+                        <Field
+                            label={locale === 'id' ? 'Judul Halaman' : 'Page Title'}
+                            value={locale === 'id' ? data.title_id : data.title_en}
+                            onChange={(value) => setData(locale === 'id' ? 'title_id' : 'title_en', value)}
+                        />
+                        <Field
+                            label={locale === 'id' ? 'Ringkasan Halaman' : 'Page Excerpt'}
+                            value={locale === 'id' ? data.excerpt_id : data.excerpt_en}
+                            onChange={(value) => setData(locale === 'id' ? 'excerpt_id' : 'excerpt_en', value)}
+                            multiline
+                        />
                     </CardContent>
                 </Card>
 
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Informasi Utama</CardTitle>
-                            <CardDescription>Bagian ini hanya menampilkan input untuk bahasa {localeLabel}.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid gap-4 md:grid-cols-2">
-                            <Field
-                                label={locale === 'id' ? 'Judul Halaman' : 'Page Title'}
-                                value={locale === 'id' ? data.title_id : data.title_en}
-                                onChange={(value) => setData(locale === 'id' ? 'title_id' : 'title_en', value)}
-                            />
-                            <Field
-                                label={locale === 'id' ? 'Ringkasan Halaman' : 'Page Excerpt'}
-                                value={locale === 'id' ? data.excerpt_id : data.excerpt_en}
-                                onChange={(value) => setData(locale === 'id' ? 'excerpt_id' : 'excerpt_en', value)}
-                                multiline
-                            />
-                        </CardContent>
-                    </Card>
+                {contentSections.map(([sectionKey, sectionValue]) => {
+                    if (page.slug === 'tentang-kami' && sectionKey === 'stats') {
+                        return (
+                            <Card key={sectionKey}>
+                                <CardHeader>
+                                    <CardTitle>Statistik</CardTitle>
+                                    <CardDescription>Angka-angka yang tampil di hero section halaman Tentang Kami.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <StatsSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
+                                </CardContent>
+                            </Card>
+                        );
+                    }
 
-                    {contentSections.map(([sectionKey, sectionValue]) => {
-                        if (page.slug === 'tentang-kami' && sectionKey === 'stats') {
-                            return (
-                                <Card key={sectionKey}>
-                                    <CardHeader>
-                                        <CardTitle>Statistik</CardTitle>
-                                        <CardDescription>Angka-angka yang tampil di hero section halaman Tentang Kami.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <StatsSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
-                                    </CardContent>
-                                </Card>
-                            );
-                        }
-
-                        if (page.slug === 'tentang-kami' && sectionKey === 'values') {
-                            return (
-                                <Card key={sectionKey}>
-                                    <CardHeader>
-                                        <CardTitle>Nilai Perusahaan</CardTitle>
-                                        <CardDescription>Tambah, ubah, atau hapus nilai/keunggulan perusahaan yang tampil di halaman Tentang Kami.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ValuesSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
-                                    </CardContent>
-                                </Card>
-                            );
-                        }
+                    if (page.slug === 'tentang-kami' && sectionKey === 'values') {
+                        return (
+                            <Card key={sectionKey}>
+                                <CardHeader>
+                                    <CardTitle>Nilai Perusahaan</CardTitle>
+                                    <CardDescription>Tambah, ubah, atau hapus nilai/keunggulan perusahaan yang tampil di halaman Tentang Kami.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <ValuesSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
+                                </CardContent>
+                            </Card>
+                        );
+                    }
 
                         if (page.slug === 'home' && sectionKey === 'services') {
                             return (
@@ -372,13 +375,12 @@ function LandingPageEditor({ page, defaultFaqs }: { page: LandingPageItem; defau
                                 </CardContent>
                             </Card>
                         );
-                    })}
+                })}
 
-                    <div className="flex justify-end">
-                        <Button type="submit" disabled={processing} className="min-w-40">
-                            Simpan Landing Page
-                        </Button>
-                    </div>
+                <div className="flex justify-end">
+                    <Button type="submit" disabled={processing} className="min-w-40">
+                        Simpan Landing Page
+                    </Button>
                 </div>
             </div>
         </form>
@@ -1117,3 +1119,4 @@ function updateNestedValue(source: Record<string, any>, path: string, value: unk
 
     return result;
 }
+

@@ -6,6 +6,12 @@ export interface LocalizedField {
     en?: string;
 }
 
+export type PublicSocialAccount = {
+    platform: string;
+    label: string;
+    url: string;
+};
+
 export function localize(value: unknown, locale: 'id' | 'en', fallback = ''): string {
     if (typeof value === 'string') {
         return value || fallback;
@@ -49,6 +55,48 @@ export function whatsappLinkFromPhone(phone: unknown, message?: string): string 
     }
 
     return `${baseUrl}?text=${encodeURIComponent(message)}`;
+}
+
+export function getPublicWhatsappNumber(seo: Record<string, any> = {}): string {
+    return String(seo.contact?.whatsapp ?? seo.contact?.phone ?? '');
+}
+
+export function getPublicPhoneNumber(seo: Record<string, any> = {}): string {
+    return String(seo.contact?.phone ?? seo.contact?.whatsapp ?? '');
+}
+
+export function getPublicEmail(seo: Record<string, any> = {}): string {
+    return String(seo.contact?.email ?? '');
+}
+
+export function getPublicAddress(seo: Record<string, any> = {}): LocalizedField | string {
+    return seo.contact?.address?.full ?? '';
+}
+
+export function getPublicMapLink(seo: Record<string, any> = {}): string {
+    return String(seo.contact?.address?.mapLink ?? seo.contact?.mapLink ?? seo.contact?.map_link ?? '');
+}
+
+export function getPublicSocialAccounts(seo: Record<string, any> = {}): PublicSocialAccount[] {
+    const accounts = Array.isArray(seo.social?.accounts) ? seo.social.accounts : [];
+
+    return accounts
+        .filter((item: Record<string, unknown>) => String(item?.url ?? '').trim())
+        .map((item: Record<string, unknown>, index: number) => ({
+            platform: String(item.platform ?? `social-${index + 1}`),
+            label: String(item.label ?? item.platform ?? `Social ${index + 1}`),
+            url: String(item.url ?? '#'),
+        }));
+}
+
+export function whatsappLinkFromSeo(seo: Record<string, any> = {}, message?: string): string {
+    const whatsappNumber = getPublicWhatsappNumber(seo);
+
+    if (! String(whatsappNumber).trim()) {
+        return '';
+    }
+
+    return whatsappLinkFromPhone(whatsappNumber, message);
 }
 
 export function formatPrice(value: number | string | null | undefined, locale: 'id' | 'en', currency = 'IDR'): string {

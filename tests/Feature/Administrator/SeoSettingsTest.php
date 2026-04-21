@@ -5,6 +5,8 @@ namespace Tests\Feature\Administrator;
 use App\Models\PageContent;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -61,5 +63,27 @@ class SeoSettingsTest extends TestCase
         $this->assertNotNull($settings);
         $this->assertSame('Asfar Tour', $settings->content['general']['siteName']['id']);
         $this->assertSame('#c80012', $settings->content['colors']['primary']);
+    }
+
+    public function test_seo_logo_can_be_uploaded_without_requiring_other_fields(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->patch(route('seo.update'), [
+                'logo' => UploadedFile::fake()->image('seo-logo.png'),
+            ])
+            ->assertRedirect();
+
+        $settings = PageContent::query()->where('slug', 'seo-settings')->first();
+
+        $this->assertNotNull($settings);
+        $this->assertArrayHasKey('contact', $settings->content);
+        $this->assertArrayHasKey('logo', $settings->content['contact']);
+        $this->assertArrayHasKey('path', $settings->content['contact']['logo']);
+
+        Storage::disk('public')->assertExists($settings->content['contact']['logo']['path']);
     }
 }

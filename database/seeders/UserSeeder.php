@@ -53,8 +53,8 @@ class UserSeeder extends Seeder
                 ['user_id' => $user->id],
                 [
                     'full_name' => $row['full_name'],
-                    'phone' => '+62 812-3456-7890',
-                    'address' => 'Jl. Asfar No. 12, Jakarta Pusat',
+                    'phone' => '08137892647',
+                    'address' => 'Casa pesanggrahan, 2 no B6, Jl. H. Sulaiman, Petukangan Utara, Kec. Pesanggrahan, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12260',
                 ],
             );
         }

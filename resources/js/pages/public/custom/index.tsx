@@ -1,27 +1,76 @@
+import {
+    MotionCard,
+    MotionGroup,
+    MotionSection,
+} from '@/components/public-motion';
+import { usePublicLocale } from '@/contexts/public-locale';
+import PublicLayout from '@/layouts/PublicLayout';
+import {
+    localize,
+    usePublicPageContent,
+    whatsappLinkFromSeo,
+} from '@/lib/public-content';
+import { type SharedData } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import { useState, type ReactNode } from 'react';
-import PublicLayout from '@/layouts/PublicLayout';
-import { usePublicLocale } from '@/contexts/public-locale';
-import { localize, usePublicPageContent, whatsappLinkFromPhone } from '@/lib/public-content';
-import { type SharedData } from '@/types';
+
+const indonesianDepartureCities = [
+    'Jakarta',
+    'Surabaya',
+    'Bandung',
+    'Semarang',
+    'Yogyakarta',
+    'Solo',
+    'Malang',
+    'Denpasar',
+    'Medan',
+    'Palembang',
+    'Padang',
+    'Pekanbaru',
+    'Batam',
+    'Balikpapan',
+    'Banjarmasin',
+    'Pontianak',
+    'Samarinda',
+    'Makassar',
+    'Manado',
+    'Ambon',
+    'Jayapura',
+    'Mataram',
+    'Kupang',
+    'Banda Aceh',
+    'Lampung',
+] as const;
 
 const content = {
     id: {
         title: 'Custom Umroh',
-        description: 'Ceritakan kebutuhan rombongan Anda, lalu kami bantu siapkan penawaran yang paling cocok.',
+        description:
+            'Ceritakan kebutuhan rombongan Anda, lalu kami bantu siapkan penawaran yang paling cocok.',
         planner: {
             title: 'Isi kebutuhan singkat Anda',
-            description: 'Form ini membantu kami memahami kebutuhan dasar sebelum tim admin menghubungi Anda.',
+            description:
+                'Form ini membantu kami memahami kebutuhan dasar sebelum tim admin menghubungi Anda.',
             groupType: 'Jenis Rombongan',
-            groupOptions: ['Keluarga', 'Teman / Komunitas', 'Corporate / Instansi'],
+            groupOptions: [
+                'Keluarga',
+                'Teman / Komunitas',
+                'Corporate / Instansi',
+            ],
             pilgrims: 'Jumlah Jamaah',
             city: 'Kota Keberangkatan',
             month: 'Perkiraan Bulan Berangkat',
             budget: 'Budget per Jamaah',
             focus: 'Prioritas Utama',
-            focusOptions: ['Harga terbaik', 'Hotel lebih dekat', 'Jadwal fleksibel', 'Pendampingan ibadah'],
+            focusOptions: [
+                'Harga terbaik',
+                'Hotel lebih dekat',
+                'Jadwal fleksibel',
+                'Pendampingan ibadah',
+            ],
             notes: 'Catatan Tambahan',
-            notesPlaceholder: 'Contoh: ingin kamar triple, rombongan lansia, butuh city tour, atau ingin berangkat saat liburan sekolah.',
+            notesPlaceholder:
+                'Contoh: ingin kamar triple, rombongan lansia, butuh city tour, atau ingin berangkat saat liburan sekolah.',
             cta: 'Kirim Brief ke WhatsApp',
         },
         guide: {
@@ -35,34 +84,49 @@ const content = {
         steps: [
             {
                 title: 'Ceritakan kebutuhan rombongan',
-                description: 'Jumlah jamaah, kota keberangkatan, dan target waktu berangkat.',
+                description:
+                    'Jumlah jamaah, kota keberangkatan, dan target waktu berangkat.',
             },
             {
                 title: 'Tim kami susun opsi terbaik',
-                description: 'Kami cocokkan maskapai, hotel, dan ritme perjalanan sesuai kebutuhan Anda.',
+                description:
+                    'Kami cocokkan maskapai, hotel, dan ritme perjalanan sesuai kebutuhan Anda.',
             },
             {
                 title: 'Anda review lalu finalisasi',
-                description: 'Setelah cocok, admin bantu lanjut ke penawaran, seat, dan dokumen.',
+                description:
+                    'Setelah cocok, admin bantu lanjut ke penawaran, seat, dan dokumen.',
             },
         ],
     },
     en: {
         title: 'Custom Umrah',
-        description: 'Tell us what your group needs, and we will prepare the most suitable proposal.',
+        description:
+            'Tell us what your group needs, and we will prepare the most suitable proposal.',
         planner: {
             title: 'Fill in your brief requirements',
-            description: 'This form helps us understand the essentials before our team contacts you.',
+            description:
+                'This form helps us understand the essentials before our team contacts you.',
             groupType: 'Group Type',
-            groupOptions: ['Family', 'Friends / Community', 'Corporate / Institution'],
+            groupOptions: [
+                'Family',
+                'Friends / Community',
+                'Corporate / Institution',
+            ],
             pilgrims: 'Number of Pilgrims',
             city: 'Departure City',
             month: 'Estimated Departure Month',
             budget: 'Budget per Pilgrim',
             focus: 'Main Priority',
-            focusOptions: ['Best price', 'Closer hotel', 'Flexible schedule', 'Better guidance'],
+            focusOptions: [
+                'Best price',
+                'Closer hotel',
+                'Flexible schedule',
+                'Better guidance',
+            ],
             notes: 'Additional Notes',
-            notesPlaceholder: 'Example: need triple rooms, elderly pilgrims, city tour, or school holiday departure.',
+            notesPlaceholder:
+                'Example: need triple rooms, elderly pilgrims, city tour, or school holiday departure.',
             cta: 'Send Brief via WhatsApp',
         },
         guide: {
@@ -76,15 +140,18 @@ const content = {
         steps: [
             {
                 title: 'Tell us what your group needs',
-                description: 'Number of pilgrims, departure city, and target month.',
+                description:
+                    'Number of pilgrims, departure city, and target month.',
             },
             {
                 title: 'We prepare the best options',
-                description: 'We match flights, hotels, and travel rhythm to your needs.',
+                description:
+                    'We match flights, hotels, and travel rhythm to your needs.',
             },
             {
                 title: 'You review and finalize',
-                description: 'Once suitable, our admin helps with the offer, seat, and documents.',
+                description:
+                    'Once suitable, our admin helps with the offer, seat, and documents.',
             },
         ],
     },
@@ -105,8 +172,8 @@ export default function Custom() {
     const [focus, setFocus] = useState(t.planner.focusOptions[0]);
     const [notes, setNotes] = useState('');
 
-    const whatsappLink = whatsappLinkFromPhone(
-        seo.contact?.phone,
+    const whatsappLink = whatsappLinkFromSeo(
+        seo,
         buildCustomInquiryMessage(locale, {
             groupType,
             pilgrims,
@@ -121,162 +188,249 @@ export default function Custom() {
     return (
         <PublicLayout>
             <Head title={localize(page?.title, locale, t.title)}>
-                <meta name="description" content={localize(page?.excerpt, locale, t.description)} />
+                <meta
+                    name="description"
+                    content={localize(page?.excerpt, locale, t.description)}
+                />
             </Head>
 
-            <section className="mx-auto w-full max-w-6xl px-4 pb-10 pt-6 sm:px-6">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-10 sm:px-6">
                 <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
-                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
                         {localize(page?.content?.badge, locale, 'Custom')}
                     </span>
                     <h1 className="public-heading mt-4 text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
                         {localize(page?.title, locale, t.title)}
                     </h1>
                     <p className="mt-2 max-w-3xl text-muted-foreground">
-                        {localize(page?.content?.description, locale, t.description)}
+                        {localize(
+                            page?.content?.description,
+                            locale,
+                            t.description,
+                        )}
                     </p>
                 </div>
-            </section>
+            </MotionSection>
 
-            <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 pb-8 sm:px-6 lg:grid-cols-[0.95fr_1.05fr]">
-                <div className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                        {localize(page?.content?.subtitle, locale, '')}
-                    </p>
-                    <h2 className="public-heading mt-3 text-xl font-semibold text-foreground">
-                        {t.guide.title}
-                    </h2>
-                    <div className="mt-5 space-y-4">
-                        {t.steps.map((step, index) => (
-                            <div key={step.title} className="rounded-2xl border border-border bg-background/70 p-4">
-                                <div className="flex items-start gap-4">
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-                                        0{index + 1}
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+                <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+                    <MotionCard className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
+                        <p className="text-xs font-semibold tracking-[0.2em] text-primary uppercase">
+                            {localize(page?.content?.subtitle, locale, '')}
+                        </p>
+                        <h2 className="public-heading mt-3 text-xl font-semibold text-foreground">
+                            {t.guide.title}
+                        </h2>
+                        <MotionGroup className="mt-5 space-y-4">
+                            {t.steps.map((step, index) => (
+                                <MotionCard
+                                    key={step.title}
+                                    className="rounded-2xl border border-border bg-background/70 p-4"
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                                            0{index + 1}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-foreground">
+                                                {step.title}
+                                            </h3>
+                                            <p className="mt-1 text-sm text-muted-foreground">
+                                                {step.description}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-semibold text-foreground">{step.title}</h3>
-                                        <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-6 rounded-2xl border border-border bg-background/70 p-5">
-                        <h3 className="font-semibold text-foreground">{t.guide.title}</h3>
-                        <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                            {t.guide.items.map((item) => (
-                                <li key={item}>{item}</li>
+                                </MotionCard>
                             ))}
-                        </ul>
-                    </div>
-                </div>
+                        </MotionGroup>
 
-                <div className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
-                    <h2 className="public-heading text-xl font-semibold text-foreground">{t.planner.title}</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">{t.planner.description}</p>
-
-                    <form
-                        className="mt-6 grid gap-4 md:grid-cols-2"
-                        onSubmit={(event) => {
-                            event.preventDefault();
-                            window.open(whatsappLink, '_blank', 'noopener,noreferrer');
-                        }}
-                    >
-                        <FormField label={t.planner.groupType}>
-                            <select className={fieldClassName} value={groupType} onChange={(event) => setGroupType(event.target.value)}>
-                                {t.planner.groupOptions.map((option) => (
-                                    <option key={option} value={option}>
-                                        {option}
-                                    </option>
+                        <MotionCard className="mt-6 rounded-2xl border border-border bg-background/70 p-5">
+                            <h3 className="font-semibold text-foreground">
+                                {t.guide.title}
+                            </h3>
+                            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                                {t.guide.items.map((item) => (
+                                    <li key={item}>{item}</li>
                                 ))}
-                            </select>
-                        </FormField>
+                            </ul>
+                        </MotionCard>
+                    </MotionCard>
 
-                        <FormField label={t.planner.pilgrims}>
-                            <input
-                                className={fieldClassName}
-                                placeholder={locale === 'id' ? 'Contoh: 12 orang' : 'Example: 12 people'}
-                                value={pilgrims}
-                                onChange={(event) => setPilgrims(event.target.value)}
-                            />
-                        </FormField>
+                    <MotionCard className="rounded-3xl border border-border bg-card/90 p-6 shadow-sm">
+                        <h2 className="public-heading text-xl font-semibold text-foreground">
+                            {t.planner.title}
+                        </h2>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            {t.planner.description}
+                        </p>
 
-                        <FormField label={t.planner.city}>
-                            <input
-                                className={fieldClassName}
-                                placeholder={locale === 'id' ? 'Contoh: Jakarta' : 'Example: Jakarta'}
-                                value={city}
-                                onChange={(event) => setCity(event.target.value)}
-                            />
-                        </FormField>
+                        <form
+                            className="mt-6 grid gap-4 md:grid-cols-2"
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                if (!whatsappLink) {
+                                    return;
+                                }
+                                window.open(
+                                    whatsappLink,
+                                    '_blank',
+                                    'noopener,noreferrer',
+                                );
+                            }}
+                        >
+                            <FormField label={t.planner.groupType}>
+                                <select
+                                    className={fieldClassName}
+                                    value={groupType}
+                                    onChange={(event) =>
+                                        setGroupType(event.target.value)
+                                    }
+                                >
+                                    {t.planner.groupOptions.map((option) => (
+                                        <option key={option} value={option}>
+                                            {option}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormField>
 
-                        <FormField label={t.planner.month}>
-                            <input
-                                className={fieldClassName}
-                                placeholder={locale === 'id' ? 'Contoh: Desember 2026' : 'Example: December 2026'}
-                                value={month}
-                                onChange={(event) => setMonth(event.target.value)}
-                            />
-                        </FormField>
-
-                        <FormField label={t.planner.budget}>
-                            <input
-                                className={fieldClassName}
-                                placeholder={locale === 'id' ? 'Contoh: 35.000.000' : 'Example: 35,000,000'}
-                                value={budget}
-                                onChange={(event) => setBudget(event.target.value)}
-                            />
-                        </FormField>
-
-                        <FormField label={t.planner.focus}>
-                            <select className={fieldClassName} value={focus} onChange={(event) => setFocus(event.target.value)}>
-                                {t.planner.focusOptions.map((option) => (
-                                    <option key={option} value={option}>
-                                        {option}
-                                    </option>
-                                ))}
-                            </select>
-                        </FormField>
-
-                        <div className="md:col-span-2">
-                            <FormField label={t.planner.notes}>
-                                <textarea
-                                    className={`${fieldClassName} min-h-32 resize-none`}
-                                    placeholder={t.planner.notesPlaceholder}
-                                    value={notes}
-                                    onChange={(event) => setNotes(event.target.value)}
+                            <FormField label={t.planner.pilgrims}>
+                                <input
+                                    className={fieldClassName}
+                                    placeholder={
+                                        locale === 'id'
+                                            ? 'Contoh: 12 orang'
+                                            : 'Example: 12 people'
+                                    }
+                                    value={pilgrims}
+                                    onChange={(event) =>
+                                        setPilgrims(event.target.value)
+                                    }
                                 />
                             </FormField>
-                        </div>
 
-                        <div className="md:col-span-2">
-                            <div className="rounded-2xl border border-border bg-background/70 p-4 text-sm text-muted-foreground">
-                                <p className="font-semibold text-foreground">
-                                    {locale === 'id' ? 'Preview brief yang akan dikirim' : 'Brief preview to be sent'}
-                                </p>
-                                <pre className="mt-3 whitespace-pre-wrap font-sans text-sm text-muted-foreground">
-                                    {buildCustomInquiryMessage(locale, {
-                                        groupType,
-                                        pilgrims,
-                                        city,
-                                        month,
-                                        budget,
-                                        focus,
-                                        notes,
-                                    })}
-                                </pre>
+                            <FormField label={t.planner.city}>
+                                <input
+                                    list="custom-umroh-departure-cities"
+                                    className={fieldClassName}
+                                    placeholder={
+                                        locale === 'id'
+                                            ? 'Pilih atau cari kota keberangkatan'
+                                            : 'Choose or search a departure city'
+                                    }
+                                    value={city}
+                                    onChange={(event) =>
+                                        setCity(event.target.value)
+                                    }
+                                />
+                                <datalist id="custom-umroh-departure-cities">
+                                    {indonesianDepartureCities.map(
+                                        (departureCity) => (
+                                            <option
+                                                key={departureCity}
+                                                value={departureCity}
+                                            />
+                                        ),
+                                    )}
+                                </datalist>
+                            </FormField>
+
+                            <FormField label={t.planner.month}>
+                                <input
+                                    className={fieldClassName}
+                                    placeholder={
+                                        locale === 'id'
+                                            ? 'Contoh: Desember 2026'
+                                            : 'Example: December 2026'
+                                    }
+                                    value={month}
+                                    onChange={(event) =>
+                                        setMonth(event.target.value)
+                                    }
+                                />
+                            </FormField>
+
+                            <FormField label={t.planner.budget}>
+                                <input
+                                    className={fieldClassName}
+                                    placeholder={
+                                        locale === 'id'
+                                            ? 'Contoh: 35.000.000'
+                                            : 'Example: 35,000,000'
+                                    }
+                                    value={budget}
+                                    onChange={(event) =>
+                                        setBudget(event.target.value)
+                                    }
+                                />
+                            </FormField>
+
+                            <FormField label={t.planner.focus}>
+                                <select
+                                    className={fieldClassName}
+                                    value={focus}
+                                    onChange={(event) =>
+                                        setFocus(event.target.value)
+                                    }
+                                >
+                                    {t.planner.focusOptions.map((option) => (
+                                        <option key={option} value={option}>
+                                            {option}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormField>
+
+                            <div className="md:col-span-2">
+                                <FormField label={t.planner.notes}>
+                                    <textarea
+                                        className={`${fieldClassName} min-h-32 resize-none`}
+                                        placeholder={t.planner.notesPlaceholder}
+                                        value={notes}
+                                        onChange={(event) =>
+                                            setNotes(event.target.value)
+                                        }
+                                    />
+                                </FormField>
                             </div>
-                        </div>
 
-                        <div className="md:col-span-2">
-                            <button className="inline-flex w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground">
-                                {localize(page?.content?.cta, locale, t.planner.cta)}
-                            </button>
-                        </div>
-                    </form>
+                            <div className="md:col-span-2">
+                                <div className="rounded-2xl border border-border bg-background/70 p-4 text-sm text-muted-foreground">
+                                    <p className="font-semibold text-foreground">
+                                        {locale === 'id'
+                                            ? 'Preview brief yang akan dikirim'
+                                            : 'Brief preview to be sent'}
+                                    </p>
+                                    <pre className="mt-3 font-sans text-sm whitespace-pre-wrap text-muted-foreground">
+                                        {buildCustomInquiryMessage(locale, {
+                                            groupType,
+                                            pilgrims,
+                                            city,
+                                            month,
+                                            budget,
+                                            focus,
+                                            notes,
+                                        })}
+                                    </pre>
+                                </div>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <button
+                                    className="inline-flex w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground disabled:pointer-events-none disabled:opacity-50"
+                                    disabled={!whatsappLink}
+                                >
+                                    {localize(
+                                        page?.content?.cta,
+                                        locale,
+                                        t.planner.cta,
+                                    )}
+                                </button>
+                            </div>
+                        </form>
+                    </MotionCard>
                 </div>
-            </section>
+            </MotionSection>
         </PublicLayout>
     );
 }

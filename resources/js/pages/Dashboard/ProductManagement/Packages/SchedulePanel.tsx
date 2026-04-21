@@ -16,7 +16,6 @@ const emptySchedule = (): ScheduleFormData => ({
     return_date: '',
     departure_city: '',
     seats_total: 45,
-    seats_available: 45,
     status: 'open',
     notes: '',
     is_active: true,
@@ -31,6 +30,7 @@ const statusConfig = {
 export function SchedulePanel({ pkg }: Props) {
     const [editingId, setEditingId] = useState<number | 'new' | null>(null);
     const form = useForm<ScheduleFormData>(emptySchedule());
+    const schedules = Array.isArray(pkg.schedules) ? pkg.schedules : [];
 
     function openNew() {
         form.reset();
@@ -44,7 +44,6 @@ export function SchedulePanel({ pkg }: Props) {
             return_date: s.return_date ?? '',
             departure_city: s.departure_city,
             seats_total: s.seats_total,
-            seats_available: s.seats_available,
             status: s.status,
             notes: s.notes ?? '',
             is_active: s.is_active,
@@ -75,7 +74,7 @@ export function SchedulePanel({ pkg }: Props) {
         });
     }
 
-    const sorted = [...pkg.schedules].sort((a, b) => a.departure_date.localeCompare(b.departure_date));
+    const sorted = [...schedules].sort((a, b) => a.departure_date.localeCompare(b.departure_date));
 
     return (
         <div className="space-y-4">
@@ -83,7 +82,7 @@ export function SchedulePanel({ pkg }: Props) {
             <div className="flex items-center justify-between">
                 <div className="flex gap-3 text-sm">
                     {(['open', 'full', 'closed'] as const).map((s) => {
-                        const count = pkg.schedules.filter((j) => j.status === s).length;
+                        const count = schedules.filter((j) => j.status === s).length;
                         const cfg = statusConfig[s];
                         return count > 0 ? (
                             <span key={s} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}>
@@ -92,7 +91,7 @@ export function SchedulePanel({ pkg }: Props) {
                             </span>
                         ) : null;
                     })}
-                    {pkg.schedules.length === 0 && <span className="text-xs text-muted-foreground">Belum ada jadwal</span>}
+                    {schedules.length === 0 && <span className="text-xs text-muted-foreground">Belum ada jadwal</span>}
                 </div>
                 <Button size="sm" onClick={openNew} className="gap-1.5">
                     <CalendarPlus className="h-3.5 w-3.5" /> Tambah
@@ -140,9 +139,10 @@ export function SchedulePanel({ pkg }: Props) {
                             {form.errors.seats_total && <p className="mt-1 text-xs text-destructive">{form.errors.seats_total}</p>}
                         </div>
                         <div>
-                            <Label className="mb-1 block text-xs">Seat Tersedia *</Label>
-                            <Input type="number" min={0} value={form.data.seats_available} onChange={(e) => form.setData('seats_available', +e.target.value)} />
-                            {form.errors.seats_available && <p className="mt-1 text-xs text-destructive">{form.errors.seats_available}</p>}
+                            <Label className="mb-1 block text-xs">Seat Tersedia</Label>
+                            <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                                Otomatis dihitung dari total seat dikurangi total pax booking pada jadwal ini.
+                            </div>
                         </div>
                         <div className="col-span-2">
                             <Label className="mb-1 block text-xs">Catatan</Label>

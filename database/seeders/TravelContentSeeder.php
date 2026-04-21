@@ -4,17 +4,13 @@ namespace Database\Seeders;
 
 use App\Models\Article;
 use App\Models\CareerOpening;
-use App\Models\DepartureSchedule;
 use App\Models\Faq;
 use App\Models\GalleryItem;
 use App\Models\LegalDocument;
 use App\Models\PageContent;
 use App\Models\Partner;
-use App\Models\ProductCategory;
 use App\Models\TeamMember;
 use App\Models\Testimonial;
-use App\Models\TravelPackage;
-use App\Models\TravelProduct;
 use App\Models\TravelService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -53,8 +49,8 @@ class TravelContentSeeder extends Seeder
                 'title' => $this->localize('Branding Settings'),
                 'excerpt' => $this->localize('Default branding settings for public pages and administrator portal.'),
                 'content' => [
-                    'company_name' => config('branding.company_name'),
-                    'company_subtitle' => config('branding.company_subtitle'),
+                    'company_name' => 'Asfar Tour',
+                    'company_subtitle' => 'Jelas Rencananya, Terjamin Amanahnya.',
                     'palette' => config('branding.palette'),
                 ],
                 'is_active' => true,
@@ -73,7 +69,7 @@ class TravelContentSeeder extends Seeder
                 'content' => [
                     'general' => [
                         'siteName' => $this->localize('Asfar Tour', 'Asfar Tour'),
-                        'tagline' => $this->localize('Haji & Umroh Amanah', 'Trusted Hajj & Umrah Travel'),
+                        'tagline' => $this->localize('Jelas Rencananya, Terjamin Amanahnya.', 'Clear in Planning, Trusted in Delivery.'),
                         'defaultDescription' => $this->localize(
                             'Asfar Tour melayani perjalanan umroh dan haji dengan paket terstruktur, jadwal jelas, dan pendampingan yang profesional.',
                             'Asfar Tour provides structured umrah and hajj journeys with clear schedules and professional guidance.',
@@ -81,30 +77,46 @@ class TravelContentSeeder extends Seeder
                         'keywords' => 'travel umroh, paket umroh, haji khusus, jadwal umroh, asfar tour',
                     ],
                     'contact' => [
-                        'phone' => '+62 812-3456-7890',
+                        'phone' => '08137892647',
+                        'whatsapp' => '08137892647',
                         'email' => 'info@asfartour.co.id',
                         'address' => [
-                            'full' => $this->localize('Jl. Asfar No. 12, Jakarta Pusat', 'Jl. Asfar No. 12, Central Jakarta'),
-                            'mapLink' => 'https://maps.google.com',
+                            'full' => $this->localize(
+                                'Casa pesanggrahan, 2 no B6, Jl. H. Sulaiman, Petukangan Utara, Kec. Pesanggrahan, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12260',
+                                'Casa Pesanggrahan, 2 No B6, Jl. H. Sulaiman, Petukangan Utara, Pesanggrahan, South Jakarta, Special Capital Region of Jakarta 12260',
+                            ),
+                            'mapLink' => 'https://maps.google.com/?q=Casa+pesanggrahan+2+no+B6+Jl.+H.+Sulaiman+Petukangan+Utara+Pesanggrahan+Jakarta+Selatan+12260',
                         ],
                         'operatingHours' => [
                             'weekday' => $this->localize('Senin - Jumat, 08.00 - 17.00', 'Monday - Friday, 08.00 AM - 05.00 PM'),
                             'weekend' => $this->localize('Sabtu, 09.00 - 14.00', 'Saturday, 09.00 AM - 02.00 PM'),
                         ],
-                        'socials' => [
-                            ['label' => 'Instagram', 'url' => 'https://instagram.com/asfartour'],
-                            ['label' => 'YouTube', 'url' => 'https://youtube.com/@asfartour'],
-                        ],
                     ],
                     'social' => [
-                        'twitterHandle' => '@asfartour',
-                        'facebookAppId' => '',
+                        'accounts' => [
+                            [
+                                'platform' => 'instagram',
+                                'label' => 'Instagram',
+                                'url' => 'https://instagram.com/asfartour.id',
+                            ],
+                            [
+                                'platform' => 'tiktok',
+                                'label' => 'TikTok',
+                                'url' => 'https://tiktok.com/@asfartour.id',
+                            ],
+                        ],
+                        'ogTitle' => $this->localize('Asfar Tour', 'Asfar Tour'),
+                        'ogDescription' => $this->localize(
+                            'Jelas rencananya, terjamin amanahnya bersama layanan umroh Asfar Tour.',
+                            'Clear in planning, trusted in delivery with Asfar Tour umrah services.',
+                        ),
                     ],
                     'advanced' => [
                         'robotsDefault' => 'index, follow',
                         'canonicalBase' => config('app.url'),
                         'googleVerification' => '',
                         'bingVerification' => '',
+                        'googleAnalyticsId' => '',
                     ],
                     'colors' => config('branding.palette'),
                 ],
@@ -124,7 +136,7 @@ class TravelContentSeeder extends Seeder
                 'content' => [
                     'hero' => [
                         'label' => $this->localize('Asfar Tour', 'Asfar Tour'),
-                        'title' => $this->localize('Jelajahi Tanah Suci', 'Journey to the Holy Land'),
+                        'title' => $this->localize('Jelas Rencananya, Terjamin Amanahnya.', 'Clear in Planning, Trusted in Delivery.'),
                         'description' => $this->localize(
                             'Pengalaman ibadah umroh yang khusyuk, nyaman, dan terarah bersama tim yang amanah.',
                             'A focused, comfortable, and well-guided umrah journey with a trusted team.',
@@ -380,7 +392,6 @@ class TravelContentSeeder extends Seeder
             PageContent::query()->updateOrCreate(['slug' => $page['slug']], $page + ['is_active' => true]);
         }
     }
-
 
     private function seedServices(): void
     {

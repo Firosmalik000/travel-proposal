@@ -1,61 +1,93 @@
-﻿import { Head } from '@inertiajs/react';
-import PublicLayout from '@/layouts/PublicLayout';
+import {
+    MotionCard,
+    MotionGroup,
+    MotionSection,
+} from '@/components/public-motion';
 import { usePublicLocale } from '@/contexts/public-locale';
-import { localize, usePublicData } from '@/lib/public-content';
+import PublicLayout from '@/layouts/PublicLayout';
+import { formatDate, localize } from '@/lib/public-content';
+import { Head, Link, router } from '@inertiajs/react';
+import { Search } from 'lucide-react';
+import { useState } from 'react';
+
+type ArticleItem = {
+    id: number;
+    title: Record<string, string> | string;
+    slug: string;
+    excerpt: Record<string, string> | string;
+    image_path?: string | null;
+    content_type: string;
+    author_name?: string | null;
+    tags: string[];
+    published_at?: string | null;
+    reading_time_minutes: number;
+    is_featured: boolean;
+};
+
+type PaginatedArticles = {
+    data: ArticleItem[];
+    links: Array<{ url: string | null; label: string; active: boolean }>;
+};
+
+type FilterOption = {
+    value: string;
+    label: string;
+};
 
 const content = {
     id: {
-        title: 'Artikel & Tips Umroh',
-        meta: 'Artikel dan tips umroh untuk edukasi jamaah sebelum berangkat.',
-        subtitle: 'Edukasi ringan agar jamaah siap berangkat dengan tenang.',
-        cta: 'Baca Artikel',
-        articles: [
-            {
-                title: 'Checklist Persiapan Umroh 2026',
-                desc: 'Panduan dokumen, perlengkapan, dan persiapan fisik.',
-            },
-            {
-                title: 'Tips Umroh Nyaman untuk Lansia',
-                desc: 'Cara menjaga stamina, obat, dan pendampingan.',
-            },
-            {
-                title: 'Memilih Paket Umroh Sesuai Budget',
-                desc: 'Perbandingan fasilitas hemat, reguler, dan premium.',
-            },
-        ],
+        title: 'Artikel & News Update',
+        meta: 'Insight, berita, dan travel update terbaru dari layanan umrah dan industri perjalanan.',
+        subtitle:
+            'Satu tempat untuk company news, travel update, tips umrah, dan insight terbaru.',
+        searchPlaceholder: 'Cari artikel atau keyword',
+        noData: 'Belum ada artikel yang cocok dengan filter ini.',
+        readMore: 'Baca Selengkapnya',
+        featured: 'Featured Story',
+        minuteRead: 'menit baca',
     },
     en: {
-        title: 'Umrah Articles & Tips',
-        meta: 'Articles and tips to help pilgrims prepare before departure.',
-        subtitle: 'Short reads to help you depart calmly and well-prepared.',
-        cta: 'Read Article',
-        articles: [
-            {
-                title: '2026 Umrah Preparation Checklist',
-                desc: 'Documents, essentials, and physical preparation guide.',
-            },
-            {
-                title: 'Comfort Tips for Elderly Pilgrims',
-                desc: 'Stamina, medicine, and assistance tips.',
-            },
-            {
-                title: 'Choosing a Package by Budget',
-                desc: 'Compare economy, regular, and premium facilities.',
-            },
-        ],
+        title: 'Articles & News Updates',
+        meta: 'Insights, news, and the latest travel updates from the company and broader travel industry.',
+        subtitle:
+            'One place for company news, travel updates, umrah tips, and fresh editorial insights.',
+        searchPlaceholder: 'Search article or keyword',
+        noData: 'No articles match the selected filters.',
+        readMore: 'Read Article',
+        featured: 'Featured Story',
+        minuteRead: 'min read',
     },
 };
 
-export default function Artikel() {
+export default function ArtikelIndex({
+    featuredArticle,
+    articles,
+    filters,
+    contentTypeOptions,
+}: {
+    featuredArticle: ArticleItem | null;
+    articles: PaginatedArticles;
+    filters: {
+        search: string;
+        content_type: string;
+    };
+    contentTypeOptions: FilterOption[];
+}) {
     const { locale } = usePublicLocale();
-    const publicData = usePublicData();
     const t = content[locale];
-    const articles = Array.isArray(publicData.articles) && publicData.articles.length > 0
-        ? publicData.articles.map((item: Record<string, unknown>) => ({
-            title: localize(item.title, locale),
-            desc: localize(item.excerpt, locale),
-        }))
-        : t.articles;
+    const [search, setSearch] = useState(filters.search);
+    const [contentType, setContentType] = useState(filters.content_type);
+
+    const submitFilters = () => {
+        router.get(
+            '/artikel',
+            {
+                search,
+                content_type: contentType,
+            },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
 
     return (
         <PublicLayout>
@@ -63,36 +95,192 @@ export default function Artikel() {
                 <meta name="description" content={t.meta} />
             </Head>
 
-            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-10 pt-6">
-                <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
-                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                        Insight
-                    </span>
-                    <h1 className="public-heading mt-4 text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
-                        {t.title}
-                    </h1>
-                    <p className="mt-2 text-muted-foreground">
-                        {t.subtitle}
-                    </p>
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-8 sm:px-6">
+                <div className="rounded-[2rem] border border-border bg-card/90 p-6 shadow-lg">
+                    <div className="max-w-3xl space-y-4">
+                        <span className="inline-flex rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.22em] text-primary uppercase">
+                            Editorial Hub
+                        </span>
+                        <h1 className="public-heading text-3xl font-semibold text-foreground md:text-5xl">
+                            {t.title}
+                        </h1>
+                        <p className="text-base text-muted-foreground md:text-lg">
+                            {t.subtitle}
+                        </p>
+                    </div>
                 </div>
-            </section>
+            </MotionSection>
 
-            <section className="mx-auto w-full max-w-6xl px-4 sm:px-6 pb-16">
-                <div className="grid gap-6 md:grid-cols-3">
-                    {articles.map((item) => (
-                        <div
-                            key={item.title}
-                            className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-                        >
-                            <h3 className="public-heading text-lg font-semibold text-foreground">{item.title}</h3>
-                            <p className="mt-2 text-sm text-muted-foreground">{item.desc}</p>
-                            <button className="mt-4 rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-muted">
-                                {t.cta}
-                            </button>
-                        </div>
-                    ))}
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+                <div className="grid gap-4 rounded-3xl border border-border bg-card/90 p-4 shadow-sm md:grid-cols-[1.5fr_220px_auto]">
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder={t.searchPlaceholder}
+                            className="h-12 w-full rounded-2xl border border-input bg-background pr-4 pl-10 text-sm text-foreground outline-none"
+                        />
+                    </div>
+                    <select
+                        value={contentType}
+                        onChange={(event) => setContentType(event.target.value)}
+                        className="h-12 rounded-2xl border border-input bg-background px-4 text-sm text-foreground outline-none"
+                    >
+                        {contentTypeOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                    <button
+                        type="button"
+                        onClick={submitFilters}
+                        className="h-12 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground"
+                    >
+                        Filter
+                    </button>
                 </div>
-            </section>
+            </MotionSection>
+
+            {featuredArticle ? (
+                <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6">
+                    <Link
+                        href={`/artikel/${featuredArticle.slug}`}
+                        className="grid overflow-hidden rounded-[2rem] border border-border bg-card/90 shadow-lg md:grid-cols-[1.2fr_1fr]"
+                    >
+                        <div className="p-6 md:p-8">
+                            <span className="inline-flex rounded-full bg-primary/10 px-4 py-1.5 text-xs font-semibold tracking-[0.22em] text-primary uppercase">
+                                {t.featured}
+                            </span>
+                            <h2 className="public-heading mt-4 text-2xl font-semibold text-foreground md:text-4xl">
+                                {localize(featuredArticle.title, locale)}
+                            </h2>
+                            <p className="mt-3 line-clamp-4 text-sm leading-7 text-muted-foreground md:text-base">
+                                {localize(featuredArticle.excerpt, locale)}
+                            </p>
+                            <div className="mt-6 flex flex-wrap gap-3 text-xs font-medium text-muted-foreground">
+                                <span>{featuredArticle.author_name}</span>
+                                <span>
+                                    {formatDate(
+                                        featuredArticle.published_at,
+                                        locale,
+                                    )}
+                                </span>
+                                <span>
+                                    {featuredArticle.reading_time_minutes}{' '}
+                                    {t.minuteRead}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="min-h-[260px] bg-muted">
+                            {featuredArticle.image_path ? (
+                                <img
+                                    src={featuredArticle.image_path}
+                                    alt={localize(
+                                        featuredArticle.title,
+                                        locale,
+                                    )}
+                                    className="h-full w-full object-cover"
+                                />
+                            ) : null}
+                        </div>
+                    </Link>
+                </MotionSection>
+            ) : null}
+
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
+                {articles.data.length > 0 ? (
+                    <MotionGroup className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                        {articles.data.map((article) => (
+                            <MotionCard
+                                key={article.id}
+                                className="overflow-hidden rounded-[1.6rem] border border-border bg-card/90 shadow-sm"
+                            >
+                                <div className="aspect-[16/10] bg-muted">
+                                    {article.image_path ? (
+                                        <img
+                                            src={article.image_path}
+                                            alt={localize(
+                                                article.title,
+                                                locale,
+                                            )}
+                                            className="h-full w-full object-cover"
+                                        />
+                                    ) : null}
+                                </div>
+                                <div className="space-y-4 p-5">
+                                    <div className="flex flex-wrap gap-2 text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
+                                        <span>{article.content_type}</span>
+                                        {article.is_featured ? (
+                                            <span>Featured</span>
+                                        ) : null}
+                                    </div>
+                                    <div>
+                                        <h3 className="public-heading text-xl font-semibold text-foreground">
+                                            {localize(article.title, locale)}
+                                        </h3>
+                                        <p className="mt-2 line-clamp-3 text-sm leading-7 text-muted-foreground">
+                                            {localize(article.excerpt, locale)}
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                                        <span>{article.author_name}</span>
+                                        <span>
+                                            {formatDate(
+                                                article.published_at,
+                                                locale,
+                                            )}
+                                        </span>
+                                        <span>
+                                            {article.reading_time_minutes}{' '}
+                                            {t.minuteRead}
+                                        </span>
+                                    </div>
+                                    <Link
+                                        href={`/artikel/${article.slug}`}
+                                        className="inline-flex rounded-full border border-border px-4 py-2 text-xs font-semibold text-foreground transition hover:bg-muted"
+                                    >
+                                        {t.readMore}
+                                    </Link>
+                                </div>
+                            </MotionCard>
+                        ))}
+                    </MotionGroup>
+                ) : (
+                    <div className="rounded-3xl border border-dashed border-border bg-card/80 px-6 py-16 text-center text-muted-foreground">
+                        {t.noData}
+                    </div>
+                )}
+
+                {articles.links.length > 3 ? (
+                    <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
+                        {articles.links.map((link, index) =>
+                            link.url ? (
+                                <button
+                                    key={`${link.label}-${index}`}
+                                    type="button"
+                                    onClick={() => router.visit(link.url!)}
+                                    className={`rounded-full px-4 py-2 text-sm ${link.active ? 'bg-primary text-primary-foreground' : 'border border-border bg-card text-foreground'}`}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ) : (
+                                <button
+                                    key={`${link.label}-${index}`}
+                                    type="button"
+                                    disabled
+                                    className="rounded-full border border-border bg-card px-4 py-2 text-sm text-muted-foreground"
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ),
+                        )}
+                    </div>
+                ) : null}
+            </MotionSection>
         </PublicLayout>
     );
 }

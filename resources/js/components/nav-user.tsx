@@ -1,3 +1,4 @@
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -9,17 +10,17 @@ import {
     SidebarMenuItem,
     useSidebar,
 } from '@/components/ui/sidebar';
-import { UserInfo } from '@/components/user-info';
 import { UserMenuContent } from '@/components/user-menu-content';
+import { useInitials } from '@/hooks/use-initials';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
-import { ChevronsUpDown } from 'lucide-react';
 
 export function NavUser() {
     const { auth } = usePage<SharedData>().props;
     const { state } = useSidebar();
     const isMobile = useIsMobile();
+    const getInitials = useInitials();
 
     return (
         <SidebarMenu>
@@ -28,11 +29,18 @@ export function NavUser() {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            className="group rounded-2xl border border-transparent bg-white/70 text-sidebar-foreground shadow-[0_16px_40px_-30px_rgba(15,23,42,0.5)] transition hover:border-rose-100 hover:bg-white data-[state=open]:border-rose-100 data-[state=open]:bg-white dark:bg-white/5 dark:hover:border-rose-500/20 dark:hover:bg-white/10 dark:data-[state=open]:border-rose-500/30"
+                            className="group rounded-2xl border border-transparent bg-white/70 text-sidebar-foreground shadow-[0_16px_40px_-30px_rgba(15,23,42,0.5)] transition group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl hover:border-rose-100 hover:bg-white data-[state=open]:border-rose-100 data-[state=open]:bg-white dark:bg-white/5 dark:hover:border-rose-500/20 dark:hover:bg-white/10 dark:data-[state=open]:border-rose-500/30"
                             data-test="sidebar-menu-button"
                         >
-                            <UserInfo user={auth.user} />
-                            <ChevronsUpDown className="ml-auto size-4" />
+                            <Avatar className="h-8 w-8 overflow-hidden rounded-full">
+                                <AvatarImage
+                                    src={auth.user.avatar}
+                                    alt={auth.user.name}
+                                />
+                                <AvatarFallback className="rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white">
+                                    {getInitials(auth.user.name)}
+                                </AvatarFallback>
+                            </Avatar>
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -46,7 +54,7 @@ export function NavUser() {
                                   : 'bottom'
                         }
                     >
-                        <UserMenuContent user={auth.user} />
+                        <UserMenuContent />
                     </DropdownMenuContent>
                 </DropdownMenu>
             </SidebarMenuItem>
