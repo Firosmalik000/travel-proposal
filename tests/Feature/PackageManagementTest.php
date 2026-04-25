@@ -35,7 +35,12 @@ class PackageManagementTest extends TestCase
     public function test_it_shows_package_management_page(): void
     {
         $user = User::factory()->create();
-        $this->makePackage();
+        $this->makePackage([
+            'image_path' => '/storage/packages/cover.jpg',
+            'content' => [
+                'gallery' => ['/storage/packages/gallery-1.jpg'],
+            ],
+        ]);
 
         $this->actingAs($user)
             ->get(route('packages.index'))
@@ -46,6 +51,8 @@ class PackageManagementTest extends TestCase
                 ->has('productOptions')
                 ->has('activityOptions')
                 ->where('packages.0.code', 'ASF-TEST-10')
+                ->where('packages.0.images.0', '/storage/packages/cover.jpg')
+                ->where('packages.0.images.1', '/storage/packages/gallery-1.jpg')
             );
     }
 

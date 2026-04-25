@@ -18,13 +18,6 @@ class ResetAdminPassword extends Command
 
     private const ALL_PERMISSIONS = ['view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'reject'];
 
-    private const ALL_MENU_KEYS = [
-        'dashboard',
-        'website_management', 'landing_page', 'seo_settings', 'branding',
-        'product_management', 'product_category', 'product', 'package',
-        'administrator', 'menu_management', 'user_access',
-    ];
-
     public function handle(): int
     {
         // Auto-seed jika DB kosong
@@ -55,7 +48,16 @@ class ResetAdminPassword extends Command
             $this->info("Password {$email} direset.");
         }
 
-        $access = array_fill_keys(self::ALL_MENU_KEYS, self::ALL_PERMISSIONS);
+        $menuKeys = Menu::query()
+            ->orderBy('order')
+            ->get()
+            ->flatMap(fn (Menu $menu): array => $menu->getAllMenuKeys())
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $access = array_fill_keys($menuKeys, self::ALL_PERMISSIONS);
 
         UserAccess::query()->updateOrCreate(
             ['user_id' => $user->id],

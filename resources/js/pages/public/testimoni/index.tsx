@@ -117,7 +117,7 @@ export default function Testimoni() {
 
             <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-12 sm:px-6">
                 <MotionCard className="relative overflow-hidden rounded-[32px] border border-border bg-card/90 p-6 shadow-lg sm:p-8 lg:rounded-[40px] lg:p-12">
-                    <div className="pointer-events-none absolute -top-20 -right-24 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
+                    <div className="pointer-events-none absolute -top-20 -right-24 hidden h-52 w-52 rounded-full bg-primary/10 blur-3xl sm:block" />
                     <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
                         <div>
                             <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">

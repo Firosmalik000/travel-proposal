@@ -3,6 +3,10 @@ import {
     MotionGroup,
     MotionSection,
 } from '@/components/public-motion';
+import {
+    IslamicOrnamentOttomanAccent,
+    IslamicOrnamentZellige,
+} from '@/components/public-ornaments';
 import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import { formatDate, localize } from '@/lib/public-content';
@@ -95,7 +99,11 @@ export default function ArtikelIndex({
                 <meta name="description" content={t.meta} />
             </Head>
 
-            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-8 sm:px-6">
+            <MotionSection className="relative isolate overflow-hidden mx-auto w-full max-w-6xl px-4 pt-6 pb-8 sm:px-6">
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                    <IslamicOrnamentZellige className="absolute top-[-30%] right-[-14%] h-[18rem] w-[18rem] rotate-[12deg] text-primary/15 sm:h-[22rem] sm:w-[22rem]" />
+                    <IslamicOrnamentOttomanAccent className="absolute bottom-[-38%] left-[-16%] h-[20rem] w-[20rem] -rotate-[10deg] text-accent/15 sm:h-[26rem] sm:w-[26rem]" />
+                </div>
                 <div className="rounded-[2rem] border border-border bg-card/90 p-6 shadow-lg">
                     <div className="max-w-3xl space-y-4">
                         <span className="inline-flex rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.22em] text-primary uppercase">
@@ -111,7 +119,10 @@ export default function ArtikelIndex({
                 </div>
             </MotionSection>
 
-            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+            <MotionSection className="relative isolate overflow-hidden mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                    <IslamicOrnamentOttomanAccent className="absolute top-[-42%] left-[12%] h-[18rem] w-[18rem] rotate-[14deg] text-primary/12 sm:h-[22rem] sm:w-[22rem]" />
+                </div>
                 <div className="grid gap-4 rounded-3xl border border-border bg-card/90 p-4 shadow-sm md:grid-cols-[1.5fr_220px_auto]">
                     <div className="relative">
                         <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

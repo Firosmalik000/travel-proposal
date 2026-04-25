@@ -3,6 +3,12 @@ import {
     MotionGroup,
     MotionSection,
 } from '@/components/public-motion';
+import {
+    IslamicLantern,
+    IslamicOrnamentOttomanAccent,
+    IslamicOrnamentRow1Col1,
+    IslamicOrnamentZellige,
+} from '@/components/public-ornaments';
 import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
@@ -130,30 +136,41 @@ export default function Kontak() {
                 />
             </Head>
 
-            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-10 sm:px-6">
-                <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
-                    <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
-                        {t.badge}
-                    </span>
-                    <h1 className="public-heading text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
-                        {localize(
-                            pageContent?.content?.heading,
-                            locale,
-                            t.heading,
-                        )}
-                    </h1>
-                    <p className="max-w-2xl text-muted-foreground">
-                        {localize(
-                            pageContent?.content?.description,
-                            locale,
-                            t.desc,
-                        )}
-                    </p>
+            <MotionSection className="relative isolate overflow-hidden py-6 sm:py-10">
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                    <IslamicOrnamentZellige className="absolute top-[-34%] right-[-10%] h-[18rem] w-[18rem] rotate-[12deg] text-primary/12 sm:h-[22rem] sm:w-[22rem]" />
+                    <IslamicLantern className="absolute bottom-[-28%] left-[2%] h-[18rem] w-[12rem] -rotate-[10deg] text-accent/12 sm:h-[24rem] sm:w-[16rem]" />
+                </div>
+                <div className="container mx-auto px-4 sm:px-6">
+                    <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
+                        <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
+                            {t.badge}
+                        </span>
+                        <h1 className="public-heading text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
+                            {localize(
+                                pageContent?.content?.heading,
+                                locale,
+                                t.heading,
+                            )}
+                        </h1>
+                        <p className="max-w-2xl text-muted-foreground">
+                            {localize(
+                                pageContent?.content?.description,
+                                locale,
+                                t.desc,
+                            )}
+                        </p>
+                    </div>
                 </div>
             </MotionSection>
 
-            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-                <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+            <MotionSection className="relative isolate overflow-hidden pb-16 sm:pb-20">
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                    <IslamicOrnamentRow1Col1 className="absolute top-[10%] left-[-6%] h-[18rem] w-[18rem] rotate-[-10deg] text-primary/10 sm:h-[22rem] sm:w-[22rem]" />
+                    <IslamicOrnamentOttomanAccent className="absolute bottom-[-34%] right-[-8%] h-[22rem] w-[22rem] rotate-[14deg] text-accent/10 sm:h-[28rem] sm:w-[28rem]" />
+                </div>
+                <div className="container mx-auto px-4 sm:px-6">
+                    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
                     <MotionGroup className="space-y-6">
                         {hasOfficeInfo ? (
                             <MotionCard className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm">
@@ -288,6 +305,7 @@ export default function Kontak() {
                             </a>
                         </MotionCard>
                     ) : null}
+                    </div>
                 </div>
             </MotionSection>
         </PublicLayout>

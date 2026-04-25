@@ -174,7 +174,7 @@ function buildFormData(pkg: Package | null): PackageFormData {
             ? pkg.discount_ends_at.slice(0, 16)
             : '',
         currency: pkg?.currency ?? 'IDR',
-        image: null,
+        images: [],
         'summary.id': pkg?.summary?.id ?? '',
         'summary.en': pkg?.summary?.en ?? '',
         content: normalizePackageContent(pkg?.content ?? {}),
@@ -370,9 +370,12 @@ export function PackageForm({
     const isEdit = pkg !== null;
     const imageInputRef = useRef<HTMLInputElement>(null);
     const lastDurationRef = useRef(initialFormData.duration_days);
-    const [previewUrl, setPreviewUrl] = useState<string | null>(
-        pkg?.image_path ?? null,
+
+    const [existingImages, setExistingImages] = useState<string[]>(
+        pkg?.images ?? [],
     );
+
+    const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [activeItineraryTab, setActiveItineraryTab] = useState('day-1');
     const [itineraryActivitySearch, setItineraryActivitySearch] = useState<
         Record<number, string>
@@ -414,12 +417,41 @@ export function PackageForm({
     }, [activeItineraryTab]);
 
     function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-        const selectedFile = event.target.files?.[0] ?? null;
-        form.setData('image', selectedFile);
-
-        if (selectedFile) {
-            setPreviewUrl(URL.createObjectURL(selectedFile));
+        const selectedFiles = Array.from(event.target.files || []);
+        if (selectedFiles.length === 0) {
+            return;
         }
+
+        const newImages = [...form.data.images, ...selectedFiles];
+        form.setData('images', newImages);
+
+        const newPreviewUrls = selectedFiles.map((file) =>
+            URL.createObjectURL(file),
+        );
+        setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
+
+        // Reset input value so same file can be selected again
+        if (imageInputRef.current) {
+            imageInputRef.current.value = '';
+        }
+    }
+
+    function removeNewImage(index: number) {
+        const newImages = form.data.images.filter((_, i) => i !== index);
+        form.setData('images', newImages);
+
+        const urlToRemove = previewUrls[index];
+        if (urlToRemove) {
+            URL.revokeObjectURL(urlToRemove);
+        }
+        setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
+    }
+
+    function removeExistingImage(index: number) {
+        const imagePath = existingImages[index];
+        setExistingImages((prev) => prev.filter((_, i) => i !== index));
+
+        // Mark for deletion on backend if needed, but for now we'll just handle it by what's NOT in the payload
     }
 
     function updateItineraryActivities(
@@ -503,9 +535,15 @@ export function PackageForm({
             formData.append('product_ids[]', String(productId)),
         );
 
-        if (form.data.image instanceof File) {
-            formData.append('image', form.data.image);
-        }
+        // Append existing images that were kept
+        existingImages.forEach((path) => {
+            formData.append('existing_images[]', path);
+        });
+
+        // Append new images
+        form.data.images.forEach((file) => {
+            formData.append('images[]', file);
+        });
 
         router.post(submitUrl, formData, {
             preserveScroll: true,
@@ -610,10 +648,14 @@ export function PackageForm({
     return (
         <form onSubmit={submit}>
             <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid h-auto w-full grid-cols-2 gap-2 sm:grid-cols-5">
+                <TabsList className="grid h-auto w-full grid-cols-2 gap-2 sm:grid-cols-6">
                     <TabsTrigger value="info" className="gap-1.5 text-xs">
                         <Info className="h-3.5 w-3.5" />
                         Info
+                    </TabsTrigger>
+                    <TabsTrigger value="gallery" className="gap-1.5 text-xs">
+                        <Camera className="h-3.5 w-3.5" />
+                        Gallery
                     </TabsTrigger>
                     <TabsTrigger value="harga" className="gap-1.5 text-xs">
                         <DollarSign className="h-3.5 w-3.5" />
@@ -780,67 +822,6 @@ export function PackageForm({
                             </Field>
                         </div>
 
-                        <div>
-                            <Label className="mb-1.5 block text-xs font-medium">
-                                Foto Package
-                            </Label>
-                            <input
-                                ref={imageInputRef}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleImageChange}
-                            />
-                            <div className="flex items-center gap-3">
-                                {previewUrl ? (
-                                    <div className="relative">
-                                        <img
-                                            src={previewUrl}
-                                            alt="Preview package"
-                                            className="h-20 w-28 rounded-lg object-cover shadow-sm"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                imageInputRef.current?.click()
-                                            }
-                                            className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/40 opacity-0 transition-opacity hover:opacity-100"
-                                        >
-                                            <Camera className="h-5 w-5 text-white" />
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            imageInputRef.current?.click()
-                                        }
-                                        className="flex h-20 w-28 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-muted-foreground/30 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
-                                    >
-                                        <Camera className="h-5 w-5" />
-                                        <span className="text-xs">Upload</span>
-                                    </button>
-                                )}
-                                {previewUrl ? (
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() =>
-                                            imageInputRef.current?.click()
-                                        }
-                                    >
-                                        Ganti Foto
-                                    </Button>
-                                ) : null}
-                            </div>
-                            {errors.image ? (
-                                <p className="mt-1 text-xs text-destructive">
-                                    {errors.image}
-                                </p>
-                            ) : null}
-                        </div>
-
                         <Field label="Ringkasan (Indonesia)">
                             <Textarea
                                 rows={2}
@@ -892,6 +873,148 @@ export function PackageForm({
                                 />
                                 <span>Package Aktif</span>
                             </label>
+                        </div>
+                    </FieldGroup>
+                </TabsContent>
+
+                <TabsContent value="gallery" className="mt-4">
+                    <SectionHeader
+                        icon={Camera}
+                        title="Gallery Package"
+                        desc="Pisahkan upload cover dan gallery ke tab khusus agar form utama lebih rapi."
+                    />
+                    <FieldGroup>
+                        <div className="rounded-2xl border border-border bg-card p-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">
+                                        Foto-foto Package
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Foto pertama menjadi cover utama.
+                                        Sisanya akan masuk ke gallery package.
+                                    </p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="gap-2"
+                                    onClick={() => imageInputRef.current?.click()}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Tambah Foto
+                                </Button>
+                            </div>
+
+                            <input
+                                ref={imageInputRef}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={handleImageChange}
+                            />
+
+                            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                                {existingImages.map((url, index) => (
+                                    <div
+                                        key={`existing-${index}`}
+                                        className="group relative h-24 overflow-hidden rounded-xl border bg-muted"
+                                    >
+                                        <img
+                                            src={url}
+                                            alt="Existing"
+                                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-full"
+                                                onClick={() =>
+                                                    removeExistingImage(index)
+                                                }
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        <div className="absolute top-1 left-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                                            {index === 0 ? 'Cover' : 'Gallery'}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {previewUrls.map((url, index) => (
+                                    <div
+                                        key={`new-${index}`}
+                                        className="group relative h-24 overflow-hidden rounded-xl border bg-muted"
+                                    >
+                                        <img
+                                            src={url}
+                                            alt="New"
+                                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                        />
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="icon"
+                                                className="h-8 w-8 rounded-full"
+                                                onClick={() =>
+                                                    removeNewImage(index)
+                                                }
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                        <div className="absolute top-1 left-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                                            {existingImages.length === 0 &&
+                                            index === 0
+                                                ? 'Cover'
+                                                : 'Gallery'}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        imageInputRef.current?.click()
+                                    }
+                                    className="flex h-24 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                                >
+                                    <Plus className="h-5 w-5" />
+                                    <span className="text-[10px] font-medium uppercase tracking-wider">
+                                        Tambah Foto
+                                    </span>
+                                </button>
+                            </div>
+
+                            {existingImages.length === 0 &&
+                            previewUrls.length === 0 ? (
+                                <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                                    <p className="text-sm font-medium text-foreground">
+                                        Belum ada foto package
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Upload cover dan isi gallery langsung
+                                        dari tab ini.
+                                    </p>
+                                </div>
+                            ) : null}
+
+                            <p className="mt-3 text-[11px] text-muted-foreground">
+                                Anda bisa mengunggah beberapa foto sekaligus.
+                                Urutan foto menentukan cover dan susunan
+                                gallery.
+                            </p>
+
+                            {errors.images ? (
+                                <p className="mt-1 text-xs text-destructive">
+                                    {errors.images}
+                                </p>
+                            ) : null}
                         </div>
                     </FieldGroup>
                 </TabsContent>

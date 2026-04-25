@@ -41,6 +41,7 @@ export type Package = {
     discount_percent: number | null;
     currency: string;
     image_path: string | null;
+    images?: string[];
     summary: { id: string; en: string };
     content: Record<string, any>;
     is_featured: boolean;
@@ -80,7 +81,7 @@ export type PackageFormData = {
     discount_label: string;
     discount_ends_at: string;
     currency: string;
-    image: File | null;
+    images: File[];
     'summary.id': string;
     'summary.en': string;
     content: Record<string, any>;

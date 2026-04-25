@@ -1,8 +1,3 @@
-import {
-    MotionCard,
-    MotionGroup,
-    MotionSection,
-} from '@/components/public-motion';
 import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import { localize, usePublicData } from '@/lib/public-content';
@@ -84,6 +79,7 @@ export default function Faq() {
                   a: localize(item.answer, locale),
               }))
             : t.faqs;
+    const normalizedFaqs = faqs.filter((item) => Boolean(item?.q) && Boolean(item?.a));
 
     return (
         <PublicLayout>
@@ -91,7 +87,7 @@ export default function Faq() {
                 <meta name="description" content={t.meta} />
             </Head>
 
-            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-10 sm:px-6">
+            <section className="mx-auto w-full max-w-6xl px-4 pt-6 pb-10 sm:px-6">
                 <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
                     <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
                         FAQ
@@ -101,27 +97,30 @@ export default function Faq() {
                     </h1>
                     <p className="mt-2 text-muted-foreground">{t.subtitle}</p>
                 </div>
-            </MotionSection>
+            </section>
 
-            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-                <MotionGroup className="space-y-3">
-                    {faqs.map((item) => (
-                        <MotionCard
-                            key={item.q}
-                            className="rounded-2xl border border-border bg-card/90 px-5 py-4 shadow-sm"
+            <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
+                <div className="space-y-3">
+                    {normalizedFaqs.map((item, index) => (
+                        <details
+                            key={`${String(item.q)}_${index}`}
+                            className="group rounded-2xl border border-border bg-card/90 px-5 py-4 shadow-sm"
                         >
-                            <details>
-                                <summary className="cursor-pointer text-sm font-semibold text-foreground">
+                            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left [&::-webkit-details-marker]:hidden">
+                                <span className="text-sm font-semibold text-foreground sm:text-base">
                                     {item.q}
-                                </summary>
-                                <p className="mt-2 text-sm text-muted-foreground">
-                                    {item.a}
-                                </p>
-                            </details>
-                        </MotionCard>
+                                </span>
+                                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground group-open:rotate-45">
+                                    +
+                                </span>
+                            </summary>
+                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                                {item.a}
+                            </p>
+                        </details>
                     ))}
-                </MotionGroup>
-            </MotionSection>
+                </div>
+            </section>
         </PublicLayout>
     );
 }

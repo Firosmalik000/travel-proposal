@@ -197,14 +197,47 @@ class PackageController extends Controller
     /** @return array<string, mixed> */
     private function packagePayload(StorePackageRequest $request, ?TravelPackage $existing = null): array
     {
-        $imagePath = $existing?->image_path;
+        $allImages = [];
+        $existingImages = $request->input('existing_images', []);
 
-        if ($request->hasFile('image')) {
-            if ($imagePath && str_starts_with($imagePath, '/storage/')) {
-                Storage::disk('public')->delete(str_replace('/storage/', '', $imagePath));
-            }
-            $imagePath = '/storage/'.$request->file('image')->store('packages', 'public');
+        // Collect existing images that were kept
+        if (! empty($existingImages)) {
+            $allImages = $existingImages;
         }
+
+        // Handle old images deletion
+        $oldImages = [];
+        if ($existing) {
+            if ($existing->image_path) {
+                $oldImages[] = $existing->image_path;
+            }
+            if (isset($existing->content['gallery']) && is_array($existing->content['gallery'])) {
+                $oldImages = array_merge($oldImages, $existing->content['gallery']);
+            }
+        }
+
+        foreach ($oldImages as $oldImage) {
+            if (! in_array($oldImage, $existingImages) && str_starts_with($oldImage, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $oldImage));
+            }
+        }
+
+        // Handle newly uploaded images
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $file) {
+                $path = '/storage/'.$file->store('packages', 'public');
+                $allImages[] = $path;
+            }
+        }
+
+        // Legacy support for single 'image' if sent
+        if ($request->hasFile('image')) {
+            $path = '/storage/'.$request->file('image')->store('packages', 'public');
+            array_unshift($allImages, $path);
+        }
+
+        $imagePath = $allImages[0] ?? null;
+        $gallery = array_slice($allImages, 1);
 
         // Handle both dot-notation (JSON) and bracket-notation (FormData)
         $nameId = $request->input('name.id') ?? $request->input('name')['id'] ?? '';
@@ -220,6 +253,13 @@ class PackageController extends Controller
             'id' => $summaryId,
             'en' => $summaryEn,
         ]);
+
+        $content = is_array($request->input('content'))
+            ? $request->input('content')
+            : (json_decode($request->input('content', '{}'), true) ?? []);
+
+        // Add gallery to content
+        $content['gallery'] = $gallery;
 
         return [
             'code' => $this->generatePackageCode(
@@ -239,7 +279,7 @@ class PackageController extends Controller
             'currency' => $request->string('currency', 'IDR')->value(),
             'image_path' => $imagePath,
             'summary' => $summary,
-            'content' => is_array($request->input('content')) ? $request->input('content') : (json_decode($request->input('content', '{}'), true) ?? []),
+            'content' => $content,
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $request->boolean('is_active', true),
         ];
@@ -385,6 +425,10 @@ class PackageController extends Controller
             'discount_percent' => $pkg->discountPercent(),
             'currency' => $pkg->currency,
             'image_path' => $pkg->image_path,
+            'images' => array_filter([
+                $pkg->image_path,
+                ...($pkg->content['gallery'] ?? []),
+            ]),
             'summary' => $pkg->summary,
             'content' => $pkg->content ?? [],
             'is_featured' => $pkg->is_featured,

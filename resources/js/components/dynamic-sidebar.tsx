@@ -1,6 +1,7 @@
 import {
     Sidebar,
     SidebarContent,
+    SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
     SidebarGroupLabel,
@@ -52,11 +53,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import AppLogo from './app-logo';
+import { NavUser } from './nav-user';
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from './ui/collapsible';
+import { Input } from './ui/input';
 
 interface MenuItem {
     id: number;
@@ -72,7 +75,7 @@ function hasNavigablePath(path: string | null | undefined): boolean {
 }
 
 function canonicalAdminPath(path: string | null | undefined): string {
-    if (! path) {
+    if (!path) {
         return '';
     }
 
@@ -117,6 +120,7 @@ const iconMap: Record<string, LucideIcon> = {
 export function DynamicSidebar() {
     const [menus, setMenus] = useState<MenuItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetch('/api/user-menus')
@@ -131,19 +135,27 @@ export function DynamicSidebar() {
             });
     }, []);
 
+    const filteredMenus = menus.filter((menu) => {
+        const matchesName = menu.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesChildren = menu.children?.some(child => 
+            child.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        return matchesName || matchesChildren;
+    });
+
     return (
         <Sidebar
             collapsible="icon"
             variant="inset"
-            className="border-r border-sidebar-border/70 bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(255,248,242,0.92))] text-sidebar-foreground shadow-[0_26px_70px_-44px_rgba(74,12,20,0.22)] dark:bg-[linear-gradient(180deg,rgba(17,24,39,0.98),rgba(15,23,42,0.94))] [&_[data-sidebar=sidebar]]:bg-transparent [&_[data-sidebar=sidebar]]:text-inherit"
+            className="border-r border-sidebar-border/50 bg-sidebar text-sidebar-foreground shadow-xl [&_[data-sidebar=sidebar]]:bg-sidebar"
         >
-            <SidebarHeader className="relative border-b border-sidebar-border/70 bg-sidebar/90 px-3 py-3 shadow-[inset_0_-1px_0_rgba(140,10,22,0.05)] backdrop-blur">
+            <SidebarHeader className="border-b border-sidebar-border/60 bg-[var(--brand-surface)]/10 p-4">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             size="lg"
                             asChild
-                            className="rounded-2xl border border-border/80 bg-card/95 px-3 text-card-foreground shadow-[0_16px_36px_-24px_rgba(140,10,22,0.16)] transition hover:-translate-y-[1px] hover:bg-card"
+                            className="h-12 rounded-xl border border-sidebar-border/40 bg-white/80 shadow-sm transition-all hover:bg-white hover:shadow-md dark:bg-black/20"
                         >
                             <Link href={dashboard()} prefetch>
                                 <AppLogo />
@@ -151,57 +163,54 @@ export function DynamicSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-                <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                
+                <div className="mt-4 group-data-[collapsible=icon]:hidden">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
+                        <Input 
+                            placeholder="Cari menu..." 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="h-10 border-sidebar-border/60 bg-white/40 pl-9 text-xs shadow-none ring-offset-background placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/30 dark:bg-black/20"
+                        />
+                    </div>
+                </div>
             </SidebarHeader>
 
-            <SidebarContent className="px-2 py-5">
-                {/* <div className="mb-4 rounded-2xl border border-border bg-card/80 p-4 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12">
-                            <AvatarImage src={auth.user.avatar} alt={auth.user.name} />
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                                {auth.user.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .join('')
-                                    .slice(0, 2)}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-foreground">
-                                {auth.user.name}
-                            </p>
-                            <p className="truncate text-xs text-muted-foreground">
-                                {auth.user.email}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="mt-3 rounded-xl border border-border bg-background/70 px-3 py-2 text-xs font-medium text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-                        {branding.company_subtitle}
-                    </div>
-                </div> */}
+            <SidebarContent className="px-2 py-4">
                 {loading ? (
-                    <div className="p-4 text-sm text-muted-foreground">
-                        Loading menus...
+                    <div className="space-y-2 px-2">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="h-10 w-full animate-pulse rounded-lg bg-sidebar-accent/50" />
+                        ))}
                     </div>
                 ) : (
-                    <SidebarGroup>
-                        <SidebarGroupLabel className="px-3 text-[0.68rem] tracking-[0.3em] text-muted-foreground/80 uppercase">
-                            Menu
+                    <SidebarGroup className="p-0">
+                        <SidebarGroupLabel className="px-4 text-[0.65rem] font-bold tracking-widest text-muted-foreground/50 uppercase">
+                            Menu Navigasi
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
-                            <SidebarMenu>
-                                {menus.map((menu) => (
+                            <SidebarMenu className="gap-1 px-2">
+                                {filteredMenus.map((menu) => (
                                     <MenuItemComponent
                                         key={menu.menu_key}
                                         item={menu}
                                     />
                                 ))}
+                                {filteredMenus.length === 0 && searchQuery && (
+                                    <div className="px-4 py-8 text-center text-xs text-muted-foreground italic">
+                                        Tidak ada menu ditemukan
+                                    </div>
+                                )}
                             </SidebarMenu>
                         </SidebarGroupContent>
                     </SidebarGroup>
                 )}
             </SidebarContent>
+
+            <SidebarFooter className="border-t border-sidebar-border/40 p-3 bg-sidebar/50 backdrop-blur">
+                <NavUser />
+            </SidebarFooter>
         </Sidebar>
     );
 }
@@ -219,6 +228,13 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
         (item.children?.some((child) => isMenuActive(child, currentPath)) ??
             false);
 
+    const buttonClasses = cn(
+        'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+        isActive 
+            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' 
+            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+    );
+
     if (item.children && item.children.length > 0) {
         return (
             <Collapsible
@@ -228,60 +244,19 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
                 className="group/collapsible"
             >
                 <SidebarMenuItem>
-                    {canNavigate ? (
-                        <SidebarMenuButton
-                            asChild
-                            tooltip={item.name}
-                            isActive={isActive}
-                            className={cn(
-                                'relative min-w-0 rounded-xl px-3 py-2 pr-10 text-slate-700 transition dark:text-slate-200',
-                                'items-start gap-3 overflow-visible text-left leading-snug [&>svg]:text-slate-500 dark:[&>svg]:text-slate-300',
-                                '[&>span:last-child]:block [&>span:last-child]:break-words [&>span:last-child]:whitespace-normal',
-                                'hover:bg-slate-900/5 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white',
-                                'data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:shadow-sm dark:data-[active=true]:bg-white/10 dark:data-[active=true]:text-white',
-                                'data-[active=true]:before:absolute data-[active=true]:before:top-1 data-[active=true]:before:bottom-1 data-[active=true]:before:left-0 data-[active=true]:before:w-1 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary',
-                            )}
-                        >
-                            <Link href={itemHref}>
-                                <IconComponent className="mt-0.5 h-4 w-4 shrink-0" />
-                                <span className="min-w-0 flex-1 font-semibold">
-                                    {item.name}
-                                </span>
-                            </Link>
-                        </SidebarMenuButton>
-                    ) : (
-                        <SidebarMenuButton
-                            asChild
-                            tooltip={item.name}
-                            isActive={isActive}
-                            className={cn(
-                                'relative min-w-0 rounded-xl px-3 py-2 pr-10 text-slate-700 transition dark:text-slate-200',
-                                'items-start gap-3 overflow-visible text-left leading-snug [&>svg]:text-slate-500 dark:[&>svg]:text-slate-300',
-                                '[&>span:last-child]:block [&>span:last-child]:break-words [&>span:last-child]:whitespace-normal',
-                                'hover:bg-slate-900/5 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white',
-                                'data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:shadow-sm dark:data-[active=true]:bg-white/10 dark:data-[active=true]:text-white',
-                                'data-[active=true]:before:absolute data-[active=true]:before:top-1 data-[active=true]:before:bottom-1 data-[active=true]:before:left-0 data-[active=true]:before:w-1 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary',
-                            )}
-                        >
-                            <CollapsibleTrigger className="flex w-full items-start gap-3 text-left">
-                                <IconComponent className="mt-0.5 h-4 w-4 shrink-0" />
-                                <span className="min-w-0 flex-1 font-semibold">
-                                    {item.name}
-                                </span>
-                            </CollapsibleTrigger>
-                        </SidebarMenuButton>
-                    )}
                     <CollapsibleTrigger asChild>
-                        <SidebarMenuAction
-                            showOnHover
-                            className="top-1/2 right-2 -translate-y-1/2 rounded-md text-slate-400 hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                            aria-label={`Toggle ${item.name}`}
+                        <SidebarMenuButton
+                            tooltip={item.name}
+                            isActive={isActive}
+                            className={buttonClasses}
                         >
-                            <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                        </SidebarMenuAction>
+                            <IconComponent className={cn("size-4 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-foreground")} />
+                            <span className="flex-1 truncate">{item.name}</span>
+                            <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                        </SidebarMenuButton>
                     </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <SidebarMenuSub className="mx-0 translate-x-0 border-l border-slate-200/70 pr-2 pl-4 dark:border-white/10">
+                    <CollapsibleContent className="px-0 py-1">
+                        <SidebarMenuSub className="ml-4 mr-0 border-l border-sidebar-border/60 pl-2 pr-0">
                             {item.children.map((child) => (
                                 <SubMenuItem
                                     key={child.menu_key}
@@ -301,18 +276,13 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
                 asChild
                 tooltip={item.name}
                 isActive={isActive}
-                className={cn(
-                    'relative min-w-0 rounded-xl px-3 py-2 text-slate-700 transition dark:text-slate-200',
-                    'items-start gap-3 overflow-visible text-left leading-snug [&>svg]:text-slate-500 dark:[&>svg]:text-slate-300',
-                    '[&>span:last-child]:block [&>span:last-child]:break-words [&>span:last-child]:whitespace-normal',
-                    'hover:bg-slate-900/5 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white',
-                    'data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:shadow-sm dark:data-[active=true]:bg-white/10 dark:data-[active=true]:text-white',
-                    'data-[active=true]:before:absolute data-[active=true]:before:top-1 data-[active=true]:before:bottom-1 data-[active=true]:before:left-0 data-[active=true]:before:w-1 data-[active=true]:before:rounded-r-full data-[active=true]:before:bg-primary',
-                )}
+                className={buttonClasses}
             >
                 <Link href={itemHref}>
-                    <IconComponent className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span className="min-w-0 flex-1 font-semibold">
+                    <div className="flex size-5 items-center justify-center transition-transform group-hover:scale-110">
+                        <IconComponent className={cn("size-full shrink-0", isActive ? "text-primary" : "text-slate-400 group-hover:text-primary")} />
+                    </div>
+                    <span className="flex-1 truncate leading-none">
                         {item.name}
                     </span>
                 </Link>
@@ -361,6 +331,13 @@ function SubMenuItem({ item }: { item: MenuItem }) {
         (item.children?.some((child) => isMenuActive(child, currentPath)) ??
             false);
 
+    const subButtonClasses = cn(
+        'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[0.825rem] font-medium transition-colors',
+        isActive 
+            ? 'bg-primary/10 text-primary' 
+            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+    );
+
     if (item.children && item.children.length > 0) {
         return (
             <Collapsible
@@ -370,56 +347,18 @@ function SubMenuItem({ item }: { item: MenuItem }) {
                 className="group/collapsible"
             >
                 <SidebarMenuSubItem>
-                    {canNavigate ? (
-                        <SidebarMenuSubButton
-                            asChild
-                            isActive={isActive}
-                            className={cn(
-                                'relative min-w-0 rounded-lg px-2.5 pr-9 text-slate-600 dark:text-slate-300',
-                                'items-start gap-3 overflow-visible text-left leading-snug [&>svg]:text-slate-400 dark:[&>svg]:text-slate-400',
-                                '[&>span:last-child]:block [&>span:last-child]:break-words [&>span:last-child]:whitespace-normal',
-                                'data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:shadow-sm dark:data-[active=true]:bg-white/10 dark:data-[active=true]:text-white',
-                                'data-[active=true]:before:absolute data-[active=true]:before:top-2 data-[active=true]:before:left-[-14px] data-[active=true]:before:h-2 data-[active=true]:before:w-2 data-[active=true]:before:rounded-full data-[active=true]:before:bg-primary',
-                            )}
-                        >
-                            <Link href={itemHref}>
-                                <IconComponent className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                                <span className="min-w-0 flex-1 font-semibold">
-                                    {item.name}
-                                </span>
-                            </Link>
-                        </SidebarMenuSubButton>
-                    ) : (
-                        <SidebarMenuSubButton
-                            asChild
-                            isActive={isActive}
-                            className={cn(
-                                'relative min-w-0 rounded-lg px-2.5 pr-9 text-slate-600 dark:text-slate-300',
-                                'items-start gap-3 overflow-visible text-left leading-snug [&>svg]:text-slate-400 dark:[&>svg]:text-slate-400',
-                                '[&>span:last-child]:block [&>span:last-child]:break-words [&>span:last-child]:whitespace-normal',
-                                'data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:shadow-sm dark:data-[active=true]:bg-white/10 dark:data-[active=true]:text-white',
-                                'data-[active=true]:before:absolute data-[active=true]:before:top-2 data-[active=true]:before:left-[-14px] data-[active=true]:before:h-2 data-[active=true]:before:w-2 data-[active=true]:before:rounded-full data-[active=true]:before:bg-primary',
-                            )}
-                        >
-                            <CollapsibleTrigger className="flex w-full items-start gap-3 text-left">
-                                <IconComponent className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                                <span className="min-w-0 flex-1 font-semibold">
-                                    {item.name}
-                                </span>
-                            </CollapsibleTrigger>
-                        </SidebarMenuSubButton>
-                    )}
                     <CollapsibleTrigger asChild>
-                        <button
-                            type="button"
-                            className="absolute top-1/2 right-1 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-900/5 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-                            aria-label={`Toggle ${item.name}`}
+                        <SidebarMenuSubButton
+                            isActive={isActive}
+                            className={subButtonClasses}
                         >
-                            <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                        </button>
+                            <IconComponent className={cn("size-3.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-sidebar-foreground")} />
+                            <span className="flex-1 truncate">{item.name}</span>
+                            <ChevronRight className="ml-auto size-3.5 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                        </SidebarMenuSubButton>
                     </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <SidebarMenuSub className="mx-0 translate-x-0 border-l border-slate-200/70 pr-2 pl-4 dark:border-white/10">
+                    <CollapsibleContent className="px-0 py-1">
+                        <SidebarMenuSub className="ml-2 mr-0 border-l border-sidebar-border/60 pl-2 pr-0">
                             {item.children.map((child) => (
                                 <SubMenuItem
                                     key={child.menu_key}
@@ -438,19 +377,11 @@ function SubMenuItem({ item }: { item: MenuItem }) {
             <SidebarMenuSubButton
                 asChild
                 isActive={isActive}
-                className={cn(
-                    'relative min-w-0 rounded-lg px-2.5 text-slate-600 dark:text-slate-300',
-                    'items-start gap-3 overflow-visible text-left leading-snug [&>svg]:text-slate-400 dark:[&>svg]:text-slate-400',
-                    '[&>span:last-child]:block [&>span:last-child]:break-words [&>span:last-child]:whitespace-normal',
-                    'data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:shadow-sm dark:data-[active=true]:bg-white/10 dark:data-[active=true]:text-white',
-                    'data-[active=true]:before:absolute data-[active=true]:before:top-2 data-[active=true]:before:left-[-14px] data-[active=true]:before:h-2 data-[active=true]:before:w-2 data-[active=true]:before:rounded-full data-[active=true]:before:bg-primary',
-                )}
+                className={subButtonClasses}
             >
                 <Link href={itemHref}>
-                    <IconComponent className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <span className="min-w-0 flex-1 font-semibold">
-                        {item.name}
-                    </span>
+                    <IconComponent className={cn("size-3.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-sidebar-foreground")} />
+                    <span className="flex-1 truncate">{item.name}</span>
                 </Link>
             </SidebarMenuSubButton>
         </SidebarMenuSubItem>

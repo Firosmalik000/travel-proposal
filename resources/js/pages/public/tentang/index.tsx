@@ -1,6 +1,12 @@
 import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
+    IslamicLantern,
+    IslamicOrnamentOttomanAccent,
+    IslamicOrnamentRow1Col1,
+    IslamicOrnamentZellige,
+} from '@/components/public-ornaments';
+import {
     localize,
     usePublicData,
     usePublicPageContent,
@@ -10,7 +16,7 @@ import { Head, Link } from '@inertiajs/react';
 import { motion, type Variants } from 'framer-motion';
 import { Award, CheckCircle, Heart, Shield, Star, Users } from 'lucide-react';
 
-const viewport = { once: false, amount: 0.3 };
+const viewport = { once: false, amount: 0.5, margin: '0px 0px -22% 0px' };
 
 const staggerParent: Variants = {
     animate: {
@@ -171,11 +177,15 @@ export default function Tentang() {
 
             <main className="bg-background">
                 {/* ── Hero ── */}
-                <section className="relative overflow-hidden bg-foreground py-24 sm:py-28 md:py-36">
+                <section className="relative overflow-hidden bg-foreground py-20 sm:py-28 md:py-36">
                     {/* decorative blobs */}
-                    <div className="absolute -top-32 -right-32 h-96 w-96 rounded-full bg-primary/20 blur-3xl" />
-                    <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-accent/10 blur-3xl" />
+                    <div className="absolute -top-32 -right-32 hidden h-96 w-96 rounded-full bg-primary/20 blur-3xl sm:block" />
+                    <div className="absolute -bottom-32 -left-32 hidden h-96 w-96 rounded-full bg-accent/10 blur-3xl sm:block" />
                     <div className="absolute top-0 left-0 h-1 w-full bg-linear-to-r from-primary via-accent to-transparent" />
+                    <div className="pointer-events-none absolute inset-0">
+                        <IslamicOrnamentRow1Col1 className="absolute -top-16 right-[-8%] h-[22rem] w-[22rem] rotate-[14deg] text-white/12 mix-blend-overlay sm:h-[30rem] sm:w-[30rem]" />
+                        <IslamicLantern className="absolute bottom-[-22%] left-[4%] h-[18rem] w-[12rem] rotate-[-8deg] text-white/12 mix-blend-overlay sm:h-[24rem] sm:w-[16rem]" />
+                    </div>
 
                     <motion.div
                         className="relative container mx-auto px-4 sm:px-6"
@@ -192,7 +202,7 @@ export default function Tentang() {
                     >
                         <div className="mx-auto max-w-3xl text-center">
                             <motion.div
-                                className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-sm"
+                                className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-4 py-1.5 shadow-sm shadow-black/20"
                                 variants={{
                                     initial: { y: -20, opacity: 0 },
                                     animate: { y: 0, opacity: 1 },
@@ -200,14 +210,14 @@ export default function Tentang() {
                                 transition={{ duration: 0.6, ease: 'backOut' }}
                             >
                                 <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-                                <span className="text-sm font-medium text-white">
+                                <span className="text-[0.7rem] font-bold tracking-wider text-white uppercase sm:text-xs">
                                     {locale === 'id'
                                         ? 'Kenali Kami Lebih Dekat'
                                         : 'Get to Know Us'}
                                 </span>
                             </motion.div>
                             <motion.h1
-                                className="font-heading text-4xl leading-tight font-extrabold text-white sm:text-5xl md:text-6xl lg:text-7xl"
+                                className="font-heading text-3xl leading-[1.1] font-extrabold text-white sm:text-5xl md:text-6xl lg:text-7xl"
                                 variants={slideUp}
                                 transition={{
                                     duration: 0.9,
@@ -217,7 +227,7 @@ export default function Tentang() {
                                 {heroTitle}
                             </motion.h1>
                             <motion.p
-                                className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-white/65 sm:text-lg"
+                                className="mx-auto mt-6 max-w-xl text-sm leading-relaxed text-white/70 sm:text-lg"
                                 variants={slideUp}
                                 transition={{
                                     duration: 0.7,
@@ -227,7 +237,7 @@ export default function Tentang() {
                                 {heroDesc}
                             </motion.p>
                             <motion.div
-                                className="mt-8 flex flex-wrap justify-center gap-3"
+                                className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:items-center"
                                 initial="initial"
                                 animate="animate"
                                 variants={{
@@ -239,7 +249,7 @@ export default function Tentang() {
                                 <motion.div variants={slideUp}>
                                     <Link
                                         href="/paket-umroh"
-                                        className="inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-primary/40 transition-all hover:scale-105 hover:bg-primary/90 active:scale-95"
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 text-sm font-bold text-white shadow-xl shadow-primary/40 transition-all hover:scale-105 hover:bg-primary/90 active:scale-95 sm:w-auto"
                                     >
                                         {locale === 'id'
                                             ? 'Lihat Paket Umroh'
@@ -250,7 +260,7 @@ export default function Tentang() {
                                 <motion.div variants={slideUp}>
                                     <Link
                                         href="/kontak"
-                                        className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-7 py-3.5 text-sm font-bold text-white backdrop-blur-sm transition-all hover:scale-105 hover:bg-white/20 active:scale-95"
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/12 px-8 py-4 text-sm font-bold text-white shadow-sm shadow-black/20 transition-all hover:scale-105 hover:bg-white/20 active:scale-95 sm:w-auto"
                                     >
                                         {locale === 'id'
                                             ? 'Hubungi Kami'
@@ -262,8 +272,8 @@ export default function Tentang() {
 
                         {/* Stats bar */}
                         {stats.length > 0 && (
-                            <motion.div
-                                className="mt-16 grid grid-cols-2 divide-x divide-white/10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm md:grid-cols-4"
+                             <motion.div
+                                className="mt-16 grid grid-cols-2 divide-x divide-white/10 rounded-[24px] border border-white/10 bg-white/8 md:grid-cols-4"
                                 initial="initial"
                                 animate="animate"
                                 variants={{
@@ -275,16 +285,16 @@ export default function Tentang() {
                                     },
                                 }}
                             >
-                                {stats.map((s) => (
+                                {stats.map((s: { value: string; label: string }) => (
                                     <motion.div
                                         key={s.label}
-                                        className="px-6 py-5 text-center"
+                                        className="px-6 py-6 text-center"
                                         variants={slideUp}
                                     >
                                         <p className="font-heading text-2xl font-bold text-white sm:text-3xl">
                                             {s.value}
                                         </p>
-                                        <p className="mt-1 text-xs text-white/55 sm:text-sm">
+                                        <p className="mt-1 text-[0.65rem] font-bold tracking-wider text-white/50 uppercase sm:text-xs">
                                             {s.label}
                                         </p>
                                     </motion.div>
@@ -295,24 +305,29 @@ export default function Tentang() {
                 </section>
 
                 {/* ── Profile ── */}
-                <section className="profile-section container mx-auto grid items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 md:gap-16 lg:grid-cols-2">
-                    <motion.div
-                        className="profile-text"
-                        initial={{ opacity: 0, x: -60 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={viewport}
-                        transition={{ duration: 0.9, ease: 'easeOut' }}
-                    >
-                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold tracking-widest text-primary uppercase">
+                <section className="profile-section relative isolate overflow-hidden py-16 sm:py-24">
+                    <div className="pointer-events-none absolute inset-0 -z-10">
+                        <IslamicOrnamentZellige className="absolute top-[-18%] left-[-6%] h-[18rem] w-[18rem] -rotate-[10deg] text-primary/12 sm:h-[22rem] sm:w-[22rem]" />
+                        <IslamicOrnamentOttomanAccent className="absolute bottom-[-34%] right-[-6%] h-[22rem] w-[22rem] rotate-[12deg] text-accent/12 sm:h-[28rem] sm:w-[28rem]" />
+                    </div>
+                    <div className="container mx-auto grid items-center gap-10 px-4 sm:px-6 md:gap-16 lg:grid-cols-2">
+                        <motion.div
+                            className="profile-text"
+                            initial={{ opacity: 0, x: -60 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            viewport={viewport}
+                            transition={{ duration: 0.9, ease: 'easeOut' }}
+                        >
+                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-primary uppercase">
                             {locale === 'id' ? 'Profil Kami' : 'Our Profile'}
                         </span>
-                        <h2 className="font-heading mt-5 text-3xl leading-tight font-extrabold text-foreground sm:text-4xl md:text-5xl">
+                        <h2 className="font-heading mt-5 text-3xl leading-[1.2] font-extrabold text-foreground sm:text-4xl md:text-5xl">
                             {profileTitle}
                         </h2>
-                        <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+                        <p className="mt-6 text-sm leading-relaxed text-muted-foreground sm:text-base">
                             {profileDesc}
                         </p>
-                        <div className="mt-6 space-y-3">
+                        <div className="mt-8 space-y-4">
                             {[
                                 locale === 'id'
                                     ? 'Izin resmi Kementerian Agama RI'
@@ -332,21 +347,21 @@ export default function Tentang() {
                                     className="flex items-start gap-3"
                                 >
                                     <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
-                                    <span className="text-sm text-foreground">
+                                    <span className="text-sm font-medium text-foreground sm:text-base">
                                         {item}
                                     </span>
                                 </div>
                             ))}
                         </div>
-                    </motion.div>
-                    <div className="profile-img relative h-72 sm:h-80 md:h-96">
+                        </motion.div>
+                        <div className="profile-img relative mt-8 h-[300px] sm:mt-0 sm:h-[400px] md:h-[480px]">
                         <motion.img
                             src={
                                 page?.content?.profile?.image_primary ||
                                 '/images/dummy.jpg'
                             }
                             alt={profileTitle}
-                            className="h-full w-full rounded-3xl object-cover shadow-2xl sm:w-3/4"
+                            className="h-full w-4/5 rounded-3xl object-cover shadow-2xl sm:w-3/4"
                             initial={{ opacity: 0, x: 60 }}
                             whileInView={{ opacity: 1, x: 0 }}
                             viewport={viewport}
@@ -358,7 +373,7 @@ export default function Tentang() {
                                 '/images/dummy.jpg'
                             }
                             alt={teamTitle}
-                            className="absolute right-0 -bottom-6 w-2/3 rounded-2xl border-4 border-background shadow-2xl sm:w-1/2 sm:border-8"
+                            className="absolute right-0 -bottom-4 w-3/5 rounded-2xl border-4 border-background shadow-2xl sm:-bottom-8 sm:w-1/2 sm:border-8"
                             initial={{ opacity: 0, scale: 0.8, y: 40 }}
                             whileInView={{ opacity: 1, scale: 1, y: 0 }}
                             viewport={viewport}
@@ -368,13 +383,14 @@ export default function Tentang() {
                                 delay: 0.2,
                             }}
                         />
-                        <div className="absolute -top-4 right-4 flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 shadow-lg shadow-primary/30 sm:right-8">
+                        <div className="absolute -top-4 right-4 flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 shadow-xl shadow-primary/30 sm:right-8">
                             <Users className="h-4 w-4 text-white" />
-                            <span className="text-xs font-bold text-white">
+                            <span className="text-[0.7rem] font-bold text-white sm:text-xs">
                                 {locale === 'id'
                                     ? 'Berpengalaman Sejak 2009'
                                     : 'Experienced Since 2009'}
                             </span>
+                        </div>
                         </div>
                     </div>
                 </section>
@@ -526,8 +542,8 @@ export default function Tentang() {
                 {/* ── CTA ── */}
                 <section className="container mx-auto px-4 pb-20 sm:px-6 sm:pb-24">
                     <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-foreground via-foreground to-primary px-8 py-14 text-center text-background shadow-2xl sm:px-12 sm:py-16">
-                        <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-                        <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-accent/10 blur-3xl" />
+                        <div className="absolute -top-20 -right-20 hidden h-64 w-64 rounded-full bg-primary/20 blur-3xl sm:block" />
+                        <div className="absolute -bottom-20 -left-20 hidden h-64 w-64 rounded-full bg-accent/10 blur-3xl sm:block" />
                         <div className="relative">
                             <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold tracking-widest text-background/60 uppercase">
                                 {locale === 'id'

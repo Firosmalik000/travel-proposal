@@ -1,16 +1,24 @@
-import { Head, useForm } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
 import { AdminLocaleSwitch } from '@/components/admin-locale-switch';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useAdminLocale } from '@/contexts/admin-locale';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useAdminLocale } from '@/contexts/admin-locale';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Layers3, Languages, PencilLine, Plus, Trash2 } from 'lucide-react';
+import { Head, useForm } from '@inertiajs/react';
+import {
+    FileText,
+    Globe,
+    Image as ImageIcon,
+    Languages,
+    Layers3,
+    Plus,
+    Settings,
+    Trash2,
+} from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 interface LocalizedValue {
@@ -25,11 +33,6 @@ interface LandingPageItem {
     excerpt?: LocalizedValue | null;
     content: Record<string, any>;
     is_active: boolean;
-}
-
-interface DefaultFaqItem {
-    question?: LocalizedValue;
-    answer?: LocalizedValue;
 }
 
 interface EditableField {
@@ -49,113 +52,221 @@ const pageLabels: Record<string, string> = {
     home: 'Home',
     'tentang-kami': 'Tentang Kami',
     kontak: 'Kontak',
-    legalitas: 'Legalitas',
     galeri: 'Galeri',
-    mitra: 'Mitra',
     karier: 'Karier',
     'custom-umroh': 'Custom Umroh',
 };
 
-const landingTabOrder = ['home', 'kontak', 'mitra', 'tentang-kami', 'legalitas', 'custom-umroh'] as const;
+const landingTabOrder = [
+    'home',
+    'kontak',
+    'tentang-kami',
+    'custom-umroh',
+] as const;
 
-const hiddenLandingSlugs = new Set(['paket-umroh', 'paket-detail', 'galeri', 'karier']);
+const hiddenLandingSlugs = new Set([
+    'paket-umroh',
+    'paket-detail',
+    'terms-conditions',
+    'privacy-policy',
+    'refund-policy',
+    'disclaimer',
+    'galeri',
+    'legalitas',
+    'mitra',
+    'karier',
+]);
 
 const landingSectionMap: Record<string, string[]> = {
-    home: ['hero', 'stats', 'about', 'packages', 'services', 'gallery', 'faq', 'contact'],
+    home: [
+        'hero',
+        'stats',
+        'about',
+        'packages',
+        'services',
+        'gallery',
+        'contact',
+    ],
     'tentang-kami': ['hero', 'profile', 'stats', 'values'],
     kontak: ['heading', 'description', 'map'],
-    legalitas: ['hero', 'docs_title', 'bank_title', 'bank_lines', 'disclaimer_title', 'disclaimer'],
     galeri: ['badge', 'description'],
-    mitra: ['badge', 'subtitle', 'description', 'cta'],
     karier: ['badge', 'subtitle', 'cta'],
     'custom-umroh': ['badge', 'description', 'subtitle', 'cta'],
 };
 
 const sectionLabels: Record<string, string> = {
-    hero: 'Hero',
-    about: 'Tentang',
-    packages: 'Paket',
-    services: 'Layanan',
-    gallery: 'Galeri',
-    contact: 'Kontak',
-    stats: 'Statistik',
-    faq: 'FAQ',
-    profile: 'Profil',
-    values: 'Nilai',
-    team: 'Tim',
-    cards: 'Kartu',
-    note: 'Catatan',
-    badge: 'Badge',
-    heading: 'Heading',
-    map: 'Peta',
+    hero: 'Hero Section',
+    about: 'Tentang Kami',
+    packages: 'Paket Unggulan',
+    services: 'Layanan Kami',
+    gallery: 'Galeri Foto',
+    contact: 'Kontak Kami',
+    stats: 'Statistik Data',
+    faq: 'Pertanyaan Umum',
+    profile: 'Profil Perusahaan',
+    values: 'Nilai & Budaya',
+    team: 'Tim Kami',
+    cards: 'Kartu Informasi',
+    note: 'Catatan Penting',
+    badge: 'Label Kecil (Badge)',
+    heading: 'Judul Utama',
+    map: 'Peta Lokasi',
     docs_title: 'Judul Dokumen',
-    bank_title: 'Judul Bank',
-    bank_lines: 'Baris Bank',
-    disclaimer_title: 'Judul Disclaimer',
-    disclaimer: 'Disclaimer',
-    subtitle: 'Subtitle',
-    description: 'Deskripsi',
-    cta: 'CTA',
-    ctas: 'CTA',
-    summary_title: 'Ringkasan',
-    included_title: 'Termasuk',
+    bank_title: 'Informasi Bank',
+    bank_lines: 'Daftar Bank',
+    disclaimer_title: 'Judul Sanggahan',
+    disclaimer: 'Pernyataan Sanggahan',
+    subtitle: 'Sub-judul',
+    description: 'Deskripsi Lengkap',
+    cta: 'Tombol Aksi (CTA)',
+    ctas: 'Tombol Aksi',
+    summary_title: 'Ringkasan Paket',
+    included_title: 'Fasilitas Termasuk',
     excluded_title: 'Tidak Termasuk',
-    itinerary_title: 'Itinerary',
-    facilities_title: 'Fasilitas',
-    requirements_title: 'Persyaratan',
-    payment_title: 'Pembayaran',
-    policy_title: 'Kebijakan',
-    cta_block: 'Blok CTA',
-    interest: 'Minat',
+    itinerary_title: 'Rencana Perjalanan',
+    facilities_title: 'Fasilitas Detail',
+    requirements_title: 'Syarat & Ketentuan',
+    payment_title: 'Skema Pembayaran',
+    policy_title: 'Kebijakan Layanan',
+    cta_block: 'Blok Tombol Aksi',
+    interest: 'Minat Pelanggan',
 };
 
-export default function LandingIndex({ pages, defaultFaqs = [] }: { pages: LandingPageItem[]; defaultFaqs?: DefaultFaqItem[] }) {
+function Section({
+    icon: Icon,
+    title,
+    desc,
+    children,
+}: {
+    icon: React.ElementType;
+    title: string;
+    desc: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+            <div className="mb-4 flex items-start gap-3 border-b border-border pb-4">
+                <div className="rounded-lg bg-primary/10 p-2">
+                    <Icon className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                    <p className="font-semibold text-foreground">{title}</p>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                </div>
+            </div>
+            <div className="space-y-4">{children}</div>
+        </div>
+    );
+}
+
+function Field({
+    label,
+    hint,
+    children,
+}: {
+    label: string;
+    hint?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div>
+            <Label className="mb-1.5 block text-xs font-medium">{label}</Label>
+            {children}
+            {hint && (
+                <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+            )}
+        </div>
+    );
+}
+
+function Row({ children }: { children: React.ReactNode }) {
+    return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
+}
+
+export default function LandingIndex({
+    pages,
+}: {
+    pages: LandingPageItem[];
+}) {
     const visiblePages = pages
-        .filter((page) => !hiddenLandingSlugs.has(page.slug))
-        .sort((leftPage, rightPage) => landingTabOrder.indexOf(leftPage.slug as (typeof landingTabOrder)[number]) - landingTabOrder.indexOf(rightPage.slug as (typeof landingTabOrder)[number]));
+        .filter(
+            (page) =>
+                !hiddenLandingSlugs.has(page.slug) &&
+                landingTabOrder.includes(
+                    page.slug as (typeof landingTabOrder)[number],
+                ),
+        )
+        .sort(
+            (leftPage, rightPage) =>
+                landingTabOrder.indexOf(
+                    leftPage.slug as (typeof landingTabOrder)[number],
+                ) -
+                landingTabOrder.indexOf(
+                    rightPage.slug as (typeof landingTabOrder)[number],
+                ),
+        );
     const defaultTab = visiblePages[0]?.slug ?? 'home';
 
     return (
-        <AppSidebarLayout breadcrumbs={[{ title: 'Landing Page', href: '/admin/website-management/landing' }]}>
-            <Head title="Landing Page" />
+        <AppSidebarLayout
+            breadcrumbs={[
+                { title: 'Website Management', href: '#' },
+                {
+                    label: 'Landing Page Editor',
+                    href: '/admin/website-management/landing',
+                },
+            ]}
+        >
+            <Head title="Landing Page Editor" />
 
-            <div className="space-y-6 p-4 sm:p-6">
-                <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-                    <div className="space-y-2">
-                        <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
-                            <PencilLine className="h-3.5 w-3.5" />
-                            Landing Editor
-                        </div>
+            <div className="p-4 md:p-6">
+                <Tabs defaultValue={defaultTab} className="space-y-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <h1 className="text-2xl font-semibold text-foreground">Kelola copy landing dengan lebih sederhana</h1>
+                            <h1 className="text-xl font-bold">
+                                Landing Page Editor
+                            </h1>
                             <p className="text-sm text-muted-foreground">
-                                Pilih halaman, lalu pilih mode bahasa input. Saat `ID` aktif, kamu hanya mengedit konten Indonesia. Saat `EN` aktif, kamu hanya
-                                mengedit konten Inggris.
+                                Kelola konten visual dan naratif halaman utama
+                                website Anda.
                             </p>
                         </div>
-                    </div>
 
-                    <div className="flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
-                        <Languages className="h-4 w-4 text-muted-foreground" />
-                        <div className="space-y-1">
-                            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">Mode Input Bahasa</p>
-                            <AdminLocaleSwitch />
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-1.5">
+                                <Languages className="h-4 w-4 text-muted-foreground" />
+                                <AdminLocaleSwitch />
+                            </div>
+                            <TabsList className="h-auto gap-1 rounded-xl border border-border bg-background p-1 shadow-sm">
+                                {visiblePages.map((page) => (
+                                    <TabsTrigger
+                                        key={page.slug}
+                                        value={page.slug}
+                                        className="h-8 rounded-lg px-3 text-xs font-semibold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+                                    >
+                                        {pageLabels[page.slug] ??
+                                            humanizeSegment(page.slug)}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
                         </div>
                     </div>
-                </div>
 
-                <Tabs defaultValue={defaultTab} className="space-y-6">
-                    <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-2xl bg-muted/60 p-2">
-                        {visiblePages.map((page) => (
-                            <TabsTrigger key={page.slug} value={page.slug} className="rounded-xl px-4 py-2 text-sm">
-                                {pageLabels[page.slug] ?? humanizeSegment(page.slug)}
-                            </TabsTrigger>
-                        ))}
-                    </TabsList>
+                    {visiblePages.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-border bg-muted/10 px-5 py-6 text-sm text-muted-foreground">
+                            Belum ada halaman landing yang siap diedit. Silakan
+                            refresh halaman ini atau jalankan seeder konten
+                            default.
+                        </div>
+                    ) : null}
 
                     {visiblePages.map((page) => (
-                        <TabsContent key={page.slug} value={page.slug} className="space-y-6">
-                            <LandingPageEditor page={page} defaultFaqs={defaultFaqs} />
+                        <TabsContent
+                            key={page.slug}
+                            value={page.slug}
+                            className="mt-0 outline-none"
+                        >
+                            <LandingPageEditor page={page} />
                         </TabsContent>
                     ))}
                 </Tabs>
@@ -164,8 +275,15 @@ export default function LandingIndex({ pages, defaultFaqs = [] }: { pages: Landi
     );
 }
 
-function LandingPageEditor({ page, defaultFaqs }: { page: LandingPageItem; defaultFaqs: DefaultFaqItem[] }) {
+function LandingPageEditor({
+    page,
+}: {
+    page: LandingPageItem;
+}) {
     const { locale } = useAdminLocale();
+    const isId = locale === 'id';
+    const localeLabel = isId ? 'Indonesia' : 'English';
+
     const { data, setData, post, processing } = useForm({
         title_id: page.title?.id ?? '',
         title_en: page.title?.en ?? '',
@@ -177,211 +295,345 @@ function LandingPageEditor({ page, defaultFaqs }: { page: LandingPageItem; defau
         _method: 'PATCH',
     });
 
-    const localeLabel = locale === 'id' ? 'Indonesia' : 'English';
-    const contentSections = getOrderedContentSections(page.slug, data.content ?? {});
+    const contentSections = getOrderedContentSections(
+        page.slug,
+        data.content ?? {},
+    );
 
-    const submit = (event: React.FormEvent<HTMLFormElement>) => {
+    const submit = (event: React.FormEvent) => {
         event.preventDefault();
 
         post(`/admin/website-management/content/${page.id}`, {
             forceFormData: true,
             preserveScroll: true,
-            onSuccess: () => toast.success(`Konten ${pageLabels[page.slug] ?? page.slug} berhasil diperbarui`),
+            onSuccess: () =>
+                toast.success(
+                    `Konten ${pageLabels[page.slug] ?? page.slug} berhasil diperbarui`,
+                ),
         });
     };
 
     return (
-        <form className="space-y-6" onSubmit={submit}>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                        <Layers3 className="h-4 w-4 text-primary" />
-                        Ringkasan Halaman
-                    </CardTitle>
-                    <CardDescription>Fokus edit hanya untuk halaman yang sedang dipilih.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-[repeat(3,minmax(0,1fr))_minmax(0,1.2fr)]">
-                    <SummaryItem label="Halaman" value={pageLabels[page.slug] ?? page.slug} />
-                    <SummaryItem label="Slug" value={page.slug} mono />
-                    <SummaryItem label="Mode Bahasa" value={localeLabel} />
-                    <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/30 px-4 py-3">
-                        <Checkbox checked={Boolean(data.is_active)} onCheckedChange={(checked) => setData('is_active', checked === true)} />
-                        <div>
-                            <p className="text-sm font-medium text-foreground">Halaman aktif</p>
-                            <p className="text-xs text-muted-foreground">Nonaktifkan jika halaman tidak ingin dipakai di public.</p>
-                        </div>
+        <form className="space-y-5" onSubmit={submit}>
+            {/* 1. Status Halaman */}
+            <Section
+                icon={Settings}
+                title="Status & Ringkasan"
+                desc="Atur visibilitas halaman di website publik."
+            >
+                <Row>
+                    <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3">
+                        <Checkbox
+                            id={`active_${page.slug}`}
+                            checked={Boolean(data.is_active)}
+                            onCheckedChange={(checked) =>
+                                setData('is_active', checked === true)
+                            }
+                        />
+                        <Label
+                            htmlFor={`active_${page.slug}`}
+                            className="cursor-pointer space-y-0.5"
+                        >
+                            <p className="text-sm font-bold">Halaman Aktif</p>
+                            <p className="text-[0.65rem] text-muted-foreground">
+                                Tampil di website publik
+                            </p>
+                        </Label>
                     </div>
-                </CardContent>
-            </Card>
+                    <div className="flex flex-col justify-center gap-0.5 rounded-xl border border-border bg-muted/20 px-4 py-3">
+                        <p className="text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground">
+                            Slug Halaman
+                        </p>
+                        <p className="font-mono text-xs font-bold text-primary">
+                            {page.slug}
+                        </p>
+                    </div>
+                </Row>
+            </Section>
 
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Informasi Utama</CardTitle>
-                        <CardDescription>Bagian ini hanya menampilkan input untuk bahasa {localeLabel}.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-4 md:grid-cols-2">
-                        <Field
-                            label={locale === 'id' ? 'Judul Halaman' : 'Page Title'}
-                            value={locale === 'id' ? data.title_id : data.title_en}
-                            onChange={(value) => setData(locale === 'id' ? 'title_id' : 'title_en', value)}
+            {/* 2. Informasi Utama */}
+            <Section
+                icon={Globe}
+                title="Informasi Utama"
+                desc={`Judul dan ringkasan halaman untuk bahasa ${localeLabel}.`}
+            >
+                <Row>
+                    <Field label="Judul Halaman">
+                        <Input
+                            value={isId ? data.title_id : data.title_en}
+                            onChange={(e) =>
+                                setData(
+                                    isId ? 'title_id' : 'title_en',
+                                    e.target.value,
+                                )
+                            }
+                            placeholder="Contoh: Beranda Utama"
                         />
-                        <Field
-                            label={locale === 'id' ? 'Ringkasan Halaman' : 'Page Excerpt'}
-                            value={locale === 'id' ? data.excerpt_id : data.excerpt_en}
-                            onChange={(value) => setData(locale === 'id' ? 'excerpt_id' : 'excerpt_en', value)}
-                            multiline
+                    </Field>
+                    <Field label="Ringkasan (Excerpt)">
+                        <Textarea
+                            rows={2}
+                            value={isId ? data.excerpt_id : data.excerpt_en}
+                            onChange={(e) =>
+                                setData(
+                                    isId ? 'excerpt_id' : 'excerpt_en',
+                                    e.target.value,
+                                )
+                            }
+                            placeholder="Deskripsi singkat halaman ini..."
                         />
-                    </CardContent>
-                </Card>
+                    </Field>
+                </Row>
+            </Section>
 
-                {contentSections.map(([sectionKey, sectionValue]) => {
-                    if (page.slug === 'tentang-kami' && sectionKey === 'stats') {
-                        return (
-                            <Card key={sectionKey}>
-                                <CardHeader>
-                                    <CardTitle>Statistik</CardTitle>
-                                    <CardDescription>Angka-angka yang tampil di hero section halaman Tentang Kami.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <StatsSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
-                                </CardContent>
-                            </Card>
-                        );
-                    }
+            {/* 3. Section Konten Dinamis */}
+            {contentSections.map(([sectionKey, sectionValue]) => {
+                const label =
+                    sectionLabels[sectionKey] ?? humanizeSegment(sectionKey);
+                const desc = `Kelola konten ${label.toLowerCase()} untuk bahasa ${localeLabel}.`;
 
-                    if (page.slug === 'tentang-kami' && sectionKey === 'values') {
-                        return (
-                            <Card key={sectionKey}>
-                                <CardHeader>
-                                    <CardTitle>Nilai Perusahaan</CardTitle>
-                                    <CardDescription>Tambah, ubah, atau hapus nilai/keunggulan perusahaan yang tampil di halaman Tentang Kami.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ValuesSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
-                                </CardContent>
-                            </Card>
-                        );
-                    }
+                if (page.slug === 'tentang-kami' && sectionKey === 'stats') {
+                    return (
+                        <Section
+                            key={sectionKey}
+                            icon={Layers3}
+                            title={label}
+                            desc={desc}
+                        >
+                            <StatsSectionEditor
+                                content={data.content}
+                                locale={locale}
+                                setContent={(content) =>
+                                    setData('content', content)
+                                }
+                            />
+                        </Section>
+                    );
+                }
 
-                        if (page.slug === 'home' && sectionKey === 'services') {
-                            return (
-                                <Card key={sectionKey}>
-                                    <CardHeader>
-                                        <CardTitle>Layanan</CardTitle>
-                                        <CardDescription>
-                                            Edit label, judul, dan deskripsi section layanan. Tambah item custom untuk override data default — kosongkan untuk pakai data dari Content Management.
-                                        </CardDescription>
-                                    </CardHeader>
-                                    <CardContent className="space-y-6">
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                            {collectEditableFields({ label: data.content?.services?.label ?? {}, title: data.content?.services?.title ?? {}, description: data.content?.services?.description ?? {} }, 'services', locale).map((field) => (
-                                                <Field key={field.path} label={field.label} value={field.value} onChange={(value) => setData('content', updateNestedValue(data.content, field.path, value))} multiline={field.multiline} />
-                                            ))}
-                                        </div>
-                                        <ServiceItemsEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
-                                    </CardContent>
-                                </Card>
-                            );
-                        }
+                if (page.slug === 'tentang-kami' && sectionKey === 'values') {
+                    return (
+                        <Section
+                            key={sectionKey}
+                            icon={Layers3}
+                            title={label}
+                            desc={desc}
+                        >
+                            <ValuesSectionEditor
+                                content={data.content}
+                                locale={locale}
+                                setContent={(content) =>
+                                    setData('content', content)
+                                }
+                            />
+                        </Section>
+                    );
+                }
 
-                        if (page.slug === 'home' && sectionKey === 'gallery') {
-                            return (
-                                <Card key={sectionKey}>
-                                    <CardHeader>
-                                        <CardTitle>{sectionLabels[sectionKey] ?? humanizeSegment(sectionKey)}</CardTitle>
-                                        <CardDescription>Atur judul, deskripsi, dan foto galeri landing untuk bahasa {localeLabel}.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <GallerySectionEditor
-                                            content={data.content}
-                                            locale={locale}
-                                            media={data.media}
-                                            setContent={(content) => setData('content', content)}
-                                            setMedia={(media) => setData('media', media)}
-                                        />
-                                    </CardContent>
-                                </Card>
-                            );
-                        }
+                if (page.slug === 'home' && sectionKey === 'services') {
+                    return (
+                        <Section
+                            key={sectionKey}
+                            icon={Layers3}
+                            title={label}
+                            desc={desc}
+                        >
+                            <div className="space-y-5">
+                                <Row>
+                                    {collectEditableFields(
+                                        {
+                                            label:
+                                                data.content?.services?.label ??
+                                                {},
+                                            title:
+                                                data.content?.services?.title ??
+                                                {},
+                                            description:
+                                                data.content?.services
+                                                    ?.description ?? {},
+                                        },
+                                        'services',
+                                        locale,
+                                    ).map((field) => (
+                                        <Field
+                                            key={field.path}
+                                            label={field.label}
+                                        >
+                                            {field.multiline ? (
+                                                <Textarea
+                                                    value={field.value}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'content',
+                                                            updateNestedValue(
+                                                                data.content,
+                                                                field.path,
+                                                                e.target.value,
+                                                            ),
+                                                        )
+                                                    }
+                                                />
+                                            ) : (
+                                                <Input
+                                                    value={field.value}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'content',
+                                                            updateNestedValue(
+                                                                data.content,
+                                                                field.path,
+                                                                e.target.value,
+                                                            ),
+                                                        )
+                                                    }
+                                                />
+                                            )}
+                                        </Field>
+                                    ))}
+                                </Row>
+                                <ServiceItemsEditor
+                                    content={data.content}
+                                    locale={locale}
+                                    setContent={(content) =>
+                                        setData('content', content)
+                                    }
+                                />
+                            </div>
+                        </Section>
+                    );
+                }
 
-                        if (page.slug === 'home' && sectionKey === 'stats') {
-                            return (
-                                <Card key={sectionKey}>
-                                    <CardHeader>
-                                        <CardTitle>{sectionLabels[sectionKey] ?? humanizeSegment(sectionKey)}</CardTitle>
-                                        <CardDescription>Tambah, ubah, atau hapus statistik yang tampil di homepage.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <StatsSectionEditor content={data.content} locale={locale} setContent={(content) => setData('content', content)} />
-                                    </CardContent>
-                                </Card>
-                            );
-                        }
+                if (page.slug === 'home' && sectionKey === 'gallery') {
+                    return (
+                        <Section
+                            key={sectionKey}
+                            icon={ImageIcon}
+                            title={label}
+                            desc={desc}
+                        >
+                            <GallerySectionEditor
+                                content={data.content}
+                                locale={locale}
+                                media={data.media}
+                                setContent={(content) =>
+                                    setData('content', content)
+                                }
+                                setMedia={(media) => setData('media', media)}
+                            />
+                        </Section>
+                    );
+                }
 
-                        if (page.slug === 'home' && sectionKey === 'faq') {
-                            return (
-                                <Card key={sectionKey}>
-                                    <CardHeader>
-                                        <CardTitle>FAQ Homepage</CardTitle>
-                                        <CardDescription>Kalau FAQ custom diisi di sini, homepage pakai data ini. Kalau kosong, homepage akan fallback ke FAQ default.</CardDescription>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <FaqSectionEditor
-                                            content={data.content}
-                                            locale={locale}
-                                            defaultFaqs={defaultFaqs}
-                                            setContent={(content) => setData('content', content)}
-                                        />
-                                    </CardContent>
-                                </Card>
-                            );
-                        }
+                if (page.slug === 'home' && sectionKey === 'stats') {
+                    return (
+                        <Section
+                            key={sectionKey}
+                            icon={Layers3}
+                            title={label}
+                            desc={desc}
+                        >
+                            <StatsSectionEditor
+                                content={data.content}
+                                locale={locale}
+                                setContent={(content) =>
+                                    setData('content', content)
+                                }
+                            />
+                        </Section>
+                    );
+                }
 
-                        const fields = collectEditableFields(sectionValue, sectionKey, locale);
+                const fields = collectEditableFields(
+                    sectionValue,
+                    sectionKey,
+                    locale,
+                );
+                if (fields.length === 0) {
+                    return null;
+                }
 
-                        if (fields.length === 0) {
-                            return null;
-                        }
-
-                        return (
-                            <Card key={sectionKey}>
-                                <CardHeader>
-                                    <CardTitle>{sectionLabels[sectionKey] ?? humanizeSegment(sectionKey)}</CardTitle>
-                                    <CardDescription>
-                                        Edit konten section {sectionLabels[sectionKey] ?? humanizeSegment(sectionKey)} untuk bahasa {localeLabel}.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="grid gap-4 md:grid-cols-2">
-                                    {[...fields, ...buildExtraSectionFields(page.slug, sectionKey, data.content, locale)].map((field) =>
-                                        isImageField(field.path) ? (
+                return (
+                    <Section
+                        key={sectionKey}
+                        icon={FileText}
+                        title={label}
+                        desc={desc}
+                    >
+                        <Row>
+                            {[
+                                ...fields,
+                                ...buildExtraSectionFields(
+                                    page.slug,
+                                    sectionKey,
+                                    data.content,
+                                    locale,
+                                ),
+                            ].map((field) =>
+                                isImageField(field.path) ? (
+                                    <div
+                                        key={field.path}
+                                        className="sm:col-span-2"
+                                    >
+                                        <Field label={field.label}>
                                             <ImageField
-                                                key={field.path}
                                                 label={field.label}
                                                 value={field.value}
-                                                file={data.media[field.path] ?? null}
-                                                onChange={(file) => setData('media', { ...data.media, [field.path]: file })}
+                                                file={
+                                                    data.media[field.path] ??
+                                                    null
+                                                }
+                                                onChange={(file) =>
+                                                    setData('media', {
+                                                        ...data.media,
+                                                        [field.path]: file,
+                                                    })
+                                                }
+                                            />
+                                        </Field>
+                                    </div>
+                                ) : (
+                                    <Field key={field.path} label={field.label}>
+                                        {field.multiline ? (
+                                            <Textarea
+                                                value={field.value}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'content',
+                                                        updateNestedValue(
+                                                            data.content,
+                                                            field.path,
+                                                            e.target.value,
+                                                        ),
+                                                    )
+                                                }
                                             />
                                         ) : (
-                                            <Field
-                                                key={field.path}
-                                                label={field.label}
+                                            <Input
                                                 value={field.value}
-                                                onChange={(value) => setData('content', updateNestedValue(data.content, field.path, value))}
-                                                multiline={field.multiline}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'content',
+                                                        updateNestedValue(
+                                                            data.content,
+                                                            field.path,
+                                                            e.target.value,
+                                                        ),
+                                                    )
+                                                }
                                             />
-                                        ),
-                                    )}
-                                </CardContent>
-                            </Card>
-                        );
-                })}
+                                        )}
+                                    </Field>
+                                ),
+                            )}
+                        </Row>
+                    </Section>
+                );
+            })}
 
-                <div className="flex justify-end">
-                    <Button type="submit" disabled={processing} className="min-w-40">
-                        Simpan Landing Page
-                    </Button>
-                </div>
+            <div className="flex justify-end pb-8 pt-4">
+                <Button type="submit" disabled={processing} size="lg">
+                    {processing ? 'Menyimpan...' : 'Simpan Semua Perubahan'}
+                </Button>
             </div>
         </form>
     );
@@ -396,17 +648,27 @@ function ServiceItemsEditor({
     locale: 'id' | 'en';
     setContent: (content: Record<string, any>) => void;
 }) {
-    const items = Array.isArray(content?.services?.items) ? content.services.items : [];
+    const items = Array.isArray(content?.services?.items)
+        ? content.services.items
+        : [];
 
     const addItem = () => {
         const next = structuredClone(content ?? {});
-        next.services = { ...(next.services ?? {}), items: [...items, { title: { id: '', en: '' }, description: { id: '', en: '' } }] };
+        next.services = {
+            ...(next.services ?? {}),
+            items: [
+                ...items,
+                { title: { id: '', en: '' }, description: { id: '', en: '' } },
+            ],
+        };
         setContent(next);
     };
 
     const removeItem = (index: number) => {
         const next = structuredClone(content ?? {});
-        next.services.items = items.filter((_: unknown, i: number) => i !== index);
+        next.services.items = items.filter(
+            (_: unknown, i: number) => i !== index,
+        );
         setContent(next);
     };
 
@@ -414,42 +676,89 @@ function ServiceItemsEditor({
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-foreground">Item Layanan Custom</p>
-                    <p className="text-xs text-muted-foreground">Kosongkan semua untuk memakai data dari Content Management → Services.</p>
+                    <p className="text-sm font-semibold">Item Layanan Custom</p>
+                    <p className="text-xs text-muted-foreground">
+                        Kosongkan semua untuk memakai data dari Content
+                        Management.
+                    </p>
                 </div>
-                <Button type="button" variant="outline" onClick={addItem}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addItem}
+                >
                     <Plus className="mr-2 h-4 w-4" />
                     Tambah Item
                 </Button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {items.map((_: unknown, index: number) => (
-                    <div key={`svc_${index}`} className="space-y-3 rounded-2xl border border-border p-4">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold text-foreground">Layanan {index + 1}</p>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-destructive hover:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
+                    <div
+                        key={`svc_${index}`}
+                        className="rounded-xl border border-border bg-muted/10 p-4"
+                    >
+                        <div className="mb-3 flex items-center justify-between">
+                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                Layanan {index + 1}
+                            </p>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeItem(index)}
+                                className="h-7 text-destructive hover:text-destructive"
+                            >
+                                <Trash2 className="mr-2 h-3.5 w-3.5" />
                                 Hapus
                             </Button>
                         </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <Field
-                                label="Judul"
-                                value={String(getNestedValue(content, `services.items.${index}.title.${locale}`) ?? '')}
-                                onChange={(value) => setContent(updateNestedValue(content, `services.items.${index}.title.${locale}`, value))}
-                            />
-                            <Field
-                                label="Deskripsi"
-                                value={String(getNestedValue(content, `services.items.${index}.description.${locale}`) ?? '')}
-                                onChange={(value) => setContent(updateNestedValue(content, `services.items.${index}.description.${locale}`, value))}
-                                multiline
-                            />
-                        </div>
+                        <Row>
+                            <Field label="Judul">
+                                <Input
+                                    value={String(
+                                        getNestedValue(
+                                            content,
+                                            `services.items.${index}.title.${locale}`,
+                                        ) ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        setContent(
+                                            updateNestedValue(
+                                                content,
+                                                `services.items.${index}.title.${locale}`,
+                                                e.target.value,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field label="Deskripsi">
+                                <Textarea
+                                    rows={2}
+                                    value={String(
+                                        getNestedValue(
+                                            content,
+                                            `services.items.${index}.description.${locale}`,
+                                        ) ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        setContent(
+                                            updateNestedValue(
+                                                content,
+                                                `services.items.${index}.description.${locale}`,
+                                                e.target.value,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
+                        </Row>
                     </div>
                 ))}
                 {items.length === 0 && (
-                    <p className="rounded-2xl border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
-                        Pakai data default dari Content Management, atau tambah item custom di sini.
+                    <p className="rounded-xl border border-dashed border-border py-6 text-center text-xs text-muted-foreground">
+                        Pakai data default, atau tambah item custom di sini.
                     </p>
                 )}
             </div>
@@ -470,13 +779,18 @@ function ValuesSectionEditor({
 
     const addValue = () => {
         const nextContent = structuredClone(content ?? {});
-        nextContent.values = [...values, { title: { id: '', en: '' }, description: { id: '', en: '' } }];
+        nextContent.values = [
+            ...values,
+            { title: { id: '', en: '' }, description: { id: '', en: '' } },
+        ];
         setContent(nextContent);
     };
 
     const removeValue = (index: number) => {
         const nextContent = structuredClone(content ?? {});
-        nextContent.values = values.filter((_: unknown, i: number) => i !== index);
+        nextContent.values = values.filter(
+            (_: unknown, i: number) => i !== index,
+        );
         setContent(nextContent);
     };
 
@@ -484,44 +798,85 @@ function ValuesSectionEditor({
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-foreground">Daftar Nilai Perusahaan</p>
-                    <p className="text-xs text-muted-foreground">Kosongkan semua untuk memakai nilai default bawaan sistem.</p>
+                    <p className="text-sm font-semibold">Daftar Nilai</p>
+                    <p className="text-xs text-muted-foreground">
+                        Kosongkan semua untuk memakai nilai default.
+                    </p>
                 </div>
-                <Button type="button" variant="outline" onClick={addValue}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addValue}
+                >
                     <Plus className="mr-2 h-4 w-4" />
                     Tambah Nilai
                 </Button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {values.map((_: unknown, index: number) => (
-                    <div key={`value_${index}`} className="space-y-3 rounded-2xl border border-border p-4">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold text-foreground">Nilai {index + 1}</p>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => removeValue(index)} className="text-destructive hover:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
+                    <div
+                        key={`value_${index}`}
+                        className="rounded-xl border border-border bg-muted/10 p-4"
+                    >
+                        <div className="mb-3 flex items-center justify-between">
+                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                Nilai {index + 1}
+                            </p>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeValue(index)}
+                                className="h-7 text-destructive hover:text-destructive"
+                            >
+                                <Trash2 className="mr-2 h-3.5 w-3.5" />
                                 Hapus
                             </Button>
                         </div>
-                        <div className="grid gap-4 md:grid-cols-2">
-                            <Field
-                                label="Judul"
-                                value={String(getNestedValue(content, `values.${index}.title.${locale}`) ?? '')}
-                                onChange={(value) => setContent(updateNestedValue(content, `values.${index}.title.${locale}`, value))}
-                            />
-                            <Field
-                                label="Deskripsi"
-                                value={String(getNestedValue(content, `values.${index}.description.${locale}`) ?? '')}
-                                onChange={(value) => setContent(updateNestedValue(content, `values.${index}.description.${locale}`, value))}
-                                multiline
-                            />
-                        </div>
+                        <Row>
+                            <Field label="Judul">
+                                <Input
+                                    value={String(
+                                        getNestedValue(
+                                            content,
+                                            `values.${index}.title.${locale}`,
+                                        ) ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        setContent(
+                                            updateNestedValue(
+                                                content,
+                                                `values.${index}.title.${locale}`,
+                                                e.target.value,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field label="Deskripsi">
+                                <Textarea
+                                    rows={2}
+                                    value={String(
+                                        getNestedValue(
+                                            content,
+                                            `values.${index}.description.${locale}`,
+                                        ) ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        setContent(
+                                            updateNestedValue(
+                                                content,
+                                                `values.${index}.description.${locale}`,
+                                                e.target.value,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
+                        </Row>
                     </div>
                 ))}
-                {values.length === 0 && (
-                    <p className="rounded-2xl border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
-                        Belum ada nilai. Klik "Tambah Nilai" atau biarkan kosong untuk memakai default.
-                    </p>
-                )}
             </div>
         </div>
     );
@@ -552,7 +907,9 @@ function StatsSectionEditor({
 
     const removeStat = (index: number) => {
         const nextContent = structuredClone(content ?? {});
-        nextContent.stats = stats.filter((_: unknown, itemIndex: number) => itemIndex !== index);
+        nextContent.stats = stats.filter(
+            (_: unknown, itemIndex: number) => itemIndex !== index,
+        );
         setContent(nextContent);
     };
 
@@ -560,163 +917,77 @@ function StatsSectionEditor({
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-semibold text-foreground">Daftar Statistik</p>
-                    <p className="text-xs text-muted-foreground">Mode bahasa aktif hanya mengubah label statistik untuk bahasa yang dipilih.</p>
+                    <p className="text-sm font-semibold">Daftar Statistik</p>
+                    <p className="text-xs text-muted-foreground">
+                        Ubah angka dan label statistik.
+                    </p>
                 </div>
-                <Button type="button" variant="outline" onClick={addStat}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addStat}
+                >
                     <Plus className="mr-2 h-4 w-4" />
-                    Tambah Statistik
+                    Tambah Data
                 </Button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
                 {stats.map((_: unknown, index: number) => (
-                    <div key={`stat_${index}`} className="grid gap-4 rounded-2xl border border-border p-4 md:grid-cols-[180px_minmax(0,1fr)_auto]">
-                        <Field
-                            label={`Value ${index + 1}`}
-                            value={String(getNestedValue(content, `stats.${index}.value`) ?? '')}
-                            onChange={(value) => setContent(updateNestedValue(content, `stats.${index}.value`, value))}
-                        />
-                        <Field
-                            label={`Label ${index + 1}`}
-                            value={String(getNestedValue(content, `stats.${index}.label.${locale}`) ?? '')}
-                            onChange={(value) => setContent(updateNestedValue(content, `stats.${index}.label.${locale}`, value))}
-                        />
-                        <div className="flex items-end">
-                            <Button type="button" variant="ghost" size="sm" onClick={() => removeStat(index)} className="text-destructive hover:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Hapus
-                            </Button>
+                    <div
+                        key={`stat_${index}`}
+                        className="flex items-center gap-3 rounded-xl border border-border bg-muted/10 p-3"
+                    >
+                        <div className="grid flex-1 gap-4 sm:grid-cols-2">
+                            <Field label={`Angka ${index + 1}`}>
+                                <Input
+                                    value={String(
+                                        getNestedValue(
+                                            content,
+                                            `stats.${index}.value`,
+                                        ) ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        setContent(
+                                            updateNestedValue(
+                                                content,
+                                                `stats.${index}.value`,
+                                                e.target.value,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field label={`Label ${index + 1}`}>
+                                <Input
+                                    value={String(
+                                        getNestedValue(
+                                            content,
+                                            `stats.${index}.label.${locale}`,
+                                        ) ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        setContent(
+                                            updateNestedValue(
+                                                content,
+                                                `stats.${index}.label.${locale}`,
+                                                e.target.value,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
                         </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-
-function FaqSectionEditor({
-    content,
-    locale,
-    defaultFaqs,
-    setContent,
-}: {
-    content: Record<string, any>;
-    locale: 'id' | 'en';
-    defaultFaqs: DefaultFaqItem[];
-    setContent: (content: Record<string, any>) => void;
-}) {
-    const faqItems = Array.isArray(content?.faq?.items) ? content.faq.items : [];
-
-    const addFaq = () => {
-        const nextContent = structuredClone(content ?? {});
-        nextContent.faq = {
-            ...(nextContent.faq ?? {}),
-            title: nextContent.faq?.title ?? { id: '', en: '' },
-            description: nextContent.faq?.description ?? { id: '', en: '' },
-            items: [
-                ...faqItems,
-                {
-                    question: { id: '', en: '' },
-                    answer: { id: '', en: '' },
-                },
-            ],
-        };
-        setContent(nextContent);
-    };
-
-    const removeFaq = (index: number) => {
-        const nextContent = structuredClone(content ?? {});
-        nextContent.faq = {
-            ...(nextContent.faq ?? {}),
-            items: faqItems.filter((_: unknown, itemIndex: number) => itemIndex !== index),
-        };
-        setContent(nextContent);
-    };
-
-    const applyDefaultFaqs = () => {
-        const nextContent = structuredClone(content ?? {});
-        nextContent.faq = {
-            ...(nextContent.faq ?? {}),
-            title: nextContent.faq?.title ?? {
-                id: 'Pertanyaan yang sering ditanyakan',
-                en: 'Frequently asked questions',
-            },
-            description: nextContent.faq?.description ?? {
-                id: 'Jawaban ringkas untuk pertanyaan paling sering dari calon jamaah.',
-                en: 'Quick answers to the most common questions from prospective pilgrims.',
-            },
-            items: defaultFaqs.map((item) => ({
-                question: {
-                    id: item.question?.id ?? '',
-                    en: item.question?.en ?? '',
-                },
-                answer: {
-                    id: item.answer?.id ?? '',
-                    en: item.answer?.en ?? '',
-                },
-            })),
-        };
-        setContent(nextContent);
-    };
-
-    return (
-        <div className="space-y-5">
-            <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                    label="Judul FAQ"
-                    value={String(getNestedValue(content, `faq.title.${locale}`) ?? '')}
-                    onChange={(value) => setContent(updateNestedValue(content, `faq.title.${locale}`, value))}
-                />
-                <Field
-                    label="Deskripsi FAQ"
-                    value={String(getNestedValue(content, `faq.description.${locale}`) ?? '')}
-                    onChange={(value) => setContent(updateNestedValue(content, `faq.description.${locale}`, value))}
-                    multiline
-                />
-            </div>
-
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-semibold text-foreground">Item FAQ Custom</p>
-                    <p className="text-xs text-muted-foreground">Kosongkan semua item kalau ingin homepage memakai FAQ default dari data utama.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    {defaultFaqs.length > 0 ? (
-                        <Button type="button" variant="secondary" onClick={applyDefaultFaqs}>
-                            Pakai FAQ Default
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeStat(index)}
+                            className="h-8 text-destructive hover:text-destructive"
+                        >
+                            <Trash2 className="h-4 w-4" />
                         </Button>
-                    ) : null}
-                    <Button type="button" variant="outline" onClick={addFaq}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah FAQ
-                    </Button>
-                </div>
-            </div>
-
-            <div className="space-y-4">
-                {faqItems.map((_: unknown, index: number) => (
-                    <div key={`faq_${index}`} className="space-y-4 rounded-2xl border border-border p-4">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm font-semibold text-foreground">FAQ {index + 1}</p>
-                            <Button type="button" variant="ghost" size="sm" onClick={() => removeFaq(index)} className="text-destructive hover:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Hapus
-                            </Button>
-                        </div>
-                        <div className="grid gap-4">
-                            <Field
-                                label="Pertanyaan"
-                                value={String(getNestedValue(content, `faq.items.${index}.question.${locale}`) ?? '')}
-                                onChange={(value) => setContent(updateNestedValue(content, `faq.items.${index}.question.${locale}`, value))}
-                            />
-                            <Field
-                                label="Jawaban"
-                                value={String(getNestedValue(content, `faq.items.${index}.answer.${locale}`) ?? '')}
-                                onChange={(value) => setContent(updateNestedValue(content, `faq.items.${index}.answer.${locale}`, value))}
-                                multiline
-                            />
-                        </div>
                     </div>
                 ))}
             </div>
@@ -724,7 +995,10 @@ function FaqSectionEditor({
     );
 }
 
-function getOrderedContentSections(pageSlug: string, content: Record<string, any>): Array<[string, unknown]> {
+function getOrderedContentSections(
+    pageSlug: string,
+    content: Record<string, any>,
+): Array<[string, unknown]> {
     const allowedSections = landingSectionMap[pageSlug];
 
     if (!allowedSections) {
@@ -732,34 +1006,6 @@ function getOrderedContentSections(pageSlug: string, content: Record<string, any
     }
 
     return allowedSections.map((key) => [key, content?.[key] ?? {}]);
-}
-
-function SummaryItem({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-    return (
-        <div className="space-y-1 rounded-2xl border border-border bg-muted/30 px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">{label}</p>
-            <p className={mono ? 'font-mono text-sm text-foreground' : 'text-sm font-medium text-foreground'}>{value}</p>
-        </div>
-    );
-}
-
-function Field({
-    label,
-    value,
-    onChange,
-    multiline = false,
-}: {
-    label: string;
-    value: string;
-    onChange: (value: string) => void;
-    multiline?: boolean;
-}) {
-    return (
-        <div className="space-y-2">
-            <Label>{label}</Label>
-            {multiline ? <Textarea className="min-h-28" value={value} onChange={(event) => onChange(event.target.value)} /> : <Input value={value} onChange={(event) => onChange(event.target.value)} />}
-        </div>
-    );
 }
 
 function ImageField({
@@ -788,23 +1034,35 @@ function ImageField({
     }, [file]);
 
     return (
-        <div className="space-y-3 md:col-span-2">
-            <Label>{label}</Label>
-            <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-                <div className="overflow-hidden rounded-2xl border border-border bg-muted/30">
-                    <img src={previewUrl ?? value ?? '/images/dummy.jpg'} alt={label} className="h-40 w-full object-cover" />
+        <div className="space-y-3">
+            <div className="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
+                <div className="overflow-hidden rounded-xl border border-border bg-muted/30 shadow-inner">
+                    <img
+                        src={previewUrl ?? value ?? '/images/dummy.jpg'}
+                        alt={label}
+                        className="h-28 w-full object-cover"
+                    />
                 </div>
                 <div className="space-y-2">
-                    <Input type="file" accept="image/*" onChange={(event) => onChange(event.target.files?.[0] ?? null)} />
-                    <p className="text-xs text-muted-foreground">Upload gambar baru untuk field ini. Preview akan langsung berubah setelah file dipilih.</p>
-                    <div className="rounded-xl border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground">
+                    <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) =>
+                            onChange(event.target.files?.[0] ?? null)
+                        }
+                    />
+                    <div className="rounded-lg border border-dashed border-border bg-background px-3 py-1.5 text-[0.65rem] text-muted-foreground">
                         {file ? (
                             <>
-                                File terpilih: <span className="font-mono">{file.name}</span>
+                                File:{' '}
+                                <span className="font-mono text-primary">
+                                    {file.name}
+                                </span>
                             </>
                         ) : (
                             <>
-                                Path saat ini: <span className="font-mono">{value || '-'}</span>
+                                Path:{' '}
+                                <span className="font-mono">{value || '-'}</span>
                             </>
                         )}
                     </div>
@@ -835,26 +1093,26 @@ function GallerySectionEditor({
         'gallery',
         locale,
     );
-    const galleryImages = Array.isArray(content?.gallery?.images) ? content.gallery.images : [];
+    const galleryImages = Array.isArray(content?.gallery?.images)
+        ? content.gallery.images
+        : [];
 
     const addGalleryImage = () => {
         setContent(
-            updateNestedValue(
-                content,
-                'gallery.images',
-                [
-                    ...galleryImages,
-                    {
-                        src: '',
-                        alt: { id: '', en: '' },
-                    },
-                ],
-            ),
+            updateNestedValue(content, 'gallery.images', [
+                ...galleryImages,
+                {
+                    src: '',
+                    alt: { id: '', en: '' },
+                },
+            ]),
         );
     };
 
     const removeGalleryImage = (index: number) => {
-        const nextImages = galleryImages.filter((_: unknown, itemIndex: number) => itemIndex !== index);
+        const nextImages = galleryImages.filter(
+            (_: unknown, itemIndex: number) => itemIndex !== index,
+        );
         const nextContent = structuredClone(content ?? {});
         if (!nextContent.gallery) {
             nextContent.gallery = {};
@@ -865,24 +1123,53 @@ function GallerySectionEditor({
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
+            <Row>
                 {baseFields.map((field) => (
-                    <Field
-                        key={field.path}
-                        label={field.label}
-                        value={field.value}
-                        onChange={(value) => setContent(updateNestedValue(content, field.path, value))}
-                        multiline={field.multiline}
-                    />
+                    <Field key={field.path} label={field.label}>
+                        {field.multiline ? (
+                            <Textarea
+                                value={field.value}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            field.path,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                            />
+                        ) : (
+                            <Input
+                                value={field.value}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            field.path,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                            />
+                        )}
+                    </Field>
                 ))}
-            </div>
+            </Row>
 
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between border-t border-border pt-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-foreground">Foto Galeri Landing</h3>
-                    <p className="text-xs text-muted-foreground">Tambahkan foto manual untuk section galeri di homepage.</p>
+                    <p className="text-sm font-semibold">Foto Galeri</p>
+                    <p className="text-xs text-muted-foreground">
+                        Tambahkan foto manual untuk beranda.
+                    </p>
                 </div>
-                <Button type="button" variant="outline" onClick={addGalleryImage}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addGalleryImage}
+                >
                     <Plus className="mr-2 h-4 w-4" />
                     Tambah Foto
                 </Button>
@@ -894,36 +1181,58 @@ function GallerySectionEditor({
                     const altPath = `gallery.images.${index}.alt.${locale}`;
 
                     return (
-                        <div key={imagePath} className="rounded-2xl border border-border p-4">
-                            <div className="mb-4 flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="text-sm font-semibold text-foreground">Foto {index + 1}</p>
-                                    <p className="text-xs text-muted-foreground">Upload gambar dan isi alt text untuk bahasa {locale === 'id' ? 'Indonesia' : 'English'}.</p>
-                                </div>
+                        <div
+                            key={imagePath}
+                            className="rounded-xl border border-border bg-muted/10 p-4"
+                        >
+                            <div className="mb-4 flex items-center justify-between">
+                                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                                    Foto {index + 1}
+                                </p>
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => removeGalleryImage(index)}
-                                    className="text-destructive hover:text-destructive"
+                                    className="h-7 text-destructive hover:text-destructive"
                                 >
-                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <Trash2 className="mr-2 h-3.5 w-3.5" />
                                     Hapus
                                 </Button>
                             </div>
 
-                            <div className="grid gap-4">
+                            <div className="space-y-4">
                                 <ImageField
                                     label={`Foto Galeri ${index + 1}`}
-                                    value={String(getNestedValue(content, imagePath) ?? '')}
+                                    value={String(
+                                        getNestedValue(content, imagePath) ??
+                                            '',
+                                    )}
                                     file={media[imagePath] ?? null}
-                                    onChange={(file) => setMedia({ ...media, [imagePath]: file })}
+                                    onChange={(file) =>
+                                        setMedia({
+                                            ...media,
+                                            [imagePath]: file,
+                                        })
+                                    }
                                 />
-                                <Field
-                                    label={`Alt Foto ${index + 1}`}
-                                    value={String(getNestedValue(content, altPath) ?? '')}
-                                    onChange={(value) => setContent(updateNestedValue(content, altPath, value))}
-                                />
+                                <Field label={`Alt Text (Penjelasan Foto)`}>
+                                    <Input
+                                        value={String(
+                                            getNestedValue(content, altPath) ??
+                                                '',
+                                        )}
+                                        onChange={(e) =>
+                                            setContent(
+                                                updateNestedValue(
+                                                    content,
+                                                    altPath,
+                                                    e.target.value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
                             </div>
                         </div>
                     );
@@ -933,7 +1242,11 @@ function GallerySectionEditor({
     );
 }
 
-function collectEditableFields(value: unknown, path: string, locale: 'id' | 'en'): EditableField[] {
+function collectEditableFields(
+    value: unknown,
+    path: string,
+    locale: 'id' | 'en',
+): EditableField[] {
     if (value === null || value === undefined) {
         return [];
     }
@@ -952,11 +1265,16 @@ function collectEditableFields(value: unknown, path: string, locale: 'id' | 'en'
     }
 
     if (Array.isArray(value)) {
-        return value.flatMap((item, index) => collectEditableFields(item, `${path}.${index}`, locale));
+        return value.flatMap((item, index) =>
+            collectEditableFields(item, `${path}.${index}`, locale),
+        );
     }
 
     if (typeof value === 'object') {
-        return Object.entries(value as Record<string, unknown>).flatMap(([key, nestedValue]) => collectEditableFields(nestedValue, `${path}.${key}`, locale));
+        return Object.entries(value as Record<string, unknown>).flatMap(
+            ([key, nestedValue]) =>
+                collectEditableFields(nestedValue, `${path}.${key}`, locale),
+        );
     }
 
     if (typeof value === 'string' || typeof value === 'number') {
@@ -975,12 +1293,30 @@ function collectEditableFields(value: unknown, path: string, locale: 'id' | 'en'
     return [];
 }
 
-function buildExtraSectionFields(pageSlug: string, sectionKey: string, content: Record<string, any>, locale: 'id' | 'en'): EditableField[] {
-    // tentang-kami: profile images
+function buildExtraSectionFields(
+    pageSlug: string,
+    sectionKey: string,
+    content: Record<string, any>,
+    locale: 'id' | 'en',
+): EditableField[] {
     if (pageSlug === 'tentang-kami' && sectionKey === 'profile') {
         return [
-            { path: 'profile.image_primary', label: 'Foto Utama', multiline: false, value: String(getNestedValue(content, 'profile.image_primary') ?? '') },
-            { path: 'profile.image_secondary', label: 'Foto Kedua', multiline: false, value: String(getNestedValue(content, 'profile.image_secondary') ?? '') },
+            {
+                path: 'profile.image_primary',
+                label: 'Foto Utama',
+                multiline: false,
+                value: String(
+                    getNestedValue(content, 'profile.image_primary') ?? '',
+                ),
+            },
+            {
+                path: 'profile.image_secondary',
+                label: 'Foto Kedua',
+                multiline: false,
+                value: String(
+                    getNestedValue(content, 'profile.image_secondary') ?? '',
+                ),
+            },
         ];
     }
 
@@ -1004,7 +1340,11 @@ function buildExtraSectionFields(pageSlug: string, sectionKey: string, content: 
     ];
 
     return extraFields
-        .filter((field) => (locale === 'id' ? !field.path.endsWith('.en') : !field.path.endsWith('.id')))
+        .filter((field) =>
+            locale === 'id'
+                ? !field.path.endsWith('.en')
+                : !field.path.endsWith('.id'),
+        )
         .map((field) => ({
             path: field.path,
             label: field.label,
@@ -1013,14 +1353,20 @@ function buildExtraSectionFields(pageSlug: string, sectionKey: string, content: 
         }));
 }
 
-function isLocalizedRecord(value: unknown): value is Record<'id' | 'en', unknown> {
+function isLocalizedRecord(
+    value: unknown,
+): value is Record<'id' | 'en', unknown> {
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
         return false;
     }
 
     const record = value as Record<string, unknown>;
 
-    return 'id' in record && 'en' in record && Object.keys(record).every((key) => key === 'id' || key === 'en');
+    return (
+        'id' in record &&
+        'en' in record &&
+        Object.keys(record).every((key) => key === 'id' || key === 'en')
+    );
 }
 
 function getNestedValue(source: Record<string, any>, path: string): unknown {
@@ -1042,11 +1388,24 @@ function getNestedValue(source: Record<string, any>, path: string): unknown {
 }
 
 function shouldUseTextarea(path: string, value: string): boolean {
-    return path.includes('description') || path.includes('excerpt') || path.includes('subtitle') || path.includes('note') || path.includes('placeholder') || path.includes('policy') || value.length > 80;
+    return (
+        path.includes('description') ||
+        path.includes('excerpt') ||
+        path.includes('subtitle') ||
+        path.includes('note') ||
+        path.includes('placeholder') ||
+        path.includes('policy') ||
+        value.length > 80
+    );
 }
 
 function isImageField(path: string): boolean {
-    return path.endsWith('.image') || path.endsWith('.image_primary') || path.endsWith('.image_secondary') || path.endsWith('.src');
+    return (
+        path.endsWith('.image') ||
+        path.endsWith('.image_primary') ||
+        path.endsWith('.image_secondary') ||
+        path.endsWith('.src')
+    );
 }
 
 function humanizePath(path: string): string {
@@ -1070,12 +1429,19 @@ function humanizeSegment(segment: string): string {
         .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function updateNestedValue(source: Record<string, any>, path: string, value: unknown): Record<string, any> {
+function updateNestedValue(
+    source: Record<string, any>,
+    path: string,
+    value: unknown,
+): Record<string, any> {
     if (path === 'gallery.images' && Array.isArray(value)) {
         return {
             ...structuredClone(source ?? {}),
             gallery: {
-                ...(structuredClone(source?.gallery ?? {}) as Record<string, any>),
+                ...(structuredClone(source?.gallery ?? {}) as Record<
+                    string,
+                    any
+                >),
                 images: value,
             },
         };
@@ -1088,7 +1454,8 @@ function updateNestedValue(source: Record<string, any>, path: string, value: unk
     segments.forEach((segment, index) => {
         const isLast = index === segments.length - 1;
         const nextSegment = segments[index + 1];
-        const nextIsNumber = nextSegment !== undefined && !Number.isNaN(Number(nextSegment));
+        const nextIsNumber =
+            nextSegment !== undefined && !Number.isNaN(Number(nextSegment));
         const numericIndex = Number(segment);
 
         if (Array.isArray(current)) {
@@ -1119,4 +1486,3 @@ function updateNestedValue(source: Record<string, any>, path: string, value: unk
 
     return result;
 }
-

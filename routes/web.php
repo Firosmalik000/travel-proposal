@@ -12,6 +12,7 @@ use App\Http\Controllers\Administrator\UserAccessController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PackageRegistrationController;
 use App\Http\Controllers\Public\ArticleController as PublicArticleController;
+use App\Http\Controllers\Public\PdfController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -156,6 +157,38 @@ Route::get('faq', function () {
     return Inertia::render('public/faq/index');
 })->name('public.faq');
 
+Route::get('terms-conditions', function () {
+    return Inertia::render('public/policy/index', [
+        'slug' => 'terms-conditions',
+    ]);
+})->name('public.terms');
+Route::get('terms-conditions.pdf', [PdfController::class, 'termsConditions'])
+    ->name('public.terms.pdf');
+
+Route::get('privacy-policy', function () {
+    return Inertia::render('public/policy/index', [
+        'slug' => 'privacy-policy',
+    ]);
+})->name('public.privacy');
+Route::get('privacy-policy.pdf', [PdfController::class, 'privacyPolicy'])
+    ->name('public.privacy.pdf');
+
+Route::get('refund-policy', function () {
+    return Inertia::render('public/policy/index', [
+        'slug' => 'refund-policy',
+    ]);
+})->name('public.refund');
+Route::get('refund-policy.pdf', [PdfController::class, 'refundPolicy'])
+    ->name('public.refund.pdf');
+
+Route::get('disclaimer', function () {
+    return Inertia::render('public/policy/index', [
+        'slug' => 'disclaimer',
+    ]);
+})->name('public.disclaimer');
+Route::get('disclaimer.pdf', [PdfController::class, 'disclaimer'])
+    ->name('public.disclaimer.pdf');
+
 Route::get('artikel', [PublicArticleController::class, 'index'])->name('public.artikel');
 Route::get('artikel/{article:slug}', [PublicArticleController::class, 'show'])->name('public.artikel.show');
 
@@ -171,9 +204,8 @@ Route::get('custom-umroh', function () {
     return Inertia::render('public/custom/index');
 })->name('public.custom');
 
-Route::get('mitra', function () {
-    return Inertia::render('public/mitra/index');
-})->name('public.mitra');
+Route::get('paket-umroh/{travelPackage:slug}/sk.pdf', [PdfController::class, 'packageSk'])
+    ->name('public.paket.sk.pdf');
 
 Route::get('karier', function () {
     return Inertia::render('public/karier/index');
@@ -211,6 +243,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $nameRoute(Route::get('articles/{article}/edit', [AdministratorArticleController::class, 'edit']), 'articles.edit');
             $nameRoute(Route::patch('articles/{article}', [AdministratorArticleController::class, 'update']), 'articles.update');
             $nameRoute(Route::delete('articles/{article}', [AdministratorArticleController::class, 'destroy']), 'articles.destroy');
+            $nameRoute(Route::get('portal-content', [ContentController::class, 'portalContent']), 'portal-content.index');
             $nameRoute(Route::get('landing', [ContentController::class, 'landing']), 'landing.index');
             $nameRoute(Route::redirect('schedules', '/admin/product-management/packages'), 'schedules.index');
             $nameRoute(Route::get('content', [ContentController::class, 'index']), 'content.index');

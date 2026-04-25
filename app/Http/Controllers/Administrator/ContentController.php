@@ -12,7 +12,6 @@ use App\Models\Faq;
 use App\Models\GalleryItem;
 use App\Models\LegalDocument;
 use App\Models\PageContent;
-use App\Models\Partner;
 use App\Models\ProductCategory;
 use App\Models\TeamMember;
 use App\Models\Testimonial;
@@ -33,10 +32,21 @@ class ContentController extends Controller
     {
         return $this->renderContentPage(
             heading: 'Content Management',
-            description: 'FAQ, layanan, testimoni, galeri, tim, legalitas, mitra, dan karier. Artikel kini dikelola di menu Articles & News.',
+            description: 'FAQ, layanan, testimoni, galeri, tim, legalitas, dan karier. Artikel kini dikelola di menu Articles & News.',
             breadcrumbHref: '/admin/website-management/content',
             pages: [],
-            resources: ['services', 'faqs', 'testimonials', 'gallery', 'team', 'legal_documents', 'partners', 'career_openings'],
+            resources: ['services', 'faqs', 'testimonials', 'gallery', 'team', 'legal_documents', 'career_openings'],
+        );
+    }
+
+    public function portalContent(): Response
+    {
+        return $this->renderContentPage(
+            heading: 'Policy & Help',
+            description: 'Kelola halaman policy dan bantuan seperti Terms & Conditions, Privacy Policy, Refund Policy, serta resource FAQ dan legalitas.',
+            breadcrumbHref: '/admin/website-management/portal-content',
+            pages: $this->portalPageSections(),
+            resources: ['faqs', 'legal_documents'],
         );
     }
 
@@ -44,11 +54,6 @@ class ContentController extends Controller
     {
         return Inertia::render('Dashboard/WebsiteManagement/Landing/Index', [
             'pages' => $this->landingPageSections(),
-            'defaultFaqs' => Faq::query()
-                ->where('is_active', true)
-                ->orderBy('sort_order')
-                ->get(['question', 'answer'])
-                ->toArray(),
         ]);
     }
 
@@ -189,6 +194,24 @@ class ContentController extends Controller
      */
     private function landingPageSections(): array
     {
+        $landingDefinitions = collect($this->landingPageDefinitions());
+
+        // Ensure core landing pages exist so the Landing editor always has tabs to render.
+        $landingDefinitions->each(function (array $definition): void {
+            PageContent::query()->firstOrCreate(
+                [
+                    'slug' => $definition['slug'],
+                    'category' => 'page',
+                ],
+                [
+                    'title' => $definition['title'],
+                    'excerpt' => $definition['excerpt'],
+                    'content' => $definition['content'],
+                    'is_active' => true,
+                ],
+            );
+        });
+
         return PageContent::query()
             ->where('category', 'page')
             ->orderBy('slug')
@@ -205,6 +228,213 @@ class ContentController extends Controller
     }
 
     /**
+     * @return array<int, array{slug: string, title: array{id: string, en: string}, excerpt: array{id: string, en: string}, content: array<string, mixed>}>
+     */
+    private function landingPageDefinitions(): array
+    {
+        return [
+            [
+                'slug' => 'home',
+                'title' => ['id' => 'Home', 'en' => 'Home'],
+                'excerpt' => ['id' => 'Konten landing page utama.', 'en' => 'Main landing page content.'],
+                'content' => [
+                    'hero' => [
+                        'label' => ['id' => 'Asfar Tour', 'en' => 'Asfar Tour'],
+                        'title' => ['id' => 'Jelas Rencananya, Terjamin Amanahnya.', 'en' => 'Clear in Planning, Trusted in Delivery.'],
+                        'description' => [
+                            'id' => 'Pengalaman ibadah umroh yang khusyuk, nyaman, dan terarah bersama tim yang amanah.',
+                            'en' => 'A focused, comfortable, and well-guided umrah journey with a trusted team.',
+                        ],
+                        'image' => '/images/dummy.jpg',
+                    ],
+                    'stats' => [
+                        ['value' => '15+', 'label' => ['id' => 'Tahun Melayani', 'en' => 'Years of Service']],
+                        ['value' => '98%', 'label' => ['id' => 'Kepuasan Jamaah', 'en' => 'Pilgrim Satisfaction']],
+                        ['value' => '20K+', 'label' => ['id' => 'Jamaah Berangkat', 'en' => 'Pilgrims Departed']],
+                        ['value' => '50+', 'label' => ['id' => 'Program Terlaksana', 'en' => 'Programs Delivered']],
+                    ],
+                    'about' => [
+                        'label' => ['id' => 'Tentang Kami', 'en' => 'About Us'],
+                        'title' => [
+                            'id' => 'Pelayanan Umroh yang Tertata dan Menenangkan',
+                            'en' => 'Structured and Reassuring Umrah Service',
+                        ],
+                        'description' => [
+                            'id' => 'Kami mengelola keberangkatan umroh dengan alur yang jelas, pendampingan ibadah, dan komunikasi yang transparan.',
+                            'en' => 'We manage umrah departures with clear flows, worship guidance, and transparent communication.',
+                        ],
+                        'cta' => ['id' => 'Baca Selengkapnya', 'en' => 'Read More'],
+                        'image_primary' => '/images/dummy.jpg',
+                        'image_secondary' => '/images/dummy.jpg',
+                    ],
+                    'packages' => [
+                        'title' => ['id' => 'Paket Unggulan', 'en' => 'Featured Packages'],
+                        'price_prefix' => ['id' => 'Mulai', 'en' => 'From'],
+                    ],
+                    'services' => [
+                        'label' => ['id' => 'Layanan Kami', 'en' => 'Our Services'],
+                        'title' => ['id' => 'Apa yang Kami Tawarkan?', 'en' => 'What We Offer'],
+                        'description' => [
+                            'id' => 'Layanan umroh menyeluruh untuk menjaga perjalanan ibadah tetap aman, nyaman, dan terarah.',
+                            'en' => 'A complete umrah service to keep the worship journey safe, comfortable, and well-guided.',
+                        ],
+                    ],
+                    'gallery' => [
+                        'title' => ['id' => 'Galeri Perjalanan', 'en' => 'Travel Gallery'],
+                        'description' => [
+                            'id' => 'Momen-momen berharga selama perjalanan jamaah.',
+                            'en' => 'Meaningful moments from pilgrim journeys.',
+                        ],
+                        'images' => [],
+                    ],
+                    'faq' => [
+                        'title' => ['id' => 'Pertanyaan Umum', 'en' => 'FAQ'],
+                        'description' => [
+                            'id' => 'Temukan jawaban untuk pertanyaan yang sering ditanyakan.',
+                            'en' => 'Find answers to common questions.',
+                        ],
+                    ],
+                    'contact' => [
+                        'label' => ['id' => 'Kontak Cepat', 'en' => 'Quick Contact'],
+                        'title' => [
+                            'id' => 'Siap berangkat? Konsultasi gratis dulu.',
+                            'en' => 'Ready to depart? Start with a free consultation.',
+                        ],
+                        'description' => [
+                            'id' => 'Tim kami siap membantu memilih paket terbaik, jadwal, dan kebutuhan dokumen.',
+                            'en' => 'Our team helps you choose the right package, schedule, and documents.',
+                        ],
+                        'whatsapp_label' => ['id' => 'Konsultasi WhatsApp', 'en' => 'WhatsApp Consultation'],
+                        'contact_label' => ['id' => 'Lihat Kontak Lengkap', 'en' => 'View Full Contact'],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'tentang-kami',
+                'title' => ['id' => 'Tentang Kami', 'en' => 'About Us'],
+                'excerpt' => ['id' => 'Profil perusahaan dan nilai-nilai.', 'en' => 'Company profile and values.'],
+                'content' => [
+                    'hero' => [
+                        'label' => ['id' => 'Tentang', 'en' => 'About'],
+                        'title' => ['id' => 'Mengenal Asfar Tour', 'en' => 'Get to Know Asfar Tour'],
+                        'description' => [
+                            'id' => 'Cerita, visi, dan komitmen kami dalam melayani jamaah.',
+                            'en' => 'Our story, vision, and commitment to serving pilgrims.',
+                        ],
+                        'image' => '/images/dummy.jpg',
+                    ],
+                    'profile' => [
+                        'title' => ['id' => 'Profil Perusahaan', 'en' => 'Company Profile'],
+                        'description' => [
+                            'id' => 'Tuliskan profil perusahaan Anda di sini.',
+                            'en' => 'Write your company profile here.',
+                        ],
+                    ],
+                    'stats' => [
+                        ['value' => '15+', 'label' => ['id' => 'Tahun Melayani', 'en' => 'Years of Service']],
+                        ['value' => '20K+', 'label' => ['id' => 'Jamaah Berangkat', 'en' => 'Pilgrims Departed']],
+                    ],
+                    'values' => [
+                        'title' => ['id' => 'Nilai & Budaya', 'en' => 'Values & Culture'],
+                        'description' => [
+                            'id' => 'Tuliskan nilai utama dan budaya layanan di sini.',
+                            'en' => 'Write key values and service culture here.',
+                        ],
+                        'items' => [],
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'kontak',
+                'title' => ['id' => 'Kontak', 'en' => 'Contact'],
+                'excerpt' => ['id' => 'Informasi kontak dan lokasi.', 'en' => 'Contact information and location.'],
+                'content' => [
+                    'heading' => [
+                        'title' => ['id' => 'Hubungi Kami', 'en' => 'Contact Us'],
+                        'subtitle' => [
+                            'id' => 'Kami siap membantu kebutuhan perjalanan Anda.',
+                            'en' => 'We are ready to help with your travel needs.',
+                        ],
+                    ],
+                    'description' => [
+                        'body' => [
+                            'id' => 'Tuliskan informasi kontak lengkap di sini.',
+                            'en' => 'Write full contact information here.',
+                        ],
+                    ],
+                    'map' => [
+                        'embed' => '',
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'custom-umroh',
+                'title' => ['id' => 'Custom Umroh', 'en' => 'Custom Umrah'],
+                'excerpt' => ['id' => 'Halaman permintaan paket custom.', 'en' => 'Custom package request page.'],
+                'content' => [
+                    'badge' => ['id' => 'Custom', 'en' => 'Custom'],
+                    'subtitle' => [
+                        'id' => 'Untuk keluarga, komunitas, atau corporate dengan kebutuhan khusus.',
+                        'en' => 'For families, communities, or corporate groups with specific needs.',
+                    ],
+                    'description' => [
+                        'id' => 'Kami menyesuaikan jadwal, hotel, maskapai, dan itinerary sesuai kebutuhan rombongan.',
+                        'en' => 'We tailor schedules, hotels, airlines, and itineraries to your group needs.',
+                    ],
+                    'cta' => ['id' => 'Konsultasi WhatsApp', 'en' => 'WhatsApp Consultation'],
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function portalPageSections(): array
+    {
+        $portalPageDefinitions = collect($this->portalPageDefinitions());
+        // Ensure portal pages exist in DB so they can be updated and also consumed by public pages
+        // through the shared `publicData.pages` prop (which only includes active DB records).
+        $pages = $portalPageDefinitions
+            ->mapWithKeys(function (array $definition): array {
+                $page = PageContent::query()->firstOrCreate(
+                    [
+                        'slug' => $definition['slug'],
+                        'category' => 'page',
+                    ],
+                    [
+                        'title' => $definition['title'],
+                        'excerpt' => $definition['excerpt'],
+                        'content' => $definition['content'],
+                        'is_active' => true,
+                    ],
+                );
+
+                return [$definition['slug'] => $page];
+            });
+
+        return $portalPageDefinitions
+            ->map(function (array $definition) use ($pages): array {
+                /** @var PageContent|null $page */
+                $page = $pages->get($definition['slug']);
+
+                return [
+                    'id' => $page?->id,
+                    'slug' => $definition['slug'],
+                    'label' => $definition['label'],
+                    'description' => $definition['description'],
+                    'title' => $page?->title ?? $definition['title'],
+                    'excerpt' => $page?->excerpt ?? $definition['excerpt'],
+                    'content' => $page?->content ?? $definition['content'],
+                    'content_json' => json_encode($page?->content ?? $definition['content'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                    'is_active' => $page?->is_active ?? true,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
      * @param  array<int, string>  $resources
      */
     private function renderContentPage(string $heading, string $description, string $breadcrumbHref, array $pages, array $resources): Response
@@ -216,6 +446,67 @@ class ContentController extends Controller
             'pages' => $pages,
             'resources' => $this->resourceSections($resources),
         ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function portalPageDefinitions(): array
+    {
+        return [
+            [
+                'slug' => 'terms-conditions',
+                'label' => 'Terms & Conditions',
+                'description' => 'Atur syarat dan ketentuan umum penggunaan portal dan layanan.',
+                'title' => ['id' => 'Syarat & Ketentuan', 'en' => 'Terms & Conditions'],
+                'excerpt' => ['id' => 'Aturan penggunaan layanan dan portal.', 'en' => 'Rules for using the services and portal.'],
+                'content' => [
+                    'body' => [
+                        'id' => 'Tuliskan syarat dan ketentuan layanan di sini.',
+                        'en' => 'Write the service terms and conditions here.',
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'privacy-policy',
+                'label' => 'Privacy Policy',
+                'description' => 'Kelola kebijakan privasi dan pemrosesan data pengguna.',
+                'title' => ['id' => 'Kebijakan Privasi', 'en' => 'Privacy Policy'],
+                'excerpt' => ['id' => 'Penjelasan penggunaan dan perlindungan data pengguna.', 'en' => 'Explanation of user data usage and protection.'],
+                'content' => [
+                    'body' => [
+                        'id' => 'Tuliskan kebijakan privasi di sini.',
+                        'en' => 'Write the privacy policy here.',
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'refund-policy',
+                'label' => 'Refund Policy',
+                'description' => 'Atur kebijakan refund, reschedule, dan pembatalan transaksi.',
+                'title' => ['id' => 'Kebijakan Refund', 'en' => 'Refund Policy'],
+                'excerpt' => ['id' => 'Aturan refund, reschedule, dan pembatalan.', 'en' => 'Rules for refunds, reschedules, and cancellations.'],
+                'content' => [
+                    'body' => [
+                        'id' => 'Tuliskan kebijakan refund dan pembatalan di sini.',
+                        'en' => 'Write the refund and cancellation policy here.',
+                    ],
+                ],
+            ],
+            [
+                'slug' => 'disclaimer',
+                'label' => 'Disclaimer',
+                'description' => 'Atur pernyataan disclaimer resmi untuk portal dan layanan.',
+                'title' => ['id' => 'Disclaimer', 'en' => 'Disclaimer'],
+                'excerpt' => ['id' => 'Pernyataan batas tanggung jawab layanan.', 'en' => 'Statement of service liability limitations.'],
+                'content' => [
+                    'body' => [
+                        'id' => 'Tuliskan disclaimer resmi di sini.',
+                        'en' => 'Write the official disclaimer here.',
+                    ],
+                ],
+            ],
+        ];
     }
 
     /**
@@ -507,20 +798,6 @@ class ContentController extends Controller
                     'is_active' => true,
                 ],
             ],
-            'partners' => [
-                'label' => 'Mitra',
-                'description' => 'Mitra maskapai, hotel, dan komunitas yang tampil di halaman mitra.',
-                'model' => Partner::class,
-                'order_by' => ['sort_order', 'asc'],
-                'template' => [
-                    'name' => 'Nama Mitra',
-                    'category' => 'maskapai',
-                    'description' => ['id' => 'Deskripsi mitra', 'en' => 'Partner description'],
-                    'logo_path' => '/images/dummy.jpg',
-                    'sort_order' => 1,
-                    'is_active' => true,
-                ],
-            ],
             'career_openings' => [
                 'label' => 'Karier',
                 'description' => 'Lowongan kerja yang tampil di halaman karier.',
@@ -568,7 +845,6 @@ class ContentController extends Controller
             'gallery' => Arr::only($item->toArray(), ['title', 'category', 'description', 'image_path', 'sort_order', 'is_active']),
             'team' => Arr::only($item->toArray(), ['name', 'role', 'bio', 'image_path', 'sort_order', 'is_active']),
             'legal_documents' => Arr::only($item->toArray(), ['title', 'document_number', 'issued_by', 'description', 'sort_order', 'is_active']),
-            'partners' => Arr::only($item->toArray(), ['name', 'category', 'description', 'logo_path', 'sort_order', 'is_active']),
             'career_openings' => Arr::only($item->toArray(), ['title', 'location', 'employment_type', 'description', 'requirements', 'sort_order', 'is_active']),
             default => [],
         };
@@ -665,14 +941,6 @@ class ContentController extends Controller
                 'sort_order' => (int) ($payload['sort_order'] ?? 0),
                 'is_active' => (bool) ($payload['is_active'] ?? true),
             ],
-            'partners' => [
-                'name' => (string) ($payload['name'] ?? ''),
-                'category' => (string) ($payload['category'] ?? ''),
-                'description' => $this->localizedValue($payload['description'] ?? []),
-                'logo_path' => (string) ($payload['logo_path'] ?? ''),
-                'sort_order' => (int) ($payload['sort_order'] ?? 0),
-                'is_active' => (bool) ($payload['is_active'] ?? true),
-            ],
             'career_openings' => [
                 'title' => $this->localizedValue($payload['title'] ?? []),
                 'location' => (string) ($payload['location'] ?? ''),
@@ -745,8 +1013,10 @@ class ContentController extends Controller
             'product_categories' => (string) ($item->getAttribute('key') ?? $item->getKey()),
             'products', 'packages' => (string) ($item->getAttribute('code') ?? $item->getKey()),
             'schedules' => (string) ($item->travelPackage?->code.' - '.$item->getAttribute('departure_date')),
+            'faqs' => (string) Arr::get($item->getAttribute('question'), 'id', Arr::get($item->getAttribute('question'), 'en', $item->getKey())),
+            'legal_documents' => (string) ($item->getAttribute('document_number') ?? $item->getKey()),
             'articles' => (string) ($item->getAttribute('slug') ?? $item->getKey()),
-            'testimonials', 'team', 'partners' => (string) ($item->getAttribute('name') ?? $item->getKey()),
+            'testimonials', 'team' => (string) ($item->getAttribute('name') ?? $item->getKey()),
             default => (string) ($item->getKey()),
         };
     }

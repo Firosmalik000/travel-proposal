@@ -10,7 +10,6 @@ use App\Models\Faq;
 use App\Models\GalleryItem;
 use App\Models\LegalDocument;
 use App\Models\PageContent;
-use App\Models\Partner;
 use App\Models\TeamMember;
 use App\Models\Testimonial;
 use App\Models\TravelPackage;
@@ -226,7 +225,6 @@ class HandleInertiaRequests extends Middleware
             'gallery' => GalleryItem::query()->where('is_active', true)->orderBy('sort_order')->get(['title', 'category', 'description', 'image_path', 'sort_order'])->toArray(),
             'team' => TeamMember::query()->where('is_active', true)->orderBy('sort_order')->get(['name', 'role', 'bio', 'image_path', 'sort_order'])->toArray(),
             'legal_documents' => LegalDocument::query()->where('is_active', true)->orderBy('sort_order')->get(['title', 'document_number', 'issued_by', 'description', 'sort_order'])->toArray(),
-            'partners' => Partner::query()->where('is_active', true)->orderBy('sort_order')->get(['name', 'category', 'description', 'logo_path', 'sort_order'])->toArray(),
             'career_openings' => CareerOpening::query()->where('is_active', true)->orderBy('sort_order')->get(['title', 'location', 'employment_type', 'description', 'requirements', 'sort_order'])->toArray(),
         ];
     }

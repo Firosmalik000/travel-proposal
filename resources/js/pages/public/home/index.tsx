@@ -1,6 +1,15 @@
 import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
+    IslamicOrnamentAbbasid,
+    IslamicOrnamentKhatam,
+    IslamicLantern,
+    IslamicOrnamentOttoman,
+    IslamicOrnamentOttomanAccent,
+    IslamicOrnamentRow1Col1,
+    IslamicOrnamentZellige,
+} from '@/components/public-ornaments';
+import {
     formatDate,
     formatPrice,
     getPublicAddress,
@@ -16,12 +25,9 @@ import { type SharedData } from '@/types';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
-    AnimatePresence,
     animate,
     motion,
     useInView,
-    useScroll,
-    useTransform,
     type Variants,
 } from 'framer-motion';
 import {
@@ -81,7 +87,7 @@ type ArticleItem = {
     readingTime: string;
 };
 
-const viewport = { once: false, amount: 0.2 };
+const viewport = { once: false, amount: 0.6, margin: '0px 0px -34% 0px' };
 
 const sectionStagger: Variants = {
     hidden: {},
@@ -143,17 +149,13 @@ const slideRightStrong: Variants = {
 };
 
 const cardBurst: Variants = {
-    hidden: { opacity: 0, y: 70, scale: 0.9, rotateX: 12 },
+    hidden: { opacity: 0, y: 28 },
     show: {
         opacity: 1,
         y: 0,
-        scale: 1,
-        rotateX: 0,
         transition: {
-            type: 'spring',
-            stiffness: 120,
-            damping: 16,
-            mass: 0.9,
+            duration: 0.42,
+            ease: [0.16, 1, 0.3, 1],
         },
     },
 };
@@ -208,23 +210,68 @@ function parseAnimatedStat(value: string): {
 
 function CountUpStat({ value, label }: StatItem) {
     const statRef = useRef<HTMLDivElement>(null);
-    const isInView = useInView(statRef, { amount: 0.7, once: false });
-    const [displayValue, setDisplayValue] = useState(value);
+    const valueRef = useRef<HTMLParagraphElement>(null);
+    const isInView = useInView(statRef, {
+        amount: 0.75,
+        margin: '0px 0px -40% 0px',
+        once: false,
+    });
+    const lastCommittedValueRef = useRef<string>(value);
+    const lastCommitAtRef = useRef<number>(0);
+    const lastRunAtRef = useRef<number>(0);
 
     useEffect(() => {
         const { target, formatter } = parseAnimatedStat(value);
 
         if (!isInView || target <= 0) {
-            setDisplayValue(value);
+            lastCommittedValueRef.current = value;
+            lastCommitAtRef.current = 0;
+            if (valueRef.current) {
+                valueRef.current.textContent = value;
+            }
 
             return;
         }
+
+        const now = performance.now();
+        // Prevent rapid restarts when hovering around the viewport threshold.
+        if (now - lastRunAtRef.current < 900) {
+            return;
+        }
+        lastRunAtRef.current = now;
 
         const controls = animate(0, target, {
             duration: 1.35,
             ease: [0.22, 1, 0.36, 1],
             onUpdate: (latest) => {
-                setDisplayValue(formatter(latest));
+                const now = performance.now();
+                // Avoid forcing React re-renders on every animation frame.
+                // 40ms ~= 25fps is plenty for a count-up effect and noticeably lighter.
+                if (now - lastCommitAtRef.current < 40) {
+                    return;
+                }
+
+                const nextText = formatter(latest);
+                if (nextText === lastCommittedValueRef.current) {
+                    return;
+                }
+
+                lastCommittedValueRef.current = nextText;
+                lastCommitAtRef.current = now;
+                if (valueRef.current) {
+                    valueRef.current.textContent = nextText;
+                }
+            },
+            onComplete: () => {
+                const nextText = formatter(target);
+                if (nextText === lastCommittedValueRef.current) {
+                    return;
+                }
+
+                lastCommittedValueRef.current = nextText;
+                if (valueRef.current) {
+                    valueRef.current.textContent = nextText;
+                }
             },
         });
 
@@ -237,8 +284,12 @@ function CountUpStat({ value, label }: StatItem) {
             className="hero-stat px-4 py-4 text-center sm:px-5"
             variants={slideUpStrong}
         >
-            <p className="font-heading text-xl font-bold text-white sm:text-2xl">
-                {displayValue}
+            <p
+                ref={valueRef}
+                className="font-heading text-xl font-bold text-white sm:text-2xl"
+                suppressHydrationWarning
+            >
+                {value}
             </p>
             <p className="mt-1 text-[11px] text-white/60 sm:text-xs">{label}</p>
         </motion.div>
@@ -251,14 +302,7 @@ export default function Home() {
     const seo = (seoSettings as Record<string, any>) ?? {};
     const publicData = usePublicData();
     const homePage = usePublicPageContent('home');
-    const heroRef = useRef<HTMLElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const { scrollYProgress } = useScroll({
-        target: heroRef,
-        offset: ['start start', 'end start'],
-    });
-    const heroImageY = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
-    const heroImageScale = useTransform(scrollYProgress, [0, 1], [1.04, 1.16]);
 
     const heroLabel = localize(homePage?.content?.hero?.label, locale);
     const heroTitle = localize(homePage?.content?.hero?.title, locale);
@@ -418,24 +462,13 @@ export default function Home() {
                 }))
               : [];
 
-    const customFaqItems = Array.isArray(homePage?.content?.faq?.items)
-        ? homePage.content.faq.items
-              .map((item: Record<string, any>) => ({
-                  question: localize(item?.question, locale),
-                  answer: localize(item?.answer, locale),
-              }))
-              .filter((item: FaqItem) => item.question && item.answer)
-        : [];
-
     const faqItems: FaqItem[] =
-        customFaqItems.length > 0
-            ? customFaqItems
-            : Array.isArray(publicData.faqs) && publicData.faqs.length > 0
-              ? publicData.faqs.map((item: Record<string, unknown>) => ({
-                    question: localize(item.question, locale),
-                    answer: localize(item.answer, locale),
-                }))
-              : [];
+        Array.isArray(publicData.faqs) && publicData.faqs.length > 0
+            ? publicData.faqs.map((item: Record<string, unknown>) => ({
+                  question: localize(item.question, locale),
+                  answer: localize(item.answer, locale),
+              }))
+            : [];
 
     const latestArticles: ArticleItem[] =
         Array.isArray(publicData.articles) && publicData.articles.length > 0
@@ -450,8 +483,6 @@ export default function Home() {
                       readingTime: `${item.reading_time_minutes ?? 1} ${locale === 'id' ? 'menit baca' : 'min read'}`,
                   }))
             : [];
-
-    const [openFaq, setOpenFaq] = useState<number | null>(null);
 
     const handleScroll = (direction: 'left' | 'right') => {
         if (scrollContainerRef.current) {
@@ -469,60 +500,66 @@ export default function Home() {
 
             <main className="relative bg-background">
                 <section
-                    ref={heroRef}
-                    className="hero-section relative flex min-h-[86vh] flex-col justify-end overflow-hidden"
+                    className="hero-section relative flex min-h-[90vh] flex-col justify-end overflow-hidden sm:min-h-[86vh]"
                 >
-                    <motion.div
-                        className="hero-bg absolute inset-0"
-                        style={{ y: heroImageY, scale: heroImageScale }}
-                    >
+                    <div className="hero-bg absolute inset-0">
                         <img
                             src={heroImage}
                             alt={heroTitle}
                             className="h-full w-full object-cover"
                         />
-                        <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/45 to-black/10" />
-                        <div className="absolute inset-0 bg-linear-to-r from-black/60 via-black/10 to-transparent" />
-                    </motion.div>
+                        <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/50 to-black/20" />
+                        <div className="absolute inset-0 bg-linear-to-r from-black/70 via-black/20 to-transparent" />
+                        <div className="pointer-events-none absolute inset-0">
+                            {/* Hero ornaments: keep it elegant (avoid noisy blend modes). */}
+                            <IslamicOrnamentRow1Col1 className="absolute -top-16 right-[-8%] h-[20rem] w-[20rem] rotate-[16deg] text-white/14 sm:h-[28rem] sm:w-[28rem]" />
+                            <div className="absolute top-[4%] left-[8%] text-white/16 sm:top-[2%] sm:left-[12%] sm:text-white/18">
+                                <div className="relative">
+                                    <IslamicLantern className="h-36 w-24 -rotate-[7deg] sm:h-44 sm:w-28" />
+                                    <IslamicLantern className="absolute top-6 left-20 h-28 w-20 rotate-[10deg] opacity-85 sm:top-8 sm:left-24 sm:h-36 sm:w-24" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div className="absolute top-0 left-0 h-1 w-full bg-linear-to-r from-primary via-accent to-transparent" />
 
                     <motion.div
                         className="relative z-10 container mx-auto px-4 sm:px-6"
                         initial="hidden"
                         whileInView="show"
-                        viewport={{ once: false, amount: 0.35 }}
+                        viewport={{ once: false, amount: 0.6, margin: '0px 0px -34% 0px' }}
                         variants={heroStagger}
                     >
-                        <div className="max-w-3xl pt-16 pb-12 sm:pt-20 sm:pb-14 md:pt-24 md:pb-16">
+                        <div className="max-w-4xl pt-24 pb-12 sm:pt-32 sm:pb-16 md:pt-40 md:pb-24 lg:pt-48">
                             <motion.div
-                                className="hero-badge mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-sm"
+                                className="hero-badge mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/12 px-4 py-1.5 shadow-sm shadow-black/20"
                                 variants={slideUpStrong}
                             >
                                 <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
-                                <span className="text-xs font-medium text-white sm:text-sm">
+                                <span className="text-[0.7rem] font-bold tracking-wider text-white uppercase sm:text-xs">
                                     {heroLabel}
                                 </span>
                             </motion.div>
                             <motion.h1
-                                className="hero-title font-heading text-4xl leading-[1.04] font-extrabold text-white sm:text-5xl md:text-6xl lg:text-7xl"
+                                className="hero-title font-heading text-3xl leading-[1.1] font-extrabold text-white sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl"
                                 variants={slideUpStrong}
                             >
                                 {heroTitle}
                             </motion.h1>
                             <motion.p
-                                className="hero-desc mt-4 max-w-lg text-sm leading-relaxed text-white/72 sm:text-base md:text-lg"
+                                className="hero-desc mt-6 max-w-xl text-sm leading-relaxed text-white/80 sm:text-base md:text-lg lg:text-xl"
                                 variants={slideUpStrong}
                             >
                                 {heroDescription}
                             </motion.p>
                             <motion.div
-                                className="mt-7 flex flex-wrap gap-3"
+                                className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
                                 variants={heroStagger}
                             >
                                 <motion.div variants={slideUpStrong}>
                                     <Link
                                         href="/paket-umroh"
-                                        className="hero-cta inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-white shadow-xl shadow-primary/40 transition-all hover:scale-105 hover:bg-primary/90 active:scale-95"
+                                        className="hero-cta inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 text-sm font-bold text-white shadow-2xl shadow-primary/40 transition-all hover:scale-105 hover:bg-primary/90 active:scale-95 sm:w-auto"
                                     >
                                         {locale === 'id'
                                             ? 'Lihat Paket Umroh'
@@ -533,7 +570,7 @@ export default function Home() {
                                 <motion.div variants={slideUpStrong}>
                                     <Link
                                         href="/jadwal-keberangkatan"
-                                        className="hero-cta inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-6 py-3 text-sm font-bold text-white backdrop-blur-sm transition-all hover:scale-105 hover:bg-white/20 active:scale-95"
+                                        className="hero-cta inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/30 bg-white/12 px-8 py-4 text-sm font-bold text-white shadow-sm shadow-black/20 transition-all hover:scale-105 hover:bg-white/20 active:scale-95 sm:w-auto"
                                     >
                                         {locale === 'id'
                                             ? 'Cek Jadwal'
@@ -546,14 +583,14 @@ export default function Home() {
 
                     {stats.length > 0 ? (
                         <motion.div
-                            className="relative z-10 border-t border-white/10 bg-black/50 backdrop-blur-md"
+                            className="relative z-10 border-t border-white/10 bg-black/70"
                             initial="hidden"
                             whileInView="show"
-                            viewport={{ once: false, amount: 0.7 }}
+                            viewport={{ once: false, amount: 0.8, margin: '0px 0px -40% 0px' }}
                             variants={sectionStagger}
                         >
                             <div className="container mx-auto px-4 sm:px-6">
-                                <div className="grid grid-cols-2 divide-x divide-white/10 md:grid-cols-4">
+                                <div className="grid grid-cols-2 divide-x divide-white/10 sm:grid-cols-2 md:grid-cols-4 lg:divide-x">
                                     {stats.map((stat) => (
                                         <CountUpStat
                                             key={stat.label}
@@ -567,24 +604,31 @@ export default function Home() {
                     ) : null}
                 </section>
 
-                <section className="about-section container mx-auto grid items-center gap-12 px-4 py-20 sm:px-6 sm:py-24 md:gap-16 lg:grid-cols-2">
+                <section className="about-section relative isolate overflow-hidden py-16 sm:py-24 [content-visibility:auto] [contain-intrinsic-size:1px_900px] [contain:paint]">
+                    <div className="pointer-events-none absolute inset-0 -z-10">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_24%,rgba(230,156,50,0.26)_0%,transparent_54%),radial-gradient(circle_at_82%_18%,rgba(189,49,34,0.18)_0%,transparent_50%),radial-gradient(circle_at_88%_70%,rgba(142,16,27,0.14)_0%,transparent_58%),radial-gradient(circle_at_20%_90%,rgba(93,8,18,0.10)_0%,transparent_62%),conic-gradient(from_210deg_at_20%_58%,rgba(230,156,50,0.12)_0deg,transparent_140deg,rgba(189,49,34,0.10)_230deg,transparent_360deg),linear-gradient(135deg,rgba(255,255,255,0.32)_0%,transparent_38%,rgba(230,156,50,0.10)_72%,transparent_100%),linear-gradient(180deg,transparent_0%,rgba(93,8,18,0.05)_62%,transparent_100%)] opacity-95 dark:opacity-40" />
+                        <IslamicOrnamentRow1Col1 className="absolute top-[8%] left-[-4%] h-[18rem] w-[18rem] rotate-[-12deg] text-primary/15 sm:h-[22rem] sm:w-[22rem]" />
+                        <IslamicLantern className="absolute bottom-[-20%] right-[0%] h-[18rem] w-[12rem] rotate-[10deg] text-accent/14 sm:h-[24rem] sm:w-[16rem]" />
+                    </div>
+
+                    <div className="container mx-auto grid items-center gap-10 px-4 sm:px-6 md:gap-16 lg:grid-cols-2">
                     <motion.div
                         initial="hidden"
                         whileInView="show"
                         viewport={viewport}
                         variants={slideLeftStrong}
                     >
-                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold tracking-widest text-primary uppercase">
+                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-primary uppercase">
                             {aboutLabel}
                         </span>
-                        <h2 className="font-heading mt-5 text-3xl leading-tight font-extrabold text-foreground sm:text-4xl md:text-5xl">
+                        <h2 className="font-heading mt-5 text-3xl leading-[1.2] font-extrabold text-foreground sm:text-4xl md:text-5xl">
                             {aboutTitle}
                         </h2>
-                        <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+                        <p className="mt-6 text-sm leading-relaxed text-muted-foreground sm:text-base">
                             {aboutDescription}
                         </p>
                         <motion.div
-                            className="mt-6 flex flex-wrap gap-3"
+                            className="mt-8 flex flex-wrap gap-3"
                             initial="hidden"
                             whileInView="show"
                             viewport={viewport}
@@ -609,7 +653,7 @@ export default function Home() {
                             ].map(({ icon: Icon, label }) => (
                                 <motion.div
                                     key={label}
-                                    className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground shadow-sm"
+                                    className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-[0.7rem] font-bold text-foreground shadow-xs sm:text-xs"
                                     variants={cardBurst}
                                 >
                                     <Icon className="h-3.5 w-3.5 text-primary" />
@@ -625,7 +669,7 @@ export default function Home() {
                         >
                             <Link
                                 href="/tentang-kami"
-                                className="mt-8 inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-bold text-background transition-all hover:scale-105 hover:bg-foreground/85 active:scale-95"
+                                className="mt-10 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-8 py-4 text-sm font-bold text-background transition-all hover:scale-105 hover:bg-foreground/85 active:scale-95 sm:w-auto"
                             >
                                 {aboutCta}
                                 <ArrowRightIcon className="h-4 w-4" />
@@ -633,66 +677,42 @@ export default function Home() {
                         </motion.div>
                     </motion.div>
                     <motion.div
-                        className="relative h-72 sm:h-80 md:h-96"
+                        className="relative mt-8 h-[320px] sm:mt-0 sm:h-[400px] md:h-[480px]"
                         initial="hidden"
                         whileInView="show"
                         viewport={viewport}
                         variants={slideRightStrong}
                     >
-                        <motion.img
+                        <img
                             src={aboutPrimaryImage}
                             alt={aboutTitle}
-                            className="h-full w-full rounded-3xl object-cover shadow-2xl sm:w-3/4"
-                            whileHover={{ scale: 1.03 }}
-                            transition={{ duration: 0.35 }}
+                            className="h-full w-4/5 rounded-3xl object-cover shadow-2xl transition-transform duration-500 hover:scale-[1.02] sm:w-3/4"
                         />
-                        <motion.img
+                        <img
                             src={aboutSecondaryImage}
                             alt={aboutTitle}
-                            className="absolute right-0 -bottom-6 w-2/3 rounded-2xl border-4 border-background shadow-2xl sm:w-1/2 sm:border-8"
-                            initial={{
-                                opacity: 0,
-                                y: 40,
-                                scale: 0.86,
-                                rotate: -4,
-                            }}
-                            whileInView={{
-                                opacity: 1,
-                                y: 0,
-                                scale: 1,
-                                rotate: 0,
-                            }}
-                            viewport={viewport}
-                            transition={{
-                                type: 'spring',
-                                stiffness: 120,
-                                damping: 16,
-                                delay: 0.18,
-                            }}
+                            className="absolute right-0 -bottom-4 w-3/5 rounded-2xl border-4 border-background shadow-2xl sm:-bottom-8 sm:w-1/2 sm:border-8"
                         />
-                        <motion.div
-                            className="absolute top-[-1rem] right-4 flex items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 shadow-lg shadow-primary/30 sm:right-8"
-                            initial={{ opacity: 0, scale: 0.84, y: 24 }}
-                            whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                            viewport={viewport}
-                            transition={{
-                                type: 'spring',
-                                stiffness: 140,
-                                damping: 14,
-                                delay: 0.28,
-                            }}
+                        <div
+                            className="absolute top-[-1rem] right-4 flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 shadow-xl shadow-primary/30 sm:right-8"
                         >
                             <CheckCircle className="h-4 w-4 text-white" />
-                            <span className="text-xs font-bold text-white">
+                            <span className="text-[0.7rem] font-bold text-white sm:text-xs">
                                 {locale === 'id'
                                     ? 'Terpercaya Sejak 2009'
                                     : 'Trusted Since 2009'}
                             </span>
-                        </motion.div>
+                        </div>
                     </motion.div>
+                    </div>
                 </section>
 
-                <section className="packages-section bg-secondary/30 py-20 sm:py-24">
+                <section className="packages-section relative isolate overflow-hidden bg-secondary/30 py-16 sm:py-24 [content-visibility:auto] [contain-intrinsic-size:1px_900px] [contain:paint]">
+                    <div className="pointer-events-none absolute inset-0 -z-10">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(230,156,50,0.28)_0%,transparent_52%),radial-gradient(circle_at_88%_22%,rgba(142,16,27,0.18)_0%,transparent_56%),radial-gradient(circle_at_78%_82%,rgba(189,49,34,0.14)_0%,transparent_60%),conic-gradient(from_190deg_at_62%_34%,rgba(230,156,50,0.10)_0deg,transparent_150deg,rgba(93,8,18,0.10)_250deg,transparent_360deg),linear-gradient(135deg,rgba(255,255,255,0.40)_0%,transparent_34%,rgba(230,156,50,0.12)_70%,transparent_100%),linear-gradient(180deg,rgba(93,8,18,0.06)_0%,transparent_34%,rgba(230,156,50,0.08)_100%)] opacity-95 dark:opacity-34" />
+                        <IslamicOrnamentAbbasid className="absolute top-[10%] right-[-4%] h-[18rem] w-[18rem] rotate-[6deg] text-primary/15 sm:h-[22rem] sm:w-[22rem]" />
+                        <IslamicLantern className="absolute bottom-[-24%] left-[2%] h-[20rem] w-[13rem] -rotate-[10deg] text-primary/14 sm:h-[26rem] sm:w-[17rem]" />
+                    </div>
                     <motion.div
                         className="container mx-auto px-4 sm:px-6"
                         initial="hidden"
@@ -700,30 +720,32 @@ export default function Home() {
                         viewport={viewport}
                         variants={sectionStagger}
                     >
-                        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="mb-12 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
                             <motion.div variants={slideLeftStrong}>
-                                <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold tracking-widest text-primary uppercase">
+                                <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-primary uppercase">
                                     {locale === 'id'
                                         ? 'Pilihan Terbaik'
                                         : 'Best Picks'}
                                 </span>
-                                <h2 className="font-heading mt-3 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl">
+                                <h2 className="font-heading mt-4 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl">
                                     {packagesTitle}
                                 </h2>
                             </motion.div>
                             <motion.div
-                                className="flex gap-2"
+                                className="hidden gap-3 sm:flex"
                                 variants={slideRightStrong}
                             >
                                 <button
                                     onClick={() => handleScroll('left')}
-                                    className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-background text-foreground transition-all hover:scale-110 hover:border-primary hover:text-primary"
+                                    className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-border bg-background text-foreground transition-all hover:scale-110 hover:border-primary hover:text-primary"
+                                    aria-label="Previous"
                                 >
                                     ←
                                 </button>
                                 <button
                                     onClick={() => handleScroll('right')}
-                                    className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-background text-foreground transition-all hover:scale-110 hover:border-primary hover:text-primary"
+                                    className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-border bg-background text-foreground transition-all hover:scale-110 hover:border-primary hover:text-primary"
+                                    aria-label="Next"
                                 >
                                     →
                                 </button>
@@ -753,37 +775,20 @@ export default function Home() {
                                     href="/paket-umroh"
                                     className="pkg-card group relative block h-[400px] w-64 cursor-pointer overflow-hidden rounded-3xl sm:h-[460px] sm:w-72 md:h-[480px]"
                                 >
-                                    <motion.img
+                                    <img
                                         src={pkg.image}
                                         alt={pkg.title}
-                                        className="h-full w-full object-cover"
-                                        whileHover={{ scale: 1.08 }}
-                                        transition={{ duration: 0.55 }}
+                                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.08]"
                                     />
                                     <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
                                     {index === 0 ? (
-                                        <motion.div
+                                        <div
                                             className="absolute top-4 left-4 rounded-full bg-accent px-3 py-1 text-xs font-bold text-white shadow"
-                                            initial={{
-                                                scale: 0.72,
-                                                opacity: 0,
-                                            }}
-                                            whileInView={{
-                                                scale: 1,
-                                                opacity: 1,
-                                            }}
-                                            viewport={viewport}
-                                            transition={{
-                                                type: 'spring',
-                                                stiffness: 180,
-                                                damping: 12,
-                                                delay: 0.12,
-                                            }}
                                         >
                                             {locale === 'id'
                                                 ? 'Terlaris'
                                                 : 'Best Seller'}
-                                        </motion.div>
+                                        </div>
                                     ) : null}
                                     <div className="absolute right-0 bottom-0 left-0 p-6 text-white">
                                         <div className="flex items-center gap-1.5 text-xs text-white/70">
@@ -802,35 +807,17 @@ export default function Home() {
                                                     {pkg.price}
                                                 </p>
                                             </div>
-                                            <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs backdrop-blur-sm">
+                                            <div className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-xs">
                                                 <Clock className="h-3 w-3" />
                                                 {pkg.duration}
                                             </div>
                                         </div>
-                                        <motion.div
-                                            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-bold"
-                                            initial={{
-                                                opacity: 0,
-                                                y: 18,
-                                                scale: 0.94,
-                                            }}
-                                            whileInView={{
-                                                opacity: 1,
-                                                y: 0,
-                                                scale: 1,
-                                            }}
-                                            whileHover={{ x: 4, scale: 1.03 }}
-                                            viewport={viewport}
-                                            transition={{
-                                                duration: 0.45,
-                                                ease: [0.16, 1, 0.3, 1],
-                                            }}
-                                        >
+                                        <div className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-bold transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none">
                                             {locale === 'id'
                                                 ? 'Lihat Detail'
                                                 : 'View Detail'}
                                             <ArrowRightIcon className="h-3 w-3" />
-                                        </motion.div>
+                                        </div>
                                     </div>
                                 </Link>
                             </motion.div>
@@ -839,7 +826,14 @@ export default function Home() {
                     </motion.div>
                 </section>
 
-                <section className="services-section container mx-auto grid items-start gap-12 px-4 py-20 sm:px-6 sm:py-24 md:gap-16 lg:grid-cols-2">
+                <section className="services-section relative isolate overflow-hidden py-20 sm:py-24">
+                    <div className="pointer-events-none absolute inset-0 -z-10">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_34%,rgba(93,8,18,0.16)_0%,transparent_58%),radial-gradient(circle_at_92%_38%,rgba(230,156,50,0.22)_0%,transparent_60%),radial-gradient(circle_at_70%_92%,rgba(189,49,34,0.16)_0%,transparent_62%),radial-gradient(circle_at_20%_86%,rgba(255,214,146,0.20)_0%,transparent_64%),conic-gradient(from_210deg_at_18%_70%,rgba(93,8,18,0.08)_0deg,transparent_160deg,rgba(230,156,50,0.10)_260deg,transparent_360deg),linear-gradient(135deg,rgba(255,255,255,0.34)_0%,transparent_28%,transparent_58%,rgba(230,156,50,0.12)_100%)] opacity-92 dark:opacity-34" />
+                        <IslamicOrnamentOttomanAccent className="absolute top-[14%] right-[-6%] h-[22rem] w-[22rem] rotate-[16deg] text-accent/15 sm:h-[28rem] sm:w-[28rem]" />
+                        <IslamicLantern className="absolute bottom-[-28%] left-[6%] h-[18rem] w-[12rem] rotate-[8deg] text-primary/12 sm:h-[24rem] sm:w-[16rem]" />
+                    </div>
+
+                    <div className="container mx-auto grid items-start gap-12 px-4 sm:px-6 md:gap-16 lg:grid-cols-2">
                     <motion.div
                         className="services-header lg:sticky lg:top-24"
                         initial="hidden"
@@ -903,10 +897,15 @@ export default function Home() {
                             </motion.div>
                         ))}
                     </motion.div>
+                    </div>
                 </section>
 
                 {latestArticles.length > 0 ? (
-                    <section className="container mx-auto px-4 py-20 sm:px-6 sm:py-24">
+                    <section className="relative isolate overflow-hidden container mx-auto px-4 py-20 sm:px-6 sm:py-24">
+                        <div className="pointer-events-none absolute inset-0 -z-10">
+                            <IslamicOrnamentZellige className="absolute top-[-10%] right-[2%] h-[18rem] w-[18rem] rotate-[10deg] text-primary/15 sm:h-[22rem] sm:w-[22rem]" />
+                            <IslamicLantern className="absolute bottom-[-28%] left-[2%] h-[18rem] w-[12rem] -rotate-[8deg] text-accent/12 sm:h-[24rem] sm:w-[16rem]" />
+                        </div>
                         <motion.div
                             initial="hidden"
                             whileInView="show"
@@ -988,7 +987,12 @@ export default function Home() {
                     </section>
                 ) : null}
 
-                <section className="gallery-section bg-foreground py-20 sm:py-24">
+                <section className="gallery-section relative isolate overflow-hidden bg-foreground py-16 sm:py-24 [content-visibility:auto] [contain-intrinsic-size:1px_900px] [contain:paint]">
+                    <div className="pointer-events-none absolute inset-0 -z-10">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_14%,rgba(230,156,50,0.42)_0%,transparent_52%),radial-gradient(circle_at_84%_20%,rgba(189,49,34,0.34)_0%,transparent_56%),radial-gradient(circle_at_78%_86%,rgba(142,16,27,0.26)_0%,transparent_62%),conic-gradient(from_210deg_at_18%_70%,rgba(230,156,50,0.14)_0deg,transparent_110deg,rgba(189,49,34,0.12)_220deg,transparent_360deg),linear-gradient(90deg,rgba(255,255,255,0.06)_0%,transparent_28%,transparent_72%,rgba(255,220,157,0.08)_100%),linear-gradient(180deg,rgba(0,0,0,0.74)_0%,rgba(0,0,0,0.22)_34%,rgba(0,0,0,0.82)_100%)] opacity-92" />
+                        <IslamicOrnamentRow1Col1 className="absolute top-[8%] left-[-6%] h-[22rem] w-[22rem] rotate-[-6deg] text-white/15 mix-blend-overlay sm:h-[28rem] sm:w-[28rem]" />
+                        <IslamicLantern className="absolute bottom-[-30%] right-[2%] h-[20rem] w-[13rem] rotate-[12deg] text-white/14 sm:h-[26rem] sm:w-[17rem]" />
+                    </div>
                     <motion.div
                         className="container mx-auto px-4 sm:px-6"
                         initial="hidden"
@@ -996,14 +1000,14 @@ export default function Home() {
                         viewport={viewport}
                         variants={sectionStagger}
                     >
-                        <div className="mb-12 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="mb-12 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                             <motion.div variants={slideLeftStrong}>
-                                <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold tracking-widest text-white/60 uppercase">
+                                <span className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-white/60 uppercase">
                                     {locale === 'id'
                                         ? 'Momen Bersama'
                                         : 'Our Moments'}
                                 </span>
-                                <h2 className="font-heading mt-3 text-3xl font-extrabold text-white sm:text-4xl md:text-5xl">
+                                <h2 className="font-heading mt-4 text-3xl font-extrabold text-white sm:text-4xl md:text-5xl">
                                     {galleryTitle}
                                 </h2>
                             </motion.div>
@@ -1015,17 +1019,17 @@ export default function Home() {
                             </motion.p>
                         </div>
                         <motion.div
-                            className="grid auto-rows-[130px] grid-cols-2 gap-3 sm:auto-rows-[160px] sm:gap-4 md:auto-rows-[190px] md:grid-cols-4"
+                            className="grid auto-rows-[120px] grid-cols-2 gap-3 sm:auto-rows-[160px] sm:gap-4 md:auto-rows-[190px] md:grid-cols-4"
                             variants={sectionStagger}
                         >
                             {galleryImages.map((image, index) => {
                                 const spans = [
-                                    'md:col-span-2 md:row-span-2',
-                                    'md:col-span-1',
-                                    'md:col-span-1',
-                                    'md:col-span-2',
-                                    'md:col-span-1',
-                                    'md:col-span-1',
+                                    'col-span-2 row-span-2 md:col-span-2 md:row-span-2',
+                                    'col-span-1',
+                                    'col-span-1',
+                                    'col-span-2 md:col-span-2',
+                                    'col-span-1',
+                                    'col-span-1',
                                 ];
 
                                 return (
@@ -1034,16 +1038,14 @@ export default function Home() {
                                         className={`gallery-item group relative overflow-hidden rounded-2xl bg-white/5 ${spans[index % spans.length]}`}
                                         variants={cardBurst}
                                     >
-                                        <motion.img
+                                        <img
                                             src={image.src}
                                             alt={image.alt}
-                                            className="absolute inset-0 h-full w-full object-cover"
-                                            whileHover={{ scale: 1.08 }}
-                                            transition={{ duration: 0.5 }}
+                                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.08]"
                                         />
-                                        <div className="absolute inset-0 bg-black/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                                         <div className="absolute inset-0 flex items-end p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                                            <p className="text-xs font-semibold text-white drop-shadow">
+                                            <p className="text-[0.65rem] font-bold text-white drop-shadow-md sm:text-xs">
                                                 {image.alt}
                                             </p>
                                         </div>
@@ -1054,107 +1056,51 @@ export default function Home() {
                     </motion.div>
                 </section>
 
-                <section className="faq-section container mx-auto px-4 py-20 sm:px-6 sm:py-24">
-                    <motion.div
-                        className="mx-auto max-w-2xl text-center"
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={viewport}
-                        variants={sectionStagger}
-                    >
-                        <motion.span
-                            className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold tracking-widest text-primary uppercase"
-                            variants={slideUpStrong}
-                        >
+                <section className="faq-section relative isolate overflow-hidden bg-white px-4 py-16 sm:px-6 sm:py-24">
+                    <div className="pointer-events-none absolute inset-0 -z-10">
+                        <IslamicOrnamentKhatam className="absolute top-[18%] right-[-6%] h-[18rem] w-[18rem] rotate-[12deg] text-accent/15 sm:h-[22rem] sm:w-[22rem]" />
+                        <IslamicLantern className="absolute bottom-[-32%] left-[0%] h-[18rem] w-[12rem] -rotate-[10deg] text-primary/12 sm:h-[24rem] sm:w-[16rem]" />
+                    </div>
+                    <div className="mx-auto max-w-2xl text-center">
+                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-primary uppercase">
                             FAQ
-                        </motion.span>
-                        <motion.h2
-                            className="font-heading mt-5 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl"
-                            variants={slideUpStrong}
-                        >
+                        </span>
+                        <h2 className="font-heading mt-4 text-3xl font-extrabold text-foreground sm:text-4xl md:text-5xl">
                             {faqTitle}
-                        </motion.h2>
-                        <motion.p
-                            className="mt-4 text-base text-muted-foreground"
-                            variants={slideUpStrong}
-                        >
+                        </h2>
+                        <p className="mt-5 text-sm text-muted-foreground sm:text-base">
                             {faqDescription}
-                        </motion.p>
-                    </motion.div>
-                    <motion.div
-                        className="mx-auto mt-12 max-w-3xl space-y-3"
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={viewport}
-                        variants={sectionStagger}
-                    >
+                        </p>
+                    </div>
+
+                    <div className="mx-auto mt-12 max-w-3xl space-y-4">
                         {faqItems.map((item, index) => (
-                            <motion.div
+                            <details
                                 key={`${item.question}_${index}`}
-                                className="faq-item overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:border-primary/30 hover:shadow-md"
-                                variants={cardBurst}
+                                className="group rounded-2xl border border-border bg-card shadow-xs"
                             >
-                                <button
-                                    className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
-                                    onClick={() =>
-                                        setOpenFaq(
-                                            openFaq === index ? null : index,
-                                        )
-                                    }
-                                >
-                                    <span className="text-sm font-semibold text-foreground">
+                                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-5 text-left sm:px-7 [&::-webkit-details-marker]:hidden">
+                                    <span className="text-sm font-bold text-foreground sm:text-base">
                                         {item.question}
                                     </span>
-                                    <motion.span
-                                        animate={{
-                                            rotate: openFaq === index ? 45 : 0,
-                                        }}
-                                        transition={{
-                                            type: 'spring',
-                                            stiffness: 220,
-                                            damping: 18,
-                                        }}
-                                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-border text-muted-foreground ${openFaq === index ? 'border-primary bg-primary/10 text-primary' : ''}`}
-                                    >
+                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-border text-muted-foreground group-open:rotate-45">
                                         +
-                                    </motion.span>
-                                </button>
-                                <AnimatePresence initial={false}>
-                                    {openFaq === index ? (
-                                        <motion.div
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{
-                                                height: 'auto',
-                                                opacity: 1,
-                                            }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{
-                                                duration: 0.28,
-                                                ease: [0.22, 1, 0.36, 1],
-                                            }}
-                                            className="overflow-hidden"
-                                        >
-                                            <motion.p
-                                                initial={{ y: -8, opacity: 0 }}
-                                                animate={{ y: 0, opacity: 1 }}
-                                                exit={{ y: -8, opacity: 0 }}
-                                                transition={{ duration: 0.22 }}
-                                                className="px-6 pb-5 text-sm leading-relaxed text-muted-foreground"
-                                            >
-                                                {item.answer}
-                                            </motion.p>
-                                        </motion.div>
-                                    ) : null}
-                                </AnimatePresence>
-                            </motion.div>
+                                    </span>
+                                </summary>
+                                <div className="px-5 pb-6 sm:px-7">
+                                    <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
+                                        {item.answer}
+                                    </p>
+                                </div>
+                            </details>
                         ))}
-                    </motion.div>
+                    </div>
                 </section>
 
                 {hasContactPanel ? (
-                    <section className="contact-section container mx-auto px-4 pb-20 sm:px-6 sm:pb-24">
+                    <section className="contact-section container mx-auto px-4 pb-16 sm:px-6 sm:pb-24 [content-visibility:auto] [contain-intrinsic-size:1px_900px]">
                         <motion.div
-                            className="relative overflow-hidden rounded-3xl bg-linear-to-br from-foreground via-foreground to-primary px-6 py-12 text-background shadow-2xl sm:px-10 sm:py-14 lg:px-14"
+                            className="relative overflow-hidden rounded-[32px] bg-linear-to-br from-foreground via-foreground to-primary px-6 py-12 text-background shadow-2xl sm:rounded-[48px] sm:px-12 sm:py-16 lg:px-16"
                             initial={{ opacity: 0, y: 56, scale: 0.96 }}
                             whileInView={{ opacity: 1, y: 0, scale: 1 }}
                             viewport={viewport}
@@ -1163,9 +1109,13 @@ export default function Home() {
                                 ease: [0.16, 1, 0.3, 1],
                             }}
                         >
-                            <div className="absolute top-[-5rem] right-[-5rem] h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-                            <div className="absolute bottom-[-5rem] left-[-5rem] h-64 w-64 rounded-full bg-accent/10 blur-3xl" />
-                            <div className="relative grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
+                            <div className="pointer-events-none absolute inset-0">
+                                <IslamicLantern className="absolute top-[-22%] left-[0%] h-[18rem] w-[12rem] rotate-[-8deg] text-white/14 sm:h-[24rem] sm:w-[16rem]" />
+                                <IslamicOrnamentAbbasid
+                                    className="absolute bottom-[-20%] right-[-6%] h-[22rem] w-[22rem] rotate-[14deg] text-white/15 mix-blend-overlay sm:h-[28rem] sm:w-[28rem]"
+                                />
+                            </div>
+                            <div className="relative grid gap-12 lg:grid-cols-[1.2fr_0.8fr]">
                                 <motion.div
                                     initial="hidden"
                                     whileInView="show"
@@ -1173,41 +1123,41 @@ export default function Home() {
                                     variants={sectionStagger}
                                 >
                                     <motion.span
-                                        className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs font-bold tracking-widest text-background/60 uppercase"
+                                        className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-background/60 uppercase"
                                         variants={slideUpStrong}
                                     >
                                         {contactLabel}
                                     </motion.span>
                                     <motion.h2
-                                        className="font-heading mt-5 text-3xl leading-tight font-extrabold sm:text-4xl md:text-5xl"
+                                        className="font-heading mt-5 text-3xl leading-tight font-extrabold sm:text-4xl md:text-5xl lg:text-6xl"
                                         variants={slideUpStrong}
                                     >
                                         {contactTitle}
                                     </motion.h2>
                                     <motion.p
-                                        className="mt-4 text-base leading-relaxed text-background/65"
+                                        className="mt-6 text-sm leading-relaxed text-background/75 sm:text-base md:text-lg"
                                         variants={slideUpStrong}
                                     >
                                         {contactDescription}
                                     </motion.p>
                                     <motion.div
-                                        className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap"
+                                        className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center"
                                         variants={heroStagger}
                                     >
                                         {whatsappLink ? (
                                             <motion.a
                                                 href={whatsappLink}
-                                                className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-sm font-bold text-white shadow-lg shadow-primary/40 transition-all hover:scale-105 hover:bg-primary/90 active:scale-95"
+                                                className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 text-sm font-bold text-white shadow-xl shadow-primary/40 transition-all hover:scale-105 hover:bg-primary/90 active:scale-95"
                                                 variants={slideUpStrong}
                                             >
-                                                <MessageCircle className="h-4 w-4" />
+                                                <MessageCircle className="h-5 w-5" />
                                                 {contactWhatsapp}
                                             </motion.a>
                                         ) : null}
                                         <motion.div variants={slideUpStrong}>
                                             <Link
                                                 href="/kontak"
-                                                className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-background/30 px-6 py-3.5 text-sm font-bold text-background/85 transition-all hover:scale-105 hover:border-background/60 hover:bg-background/10 active:scale-95"
+                                                className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-background/25 bg-background/8 px-8 py-4 text-sm font-bold text-background/90 transition-all hover:scale-105 hover:border-background/50 hover:bg-background/10 active:scale-95 sm:w-auto"
                                             >
                                                 {contactFull}
                                                 <ArrowRightIcon className="h-4 w-4" />
@@ -1216,7 +1166,7 @@ export default function Home() {
                                     </motion.div>
                                 </motion.div>
                                 <motion.div
-                                    className="grid gap-4 rounded-2xl bg-white/8 p-6 backdrop-blur-sm"
+                                    className="flex flex-col gap-5 rounded-[24px] bg-white/12 p-6 ring-1 ring-white/12 sm:p-8"
                                     initial="hidden"
                                     whileInView="show"
                                     viewport={viewport}
@@ -1226,17 +1176,17 @@ export default function Home() {
                                         ({ icon: Icon, label, value }) => (
                                             <motion.div
                                                 key={label}
-                                                className="flex items-center gap-4 text-sm text-background/80"
+                                                className="flex items-start gap-5 text-sm text-background/85"
                                                 variants={cardBurst}
                                             >
-                                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
-                                                    <Icon className="h-4 w-4" />
+                                                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white shadow-inner">
+                                                    <Icon className="h-5 w-5" />
                                                 </span>
-                                                <div>
-                                                    <p className="text-xs tracking-widest text-background/45 uppercase">
+                                                <div className="min-w-0">
+                                                    <p className="text-[0.6rem] font-bold tracking-widest text-background/50 uppercase">
                                                         {label}
                                                     </p>
-                                                    <p className="font-semibold">
+                                                    <p className="mt-1 break-words text-sm font-bold sm:text-base">
                                                         {value}
                                                     </p>
                                                 </div>
@@ -1245,15 +1195,15 @@ export default function Home() {
                                     )}
                                     {contactSocials.length > 0 ? (
                                         <motion.div
-                                            className="pt-2"
+                                            className="mt-4 pt-6 border-t border-white/10"
                                             variants={slideUpStrong}
                                         >
-                                            <p className="text-xs tracking-widest text-background/45 uppercase">
+                                            <p className="text-[0.6rem] font-bold tracking-widest text-background/50 uppercase">
                                                 {locale === 'id'
-                                                    ? 'Sosial Media'
+                                                    ? 'Media Sosial'
                                                     : 'Social Media'}
                                             </p>
-                                            <div className="mt-3 flex flex-wrap gap-2">
+                                            <div className="mt-4 flex flex-wrap gap-2.5">
                                                 {contactSocials.map(
                                                     (social, index) => {
                                                         const Icon =
@@ -1267,12 +1217,12 @@ export default function Home() {
                                                                 }
                                                                 rel="noreferrer"
                                                                 target="_blank"
-                                                                className="inline-flex items-center gap-2 rounded-full border border-background/20 px-3 py-2 text-xs font-semibold text-background/75 transition-all hover:scale-105 hover:border-background/50 hover:bg-background/10"
+                                                                className="inline-flex items-center gap-2 rounded-full border border-background/20 bg-white/5 px-4 py-2.5 text-xs font-bold text-background/80 transition-all hover:scale-105 hover:border-background/50 hover:bg-white/10"
                                                                 variants={
                                                                     cardBurst
                                                                 }
                                                             >
-                                                                <Icon className="h-3.5 w-3.5" />
+                                                                <Icon className="h-4 w-4" />
                                                                 {social.label}
                                                             </motion.a>
                                                         );

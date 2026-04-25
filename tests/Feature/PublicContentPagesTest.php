@@ -61,4 +61,51 @@ class PublicContentPagesTest extends TestCase
                 ->where('publicData.pages.custom-umroh.slug', 'custom-umroh'),
             );
     }
+
+    public function test_policy_pages_receive_portal_content_from_database(): void
+    {
+        PageContent::query()->create([
+            'slug' => 'terms-conditions',
+            'category' => 'page',
+            'title' => ['id' => 'Syarat & Ketentuan', 'en' => 'Terms & Conditions'],
+            'excerpt' => ['id' => 'Aturan penggunaan layanan.', 'en' => 'Rules for using the service.'],
+            'content' => [
+                'body' => [
+                    'id' => '<h2>Terms</h2><p>Isi terms.</p>',
+                    'en' => '<h2>Terms</h2><p>Terms body.</p>',
+                ],
+            ],
+            'is_active' => true,
+        ]);
+
+        PageContent::query()->create([
+            'slug' => 'privacy-policy',
+            'category' => 'page',
+            'title' => ['id' => 'Kebijakan Privasi', 'en' => 'Privacy Policy'],
+            'excerpt' => ['id' => 'Aturan privasi.', 'en' => 'Privacy rules.'],
+            'content' => [
+                'body' => [
+                    'id' => '<h2>Privasi</h2><p>Isi privasi.</p>',
+                    'en' => '<h2>Privacy</h2><p>Privacy body.</p>',
+                ],
+            ],
+            'is_active' => true,
+        ]);
+
+        $this->get(route('public.terms'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/policy/index')
+                ->where('slug', 'terms-conditions')
+                ->where('publicData.pages.terms-conditions.slug', 'terms-conditions'),
+            );
+
+        $this->get(route('public.privacy'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/policy/index')
+                ->where('slug', 'privacy-policy')
+                ->where('publicData.pages.privacy-policy.slug', 'privacy-policy'),
+            );
+    }
 }

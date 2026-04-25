@@ -1,4 +1,10 @@
 import { MotionCard, MotionSection } from '@/components/public-motion';
+import {
+    IslamicOrnamentOttoman,
+    IslamicOrnamentOttomanAccent,
+    IslamicOrnamentRow1Col1,
+    IslamicOrnamentZellige,
+} from '@/components/public-ornaments';
 import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
@@ -81,6 +87,7 @@ export default function PaketDetail() {
     );
     const nextSchedule = openSchedules[0] ?? null;
     const registrationLink = `/paket-umroh/${pkg.slug}/daftar${nextSchedule?.id ? `?schedule=${nextSchedule.id}` : ''}`;
+    const packagePdfDownloadUrl = `/paket-umroh/${pkg.slug}/sk.pdf?lang=${locale}&download=1`;
 
     const whatsappMsg = encodeURIComponent(
         `Halo, saya tertarik dengan paket *${name}* (${pkg.code}). Mohon info lebih lanjut.`,
@@ -570,6 +577,26 @@ export default function PaketDetail() {
                     </h2>
                     <div className="rounded-2xl border border-border bg-muted/30 p-5 text-sm leading-relaxed text-foreground">
                         {policy}
+                        <div className="mt-4 border-t border-border/70 pt-4">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                                <Link
+                                    href="/terms-conditions"
+                                    className="inline-flex items-center justify-center rounded-full bg-foreground px-4 py-2 text-xs font-bold text-background transition hover:bg-foreground/90"
+                                >
+                                    {locale === 'id'
+                                        ? 'Baca Syarat & Ketentuan'
+                                        : 'Read Terms & Conditions'}
+                                </Link>
+                                <a
+                                    href={packagePdfDownloadUrl}
+                                    className="inline-flex items-center justify-center rounded-full bg-primary px-4 py-2 text-xs font-bold text-white shadow-sm shadow-primary/30 transition hover:bg-primary/90"
+                                >
+                                    {locale === 'id'
+                                        ? 'Download SK (PDF)'
+                                        : 'Download SK (PDF)'}
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </section>
             )}

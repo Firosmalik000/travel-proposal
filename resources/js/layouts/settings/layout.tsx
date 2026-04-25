@@ -10,7 +10,7 @@ import { show } from '@/routes/two-factor';
 import { edit as editPassword } from '@/routes/user-password';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { KeyRound, ShieldCheck, SunMoon, User } from 'lucide-react';
+import { CalendarClock, KeyRound, ShieldCheck, SunMoon, User } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
 
 const sidebarNavItems: NavItem[] = [
@@ -34,6 +34,11 @@ const sidebarNavItems: NavItem[] = [
         href: editAppearance(),
         icon: SunMoon,
     },
+    {
+        title: 'Schedule',
+        href: '/settings/schedule',
+        icon: CalendarClock,
+    },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
@@ -55,7 +60,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             <div className="mx-auto max-w-7xl space-y-6">
                 <Heading
                     title="Settings"
-                    description="Manage your profile and account settings"
+                    description="Manage your profile, account, and scheduler settings"
                 />
 
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-10">

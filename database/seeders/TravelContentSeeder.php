@@ -8,7 +8,6 @@ use App\Models\Faq;
 use App\Models\GalleryItem;
 use App\Models\LegalDocument;
 use App\Models\PageContent;
-use App\Models\Partner;
 use App\Models\TeamMember;
 use App\Models\Testimonial;
 use App\Models\TravelService;
@@ -28,7 +27,6 @@ class TravelContentSeeder extends Seeder
         $this->seedGallery();
         $this->seedTeam();
         $this->seedLegalDocuments();
-        $this->seedPartners();
         $this->seedCareerOpenings();
     }
 
@@ -38,6 +36,14 @@ class TravelContentSeeder extends Seeder
             'id' => $id,
             'en' => $en ?? $id,
         ];
+    }
+
+    /**
+     * @param  array<int, string>  $blocks
+     */
+    private function html(array $blocks): string
+    {
+        return implode('', $blocks);
     }
 
     private function seedBrandingSettings(): void
@@ -147,7 +153,7 @@ class TravelContentSeeder extends Seeder
                         ['value' => '15+', 'label' => $this->localize('Tahun Melayani', 'Years of Service')],
                         ['value' => '98%', 'label' => $this->localize('Kepuasan Jamaah', 'Pilgrim Satisfaction')],
                         ['value' => '20K+', 'label' => $this->localize('Jamaah Berangkat', 'Pilgrims Departed')],
-                        ['value' => '50+', 'label' => $this->localize('Mitra Terpercaya', 'Trusted Partners')],
+                        ['value' => '50+', 'label' => $this->localize('Program Terlaksana', 'Programs Delivered')],
                     ],
                     'about' => [
                         'label' => $this->localize('Tentang Kami', 'About Us'),
@@ -231,7 +237,7 @@ class TravelContentSeeder extends Seeder
                         ['value' => '15+', 'label' => $this->localize('Tahun Melayani', 'Years Serving')],
                         ['value' => '20K+', 'label' => $this->localize('Jamaah Berangkat', 'Pilgrims Departed')],
                         ['value' => '98%', 'label' => $this->localize('Kepuasan Jamaah', 'Pilgrim Satisfaction')],
-                        ['value' => '50+', 'label' => $this->localize('Mitra Terpercaya', 'Trusted Partners')],
+                        ['value' => '50+', 'label' => $this->localize('Program Terlaksana', 'Programs Delivered')],
                     ],
                 ],
             ],
@@ -287,6 +293,30 @@ class TravelContentSeeder extends Seeder
                         'title' => $this->localize('Legalitas & Perizinan', 'Licenses & Legalities'),
                         'description' => $this->localize('Informasi resmi yang memperkuat kepercayaan jamaah.', 'Verified information that strengthens pilgrim trust.'),
                     ],
+                    'body' => $this->localize(
+                        $this->html([
+                            '<p>Asfar Tour berkomitmen menjalankan operasional perjalanan ibadah secara legal, transparan, dan mudah diverifikasi oleh calon jamaah maupun keluarga.</p>',
+                            '<h2>Komitmen Legalitas</h2>',
+                            '<ul>',
+                            '<li>Setiap transaksi diarahkan melalui rekening resmi perusahaan.</li>',
+                            '<li>Dokumen perizinan dan identitas usaha dapat diverifikasi melalui tim admin resmi.</li>',
+                            '<li>Informasi paket, jadwal, dan fasilitas selalu disampaikan tertulis sebelum keberangkatan.</li>',
+                            '</ul>',
+                            '<h3>Catatan Penting</h3>',
+                            '<p>Apabila Anda menerima penawaran dari pihak yang mengatasnamakan perusahaan, pastikan nomor kontak, rekening, dan dokumen pendukung sesuai dengan kanal resmi yang tercantum di website.</p>',
+                        ]),
+                        $this->html([
+                            '<p>Asfar Tour is committed to operating pilgrimage journeys legally, transparently, and in a way that is easy for pilgrims and families to verify.</p>',
+                            '<h2>Legal Commitment</h2>',
+                            '<ul>',
+                            '<li>All transactions are directed through the official company bank account.</li>',
+                            '<li>Licenses and company identity documents can be verified through the official admin team.</li>',
+                            '<li>Package details, schedules, and facilities are always shared in writing before departure.</li>',
+                            '</ul>',
+                            '<h3>Important Note</h3>',
+                            '<p>If you receive an offer from someone claiming to represent the company, make sure the contact number, bank account, and supporting documents match the official channels listed on the website.</p>',
+                        ]),
+                    ),
                     'docs_title' => $this->localize('Dokumen Legalitas', 'Legal Documents'),
                     'bank_title' => $this->localize('Rekening Resmi', 'Official Bank Account'),
                     'bank_lines' => [
@@ -302,6 +332,132 @@ class TravelContentSeeder extends Seeder
                 ],
             ],
             [
+                'slug' => 'terms-conditions',
+                'category' => 'page',
+                'title' => $this->localize('Syarat & Ketentuan', 'Terms & Conditions'),
+                'excerpt' => $this->localize('Ketentuan penggunaan layanan, pendaftaran, dan transaksi.', 'Rules for using the service, registration, and transactions.'),
+                'content' => [
+                    'body' => $this->localize(
+                        $this->html([
+                            '<p>Dengan menggunakan layanan Asfar Tour, pengguna dianggap telah memahami alur pendaftaran, pembayaran, dan komunikasi resmi yang berlaku.</p>',
+                            '<h2>Ketentuan Umum</h2>',
+                            '<ul>',
+                            '<li>Pendaftaran dinyatakan aktif setelah data jamaah dan pembayaran awal diterima.</li>',
+                            '<li>Harga paket mengikuti detail yang tertulis pada invoice atau penawaran resmi.</li>',
+                            '<li>Perubahan jadwal keberangkatan mengikuti ketersediaan seat dan kebijakan maskapai.</li>',
+                            '</ul>',
+                            '<h2>Tanggung Jawab Pengguna</h2>',
+                            '<p>Calon jamaah wajib memberikan data identitas yang benar, aktif merespons kebutuhan dokumen, dan mengikuti arahan administrasi sebelum keberangkatan.</p>',
+                        ]),
+                        $this->html([
+                            '<p>By using Asfar Tour services, users are considered to understand the active registration, payment, and official communication flow.</p>',
+                            '<h2>General Terms</h2>',
+                            '<ul>',
+                            '<li>Registration becomes active after pilgrim data and the initial payment are received.</li>',
+                            '<li>Package prices follow the details stated in the invoice or official quotation.</li>',
+                            '<li>Departure schedule changes are subject to seat availability and airline policies.</li>',
+                            '</ul>',
+                            '<h2>User Responsibility</h2>',
+                            '<p>Pilgrims are required to provide accurate identity data, respond to document requests, and follow administrative guidance before departure.</p>',
+                        ]),
+                    ),
+                ],
+                'is_active' => true,
+            ],
+            [
+                'slug' => 'privacy-policy',
+                'category' => 'page',
+                'title' => $this->localize('Kebijakan Privasi', 'Privacy Policy'),
+                'excerpt' => $this->localize('Pengelolaan data pribadi jamaah dan pengguna website.', 'Management of pilgrim personal data and website user information.'),
+                'content' => [
+                    'body' => $this->localize(
+                        $this->html([
+                            '<p>Data pribadi digunakan untuk proses registrasi, komunikasi layanan, validasi dokumen, dan peningkatan kualitas pendampingan jamaah.</p>',
+                            '<h2>Data yang Dikumpulkan</h2>',
+                            '<ul>',
+                            '<li>Identitas dasar seperti nama, nomor telepon, email, dan alamat.</li>',
+                            '<li>Dokumen perjalanan yang dibutuhkan untuk pengurusan keberangkatan.</li>',
+                            '<li>Riwayat komunikasi yang berkaitan dengan konsultasi dan transaksi.</li>',
+                            '</ul>',
+                            '<h2>Perlindungan Data</h2>',
+                            '<p>Kami membatasi akses data hanya untuk tim internal yang membutuhkan dan tidak membagikan data kepada pihak luar tanpa dasar yang sah.</p>',
+                        ]),
+                        $this->html([
+                            '<p>Personal data is used for registration, service communication, document validation, and improving pilgrim assistance.</p>',
+                            '<h2>Collected Data</h2>',
+                            '<ul>',
+                            '<li>Basic identity such as name, phone number, email, and address.</li>',
+                            '<li>Travel documents required for departure arrangements.</li>',
+                            '<li>Communication history related to consultation and transactions.</li>',
+                            '</ul>',
+                            '<h2>Data Protection</h2>',
+                            '<p>We limit data access to the internal team that needs it and do not share data with external parties without a valid basis.</p>',
+                        ]),
+                    ),
+                ],
+                'is_active' => true,
+            ],
+            [
+                'slug' => 'refund-policy',
+                'category' => 'page',
+                'title' => $this->localize('Kebijakan Refund', 'Refund Policy'),
+                'excerpt' => $this->localize('Aturan refund, reschedule, dan pembatalan keberangkatan.', 'Refund, reschedule, and cancellation rules for departures.'),
+                'content' => [
+                    'body' => $this->localize(
+                        $this->html([
+                            '<p>Permintaan refund atau perubahan jadwal diproses berdasarkan status pembayaran, progres pengurusan dokumen, dan kebijakan vendor terkait.</p>',
+                            '<h2>Pengajuan Refund</h2>',
+                            '<ul>',
+                            '<li>Pengajuan wajib dilakukan melalui admin resmi perusahaan.</li>',
+                            '<li>Nominal refund dapat dipotong biaya administrasi, visa, tiket, atau komponen lain yang sudah diproses.</li>',
+                            '<li>Estimasi penyelesaian mengikuti hasil verifikasi internal dan vendor.</li>',
+                            '</ul>',
+                            '<h2>Perubahan Jadwal</h2>',
+                            '<p>Reschedule akan dibantu sesuai seat yang tersedia dan selisih biaya yang mungkin timbul pada periode baru.</p>',
+                        ]),
+                        $this->html([
+                            '<p>Refund and schedule change requests are processed based on payment status, document progress, and related vendor policies.</p>',
+                            '<h2>Refund Requests</h2>',
+                            '<ul>',
+                            '<li>Requests must be submitted through the official company admin.</li>',
+                            '<li>The refund amount may be reduced by administration, visa, ticket, or other processed component costs.</li>',
+                            '<li>Completion timing depends on internal and vendor verification.</li>',
+                            '</ul>',
+                            '<h2>Schedule Changes</h2>',
+                            '<p>Rescheduling will be assisted based on available seats and any fare differences in the new period.</p>',
+                        ]),
+                    ),
+                ],
+                'is_active' => true,
+            ],
+            [
+                'slug' => 'disclaimer',
+                'category' => 'page',
+                'title' => $this->localize('Disclaimer', 'Disclaimer'),
+                'excerpt' => $this->localize('Batas tanggung jawab informasi dan layanan.', 'Service and information liability limitations.'),
+                'content' => [
+                    'body' => $this->localize(
+                        $this->html([
+                            '<p>Informasi pada website disediakan untuk membantu calon jamaah memahami layanan, namun detail akhir tetap mengacu pada penawaran resmi, invoice, dan dokumen perjalanan.</p>',
+                            '<ul>',
+                            '<li>Ketersediaan seat, harga, dan jadwal dapat berubah mengikuti vendor dan kondisi operasional.</li>',
+                            '<li>Materi website tidak menggantikan verifikasi administratif yang diwajibkan sebelum keberangkatan.</li>',
+                            '<li>Keputusan akhir terkait visa dan regulasi perjalanan tetap mengikuti otoritas terkait.</li>',
+                            '</ul>',
+                        ]),
+                        $this->html([
+                            '<p>The information on this website is provided to help prospective pilgrims understand the services, but final details always follow the official quotation, invoice, and travel documents.</p>',
+                            '<ul>',
+                            '<li>Seat availability, pricing, and schedules may change based on vendors and operational conditions.</li>',
+                            '<li>Website material does not replace administrative verification required before departure.</li>',
+                            '<li>Final decisions regarding visas and travel regulations remain subject to the relevant authorities.</li>',
+                            '</ul>',
+                        ]),
+                    ),
+                ],
+                'is_active' => true,
+            ],
+            [
                 'slug' => 'galeri',
                 'category' => 'page',
                 'title' => $this->localize('Galeri Foto & Video', 'Photo & Video Gallery'),
@@ -309,21 +465,6 @@ class TravelContentSeeder extends Seeder
                 'content' => [
                     'badge' => $this->localize('Gallery', 'Gallery'),
                     'description' => $this->localize('Dokumentasi jamaah, hotel, manasik, dan perjalanan di tanah suci.', 'Documentation of pilgrims, hotels, manasik, and journeys in the holy land.'),
-                ],
-            ],
-            [
-                'slug' => 'mitra',
-                'category' => 'page',
-                'title' => $this->localize('Mitra, Corporate, & Komunitas', 'Partners, Corporate, & Community'),
-                'excerpt' => $this->localize('Program kerja sama untuk corporate dan komunitas.', 'Partnership programs for corporate and community groups.'),
-                'content' => [
-                    'badge' => $this->localize('Partner', 'Partner'),
-                    'subtitle' => $this->localize('Program kerja sama untuk kantor, komunitas, dan organisasi.', 'Collaboration programs for offices, communities, and organizations.'),
-                    'description' => $this->localize(
-                        'Kami menyediakan penawaran khusus untuk perjalanan rombongan dan corporate.',
-                        'We provide special offers for group and corporate trips.',
-                    ),
-                    'cta' => $this->localize('Hubungi Tim Mitra', 'Contact Partner Team'),
                 ],
             ],
             [
@@ -496,18 +637,6 @@ class TravelContentSeeder extends Seeder
 
         foreach ($rows as $row) {
             LegalDocument::query()->updateOrCreate(['sort_order' => $row['sort_order']], $row + ['is_active' => true]);
-        }
-    }
-
-    private function seedPartners(): void
-    {
-        $rows = [
-            ['name' => 'Garuda Indonesia', 'category' => 'maskapai', 'description' => $this->localize('Partner penerbangan untuk keberangkatan tertentu.', 'Flight partner for selected departures.'), 'logo_path' => '/images/dummy.jpg', 'sort_order' => 1],
-            ['name' => 'Saudia', 'category' => 'maskapai', 'description' => $this->localize('Maskapai internasional untuk paket reguler dan premium.', 'International airline for regular and premium packages.'), 'logo_path' => '/images/dummy.jpg', 'sort_order' => 2],
-        ];
-
-        foreach ($rows as $row) {
-            Partner::query()->updateOrCreate(['name' => $row['name']], $row + ['is_active' => true]);
         }
     }
 
