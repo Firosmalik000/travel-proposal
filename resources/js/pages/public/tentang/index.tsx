@@ -16,7 +16,7 @@ import { Head, Link } from '@inertiajs/react';
 import { motion, type Variants } from 'framer-motion';
 import { Award, CheckCircle, Heart, Shield, Star, Users } from 'lucide-react';
 
-const viewport = { once: false, amount: 0.5, margin: '0px 0px -22% 0px' };
+const viewport = { once: false, amount: 0.15, margin: '12% 0px 30% 0px' };
 
 const staggerParent: Variants = {
     animate: {

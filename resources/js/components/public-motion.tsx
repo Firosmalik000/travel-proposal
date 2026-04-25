@@ -1,12 +1,12 @@
 import { motion, type HTMLMotionProps, type Variants } from 'framer-motion';
 
-// Public animations should repeat, but we tune the viewport so it doesn't rapidly
-// toggle enter/leave (which causes jank). Higher amount + negative bottom margin
-// means it must be more "in view" before playing again.
+// Public animations should repeat, and should trigger as soon as content starts
+// entering the viewport (especially on mobile). We also add a generous positive
+// bottom rootMargin so IntersectionObserver doesn't miss tall sections/cards.
 export const publicViewport = {
     once: false,
-    amount: 0.6,
-    margin: '0px 0px -34% 0px',
+    amount: 0.15,
+    margin: '12% 0px 30% 0px',
 };
 
 export const publicSectionVariants: Variants = {

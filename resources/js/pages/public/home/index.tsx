@@ -87,7 +87,7 @@ type ArticleItem = {
     readingTime: string;
 };
 
-const viewport = { once: false, amount: 0.6, margin: '0px 0px -34% 0px' };
+const viewport = { once: false, amount: 0.15, margin: '12% 0px 30% 0px' };
 
 const sectionStagger: Variants = {
     hidden: {},
@@ -212,8 +212,8 @@ function CountUpStat({ value, label }: StatItem) {
     const statRef = useRef<HTMLDivElement>(null);
     const valueRef = useRef<HTMLParagraphElement>(null);
     const isInView = useInView(statRef, {
-        amount: 0.75,
-        margin: '0px 0px -40% 0px',
+        amount: 0.5,
+        margin: '12% 0px 30% 0px',
         once: false,
     });
     const lastCommittedValueRef = useRef<string>(value);
@@ -527,7 +527,7 @@ export default function Home() {
                         className="relative z-10 container mx-auto px-4 sm:px-6"
                         initial="hidden"
                         whileInView="show"
-                        viewport={{ once: false, amount: 0.6, margin: '0px 0px -34% 0px' }}
+                        viewport={{ once: false, amount: 0.15, margin: '12% 0px 30% 0px' }}
                         variants={heroStagger}
                     >
                         <div className="max-w-4xl pt-24 pb-12 sm:pt-32 sm:pb-16 md:pt-40 md:pb-24 lg:pt-48">
@@ -586,7 +586,7 @@ export default function Home() {
                             className="relative z-10 border-t border-white/10 bg-black/70"
                             initial="hidden"
                             whileInView="show"
-                            viewport={{ once: false, amount: 0.8, margin: '0px 0px -40% 0px' }}
+                            viewport={{ once: false, amount: 0.2, margin: '12% 0px 30% 0px' }}
                             variants={sectionStagger}
                         >
                             <div className="container mx-auto px-4 sm:px-6">
