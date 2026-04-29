@@ -153,6 +153,7 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::put('register/{registration}/mark-registered', [BookingRegisterController::class, 'markRegistered']), 'booking.register.mark-registered');
             $nameRoute(Route::delete('register/{registration}', [BookingRegisterController::class, 'destroy']), 'booking.register.destroy');
             $nameRoute(Route::get('listing', [BookingRegisterController::class, 'listing']), 'booking.listing.index');
+            $nameRoute(Route::get('listing.pdf', [BookingRegisterController::class, 'listingPdf']), 'booking.listing.pdf');
             $nameRoute(Route::get('listing/{registration}/participants.pdf', [BookingRegisterController::class, 'participantPdf']), 'booking.listing.participants.pdf');
             $nameRoute(Route::post('listing', [BookingRegisterController::class, 'store']), 'booking.listing.store');
             $nameRoute(Route::put('listing/{registration}', [BookingRegisterController::class, 'update']), 'booking.listing.update');

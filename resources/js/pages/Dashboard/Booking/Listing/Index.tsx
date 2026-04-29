@@ -327,6 +327,28 @@ export default function BookingListingIndex({
         );
     }
 
+    function openFilteredPdf(): void {
+        const params = new URLSearchParams();
+
+        if (debouncedSearch) {
+            params.set('search', debouncedSearch);
+        }
+
+        if (statusFilter && statusFilter !== 'registered') {
+            params.set('status', statusFilter);
+        }
+
+        if (packageFilter && packageFilter !== 'all') {
+            params.set('travel_package_id', packageFilter);
+        }
+
+        const url = `/admin/booking-management/listing.pdf${
+            params.toString() ? `?${params.toString()}` : ''
+        }`;
+
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
     useEffect(() => {
         if (
             debouncedSearch === (filters.search ?? '') &&
@@ -499,13 +521,23 @@ export default function BookingListingIndex({
                             siap dikelola lebih lanjut oleh admin.
                         </p>
                     </div>
-                    <Button
-                        onClick={openCreateDialog}
-                        className="w-full md:w-auto"
-                    >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah Booking
-                    </Button>
+                    <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+                        <Button
+                            variant="outline"
+                            onClick={openFilteredPdf}
+                            className="w-full gap-2 md:w-auto"
+                        >
+                            <FileText className="h-4 w-4" />
+                            Export PDF
+                        </Button>
+                        <Button
+                            onClick={openCreateDialog}
+                            className="w-full md:w-auto"
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah Booking
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-3">
