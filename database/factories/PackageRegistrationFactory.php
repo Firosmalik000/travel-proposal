@@ -18,19 +18,19 @@ class PackageRegistrationFactory extends Factory
         $travelPackage = TravelPackage::query()->first() ?? TravelPackage::query()->create([
             'code' => 'PKG-FACT-01',
             'slug' => 'package-factory-01',
-            'name' => ['id' => 'Package Factory', 'en' => 'Package Factory'],
+            'name' => 'Package Factory',
             'package_type' => 'reguler',
             'departure_city' => 'Jakarta',
             'duration_days' => 9,
             'price' => 25000000,
             'currency' => 'IDR',
-            'summary' => ['id' => 'Factory summary', 'en' => 'Factory summary'],
+            'summary' => 'Factory summary',
             'content' => [],
             'is_active' => true,
         ]);
 
         return [
-            'travel_package_id' => $travelPackage->id,
+            'package_id' => $travelPackage->id,
             'departure_schedule_id' => null,
             'full_name' => fake()->name(),
             'phone' => fake()->numerify('62812########'),

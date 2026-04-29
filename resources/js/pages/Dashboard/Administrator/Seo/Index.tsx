@@ -1,4 +1,3 @@
-import { AdminLocaleSwitch } from '@/components/admin-locale-switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,13 +9,11 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useAdminLocale } from '@/contexts/admin-locale';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, useForm } from '@inertiajs/react';
 import {
     Globe,
     Image,
-    Languages,
     Phone,
     Plus,
     Settings,
@@ -98,8 +95,6 @@ function Row({ children }: { children: React.ReactNode }) {
 }
 
 export default function SeoIndex({ settings }: Props) {
-    const { locale } = useAdminLocale();
-    const isId = locale === 'id';
     const initialAccounts: SocialAccount[] = Array.isArray(
         settings.social?.accounts,
     )
@@ -111,33 +106,42 @@ export default function SeoIndex({ settings }: Props) {
           }));
 
     const [accounts, setAccounts] = useState<SocialAccount[]>(initialAccounts);
+    const isId = true;
 
     const { data, setData, post, processing, errors, transform } = useForm({
         // General
-        site_name_id: settings.general?.siteName?.id ?? '',
-        site_name_en: settings.general?.siteName?.en ?? '',
-        tagline_id: settings.general?.tagline?.id ?? '',
-        tagline_en: settings.general?.tagline?.en ?? '',
-        default_description_id: settings.general?.defaultDescription?.id ?? '',
-        default_description_en: settings.general?.defaultDescription?.en ?? '',
+        site_name: settings.general?.siteName ?? '',
+        site_name_id: settings.general?.siteName ?? '',
+        site_name_en: settings.general?.siteName ?? '',
+        tagline: settings.general?.tagline ?? '',
+        tagline_id: settings.general?.tagline ?? '',
+        tagline_en: settings.general?.tagline ?? '',
+        default_description: settings.general?.defaultDescription ?? '',
+        default_description_id: settings.general?.defaultDescription ?? '',
+        default_description_en: settings.general?.defaultDescription ?? '',
         keywords: settings.general?.keywords ?? '',
         // Contact
         phone: settings.contact?.phone ?? '',
         whatsapp: settings.contact?.whatsapp ?? '',
         email: settings.contact?.email ?? '',
-        address_id: settings.contact?.address?.full?.id ?? '',
-        address_en: settings.contact?.address?.full?.en ?? '',
+        address: settings.contact?.address?.full ?? '',
+        address_id: settings.contact?.address?.full ?? '',
+        address_en: settings.contact?.address?.full ?? '',
         map_link: settings.contact?.address?.mapLink ?? '',
-        weekday_hours_id: settings.contact?.operatingHours?.weekday?.id ?? '',
-        weekday_hours_en: settings.contact?.operatingHours?.weekday?.en ?? '',
-        weekend_hours_id: settings.contact?.operatingHours?.weekend?.id ?? '',
-        weekend_hours_en: settings.contact?.operatingHours?.weekend?.en ?? '',
+        weekday_hours: settings.contact?.operatingHours?.weekday ?? '',
+        weekday_hours_id: settings.contact?.operatingHours?.weekday ?? '',
+        weekday_hours_en: settings.contact?.operatingHours?.weekday ?? '',
+        weekend_hours: settings.contact?.operatingHours?.weekend ?? '',
+        weekend_hours_id: settings.contact?.operatingHours?.weekend ?? '',
+        weekend_hours_en: settings.contact?.operatingHours?.weekend ?? '',
         // Social media
         social_accounts: [] as SocialAccount[],
-        og_title_id: settings.social?.ogTitle?.id ?? '',
-        og_title_en: settings.social?.ogTitle?.en ?? '',
-        og_description_id: settings.social?.ogDescription?.id ?? '',
-        og_description_en: settings.social?.ogDescription?.en ?? '',
+        og_title: settings.social?.ogTitle ?? '',
+        og_title_id: settings.social?.ogTitle ?? '',
+        og_title_en: settings.social?.ogTitle ?? '',
+        og_description: settings.social?.ogDescription ?? '',
+        og_description_id: settings.social?.ogDescription ?? '',
+        og_description_en: settings.social?.ogDescription ?? '',
         // Advanced
         robots_default: settings.advanced?.robotsDefault ?? 'index, follow',
         canonical_base: settings.advanced?.canonicalBase ?? '',
@@ -155,6 +159,17 @@ export default function SeoIndex({ settings }: Props) {
         transform((currentData) => ({
             ...currentData,
             social_accounts: accounts,
+            address: currentData.address_id || currentData.address,
+            site_name: currentData.site_name_id || currentData.site_name,
+            tagline: currentData.tagline_id || currentData.tagline,
+            default_description:
+                currentData.default_description_id ||
+                currentData.default_description,
+            weekday_hours: currentData.weekday_hours_id || currentData.weekday_hours,
+            weekend_hours: currentData.weekend_hours_id || currentData.weekend_hours,
+            og_title: currentData.og_title_id || currentData.og_title,
+            og_description:
+                currentData.og_description_id || currentData.og_description,
         }));
 
         post('/admin/website-management/seo', {
@@ -183,7 +198,7 @@ export default function SeoIndex({ settings }: Props) {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-xl font-bold">
-                            SEO & Site Settings
+                            Pengaturan SEO & Website
                         </h1>
                         <p className="text-sm text-muted-foreground">
                             Metadata, kontak, sosial media, dan pengaturan
@@ -191,10 +206,6 @@ export default function SeoIndex({ settings }: Props) {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
-                            <Languages className="h-4 w-4 text-muted-foreground" />
-                            <AdminLocaleSwitch />
-                        </div>
                         <Button
                             type="submit"
                             disabled={processing}
@@ -219,32 +230,20 @@ export default function SeoIndex({ settings }: Props) {
                     <Row>
                         <Field label="Nama Website">
                             <Input
-                                value={
-                                    isId ? data.site_name_id : data.site_name_en
-                                }
+                                value={data.site_name}
                                 onChange={(e) =>
-                                    setData(
-                                        isId ? 'site_name_id' : 'site_name_en',
-                                        e.target.value,
-                                    )
+                                    setData('site_name', e.target.value)
                                 }
                                 placeholder="Asfar Tour"
                             />
                         </Field>
                         <Field label="Tagline">
                             <Input
-                                value={isId ? data.tagline_id : data.tagline_en}
+                                value={data.tagline}
                                 onChange={(e) =>
-                                    setData(
-                                        isId ? 'tagline_id' : 'tagline_en',
-                                        e.target.value,
-                                    )
+                                    setData('tagline', e.target.value)
                                 }
-                                placeholder={
-                                    isId
-                                        ? 'Travel Umroh Terpercaya'
-                                        : 'Trusted Umrah Travel'
-                                }
+                                placeholder="Travel Umroh Terpercaya"
                             />
                         </Field>
                     </Row>
@@ -254,18 +253,9 @@ export default function SeoIndex({ settings }: Props) {
                     >
                         <Textarea
                             rows={3}
-                            value={
-                                isId
-                                    ? data.default_description_id
-                                    : data.default_description_en
-                            }
+                            value={data.default_description}
                             onChange={(e) =>
-                                setData(
-                                    isId
-                                        ? 'default_description_id'
-                                        : 'default_description_en',
-                                    e.target.value,
-                                )
+                                setData('default_description', e.target.value)
                             }
                         />
                     </Field>
@@ -326,18 +316,9 @@ export default function SeoIndex({ settings }: Props) {
                     <Field label="Alamat">
                         <Textarea
                             rows={2}
-                            value={isId ? data.address_id : data.address_en}
-                            onChange={(e) =>
-                                setData(
-                                    isId ? 'address_id' : 'address_en',
-                                    e.target.value,
-                                )
-                            }
-                            placeholder={
-                                isId
-                                    ? 'Jl. Contoh No. 1, Jakarta'
-                                    : '1 Example St, Jakarta'
-                            }
+                            value={data.address}
+                            onChange={(e) => setData('address', e.target.value)}
+                            placeholder="Jl. Contoh No. 1, Jakarta"
                         />
                     </Field>
                     <Field

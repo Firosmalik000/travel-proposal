@@ -26,11 +26,8 @@ class ScheduleController extends Controller
             ['slug' => self::SETTINGS_SLUG],
             [
                 'category' => 'settings',
-                'title' => ['id' => 'Schedule Settings', 'en' => 'Schedule Settings'],
-                'excerpt' => [
-                    'id' => 'Pengaturan scheduler untuk proses booking otomatis.',
-                    'en' => 'Scheduler settings for automated booking processes.',
-                ],
+                'title' => 'Pengaturan Jadwal',
+                'excerpt' => 'Pengaturan scheduler untuk proses booking otomatis.',
                 'content' => [],
                 'is_active' => true,
             ],

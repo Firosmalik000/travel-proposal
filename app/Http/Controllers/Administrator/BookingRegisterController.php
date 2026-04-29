@@ -9,8 +9,10 @@ use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Mpdf\Mpdf;
 
 class BookingRegisterController extends Controller
 {
@@ -28,13 +30,83 @@ class BookingRegisterController extends Controller
         $filters = [
             'search' => trim((string) $request->string('search')->value()),
             'status' => 'registered',
+            'travel_package_id' => $request->integer('travel_package_id') ?: null,
         ];
 
         return Inertia::render('Dashboard/Booking/Listing/Index', [
             'registrations' => $this->registrations($filters),
-            'packages' => $this->packages(),
+            'packages' => $this->packages($filters),
             'schedules' => $this->schedules(),
             'filters' => $filters,
+        ]);
+    }
+
+    public function participantPdf(PackageRegistration $registration): HttpResponse
+    {
+        $registration->loadMissing([
+            'package:id,code,name,package_type,departure_city,duration_days,price,currency',
+            'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
+        ]);
+
+        $packageName = (string) ($registration->package?->name ?? '');
+        $bookingCode = sprintf(
+            'BK-%s-%04d',
+            $registration->created_at?->format('ymd') ?? now()->format('ymd'),
+            $registration->id,
+        );
+
+        $metaRows = [
+            ['Kode Booking', $bookingCode],
+            ['Nama Pemesan', (string) $registration->full_name],
+            ['WhatsApp', (string) $registration->phone],
+            ['Email', (string) ($registration->email ?? '-')],
+            ['Kota Asal', (string) $registration->origin_city],
+            ['Jumlah Pax', (string) $registration->passenger_count],
+            ['Paket', trim(sprintf('%s (%s)', $packageName, (string) ($registration->package?->code ?? '-')))],
+            [
+                'Keberangkatan',
+                $registration->departureSchedule?->departure_date?->toDateString()
+                    ? sprintf(
+                        '%s (%s)',
+                        $registration->departureSchedule?->departure_date?->toDateString(),
+                        (string) ($registration->departureSchedule?->departure_city ?? '-'),
+                    )
+                    : '-',
+            ],
+        ];
+
+        $participantRows = [];
+        $paxCount = max((int) $registration->passenger_count, 1);
+        for ($i = 1; $i <= $paxCount; $i++) {
+            $participantRows[] = [
+                $i,
+                '',
+                '',
+                '',
+                '',
+            ];
+        }
+
+        $html = view('pdf.participants', [
+            'bookingCode' => $bookingCode,
+            'metaRows' => $metaRows,
+            'participantRows' => $participantRows,
+            'notes' => (string) ($registration->notes ?? ''),
+        ])->render();
+
+        $mpdf = new Mpdf([
+            'mode' => 'utf-8',
+            'format' => 'A4',
+            'margin_top' => 12,
+            'margin_bottom' => 12,
+            'margin_left' => 12,
+            'margin_right' => 12,
+        ]);
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('', 'S'), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="peserta-'.$bookingCode.'.pdf"',
         ]);
     }
 
@@ -59,7 +131,7 @@ class BookingRegisterController extends Controller
         $schedule = $request->selectedSchedule();
 
         $registration = PackageRegistration::query()->create([
-            'travel_package_id' => $request->integer('travel_package_id'),
+            'package_id' => $request->integer('travel_package_id'),
             'departure_schedule_id' => $schedule?->id,
             'full_name' => $request->string('full_name')->value(),
             'phone' => $request->string('phone')->value(),
@@ -83,7 +155,7 @@ class BookingRegisterController extends Controller
         $schedule = $request->selectedSchedule();
 
         $registration->update([
-            'travel_package_id' => $request->integer('travel_package_id'),
+            'package_id' => $request->integer('travel_package_id'),
             'departure_schedule_id' => $schedule?->id,
             'full_name' => $request->string('full_name')->value(),
             'phone' => $request->string('phone')->value(),
@@ -124,12 +196,16 @@ class BookingRegisterController extends Controller
     {
         $search = trim((string) ($filters['search'] ?? ''));
         $status = (string) ($filters['status'] ?? '');
+        $travelPackageId = (int) ($filters['travel_package_id'] ?? 0);
 
         return PackageRegistration::query()
             ->with([
-                'travelPackage:id,code,slug,name,package_type',
-                'departureSchedule:id,travel_package_id,departure_date,return_date,departure_city,status',
+                'package:id,code,slug,name,package_type',
+                'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
             ])
+            ->when($travelPackageId > 0, function ($query) use ($travelPackageId): void {
+                $query->where('package_id', $travelPackageId);
+            })
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($registrationQuery) use ($search): void {
                     $registrationQuery
@@ -137,11 +213,10 @@ class BookingRegisterController extends Controller
                         ->orWhere('phone', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhere('origin_city', 'like', "%{$search}%")
-                        ->orWhereHas('travelPackage', function ($travelPackageQuery) use ($search): void {
-                            $travelPackageQuery
+                        ->orWhereHas('package', function ($packageQuery) use ($search): void {
+                            $packageQuery
                                 ->where('code', 'like', "%{$search}%")
-                                ->orWhere('name->id', 'like', "%{$search}%")
-                                ->orWhere('name->en', 'like', "%{$search}%");
+                                ->orWhere('name', 'like', "%{$search}%");
                         })
                         ->orWhereHas('departureSchedule', function ($scheduleQuery) use ($search): void {
                             $scheduleQuery->where('departure_city', 'like', "%{$search}%");
@@ -165,13 +240,13 @@ class BookingRegisterController extends Controller
                 'notes' => $registration->notes,
                 'status' => $registration->status,
                 'created_at' => $registration->created_at?->toDateTimeString(),
-                'travel_package_id' => $registration->travel_package_id,
+                'travel_package_id' => $registration->package_id,
                 'departure_schedule_id' => $registration->departure_schedule_id,
                 'travel_package' => [
-                    'code' => $registration->travelPackage?->code,
-                    'slug' => $registration->travelPackage?->slug,
-                    'name' => $registration->travelPackage?->name,
-                    'package_type' => $registration->travelPackage?->package_type,
+                    'code' => $registration->package?->code,
+                    'slug' => $registration->package?->slug,
+                    'name' => $registration->package?->name,
+                    'package_type' => $registration->package?->package_type,
                 ],
                 'departure_schedule' => [
                     'departure_date' => $registration->departureSchedule?->departure_date?->toDateString(),
@@ -186,10 +261,17 @@ class BookingRegisterController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function packages(): array
+    private function packages(array $filters = []): array
     {
+        $status = (string) ($filters['status'] ?? 'registered');
+
         return TravelPackage::query()
             ->where('is_active', true)
+            ->when($status !== '', function ($query) use ($status): void {
+                $query->whereHas('registrations', function ($registrationQuery) use ($status): void {
+                    $registrationQuery->where('status', $status);
+                });
+            })
             ->orderBy('code')
             ->get(['id', 'code', 'name', 'package_type'])
             ->map(fn (TravelPackage $travelPackage): array => [
@@ -216,7 +298,7 @@ class BookingRegisterController extends Controller
             ->orderBy('departure_date')
             ->get([
                 'id',
-                'travel_package_id',
+                'package_id',
                 'departure_date',
                 'return_date',
                 'departure_city',
@@ -225,7 +307,7 @@ class BookingRegisterController extends Controller
             ])
             ->map(fn (DepartureSchedule $departureSchedule): array => [
                 'id' => $departureSchedule->id,
-                'travel_package_id' => $departureSchedule->travel_package_id,
+                'travel_package_id' => $departureSchedule->package_id,
                 'departure_date' => $departureSchedule->departure_date?->toDateString(),
                 'return_date' => $departureSchedule->return_date?->toDateString(),
                 'departure_city' => $departureSchedule->departure_city,

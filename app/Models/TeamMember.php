@@ -21,8 +21,6 @@ class TeamMember extends Model
     protected function casts(): array
     {
         return [
-            'role' => 'array',
-            'bio' => 'array',
             'is_active' => 'boolean',
         ];
     }

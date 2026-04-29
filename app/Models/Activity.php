@@ -10,22 +10,11 @@ class Activity extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'code',
-        'name',
-        'description',
-        'sort_order',
-        'is_active',
-    ];
+    protected $fillable = ['code',         'name',         'description',         'sort_order',         'is_active'];
 
     protected function casts(): array
     {
-        return [
-            'name' => 'array',
-            'description' => 'array',
-            'sort_order' => 'integer',
-            'is_active' => 'boolean',
-        ];
+        return ['name' => 'array',             'description' => 'array',             'sort_order' => 'integer',             'is_active' => 'boolean'];
     }
 
     public function packageItineraries(): HasMany

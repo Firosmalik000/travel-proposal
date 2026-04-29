@@ -8,18 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('travel_packages', function (Blueprint $table) {
+        Schema::create('packages', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique();
             $table->string('slug')->unique();
-            $table->json('name');
+            $table->string('name');
             $table->string('package_type')->default('reguler');
             $table->string('departure_city');
             $table->unsignedInteger('duration_days');
             $table->decimal('price', 12, 2)->nullable();
             $table->string('currency', 3)->default('IDR');
             $table->string('image_path')->nullable();
-            $table->json('summary')->nullable();
+            $table->text('summary')->nullable();
             $table->json('content')->nullable();
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_active')->default(true);
@@ -30,19 +30,19 @@ return new class extends Migration
             $table->index(['is_featured', 'is_active']);
         });
 
-        Schema::create('travel_package_product', function (Blueprint $table) {
+        Schema::create('package_product', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('travel_package_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('travel_product_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('package_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();
 
-            $table->unique(['travel_package_id', 'travel_product_id'], 'tpp_package_product_unique');
+            $table->unique(['package_id', 'product_id'], 'package_product_unique');
         });
 
         Schema::create('departure_schedules', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('travel_package_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('package_id')->nullable()->constrained()->nullOnDelete();
             $table->date('departure_date');
             $table->date('return_date')->nullable();
             $table->string('departure_city');
@@ -61,7 +61,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('departure_schedules');
-        Schema::dropIfExists('travel_package_product');
-        Schema::dropIfExists('travel_packages');
+        Schema::dropIfExists('package_product');
+        Schema::dropIfExists('packages');
     }
 };

@@ -88,7 +88,7 @@ class PackageController extends Controller
 
     public function updateSchedule(StoreScheduleRequest $request, TravelPackage $package, DepartureSchedule $schedule): RedirectResponse
     {
-        abort_if($schedule->travel_package_id !== $package->id, 403);
+        abort_if($schedule->package_id !== $package->id, 403);
 
         $schedule->update([
             ...$request->validated(),
@@ -101,7 +101,7 @@ class PackageController extends Controller
 
     public function destroySchedule(TravelPackage $package, DepartureSchedule $schedule): RedirectResponse
     {
-        abort_if($schedule->travel_package_id !== $package->id, 403);
+        abort_if($schedule->package_id !== $package->id, 403);
 
         $schedule->delete();
 
@@ -116,19 +116,17 @@ class PackageController extends Controller
             'activity_ids.*' => ['integer', 'exists:activities,id'],
             'day_number' => ['required', 'integer', 'min:1'],
             'sort_order' => ['nullable', 'integer', 'min:1'],
-            'title.id' => ['nullable', 'string', 'max:255'],
-            'title.en' => ['nullable', 'string', 'max:255'],
-            'description.id' => ['nullable', 'string'],
-            'description.en' => ['nullable', 'string'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
             'product_ids' => ['nullable', 'array'],
-            'product_ids.*' => ['integer', 'exists:travel_products,id'],
+            'product_ids.*' => ['integer', 'exists:products,id'],
         ]);
 
         $activityIds = $this->normalizeActivityIds($data);
         [$title, $description] = $this->resolveItineraryActivityContent(
             $activityIds,
-            $data['title'] ?? [],
-            $data['description'] ?? [],
+            (string) ($data['title'] ?? ''),
+            (string) ($data['description'] ?? ''),
         );
 
         $itinerary = $package->itineraries()->updateOrCreate(
@@ -149,7 +147,7 @@ class PackageController extends Controller
 
     public function updateItinerary(Request $request, TravelPackage $package, PackageItinerary $itinerary): RedirectResponse
     {
-        abort_if($itinerary->travel_package_id !== $package->id, 403);
+        abort_if($itinerary->package_id !== $package->id, 403);
 
         $data = $request->validate([
             'activity_id' => ['nullable', 'integer', 'exists:activities,id'],
@@ -157,19 +155,17 @@ class PackageController extends Controller
             'activity_ids.*' => ['integer', 'exists:activities,id'],
             'day_number' => ['nullable', 'integer', 'min:1'],
             'sort_order' => ['nullable', 'integer', 'min:1'],
-            'title.id' => ['nullable', 'string', 'max:255'],
-            'title.en' => ['nullable', 'string', 'max:255'],
-            'description.id' => ['nullable', 'string'],
-            'description.en' => ['nullable', 'string'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
             'product_ids' => ['nullable', 'array'],
-            'product_ids.*' => ['integer', 'exists:travel_products,id'],
+            'product_ids.*' => ['integer', 'exists:products,id'],
         ]);
 
         $activityIds = $this->normalizeActivityIds($data, $itinerary->activity_ids ?? []);
         [$title, $description] = $this->resolveItineraryActivityContent(
             $activityIds,
-            $data['title'] ?? ($itinerary->title ?? []),
-            $data['description'] ?? ($itinerary->description ?? []),
+            (string) ($data['title'] ?? ($itinerary->title ?? '')),
+            (string) ($data['description'] ?? ($itinerary->description ?? '')),
         );
 
         $itinerary->update([
@@ -187,7 +183,7 @@ class PackageController extends Controller
 
     public function destroyItinerary(TravelPackage $package, PackageItinerary $itinerary): RedirectResponse
     {
-        abort_if($itinerary->travel_package_id !== $package->id, 403);
+        abort_if($itinerary->package_id !== $package->id, 403);
 
         $itinerary->delete();
 
@@ -239,20 +235,8 @@ class PackageController extends Controller
         $imagePath = $allImages[0] ?? null;
         $gallery = array_slice($allImages, 1);
 
-        // Handle both dot-notation (JSON) and bracket-notation (FormData)
-        $nameId = $request->input('name.id') ?? $request->input('name')['id'] ?? '';
-        $nameEn = $request->input('name.en') ?? $request->input('name')['en'] ?? '';
-        $summaryId = $request->input('summary.id') ?? $request->input('summary')['id'] ?? '';
-        $summaryEn = $request->input('summary.en') ?? $request->input('summary')['en'] ?? '';
-
-        $name = $this->normalizeLocalizedPayload([
-            'id' => $nameId,
-            'en' => $nameEn,
-        ]);
-        $summary = $this->normalizeLocalizedPayload([
-            'id' => $summaryId,
-            'en' => $summaryEn,
-        ]);
+        $name = trim((string) $request->string('name')->value());
+        $summary = $request->filled('summary') ? $request->string('summary')->value() : null;
 
         $content = is_array($request->input('content'))
             ? $request->input('content')
@@ -310,14 +294,8 @@ class PackageController extends Controller
                     'activity_ids' => $this->normalizeActivityIds($itinerary),
                     'day_number' => $dayNumber,
                     'sort_order' => isset($itinerary['sort_order']) && is_numeric($itinerary['sort_order']) ? (int) $itinerary['sort_order'] : $dayNumber,
-                    'title' => [
-                        'id' => (string) data_get($itinerary, 'title.id', ''),
-                        'en' => (string) data_get($itinerary, 'title.en', ''),
-                    ],
-                    'description' => [
-                        'id' => (string) data_get($itinerary, 'description.id', ''),
-                        'en' => (string) data_get($itinerary, 'description.en', ''),
-                    ],
+                    'title' => (string) data_get($itinerary, 'title', ''),
+                    'description' => (string) data_get($itinerary, 'description', ''),
                     'product_ids' => collect(data_get($itinerary, 'product_ids', []))
                         ->filter(fn ($productId) => is_numeric($productId))
                         ->map(fn ($productId) => (int) $productId)
@@ -325,17 +303,24 @@ class PackageController extends Controller
                         ->all(),
                 ];
             })
+            ->filter(function (array $itinerary): bool {
+                $hasActivities = ! empty($itinerary['activity_ids']);
+                $hasProducts = ! empty($itinerary['product_ids']);
+                $hasText = trim((string) ($itinerary['title'] ?? '')) !== '' || trim((string) ($itinerary['description'] ?? '')) !== '';
+
+                return $hasActivities || $hasProducts || $hasText;
+            })
             ->sortBy('sort_order')
             ->values();
+
+        if ($normalizedItineraries->isEmpty()) {
+            return;
+        }
 
         $package->itineraries()->each(function (PackageItinerary $itinerary): void {
             $itinerary->products()->detach();
             $itinerary->delete();
         });
-
-        if ($normalizedItineraries->isEmpty()) {
-            return;
-        }
 
         $normalizedItineraries->each(function (array $itineraryData) use ($package): void {
             $productIds = $itineraryData['product_ids'];
@@ -344,8 +329,8 @@ class PackageController extends Controller
             $itineraryData['activity_id'] = $itineraryData['activity_ids'][0] ?? null;
             [$itineraryData['title'], $itineraryData['description']] = $this->resolveItineraryActivityContent(
                 $itineraryData['activity_ids'] ?? [],
-                $itineraryData['title'] ?? [],
-                $itineraryData['description'] ?? [],
+                (string) ($itineraryData['title'] ?? ''),
+                (string) ($itineraryData['description'] ?? ''),
             );
 
             $itinerary = $package->itineraries()->create($itineraryData);
@@ -356,10 +341,10 @@ class PackageController extends Controller
     /** @param array<int> $productIds */
     private function syncItineraryProducts(PackageItinerary $itinerary, array $productIds): void
     {
-        $allowedProductIds = $itinerary->travelPackage()
+        $allowedProductIds = $itinerary->package()
             ->firstOrFail()
             ->products()
-            ->pluck('travel_products.id')
+            ->pluck('products.id')
             ->all();
 
         $syncData = collect($productIds)
@@ -399,8 +384,8 @@ class PackageController extends Controller
             ->map(fn (Activity $activity) => [
                 'id' => $activity->id,
                 'code' => $activity->code,
-                'name' => $activity->name ?? [],
-                'description' => $activity->description ?? [],
+                'name' => $activity->name,
+                'description' => $activity->description,
                 'sort_order' => $activity->sort_order,
             ])
             ->values()
@@ -460,13 +445,13 @@ class PackageController extends Controller
                         ->all(),
                     'day_number' => $it->day_number,
                     'sort_order' => $it->sort_order,
-                    'title' => $it->title ?? [],
-                    'description' => $it->description ?? [],
+                    'title' => $it->title,
+                    'description' => $it->description,
                     'activity' => $activities[0] ?? ($it->activity ? [
                         'id' => $it->activity->id,
                         'code' => $it->activity->code,
-                        'name' => $it->activity->name ?? [],
-                        'description' => $it->activity->description ?? [],
+                        'name' => $it->activity->name,
+                        'description' => $it->activity->description,
                         'sort_order' => $it->activity->sort_order,
                     ] : null),
                     'activities' => $activities,
@@ -505,12 +490,11 @@ class PackageController extends Controller
         return $activityIds->unique()->values()->all();
     }
 
-    /** @param array<int, int> $activityIds
-     * @param  array<string, mixed>  $fallbackTitle
-     * @param  array<string, mixed>  $fallbackDescription
-     * @return array{0: array<string, string>, 1: array<string, string>}
+    /**
+     * @param  array<int, int>  $activityIds
+     * @return array{0: string, 1: string}
      */
-    private function resolveItineraryActivityContent(array $activityIds, array $fallbackTitle = [], array $fallbackDescription = []): array
+    private function resolveItineraryActivityContent(array $activityIds, string $fallbackTitle = '', string $fallbackDescription = ''): array
     {
         $activities = Activity::query()
             ->whereIn('id', $activityIds)
@@ -520,34 +504,20 @@ class PackageController extends Controller
 
         if ($activities->isEmpty()) {
             return [
-                [
-                    'id' => (string) data_get($fallbackTitle, 'id', ''),
-                    'en' => (string) data_get($fallbackTitle, 'en', ''),
-                ],
-                [
-                    'id' => (string) data_get($fallbackDescription, 'id', ''),
-                    'en' => (string) data_get($fallbackDescription, 'en', ''),
-                ],
+                $fallbackTitle,
+                $fallbackDescription,
             ];
         }
 
         return [
-            [
-                'id' => $activities->map(fn (Activity $activity) => (string) data_get($activity->name ?? [], 'id', ''))
-                    ->filter()
-                    ->implode(', '),
-                'en' => $activities->map(fn (Activity $activity) => (string) data_get($activity->name ?? [], 'en', ''))
-                    ->filter()
-                    ->implode(', '),
-            ],
-            [
-                'id' => $activities->map(fn (Activity $activity) => (string) data_get($activity->description ?? [], 'id', ''))
-                    ->filter()
-                    ->implode("\n"),
-                'en' => $activities->map(fn (Activity $activity) => (string) data_get($activity->description ?? [], 'en', ''))
-                    ->filter()
-                    ->implode("\n"),
-            ],
+            $activities
+                ->map(fn (Activity $activity) => trim((string) $activity->name))
+                ->filter()
+                ->implode(', '),
+            $activities
+                ->map(fn (Activity $activity) => trim((string) ($activity->description ?? '')))
+                ->filter()
+                ->implode("\n"),
         ];
     }
 
@@ -571,21 +541,17 @@ class PackageController extends Controller
             ->map(fn (Activity $activity) => [
                 'id' => $activity->id,
                 'code' => $activity->code,
-                'name' => $activity->name ?? [],
-                'description' => $activity->description ?? [],
+                'name' => $activity->name,
+                'description' => $activity->description,
                 'sort_order' => $activity->sort_order,
             ])
             ->values()
             ->all();
     }
 
-    /**
-     * @param  array{id?: string, en?: string}  $name
-     */
-    private function generatePackageCode(array $name, int $durationDays, ?TravelPackage $ignore = null): string
+    private function generatePackageCode(string $name, int $durationDays, ?TravelPackage $ignore = null): string
     {
-        $source = trim((string) ($name['id'] ?? '')) ?: trim((string) ($name['en'] ?? ''));
-        $normalized = Str::upper(Str::slug($source, '-'));
+        $normalized = Str::upper(Str::slug($name, '-'));
         $normalized = $normalized !== '' ? Str::limit($normalized, 38, '') : 'PACKAGE';
 
         $baseCode = 'ASF-'.$normalized.($durationDays > 0 ? '-'.$durationDays : '');
@@ -603,20 +569,5 @@ class PackageController extends Controller
         }
 
         return $candidate;
-    }
-
-    /**
-     * @param  array{id?: string, en?: string}  $value
-     * @return array{id: string, en: string}
-     */
-    private function normalizeLocalizedPayload(array $value): array
-    {
-        $indonesian = trim((string) ($value['id'] ?? ''));
-        $english = trim((string) ($value['en'] ?? ''));
-
-        return [
-            'id' => $indonesian,
-            'en' => $english !== '' ? $english : $indonesian,
-        ];
     }
 }

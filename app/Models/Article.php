@@ -48,12 +48,7 @@ class Article extends Model
     protected function casts(): array
     {
         return [
-            'title' => 'array',
-            'excerpt' => 'array',
-            'body' => 'array',
             'tags' => 'array',
-            'meta_title' => 'array',
-            'meta_description' => 'array',
             'published_at' => 'datetime',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',

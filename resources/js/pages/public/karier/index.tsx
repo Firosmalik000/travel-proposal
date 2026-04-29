@@ -1,11 +1,10 @@
 import { Head } from '@inertiajs/react';
 import { MotionCard, MotionGroup, MotionSection } from '@/components/public-motion';
 import PublicLayout from '@/layouts/PublicLayout';
-import { usePublicLocale } from '@/contexts/public-locale';
 import { localize, usePublicData, usePublicPageContent } from '@/lib/public-content';
 
 export default function Karier() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const publicData = usePublicData();
     const page = usePublicPageContent('karier');
     const jobs = Array.isArray(publicData.career_openings) ? publicData.career_openings : [];

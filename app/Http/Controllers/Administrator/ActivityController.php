@@ -20,10 +20,8 @@ class ActivityController extends Controller
         $activities = Activity::query()
             ->when($search !== '', function ($query) use ($search) {
                 $query->where('code', 'like', "%{$search}%")
-                    ->orWhere('name->id', 'like', "%{$search}%")
-                    ->orWhere('name->en', 'like', "%{$search}%")
-                    ->orWhere('description->id', 'like', "%{$search}%")
-                    ->orWhere('description->en', 'like', "%{$search}%");
+                    ->orWhere('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             })
             ->orderBy('sort_order')
             ->orderBy('code')
@@ -32,8 +30,8 @@ class ActivityController extends Controller
             ->through(fn (Activity $activity) => [
                 'id' => $activity->id,
                 'code' => $activity->code,
-                'name' => $activity->name ?? [],
-                'description' => $activity->description ?? [],
+                'name' => $activity->name,
+                'description' => $activity->description,
                 'sort_order' => $activity->sort_order,
                 'is_active' => $activity->is_active,
                 'created_at' => $activity->created_at?->toDateTimeString(),
@@ -54,10 +52,8 @@ class ActivityController extends Controller
 
     public function store(StoreActivityRequest $request): RedirectResponse
     {
-        $name = $this->normalizeLocalizedPayload($request->input('name', []));
-        $description = $this->normalizeLocalizedPayload(
-            $request->input('description', []),
-        );
+        $name = trim((string) $request->string('name')->value());
+        $description = $request->filled('description') ? $request->string('description')->value() : null;
 
         Activity::query()->create([
             'code' => $this->generateActivityCode($name),
@@ -72,10 +68,8 @@ class ActivityController extends Controller
 
     public function update(StoreActivityRequest $request, Activity $activity): RedirectResponse
     {
-        $name = $this->normalizeLocalizedPayload($request->input('name', []));
-        $description = $this->normalizeLocalizedPayload(
-            $request->input('description', []),
-        );
+        $name = trim((string) $request->string('name')->value());
+        $description = $request->filled('description') ? $request->string('description')->value() : null;
 
         $activity->update([
             'code' => $this->generateActivityCode($name, $activity),
@@ -95,13 +89,9 @@ class ActivityController extends Controller
         return back()->with('success', 'Activity berhasil dihapus.');
     }
 
-    /**
-     * @param  array{id?: string, en?: string}  $name
-     */
-    private function generateActivityCode(array $name, ?Activity $ignore = null): string
+    private function generateActivityCode(string $name, ?Activity $ignore = null): string
     {
-        $source = trim((string) ($name['id'] ?? '')) ?: trim((string) ($name['en'] ?? ''));
-        $normalized = Str::upper(Str::slug($source, '-'));
+        $normalized = Str::upper(Str::slug($name, '-'));
         $normalized = $normalized !== '' ? Str::limit($normalized, 42, '') : 'ACTIVITY';
 
         $baseCode = 'ACT-'.$normalized;
@@ -119,20 +109,5 @@ class ActivityController extends Controller
         }
 
         return $candidate;
-    }
-
-    /**
-     * @param  array{id?: string, en?: string}  $value
-     * @return array{id: string, en: string}
-     */
-    private function normalizeLocalizedPayload(array $value): array
-    {
-        $indonesian = trim((string) ($value['id'] ?? ''));
-        $english = trim((string) ($value['en'] ?? ''));
-
-        return [
-            'id' => $indonesian,
-            'en' => $english !== '' ? $english : $indonesian,
-        ];
     }
 }

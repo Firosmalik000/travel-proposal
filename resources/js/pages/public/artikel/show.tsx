@@ -3,7 +3,6 @@ import {
     MotionGroup,
     MotionSection,
 } from '@/components/public-motion';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import { formatDate, localize } from '@/lib/public-content';
 import { Head, Link } from '@inertiajs/react';
@@ -62,7 +61,7 @@ export default function ArticleShow({
     article: ArticleItem;
     relatedArticles: ArticleItem[];
 }) {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const t = content[locale];
     const articleTitle = localize(
         article.meta_title || article.title,

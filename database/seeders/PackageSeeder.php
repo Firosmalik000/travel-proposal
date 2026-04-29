@@ -19,9 +19,9 @@ class PackageSeeder extends Seeder
         $this->seedTestimonials($packages);
     }
 
-    private function loc(string $id, string $en = ''): array
+    private function loc(string $id, string $en = ''): string
     {
-        return ['id' => $id, 'en' => $en !== '' ? $en : $id];
+        return $id;
     }
 
     private function seedProducts(): array
@@ -380,9 +380,9 @@ class PackageSeeder extends Seeder
             }
 
             DepartureSchedule::query()->updateOrCreate(
-                ['travel_package_id' => $package->id, 'departure_date' => $row['departure_date']],
+                ['package_id' => $package->id, 'departure_date' => $row['departure_date']],
                 [
-                    'travel_package_id' => $package->id,
+                    'package_id' => $package->id,
                     'departure_date' => $row['departure_date'],
                     'return_date' => $row['return_date'],
                     'departure_city' => $row['city'],
@@ -417,10 +417,10 @@ class PackageSeeder extends Seeder
             }
 
             Testimonial::query()->updateOrCreate(
-                ['name' => $row['name'], 'travel_package_id' => $package->id],
+                ['name' => $row['name'], 'package_id' => $package->id],
                 [
                     'origin_city' => $row['city'],
-                    'travel_package_id' => $package->id,
+                    'package_id' => $package->id,
                     'quote' => $row['quote'],
                     'rating' => $row['rating'],
                     'is_featured' => $row['rating'] === 5,

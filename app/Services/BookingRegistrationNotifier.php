@@ -54,8 +54,8 @@ class BookingRegistrationNotifier
 
     private function buildWhatsAppMessage(PackageRegistration $registration): string
     {
-        $packageName = $registration->travelPackage?->name['id']
-            ?? $registration->travelPackage?->code
+        $packageName = $registration->package?->name
+            ?? $registration->package?->code
             ?? 'Paket Umroh';
 
         $scheduleLabel = $registration->departureSchedule?->departure_date?->translatedFormat('d F Y') ?? '-';

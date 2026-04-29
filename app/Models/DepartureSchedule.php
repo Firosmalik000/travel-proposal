@@ -12,7 +12,7 @@ class DepartureSchedule extends Model
     use HasFactory;
 
     protected $fillable = [
-        'travel_package_id',
+        'package_id',
         'departure_date',
         'return_date',
         'departure_city',
@@ -34,7 +34,7 @@ class DepartureSchedule extends Model
 
     public function travelPackage(): BelongsTo
     {
-        return $this->belongsTo(TravelPackage::class);
+        return $this->belongsTo(TravelPackage::class, 'package_id');
     }
 
     public function registrations(): HasMany

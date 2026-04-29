@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class PackageItinerary extends Model
 {
     protected $fillable = [
-        'travel_package_id',
+        'package_id',
         'activity_id',
         'activity_ids',
         'day_number',
@@ -24,14 +24,12 @@ class PackageItinerary extends Model
             'day_number' => 'integer',
             'sort_order' => 'integer',
             'activity_ids' => 'array',
-            'title' => 'array',
-            'description' => 'array',
         ];
     }
 
-    public function travelPackage(): BelongsTo
+    public function package(): BelongsTo
     {
-        return $this->belongsTo(TravelPackage::class);
+        return $this->belongsTo(TravelPackage::class, 'package_id');
     }
 
     public function activity(): BelongsTo
@@ -41,7 +39,7 @@ class PackageItinerary extends Model
 
     public function products(): BelongsToMany
     {
-        return $this->belongsToMany(TravelProduct::class, 'package_itinerary_product')
+        return $this->belongsToMany(TravelProduct::class, 'package_itinerary_product', 'package_itinerary_id', 'product_id')
             ->withPivot('sort_order')
             ->withTimestamps()
             ->orderByPivot('sort_order');

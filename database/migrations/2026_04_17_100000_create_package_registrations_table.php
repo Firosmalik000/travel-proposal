@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('package_registrations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('travel_package_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('package_id')->constrained()->cascadeOnDelete();
             $table->foreignId('departure_schedule_id')->nullable()->constrained()->nullOnDelete();
             $table->string('full_name');
             $table->string('phone', 30);
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->string('status')->default('pending');
             $table->timestamps();
 
-            $table->index(['travel_package_id', 'status']);
+            $table->index(['package_id', 'status']);
             $table->index('created_at');
         });
     }

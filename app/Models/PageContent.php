@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\NormalizesLocalizedStrings;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PageContent extends Model
 {
     use HasFactory;
+    use NormalizesLocalizedStrings;
 
     protected $fillable = [
         'slug',
@@ -22,9 +24,17 @@ class PageContent extends Model
     {
         return [
             'content' => 'array',
-            'title' => 'array',
-            'excerpt' => 'array',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function setTitleAttribute(mixed $value): void
+    {
+        $this->attributes['title'] = $this->normalizeLocalizedString($value);
+    }
+
+    public function setExcerptAttribute(mixed $value): void
+    {
+        $this->attributes['excerpt'] = $this->normalizeNullableLocalizedString($value);
     }
 }

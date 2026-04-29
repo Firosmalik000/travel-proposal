@@ -3,7 +3,6 @@ import {
     MotionGroup,
     MotionSection,
 } from '@/components/public-motion';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     localize,
@@ -158,7 +157,7 @@ const content = {
 };
 
 export default function Custom() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const page = usePublicPageContent('custom-umroh');
     const { seoSettings } = usePage<SharedData>().props;
     const seo = (seoSettings as Record<string, any>) ?? {};

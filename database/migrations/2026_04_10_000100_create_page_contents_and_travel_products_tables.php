@@ -12,8 +12,8 @@ return new class extends Migration
             $table->id();
             $table->string('slug')->unique();
             $table->string('category')->nullable();
-            $table->json('title');
-            $table->json('excerpt')->nullable();
+            $table->string('title');
+            $table->text('excerpt')->nullable();
             $table->json('content')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -21,13 +21,13 @@ return new class extends Migration
             $table->index(['category', 'is_active']);
         });
 
-        Schema::create('travel_products', function (Blueprint $table) {
+        Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique();
             $table->string('slug')->unique();
-            $table->json('name');
+            $table->string('name');
             $table->string('product_type')->nullable();
-            $table->json('description')->nullable();
+            $table->text('description')->nullable();
             $table->json('content')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -38,7 +38,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('travel_products');
+        Schema::dropIfExists('products');
         Schema::dropIfExists('page_contents');
     }
 };

@@ -36,9 +36,9 @@
             <tr>
                 <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;font-weight:bold;">Paket</td>
                 <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;">
-                    {{ $registration->travelPackage?->name['id'] ?? $registration->travelPackage?->code ?? '-' }}
-                    @if($registration->travelPackage?->code)
-                        ({{ $registration->travelPackage->code }})
+                    {{ $registration->package?->name ?? $registration->package?->code ?? '-' }}
+                    @if($registration->package?->code)
+                        ({{ $registration->package->code }})
                     @endif
                 </td>
             </tr>

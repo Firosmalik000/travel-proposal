@@ -7,6 +7,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, router } from '@inertiajs/react';
 import { MoreHorizontal, Plus, Search } from 'lucide-react';
@@ -88,6 +95,15 @@ export default function ArticleIndex({
     const [status, setStatus] = useState(filters.status);
     const [contentType, setContentType] = useState(filters.content_type);
     const [featured, setFeatured] = useState(filters.featured);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [drawerUrl, setDrawerUrl] = useState<string | null>(null);
+    const [drawerTitle, setDrawerTitle] = useState<string>('');
+
+    const openDrawer = (url: string, title: string) => {
+        setDrawerUrl(url);
+        setDrawerTitle(title);
+        setDrawerOpen(true);
+    };
 
     const submitFilters = () => {
         router.get(
@@ -114,8 +130,9 @@ export default function ArticleIndex({
 
     const handleArticleAction = (action: string, article: ArticleRow) => {
         if (action === 'edit') {
-            router.visit(
+            openDrawer(
                 `/admin/website-management/articles/${article.id}/edit`,
+                'Edit Artikel',
             );
 
             return;
@@ -155,10 +172,18 @@ export default function ArticleIndex({
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href="/admin/website-management/articles/create">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                openDrawer(
+                                    '/admin/website-management/articles/create',
+                                    'Artikel Baru',
+                                )
+                            }
+                        >
                             <Plus className="mr-2 h-4 w-4" />
                             Artikel Baru
-                        </Link>
+                        </button>
                     </Button>
                 </div>
 
@@ -263,6 +288,40 @@ export default function ArticleIndex({
                         </Button>
                     </div>
                 </div>
+
+                <Sheet
+                    open={drawerOpen}
+                    onOpenChange={(nextOpen) => {
+                        setDrawerOpen(nextOpen);
+
+                        if (!nextOpen) {
+                            setDrawerUrl(null);
+                            router.reload({
+                                preserveScroll: true,
+                                preserveState: true,
+                            });
+                        }
+                    }}
+                >
+                    <SheetContent
+                        side="right"
+                        className="w-full p-0 sm:max-w-[42rem]"
+                    >
+                        <SheetHeader className="border-b border-border p-4">
+                            <SheetTitle>{drawerTitle}</SheetTitle>
+                            <SheetDescription>
+                                Buat atau edit artikel tanpa pindah halaman.
+                            </SheetDescription>
+                        </SheetHeader>
+                        {drawerUrl ? (
+                            <iframe
+                                title={drawerTitle}
+                                src={drawerUrl}
+                                className="h-[calc(100vh-88px)] w-full bg-background"
+                            />
+                        ) : null}
+                    </SheetContent>
+                </Sheet>
 
                 <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
                     <div className="border-b border-border px-4 py-3 text-sm text-muted-foreground">

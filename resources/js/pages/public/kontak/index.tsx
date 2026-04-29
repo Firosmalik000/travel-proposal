@@ -9,7 +9,6 @@ import {
     IslamicOrnamentRow1Col1,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     getPublicAddress,
@@ -86,7 +85,7 @@ const content = {
 };
 
 export default function Kontak() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const t = content[locale];
     const pageContent = usePublicPageContent('kontak');
     const { seoSettings } = usePage<SharedData>().props;

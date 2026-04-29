@@ -17,7 +17,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('category')->nullable();
-            $table->json('description')->nullable();
+            $table->text('description')->nullable();
             $table->string('logo_path')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
@@ -28,4 +28,3 @@ return new class extends Migration
         });
     }
 };
-

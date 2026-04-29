@@ -3,7 +3,6 @@ import {
     MotionGroup,
     MotionSection,
 } from '@/components/public-motion';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import { localize, usePublicData } from '@/lib/public-content';
 import { Head } from '@inertiajs/react';
@@ -93,7 +92,7 @@ const content = {
 };
 
 export default function Testimoni() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const publicData = usePublicData();
     const t = content[locale];
     const testimonials =

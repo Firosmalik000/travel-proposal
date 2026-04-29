@@ -21,8 +21,6 @@ class GalleryItem extends Model
     protected function casts(): array
     {
         return [
-            'title' => 'array',
-            'description' => 'array',
             'is_active' => 'boolean',
         ];
     }

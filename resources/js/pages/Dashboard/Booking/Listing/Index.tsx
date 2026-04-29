@@ -33,7 +33,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { useAdminLocale } from '@/contexts/admin-locale';
 import { useDebounce } from '@/hooks/use-debounce';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
@@ -41,6 +40,7 @@ import {
     CalendarDays,
     CircleDollarSign,
     Copy,
+    FileText,
     Mail,
     MapPin,
     Plus,
@@ -129,6 +129,7 @@ type Props = {
     filters: {
         search: string;
         status: string;
+        travel_package_id?: number | null;
     };
 };
 
@@ -204,6 +205,10 @@ function packageDisplayName(
     travelPackage: TravelPackageOption | Registration['travel_package'],
     locale: string,
 ): string {
+    if (typeof travelPackage.name === 'string') {
+        return travelPackage.name || '-';
+    }
+
     return travelPackage.name?.[locale] ?? travelPackage.name?.id ?? '-';
 }
 
@@ -217,7 +222,7 @@ export default function BookingListingIndex({
     schedules,
     filters,
 }: Props) {
-    const { locale } = useAdminLocale();
+    const locale: 'id' | 'en' = 'id';
     const registrationItems = Array.isArray(registrations?.data)
         ? registrations.data
         : [];
@@ -226,6 +231,9 @@ export default function BookingListingIndex({
     const [search, setSearch] = useState(filters.search ?? '');
     const [statusFilter, setStatusFilter] = useState(
         filters.status || 'registered',
+    );
+    const [packageFilter, setPackageFilter] = useState(
+        filters.travel_package_id ? String(filters.travel_package_id) : '',
     );
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingRegistration, setEditingRegistration] =
@@ -298,12 +306,17 @@ export default function BookingListingIndex({
         setIsDialogOpen(true);
     }
 
-    function applyFilters(nextSearch: string, nextStatus: string): void {
+    function applyFilters(
+        nextSearch: string,
+        nextStatus: string,
+        nextPackageId: string,
+    ): void {
         router.get(
             '/admin/booking-management/listing',
             {
                 search: nextSearch || undefined,
                 status: nextStatus || 'registered',
+                travel_package_id: nextPackageId || undefined,
             },
             {
                 preserveState: true,
@@ -316,13 +329,22 @@ export default function BookingListingIndex({
     useEffect(() => {
         if (
             debouncedSearch === (filters.search ?? '') &&
-            statusFilter === (filters.status || 'registered')
+            statusFilter === (filters.status || 'registered') &&
+            packageFilter ===
+                (filters.travel_package_id ? String(filters.travel_package_id) : '')
         ) {
             return;
         }
 
-        applyFilters(debouncedSearch, statusFilter);
-    }, [debouncedSearch, filters.search, filters.status, statusFilter]);
+        applyFilters(debouncedSearch, statusFilter, packageFilter);
+    }, [
+        debouncedSearch,
+        filters.search,
+        filters.status,
+        filters.travel_package_id,
+        packageFilter,
+        statusFilter,
+    ]);
 
     function handlePackageChange(value: string): void {
         form.setData((data) => ({
@@ -385,7 +407,13 @@ export default function BookingListingIndex({
             [registration.id]: action,
         }));
 
-        if (action === 'edit') {
+        if (action === 'pdf') {
+            window.open(
+                `/admin/booking-management/listing/${registration.id}/participants.pdf`,
+                '_blank',
+                'noopener,noreferrer',
+            );
+        } else if (action === 'edit') {
             openEditDialog(registration);
         } else if (action === 'delete') {
             setDeleteTarget(registration);
@@ -506,7 +534,7 @@ export default function BookingListingIndex({
                                 admin, termasuk kontak, jadwal, dan status.
                             </CardDescription>
                         </div>
-                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_460px]">
                             <div className="relative">
                                 <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
@@ -518,21 +546,48 @@ export default function BookingListingIndex({
                                     className="pl-9"
                                 />
                             </div>
-                            <Select
-                                value={statusFilter}
-                                onValueChange={(value) => {
-                                    setStatusFilter(value);
-                                }}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Status registered" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="registered">
-                                        Registered
-                                    </SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <Select
+                                    value={packageFilter}
+                                    onValueChange={(value) => {
+                                        setPackageFilter(value);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Semua paket" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="">
+                                            Semua paket
+                                        </SelectItem>
+                                        {packageOptions.map((travelPackage) => (
+                                            <SelectItem
+                                                key={travelPackage.id}
+                                                value={String(travelPackage.id)}
+                                            >
+                                                {travelPackage.code
+                                                    ? `${travelPackage.code} - ${packageDisplayName(travelPackage, locale)}`
+                                                    : packageDisplayName(travelPackage, locale)}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select
+                                    value={statusFilter}
+                                    onValueChange={(value) => {
+                                        setStatusFilter(value);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Status registered" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="registered">
+                                            Registered
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -761,6 +816,12 @@ export default function BookingListingIndex({
                                                                 <SelectValue placeholder="Pilih aksi" />
                                                             </SelectTrigger>
                                                             <SelectContent>
+                                                                <SelectItem value="pdf">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <FileText className="h-4 w-4" />
+                                                                        PDF peserta
+                                                                    </div>
+                                                                </SelectItem>
                                                                 <SelectItem value="edit">
                                                                     Edit booking
                                                                 </SelectItem>

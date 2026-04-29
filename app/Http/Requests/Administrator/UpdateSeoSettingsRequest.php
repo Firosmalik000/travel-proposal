@@ -21,36 +21,47 @@ class UpdateSeoSettingsRequest extends FormRequest
             ? array_values(array_filter($socialAccounts, fn ($item) => ! empty($item['url'])))
             : [];
         $this->merge(['social_accounts' => $filtered]);
+
+        $fallbackMap = [
+            'site_name' => 'site_name_id',
+            'tagline' => 'tagline_id',
+            'default_description' => 'default_description_id',
+            'address' => 'address_id',
+            'weekday_hours' => 'weekday_hours_id',
+            'weekend_hours' => 'weekend_hours_id',
+            'og_title' => 'og_title_id',
+            'og_description' => 'og_description_id',
+        ];
+
+        foreach ($fallbackMap as $target => $fallback) {
+            if (! $this->filled($target) && $this->filled($fallback)) {
+                $this->merge([
+                    $target => (string) $this->input($fallback),
+                ]);
+            }
+        }
     }
 
     public function rules(): array
     {
         return [
-            'site_name_id' => ['nullable', 'string', 'max:255'],
-            'site_name_en' => ['nullable', 'string', 'max:255'],
-            'tagline_id' => ['nullable', 'string', 'max:255'],
-            'tagline_en' => ['nullable', 'string', 'max:255'],
-            'default_description_id' => ['nullable', 'string'],
-            'default_description_en' => ['nullable', 'string'],
+            'site_name' => ['nullable', 'string', 'max:255'],
+            'tagline' => ['nullable', 'string', 'max:255'],
+            'default_description' => ['nullable', 'string'],
             'keywords' => ['nullable', 'string'],
             'phone' => ['nullable', 'string', 'max:255'],
             'whatsapp' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
-            'address_id' => ['nullable', 'string'],
-            'address_en' => ['nullable', 'string'],
+            'address' => ['nullable', 'string'],
             'map_link' => ['nullable', 'string', 'max:2000'],
-            'weekday_hours_id' => ['nullable', 'string', 'max:255'],
-            'weekday_hours_en' => ['nullable', 'string', 'max:255'],
-            'weekend_hours_id' => ['nullable', 'string', 'max:255'],
-            'weekend_hours_en' => ['nullable', 'string', 'max:255'],
+            'weekday_hours' => ['nullable', 'string', 'max:255'],
+            'weekend_hours' => ['nullable', 'string', 'max:255'],
             'social_accounts' => ['nullable', 'array'],
             'social_accounts.*.platform' => ['required_with:social_accounts', 'string', 'max:50'],
             'social_accounts.*.label' => ['nullable', 'string', 'max:100'],
             'social_accounts.*.url' => ['required_with:social_accounts', 'string', 'max:500'],
-            'og_title_id' => ['nullable', 'string', 'max:255'],
-            'og_title_en' => ['nullable', 'string', 'max:255'],
-            'og_description_id' => ['nullable', 'string'],
-            'og_description_en' => ['nullable', 'string'],
+            'og_title' => ['nullable', 'string', 'max:255'],
+            'og_description' => ['nullable', 'string'],
             'robots_default' => ['nullable', 'string', 'max:255'],
             'canonical_base' => ['nullable', 'string', 'max:500'],
             'google_verification' => ['nullable', 'string', 'max:255'],

@@ -7,7 +7,6 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { useAdminLocale } from '@/contexts/admin-locale';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import packages from '@/routes/packages';
 import { Head, router } from '@inertiajs/react';
@@ -41,7 +40,7 @@ export default function PackagesIndex({
     productOptions,
     activityOptions,
 }: Props) {
-    const { locale } = useAdminLocale();
+    const locale: 'id' | 'en' = 'id';
     const safePackageList = Array.isArray(packageList) ? packageList : [];
     const safeProductOptions = Array.isArray(productOptions)
         ? productOptions
@@ -54,7 +53,10 @@ export default function PackagesIndex({
     const [schedulePkg, setSchedulePkg] = useState<Package | null>(null);
 
     const filtered = safePackageList.filter((pkg) => {
-        const localizedName = pkg.name?.[locale] || pkg.name?.id || '';
+        const localizedName =
+            typeof pkg.name === 'string'
+                ? pkg.name
+                : (pkg.name?.[locale] || pkg.name?.id || '');
 
         return (
             localizedName.toLowerCase().includes(search.toLowerCase()) ||

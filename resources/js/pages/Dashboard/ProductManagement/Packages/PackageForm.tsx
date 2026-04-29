@@ -158,11 +158,25 @@ function buildFormData(pkg: Package | null): PackageFormData {
         pkg?.original_price && pkg.original_price > pkg.price
             ? Math.round((1 - pkg.price / pkg.original_price) * 100)
             : '';
+    const nameId =
+        typeof pkg?.name === 'string' ? pkg.name : (pkg?.name?.id ?? '');
+    const nameEn =
+        typeof pkg?.name === 'string'
+            ? pkg.name
+            : (pkg?.name?.en ?? nameId);
+    const summaryId =
+        typeof pkg?.summary === 'string'
+            ? pkg.summary
+            : (pkg?.summary?.id ?? '');
+    const summaryEn =
+        typeof pkg?.summary === 'string'
+            ? pkg.summary
+            : (pkg?.summary?.en ?? summaryId);
 
     return {
         slug: pkg?.slug ?? '',
-        'name.id': pkg?.name?.id ?? '',
-        'name.en': pkg?.name?.en ?? '',
+        'name.id': nameId,
+        'name.en': nameEn,
         package_type: pkg?.package_type ?? 'reguler',
         departure_city: pkg?.departure_city ?? '',
         duration_days: durationDays,
@@ -175,8 +189,8 @@ function buildFormData(pkg: Package | null): PackageFormData {
             : '',
         currency: pkg?.currency ?? 'IDR',
         images: [],
-        'summary.id': pkg?.summary?.id ?? '',
-        'summary.en': pkg?.summary?.en ?? '',
+        'summary.id': summaryId,
+        'summary.en': summaryEn,
         content: normalizePackageContent(pkg?.content ?? {}),
         itineraries: normalizeItineraries(durationDays, pkg?.itineraries ?? []),
         product_ids: pkg?.product_ids ?? [],
@@ -545,21 +559,36 @@ export function PackageForm({
             formData.append('images[]', file);
         });
 
-        router.post(submitUrl, formData, {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success(
-                    isEdit ? 'Package diperbarui.' : 'Package ditambahkan.',
-                );
-                onSuccess();
-            },
-            onError: (errors) =>
-                toast.error(
-                    `Error: ${Object.entries(errors)
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join(' | ')}`,
-                ),
-        });
+        try {
+            router.post(submitUrl, formData, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(
+                        isEdit ? 'Package diperbarui.' : 'Package ditambahkan.',
+                    );
+                    onSuccess();
+                },
+                onError: (errors) => {
+                    console.error('[PackageForm] validation errors', {
+                        submitUrl,
+                        errors,
+                    });
+
+                    toast.error(
+                        `Error: ${Object.entries(errors)
+                            .map(([key, value]) => `${key}: ${value}`)
+                            .join(' | ')}`,
+                    );
+                },
+            });
+        } catch (error) {
+            console.error('[PackageForm] submit threw', {
+                submitUrl,
+                error,
+            });
+
+            toast.error('Terjadi error saat menyimpan. Cek console.');
+        }
     }
 
     const basePrice = Number(form.data.original_price) || 0;
@@ -727,21 +756,10 @@ export function PackageForm({
                                     form.setData((currentData) => ({
                                         ...currentData,
                                         'name.id': event.target.value,
-                                    }))
-                                }
-                                placeholder="Umroh Reguler 10 Hari"
-                            />
-                        </Field>
-                        <Field label="Nama Package (English)">
-                            <Input
-                                value={form.data['name.en']}
-                                onChange={(event) =>
-                                    form.setData((currentData) => ({
-                                        ...currentData,
                                         'name.en': event.target.value,
                                     }))
                                 }
-                                placeholder="Regular Umrah 10 Days"
+                                placeholder="Umroh Reguler 10 Hari"
                             />
                         </Field>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -830,21 +848,10 @@ export function PackageForm({
                                     form.setData((currentData) => ({
                                         ...currentData,
                                         'summary.id': event.target.value,
-                                    }))
-                                }
-                                placeholder="Deskripsi singkat paket..."
-                            />
-                        </Field>
-                        <Field label="Ringkasan (English)">
-                            <Textarea
-                                rows={2}
-                                value={form.data['summary.en']}
-                                onChange={(event) =>
-                                    form.setData((currentData) => ({
-                                        ...currentData,
                                         'summary.en': event.target.value,
                                     }))
                                 }
+                                placeholder="Deskripsi singkat paket..."
                             />
                         </Field>
 

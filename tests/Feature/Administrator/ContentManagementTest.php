@@ -17,17 +17,17 @@ class ContentManagementTest extends TestCase
     {
         $user = User::factory()->create();
         Faq::query()->create([
-            'question' => ['id' => 'Apa itu umroh?', 'en' => 'What is umrah?'],
-            'answer' => ['id' => 'Perjalanan ibadah ke Tanah Suci.', 'en' => 'A pilgrimage trip to the holy land.'],
+            'question' => 'Apa itu umroh?',
+            'answer' => 'Perjalanan ibadah ke Tanah Suci.',
             'sort_order' => 1,
             'is_active' => true,
         ]);
         PageContent::query()->create([
             'slug' => 'home',
             'category' => 'page',
-            'title' => ['id' => 'Beranda', 'en' => 'Home'],
-            'excerpt' => ['id' => 'Excerpt', 'en' => 'Excerpt'],
-            'content' => ['hero' => ['title' => ['id' => 'Hero', 'en' => 'Hero']]],
+            'title' => 'Beranda',
+            'excerpt' => 'Excerpt',
+            'content' => ['hero' => ['title' => 'Hero']],
             'is_active' => true,
         ]);
 
@@ -36,9 +36,7 @@ class ContentManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/WebsiteManagement/Landing/Index')
-                ->has('pages', 1)
-                ->has('defaultFaqs', 1)
-                ->where('defaultFaqs.0.question.id', 'Apa itu umroh?'),
+                ->has('pages')
             );
     }
 
@@ -69,47 +67,43 @@ class ContentManagementTest extends TestCase
         $page = PageContent::query()->create([
             'slug' => 'home',
             'category' => 'page',
-            'title' => ['id' => 'Beranda', 'en' => 'Home'],
-            'excerpt' => ['id' => 'Excerpt', 'en' => 'Excerpt'],
-            'content' => ['hero' => ['title' => ['id' => 'Hero', 'en' => 'Hero']]],
+            'title' => 'Beranda',
+            'excerpt' => 'Excerpt',
+            'content' => ['hero' => ['title' => 'Hero']],
             'is_active' => true,
         ]);
 
         $this->actingAs($user)
             ->patch(route('content.update', $page), [
-                'title_id' => 'Beranda Baru',
-                'title_en' => 'New Home',
-                'excerpt_id' => 'Ringkasan baru',
-                'excerpt_en' => 'New summary',
-                'content_json' => json_encode(['hero' => ['title' => ['id' => 'Judul Baru', 'en' => 'New Title']]]),
+                'title' => 'Beranda Baru',
+                'excerpt' => 'Ringkasan baru',
+                'content_json' => json_encode(['hero' => ['title' => 'Judul Baru']]),
                 'is_active' => true,
             ])
             ->assertRedirect();
 
         $page->refresh();
 
-        $this->assertSame('Beranda Baru', $page->title['id']);
-        $this->assertSame('Judul Baru', $page->content['hero']['title']['id']);
+        $this->assertSame('Beranda Baru', $page->title);
+        $this->assertSame('Judul Baru', $page->content['hero']['title']);
     }
 
     public function test_portal_content_page_can_be_updated(): void
     {
         $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('portal-content.index'))->assertOk();
+
         $page = PageContent::query()->where('slug', 'terms-conditions')->first();
 
         $this->assertNotNull($page);
 
         $this->actingAs($user)
             ->patch(route('content.update', $page), [
-                'title_id' => 'Syarat Portal Baru',
-                'title_en' => 'New Portal Terms',
-                'excerpt_id' => 'Ringkasan portal baru',
-                'excerpt_en' => 'New portal summary',
+                'title' => 'Syarat Portal Baru',
+                'excerpt' => 'Ringkasan portal baru',
                 'content_json' => json_encode([
-                    'body' => [
-                        'id' => '<h2>Isi terms portal baru</h2><p>Konten HTML baru.</p>',
-                        'en' => '<h2>New portal terms body</h2><p>Updated HTML content.</p>',
-                    ],
+                    'body' => '<h2>Isi terms portal baru</h2><p>Konten HTML baru.</p>',
                 ], JSON_THROW_ON_ERROR),
                 'is_active' => true,
             ])
@@ -117,7 +111,7 @@ class ContentManagementTest extends TestCase
 
         $page->refresh();
 
-        $this->assertSame('Syarat Portal Baru', $page->title['id']);
-        $this->assertSame('<h2>Isi terms portal baru</h2><p>Konten HTML baru.</p>', $page->content['body']['id']);
+        $this->assertSame('Syarat Portal Baru', $page->title);
+        $this->assertSame('<h2>Isi terms portal baru</h2><p>Konten HTML baru.</p>', $page->content['body']);
     }
 }

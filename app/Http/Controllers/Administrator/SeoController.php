@@ -30,8 +30,8 @@ class SeoController extends Controller
             ['slug' => self::SEO_SLUG],
             [
                 'category' => 'settings',
-                'title' => ['id' => 'SEO Settings', 'en' => 'SEO Settings'],
-                'excerpt' => ['id' => 'Pengaturan SEO website', 'en' => 'Website SEO settings'],
+                'title' => 'Pengaturan SEO',
+                'excerpt' => 'Pengaturan SEO website',
                 'content' => [],
                 'is_active' => true,
             ],
@@ -39,12 +39,9 @@ class SeoController extends Controller
 
         $content = is_array($settings->content) ? $settings->content : [];
         $content['general'] = [
-            'siteName' => ['id' => $request->string('site_name_id')->value(), 'en' => $request->string('site_name_en')->value()],
-            'tagline' => ['id' => $request->string('tagline_id')->value(), 'en' => $request->string('tagline_en')->value()],
-            'defaultDescription' => [
-                'id' => $request->string('default_description_id')->value(),
-                'en' => $request->string('default_description_en')->value(),
-            ],
+            'siteName' => $request->string('site_name')->value(),
+            'tagline' => $request->string('tagline')->value(),
+            'defaultDescription' => $request->string('default_description')->value(),
             'keywords' => $request->string('keywords')->value(),
         ];
         $content['contact'] = [
@@ -53,12 +50,12 @@ class SeoController extends Controller
             'whatsapp' => $request->string('whatsapp')->value(),
             'email' => $request->string('email')->value(),
             'address' => [
-                'full' => ['id' => $request->string('address_id')->value(), 'en' => $request->string('address_en')->value()],
+                'full' => $request->string('address')->value(),
                 'mapLink' => $request->string('map_link')->value(),
             ],
             'operatingHours' => [
-                'weekday' => ['id' => $request->string('weekday_hours_id')->value(), 'en' => $request->string('weekday_hours_en')->value()],
-                'weekend' => ['id' => $request->string('weekend_hours_id')->value(), 'en' => $request->string('weekend_hours_en')->value()],
+                'weekday' => $request->string('weekday_hours')->value(),
+                'weekend' => $request->string('weekend_hours')->value(),
             ],
         ];
         $content['social'] = [
@@ -66,8 +63,8 @@ class SeoController extends Controller
             'accounts' => is_array($request->input('social_accounts'))
                 ? $request->input('social_accounts')
                 : json_decode($request->string('social_accounts')->value() ?: '[]', true) ?? [],
-            'ogTitle' => ['id' => $request->string('og_title_id')->value(), 'en' => $request->string('og_title_en')->value()],
-            'ogDescription' => ['id' => $request->string('og_description_id')->value(), 'en' => $request->string('og_description_en')->value()],
+            'ogTitle' => $request->string('og_title')->value(),
+            'ogDescription' => $request->string('og_description')->value(),
         ];
         $content['advanced'] = [
             'robotsDefault' => $request->string('robots_default')->value(),

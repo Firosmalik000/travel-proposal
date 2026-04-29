@@ -11,13 +11,27 @@ class UpdatePageContentRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $fallbackMap = [
+            'title' => 'title_id',
+            'excerpt' => 'excerpt_id',
+        ];
+
+        foreach ($fallbackMap as $target => $fallback) {
+            if (! $this->filled($target) && $this->filled($fallback)) {
+                $this->merge([
+                    $target => (string) $this->input($fallback),
+                ]);
+            }
+        }
+    }
+
     public function rules(): array
     {
         return [
-            'title_id' => ['required', 'string', 'max:255'],
-            'title_en' => ['required', 'string', 'max:255'],
-            'excerpt_id' => ['nullable', 'string'],
-            'excerpt_en' => ['nullable', 'string'],
+            'title' => ['required', 'string', 'max:255'],
+            'excerpt' => ['nullable', 'string'],
             'content' => ['nullable', 'array'],
             'content_json' => ['nullable', 'json'],
             'media' => ['nullable', 'array'],

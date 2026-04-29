@@ -8,10 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('travel_services', function (Blueprint $table) {
+        Schema::create('services', function (Blueprint $table) {
             $table->id();
-            $table->json('title');
-            $table->json('description');
+            $table->string('title');
+            $table->text('description');
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -23,8 +23,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('origin_city')->nullable();
-            $table->foreignId('travel_package_id')->nullable()->constrained()->nullOnDelete();
-            $table->json('quote');
+            $table->foreignId('package_id')->nullable()->constrained()->nullOnDelete();
+            $table->text('quote');
             $table->unsignedTinyInteger('rating')->default(5);
             $table->boolean('is_featured')->default(false);
             $table->boolean('is_active')->default(true);
@@ -35,8 +35,8 @@ return new class extends Migration
 
         Schema::create('faqs', function (Blueprint $table) {
             $table->id();
-            $table->json('question');
-            $table->json('answer');
+            $table->text('question');
+            $table->longText('answer');
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -47,9 +47,9 @@ return new class extends Migration
         Schema::create('articles', function (Blueprint $table) {
             $table->id();
             $table->string('slug')->unique();
-            $table->json('title');
-            $table->json('excerpt')->nullable();
-            $table->json('body')->nullable();
+            $table->string('title');
+            $table->text('excerpt')->nullable();
+            $table->longText('body')->nullable();
             $table->string('image_path')->nullable();
             $table->timestamp('published_at')->nullable();
             $table->boolean('is_featured')->default(false);
@@ -62,9 +62,9 @@ return new class extends Migration
 
         Schema::create('gallery_items', function (Blueprint $table) {
             $table->id();
-            $table->json('title');
+            $table->string('title');
             $table->string('category')->nullable();
-            $table->json('description')->nullable();
+            $table->text('description')->nullable();
             $table->string('image_path');
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
@@ -81,6 +81,6 @@ return new class extends Migration
         Schema::dropIfExists('articles');
         Schema::dropIfExists('faqs');
         Schema::dropIfExists('testimonials');
-        Schema::dropIfExists('travel_services');
+        Schema::dropIfExists('services');
     }
 };

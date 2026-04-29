@@ -163,7 +163,7 @@ class DashboardController extends Controller
             ->limit(5)
             ->get()
             ->map(fn (DepartureSchedule $schedule): array => [
-                'title' => (string) ($schedule->travelPackage?->name['id'] ?? 'Paket Umroh'),
+                'title' => (string) ($schedule->travelPackage?->name ?? 'Paket Umroh'),
                 'departure_date' => $schedule->departure_date?->toDateString(),
                 'departure_city' => $schedule->departure_city,
                 'seats_available' => $schedule->availableSeatsCount(),

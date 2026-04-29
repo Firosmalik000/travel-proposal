@@ -20,6 +20,7 @@ use App\Models\TravelProduct;
 use App\Models\TravelService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
@@ -57,26 +58,106 @@ class ContentController extends Controller
         ]);
     }
 
-    public function products(): Response
+    public function products(Request $request): Response
     {
-        return $this->renderContentPage(
-            heading: 'Product Management',
-            description: 'Kelola product travel yang menjadi komponen package.',
-            breadcrumbHref: '/admin/product-management/products',
-            pages: [],
-            resources: ['products'],
-        );
+        $search = trim((string) $request->query('search', ''));
+        $productType = trim((string) $request->query('product_type', 'all'));
+
+        $query = TravelProduct::query()
+            ->when($search !== '', function ($q) use ($search): void {
+                $q->where(function ($inner) use ($search): void {
+                    $inner
+                        ->where('code', 'like', '%'.$search.'%')
+                        ->orWhere('name', 'like', '%'.$search.'%')
+                        ->orWhere('slug', 'like', '%'.$search.'%')
+                        ->orWhere('product_type', 'like', '%'.$search.'%');
+                });
+            })
+            ->when($productType !== '' && $productType !== 'all', fn ($q) => $q->where('product_type', $productType))
+            ->orderBy('code');
+
+        $products = $query
+            ->paginate(12)
+            ->withQueryString()
+            ->through(fn (TravelProduct $product): array => [
+                'id' => $product->id,
+                'code' => $product->code,
+                'slug' => $product->slug,
+                'icon' => $product->icon,
+                'name' => $product->name,
+                'product_type' => $product->product_type,
+                'description' => $product->description,
+                'unit' => is_array($product->content) ? (string) ($product->content['unit'] ?? '') : '',
+                'is_active' => $product->is_active,
+            ]);
+
+        $stats = [
+            'total' => TravelProduct::query()->count(),
+            'active' => TravelProduct::query()->where('is_active', true)->count(),
+            'inactive' => TravelProduct::query()->where('is_active', false)->count(),
+        ];
+
+        $productTypeOptions = ProductCategory::query()
+            ->orderBy('sort_order')
+            ->orderBy('key')
+            ->get(['key', 'name'])
+            ->map(fn (ProductCategory $category): array => [
+                'value' => (string) $category->key,
+                'label' => (string) ($category->name ?: $category->key),
+            ])
+            ->values()
+            ->all();
+
+        return Inertia::render('Dashboard/ProductManagement/Products/Index', [
+            'products' => $products,
+            'filters' => [
+                'search' => $search,
+                'product_type' => $productType,
+            ],
+            'stats' => $stats,
+            'product_type_options' => $productTypeOptions,
+        ]);
     }
 
-    public function productCategories(): Response
+    public function productCategories(Request $request): Response
     {
-        return $this->renderContentPage(
-            heading: 'Product Category',
-            description: 'Kelola kategori product yang dipakai sebagai tipe product travel.',
-            breadcrumbHref: '/admin/product-management/categories',
-            pages: [],
-            resources: ['product_categories'],
-        );
+        $search = trim((string) $request->query('search', ''));
+
+        $categories = ProductCategory::query()
+            ->when($search !== '', function ($q) use ($search): void {
+                $q->where(function ($inner) use ($search): void {
+                    $inner
+                        ->where('key', 'like', '%'.$search.'%')
+                        ->orWhere('name', 'like', '%'.$search.'%')
+                        ->orWhere('description', 'like', '%'.$search.'%');
+                });
+            })
+            ->orderBy('sort_order')
+            ->orderBy('key')
+            ->paginate(12)
+            ->withQueryString()
+            ->through(fn (ProductCategory $category): array => [
+                'id' => $category->id,
+                'key' => $category->key,
+                'name' => $category->name,
+                'description' => $category->description,
+                'sort_order' => $category->sort_order,
+                'is_active' => $category->is_active,
+            ]);
+
+        $stats = [
+            'total' => ProductCategory::query()->count(),
+            'active' => ProductCategory::query()->where('is_active', true)->count(),
+            'inactive' => ProductCategory::query()->where('is_active', false)->count(),
+        ];
+
+        return Inertia::render('Dashboard/ProductManagement/Categories/Index', [
+            'categories' => $categories,
+            'filters' => [
+                'search' => $search,
+            ],
+            'stats' => $stats,
+        ]);
     }
 
     public function packages(): Response
@@ -109,14 +190,8 @@ class ContentController extends Controller
         $content = $this->applyUploadedMedia($request, is_array($content) ? $content : []);
 
         $pageContent->update([
-            'title' => [
-                'id' => $request->string('title_id')->value(),
-                'en' => $request->string('title_en')->value(),
-            ],
-            'excerpt' => [
-                'id' => $request->string('excerpt_id')->value(),
-                'en' => $request->string('excerpt_en')->value(),
-            ],
+            'title' => $request->string('title')->value(),
+            'excerpt' => $request->filled('excerpt') ? $request->string('excerpt')->value() : null,
             'content' => $content,
             'is_active' => $request->boolean('is_active'),
         ]);
@@ -194,24 +269,6 @@ class ContentController extends Controller
      */
     private function landingPageSections(): array
     {
-        $landingDefinitions = collect($this->landingPageDefinitions());
-
-        // Ensure core landing pages exist so the Landing editor always has tabs to render.
-        $landingDefinitions->each(function (array $definition): void {
-            PageContent::query()->firstOrCreate(
-                [
-                    'slug' => $definition['slug'],
-                    'category' => 'page',
-                ],
-                [
-                    'title' => $definition['title'],
-                    'excerpt' => $definition['excerpt'],
-                    'content' => $definition['content'],
-                    'is_active' => true,
-                ],
-            );
-        });
-
         return PageContent::query()
             ->where('category', 'page')
             ->orderBy('slug')
@@ -221,7 +278,7 @@ class ContentController extends Controller
                 'slug' => $page->slug,
                 'title' => $page->title,
                 'excerpt' => $page->excerpt,
-                'content' => $page->content ?? [],
+                'content' => $this->stripLocaleData($page->content ?? []),
                 'is_active' => $page->is_active,
             ])
             ->all();
@@ -246,6 +303,93 @@ class ContentController extends Controller
                             'en' => 'A focused, comfortable, and well-guided umrah journey with a trusted team.',
                         ],
                         'image' => '/images/dummy.jpg',
+                        'cta_label' => ['id' => 'FREE KONSULTASI', 'en' => 'FREE CONSULTATION'],
+                        'secondary_cta_label' => ['id' => 'Lihat Paket', 'en' => 'View Packages'],
+                        'secondary_cta_href' => '/paket-umroh',
+                    ],
+                    'timeline' => [
+                        'label' => ['id' => 'Alur Perjalanan yang Kami Jalankan', 'en' => 'Journey Flow'],
+                        'heading' => [
+                            'id' => 'Sistem Perjalanan yang Jelas, Bukan Sekadar Janji',
+                            'en' => 'A Clear System, Not Just Promises',
+                        ],
+                        'steps' => [
+                            [
+                                'icon' => 'users',
+                                'caption' => ['id' => 'DAFTAR & KONSULTASI', 'en' => 'REGISTER'],
+                                'title' => ['id' => 'Registrasi', 'en' => 'Registration'],
+                                'description' => ['id' => 'Konsultasi & pilih paket yang sesuai.', 'en' => 'Consult and pick the right package.'],
+                            ],
+                            [
+                                'icon' => 'credit-card',
+                                'caption' => ['id' => 'DP / PELUNASAN', 'en' => 'PAYMENT'],
+                                'title' => ['id' => 'Pembayaran', 'en' => 'Payment'],
+                                'description' => ['id' => 'Skema biaya jelas, konfirmasi transparan.', 'en' => 'Clear costs and transparent confirmation.'],
+                            ],
+                            [
+                                'icon' => 'check-circle-2',
+                                'caption' => ['id' => 'MANASIK & DOKUMEN', 'en' => 'PREP'],
+                                'title' => ['id' => 'Persiapan Umroh', 'en' => 'Preparation'],
+                                'description' => ['id' => 'Manasik, perlengkapan, dan dokumen.', 'en' => 'Manasik, gear, and documents.'],
+                            ],
+                            [
+                                'icon' => 'plane',
+                                'caption' => ['id' => 'BERANGKAT BARENG', 'en' => 'DEPART'],
+                                'title' => ['id' => 'Keberangkatan', 'en' => 'Departure'],
+                                'description' => ['id' => 'Briefing & pendampingan sebelum berangkat.', 'en' => 'Briefing and guidance before departure.'],
+                            ],
+                            [
+                                'icon' => 'landmark',
+                                'caption' => ['id' => 'BIMBINGAN IBADAH', 'en' => 'GUIDANCE'],
+                                'title' => ['id' => 'Ibadah', 'en' => 'Worship'],
+                                'description' => ['id' => 'Bimbingan ibadah sepanjang perjalanan.', 'en' => 'Guidance throughout the journey.'],
+                            ],
+                            [
+                                'icon' => 'calendar-days',
+                                'caption' => ['id' => 'PULANG AMAN', 'en' => 'RETURN'],
+                                'title' => ['id' => 'Kepulangan', 'en' => 'Return'],
+                                'description' => ['id' => 'Kontrol perjalanan sampai tiba di tanah air.', 'en' => 'Managed until you return home.'],
+                            ],
+                        ],
+                        'value_cards' => [
+                            [
+                                'icon' => 'shield-check',
+                                'title' => ['id' => 'Transparansi Biaya', 'en' => 'Transparent Fees'],
+                                'description' => ['id' => 'Rincian biaya jelas sejak awal, tanpa kejutan di tengah jalan.', 'en' => 'Clear fees from the start, no surprises.'],
+                            ],
+                            [
+                                'icon' => 'calendar-days',
+                                'title' => ['id' => 'Timeline Terencana', 'en' => 'Planned Timeline'],
+                                'description' => ['id' => 'Jadwal terstruktur dari pendaftaran sampai kepulangan.', 'en' => 'Structured schedule from start to return.'],
+                            ],
+                            [
+                                'icon' => 'heart-handshake',
+                                'title' => ['id' => 'Pendampingan Ibadah', 'en' => 'Worship Assistance'],
+                                'description' => ['id' => 'Pembimbing berpengalaman memastikan ibadah lebih tenang dan khusyuk.', 'en' => 'Experienced guidance for calm worship.'],
+                            ],
+                            [
+                                'icon' => 'check-circle-2',
+                                'title' => ['id' => 'Sistem Terstruktur', 'en' => 'Structured System'],
+                                'description' => ['id' => 'Proses administrasi, keberangkatan, dan pelayanan berjalan rapi.', 'en' => 'Administration, departure, and service are organized.'],
+                            ],
+                        ],
+                    ],
+                    'problem' => [
+                        'label' => ['id' => 'PENTING DIKETAHUI', 'en' => 'IMPORTANT'],
+                        'heading' => [
+                            'id' => 'Banyak Jamaah Gagal Berangkat Bukan Karena Niat, Tapi Karena Salah Pilih Travel',
+                            'en' => 'Many Fail to Depart Due to Choosing the Wrong Travel',
+                        ],
+                        'badges' => [
+                            ['id' => 'Biaya tiba-tiba berubah di tengah jalan', 'en' => 'Fees change unexpectedly'],
+                            ['id' => 'Minimnya informasi & komunikasi', 'en' => 'Lack of info & communication'],
+                            ['id' => 'Jadwal keberangkatan tidak jelas', 'en' => 'Unclear departure schedule'],
+                            ['id' => 'Takut tertipu travel yang tidak amanah', 'en' => 'Fear of untrustworthy travel'],
+                        ],
+                        'quote' => [
+                            'id' => '“Kami memahami kekhawatiran itu. Karena itu, Asfar Tour hadir dengan sistem yang jelas dan transparan.”',
+                            'en' => '“We understand the concerns. That’s why we provide a clear and transparent system.”',
+                        ],
                     ],
                     'stats' => [
                         ['value' => '15+', 'label' => ['id' => 'Tahun Melayani', 'en' => 'Years of Service']],
@@ -270,6 +414,12 @@ class ContentController extends Controller
                     'packages' => [
                         'title' => ['id' => 'Paket Unggulan', 'en' => 'Featured Packages'],
                         'price_prefix' => ['id' => 'Mulai', 'en' => 'From'],
+                        'heading' => ['id' => 'PAKET UMROH KAMI', 'en' => 'OUR UMRAH PACKAGES'],
+                        'cta_label' => ['id' => 'Lihat Paket Lainnya', 'en' => 'See More Packages'],
+                        'detail_label' => ['id' => 'Lihat Detail', 'en' => 'View Details'],
+                        'duration_suffix' => ['id' => 'hari', 'en' => 'days'],
+                        'fallback_name' => ['id' => 'Paket Umroh', 'en' => 'Umrah Package'],
+                        'fallback_summary' => ['id' => 'Detail paket akan tampil di sini.', 'en' => 'Package details will appear here.'],
                     ],
                     'services' => [
                         'label' => ['id' => 'Layanan Kami', 'en' => 'Our Services'],
@@ -278,6 +428,33 @@ class ContentController extends Controller
                             'id' => 'Layanan umroh menyeluruh untuk menjaga perjalanan ibadah tetap aman, nyaman, dan terarah.',
                             'en' => 'A complete umrah service to keep the worship journey safe, comfortable, and well-guided.',
                         ],
+                        'fallback_title_prefix' => ['id' => 'Layanan', 'en' => 'Service'],
+                        'fallback_description' => [
+                            'id' => 'Deskripsi layanan akan tampil di sini.',
+                            'en' => 'Service description will appear here.',
+                        ],
+                        'items' => [
+                            [
+                                'icon' => 'plane',
+                                'title' => ['id' => 'Flight Booking', 'en' => 'Flight Booking'],
+                                'description' => ['id' => 'Kami bantu atur penerbangan PP sesuai paket dan kebutuhan.', 'en' => 'We arrange round-trip flights based on your needs.'],
+                            ],
+                            [
+                                'icon' => 'landmark',
+                                'title' => ['id' => 'Tours & Activities', 'en' => 'Tours & Activities'],
+                                'description' => ['id' => 'Rangkaian agenda ibadah & ziarah yang tertata.', 'en' => 'Structured worship agenda and visits.'],
+                            ],
+                            [
+                                'icon' => 'map-pin',
+                                'title' => ['id' => 'Airport Transfers', 'en' => 'Airport Transfers'],
+                                'description' => ['id' => 'Penjemputan dan pengantaran yang terkoordinasi.', 'en' => 'Coordinated pick-up and drop-off.'],
+                            ],
+                            [
+                                'icon' => 'check-circle-2',
+                                'title' => ['id' => 'Hotel Bookings', 'en' => 'Hotel Bookings'],
+                                'description' => ['id' => 'Akomodasi nyaman dengan lokasi strategis.', 'en' => 'Comfortable hotels in strategic locations.'],
+                            ],
+                        ],
                     ],
                     'gallery' => [
                         'title' => ['id' => 'Galeri Perjalanan', 'en' => 'Travel Gallery'],
@@ -285,6 +462,7 @@ class ContentController extends Controller
                             'id' => 'Momen-momen berharga selama perjalanan jamaah.',
                             'en' => 'Meaningful moments from pilgrim journeys.',
                         ],
+                        'cta_label' => ['id' => 'OUR HISTORY', 'en' => 'OUR HISTORY'],
                         'images' => [],
                     ],
                     'faq' => [
@@ -293,6 +471,25 @@ class ContentController extends Controller
                             'id' => 'Temukan jawaban untuk pertanyaan yang sering ditanyakan.',
                             'en' => 'Find answers to common questions.',
                         ],
+                    ],
+                    'testimonials' => [
+                        'heading' => ['id' => 'Kesan Jamaah', 'en' => 'Testimonials'],
+                        'fallback_quote' => [
+                            'id' => 'Testimoni jamaah akan tampil di sini.',
+                            'en' => 'Testimonials will appear here.',
+                        ],
+                    ],
+                    'articles' => [
+                        'label' => ['id' => 'Artikel', 'en' => 'Articles'],
+                        'heading' => ['id' => 'News & Update Terbaru', 'en' => 'Latest News & Updates'],
+                        'cta_label' => ['id' => 'Lihat Semua Artikel', 'en' => 'View All Articles'],
+                        'read_more_label' => ['id' => 'Baca selengkapnya', 'en' => 'Read more'],
+                        'empty_title' => ['id' => 'Belum ada artikel yang tampil.', 'en' => 'No articles available yet.'],
+                        'empty_description' => [
+                            'id' => 'Pastikan artikel sudah berstatus Terbit dan tanggal publikasinya tidak di masa depan.',
+                            'en' => 'Make sure the article is Published and the publish date is not in the future.',
+                        ],
+                        'fallback_item_title_prefix' => ['id' => 'Artikel', 'en' => 'Article'],
                     ],
                     'contact' => [
                         'label' => ['id' => 'Kontak Cepat', 'en' => 'Quick Contact'],
@@ -306,6 +503,16 @@ class ContentController extends Controller
                         ],
                         'whatsapp_label' => ['id' => 'Konsultasi WhatsApp', 'en' => 'WhatsApp Consultation'],
                         'contact_label' => ['id' => 'Lihat Kontak Lengkap', 'en' => 'View Full Contact'],
+                        'banner_image' => '/images/dummy.jpg',
+                        'banner_kicker' => ['id' => 'Konsultasi Gratis', 'en' => 'Free Consultation'],
+                        'banner_title' => [
+                            'id' => 'AYO WUJUDKAN IBADAH KE TANAH SUCI BARENG {company_name}',
+                            'en' => 'Let’s go to the holy land with {company_name}',
+                        ],
+                        'secondary_label' => ['id' => 'Lihat Paket', 'en' => 'View Packages'],
+                        'secondary_href' => '/paket-umroh',
+                        'address_label' => ['id' => 'Alamat', 'en' => 'Address'],
+                        'contact_info_label' => ['id' => 'Kontak', 'en' => 'Contact'],
                     ],
                 ],
             ],
@@ -403,9 +610,9 @@ class ContentController extends Controller
                         'category' => 'page',
                     ],
                     [
-                        'title' => $definition['title'],
-                        'excerpt' => $definition['excerpt'],
-                        'content' => $definition['content'],
+                        'title' => $this->localizedValue($definition['title'] ?? ''),
+                        'excerpt' => $this->localizedValue($definition['excerpt'] ?? ''),
+                        'content' => $this->stripLocaleData($definition['content'] ?? []),
                         'is_active' => true,
                     ],
                 );
@@ -418,15 +625,17 @@ class ContentController extends Controller
                 /** @var PageContent|null $page */
                 $page = $pages->get($definition['slug']);
 
+                $resolvedContent = $this->stripLocaleData($page?->content ?? $definition['content']);
+
                 return [
                     'id' => $page?->id,
                     'slug' => $definition['slug'],
                     'label' => $definition['label'],
                     'description' => $definition['description'],
-                    'title' => $page?->title ?? $definition['title'],
-                    'excerpt' => $page?->excerpt ?? $definition['excerpt'],
-                    'content' => $page?->content ?? $definition['content'],
-                    'content_json' => json_encode($page?->content ?? $definition['content'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                    'title' => $this->localizedValue($page?->title ?? $definition['title']),
+                    'excerpt' => $this->localizedValue($page?->excerpt ?? $definition['excerpt']),
+                    'content' => $resolvedContent,
+                    'content_json' => json_encode($resolvedContent, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                     'is_active' => $page?->is_active ?? true,
                 ];
             })
@@ -518,26 +727,30 @@ class ContentController extends Controller
         return collect($this->resourceDefinitions())
             ->only($resourceKeys)
             ->map(
-                fn (array $definition, string $key): array => [
-                    'key' => $key,
-                    'label' => $definition['label'],
-                    'description' => $definition['description'],
-                    'template' => $definition['template'],
-                    'meta' => $this->resourceMeta($key),
-                    'template_json' => json_encode($definition['template'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                    'items' => $definition['model']::query()
-                        ->when(Arr::get($definition, 'with'), fn ($query, array $relations) => $query->with($relations))
-                        ->orderBy(...$definition['order_by'])
-                        ->get()
-                        ->map(fn (Model $item): array => [
-                            'id' => $item->getKey(),
-                            'title' => $this->resourceItemTitle($key, $item),
-                            'payload' => $this->serializeResource($key, $item),
-                            'payload_json' => json_encode($this->serializeResource($key, $item), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                        ])
-                        ->values()
-                        ->all(),
-                ],
+                function (array $definition, string $key): array {
+                    $template = $this->stripLocaleData($definition['template'] ?? []);
+
+                    return [
+                        'key' => $key,
+                        'label' => $definition['label'],
+                        'description' => $definition['description'],
+                        'template' => $template,
+                        'meta' => $this->resourceMeta($key),
+                        'template_json' => json_encode($template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                        'items' => $definition['model']::query()
+                            ->when(Arr::get($definition, 'with'), fn ($query, array $relations) => $query->with($relations))
+                            ->orderBy(...$definition['order_by'])
+                            ->get()
+                            ->map(fn (Model $item): array => [
+                                'id' => $item->getKey(),
+                                'title' => $this->resourceItemTitle($key, $item),
+                                'payload' => $this->stripLocaleData($this->serializeResource($key, $item)),
+                                'payload_json' => json_encode($this->stripLocaleData($this->serializeResource($key, $item)), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                            ])
+                            ->values()
+                            ->all(),
+                    ];
+                },
             )->values()->all();
     }
 
@@ -995,16 +1208,34 @@ class ContentController extends Controller
         return $payload;
     }
 
-    /**
-     * @param  array<string, mixed>  $payload
-     * @return array<string, string>
-     */
-    private function localizedValue(array $payload): array
+    private function localizedValue(mixed $payload): string
     {
-        return [
-            'id' => isset($payload['id']) ? (string) $payload['id'] : '',
-            'en' => isset($payload['en']) ? (string) $payload['en'] : '',
-        ];
+        if (is_string($payload)) {
+            return $payload;
+        }
+
+        if (is_array($payload)) {
+            return (string) ($payload['id'] ?? $payload['en'] ?? '');
+        }
+
+        return '';
+    }
+
+    private function stripLocaleData(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (array_key_exists('id', $value) || array_key_exists('en', $value)) {
+            return $this->stripLocaleData($value['id'] ?? $value['en'] ?? '');
+        }
+
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->stripLocaleData($item);
+        }
+
+        return $value;
     }
 
     private function resourceItemTitle(string $resource, Model $item): string
@@ -1013,7 +1244,7 @@ class ContentController extends Controller
             'product_categories' => (string) ($item->getAttribute('key') ?? $item->getKey()),
             'products', 'packages' => (string) ($item->getAttribute('code') ?? $item->getKey()),
             'schedules' => (string) ($item->travelPackage?->code.' - '.$item->getAttribute('departure_date')),
-            'faqs' => (string) Arr::get($item->getAttribute('question'), 'id', Arr::get($item->getAttribute('question'), 'en', $item->getKey())),
+            'faqs' => (string) ($item->getAttribute('question') ?? $item->getKey()),
             'legal_documents' => (string) ($item->getAttribute('document_number') ?? $item->getKey()),
             'articles' => (string) ($item->getAttribute('slug') ?? $item->getKey()),
             'testimonials', 'team' => (string) ($item->getAttribute('name') ?? $item->getKey()),
@@ -1021,15 +1252,15 @@ class ContentController extends Controller
         };
     }
 
-    private function productCategoryDefaultUnit(string $categoryKey): array
+    private function productCategoryDefaultUnit(string $categoryKey): string
     {
         return match ($categoryKey) {
-            'dokumen' => ['id' => 'per jamaah', 'en' => 'per pilgrim'],
-            'transportasi' => ['id' => 'per paket', 'en' => 'per package'],
-            'akomodasi' => ['id' => 'per kamar', 'en' => 'per room'],
-            'layanan' => ['id' => 'per paket', 'en' => 'per package'],
-            'perlengkapan' => ['id' => 'per jamaah', 'en' => 'per pilgrim'],
-            default => ['id' => 'per paket', 'en' => 'per package'],
+            'dokumen' => 'per jamaah',
+            'transportasi' => 'per paket',
+            'akomodasi' => 'per kamar',
+            'layanan' => 'per paket',
+            'perlengkapan' => 'per jamaah',
+            default => 'per paket',
         };
     }
 

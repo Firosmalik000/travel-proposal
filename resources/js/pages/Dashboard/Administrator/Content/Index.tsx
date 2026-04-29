@@ -1,4 +1,3 @@
-import { AdminLocaleSwitch } from '@/components/admin-locale-switch';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { useAdminLocale } from '@/contexts/admin-locale';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { cn } from '@/lib/utils';
 import { Head, router, useForm } from '@inertiajs/react';
@@ -23,7 +21,7 @@ import { toast } from 'sonner';
 // --- TYPES ---
 interface ResourceItem { id: number; title: string; payload: Record<string, any>; }
 interface ResourceSection { key: string; label: string; description: string; template: Record<string, any>; meta?: Record<string, any>; items: ResourceItem[]; }
-interface StaticPageSection { id: number | null; slug: string; label: string; description: string; title: Record<string, any>; excerpt: Record<string, any>; content: Record<string, any>; content_json: string; is_active: boolean; }
+interface StaticPageSection { id: number | null; slug: string; label: string; description: string; title: string; excerpt: string; content: Record<string, any>; content_json: string; is_active: boolean; }
 type Option = { label: string; value: string; };
 type FieldDefinition = { path: string; label: string; type: 'text'|'date'|'textarea'|'number'|'checkbox'|'select'|'localized-text'|'localized-textarea'|'localized-list'|'code-list'|'product-selector'|'itinerary'|'image'; description?: string; options?: Option[]; optionsKey?: string; min?: number; step?: number; };
 type ProductOption = { code: string; name: Record<string, unknown> | string; product_type: string; is_active: boolean; };
@@ -116,17 +114,6 @@ export default function ContentIndex({ heading = 'Management', pages = [], resou
                                 Kelola halaman policy, bantuan, FAQ, dan legal documents dari satu modul yang lebih rapi dan konsisten.
                             </p>
                         </div>
-                        <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
-                            <div className="flex items-center gap-3">
-                                <Languages className="h-4 w-4 text-muted-foreground" />
-                                <div className="space-y-1">
-                                    <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                                        Mode Input Bahasa
-                                    </p>
-                                    <AdminLocaleSwitch />
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 ) : (
                     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -138,7 +125,6 @@ export default function ContentIndex({ heading = 'Management', pages = [], resou
                                 Manajemen resource portal dalam satu workspace admin.
                             </p>
                         </div>
-                        <AdminLocaleSwitch />
                     </div>
                 )}
 
@@ -710,15 +696,11 @@ function StaticPagesPanel({ pages }: { pages: StaticPageSection[] }) {
 }
 
 function StaticPageEditorDialog({ page, onClose }: { page: StaticPageSection; onClose: () => void }) {
-    const { locale } = useAdminLocale();
     const [bodyMode, setBodyMode] = useState<'visual' | 'html'>('visual');
     const form = useForm({
-        title_id: stringValue(page.title?.id),
-        title_en: stringValue(page.title?.en),
-        excerpt_id: stringValue(page.excerpt?.id),
-        excerpt_en: stringValue(page.excerpt?.en),
-        body_id: stringValue(page.content?.body?.id),
-        body_en: stringValue(page.content?.body?.en),
+        title: stringValue(page.title),
+        excerpt: stringValue(page.excerpt),
+        body: stringValue(page.content?.body),
         is_active: page.is_active,
     });
 
@@ -732,16 +714,11 @@ function StaticPageEditorDialog({ page, onClose }: { page: StaticPageSection; on
         }
 
         router.patch(`/admin/website-management/content/${page.id}`, {
-            title_id: form.data.title_id,
-            title_en: form.data.title_en,
-            excerpt_id: form.data.excerpt_id,
-            excerpt_en: form.data.excerpt_en,
+            title: form.data.title,
+            excerpt: form.data.excerpt,
             content_json: JSON.stringify({
                 ...page.content,
-                body: {
-                    id: form.data.body_id,
-                    en: form.data.body_en,
-                },
+                body: form.data.body,
             }),
             is_active: form.data.is_active,
         }, {
@@ -752,9 +729,6 @@ function StaticPageEditorDialog({ page, onClose }: { page: StaticPageSection; on
             },
         });
     };
-
-    const activeBodyKey = locale === 'id' ? 'body_id' : 'body_en';
-    const activeBodyValue = locale === 'id' ? form.data.body_id : form.data.body_en;
 
     return (
         <Sheet open onOpenChange={(open) => !open && onClose()}>
@@ -774,52 +748,41 @@ function StaticPageEditorDialog({ page, onClose }: { page: StaticPageSection; on
                             <p className="mt-2 text-sm font-semibold text-foreground">{page.label}</p>
                             <p className="mt-1 text-xs text-muted-foreground">{page.slug}</p>
                         </div>
-                        <div className="rounded-2xl border border-border bg-background p-4">
-                            <div className="flex items-center gap-3">
-                                <Languages className="h-4 w-4 text-muted-foreground" />
-                                <div className="space-y-1">
-                                    <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-                                        Mode Input Bahasa
-                                    </p>
-                                    <AdminLocaleSwitch />
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                         <div className="mb-4">
                             <p className="text-sm font-semibold text-foreground">
-                                Konten {locale === 'id' ? 'Indonesia' : 'English'}
+                                Konten Halaman
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                Hanya field bahasa aktif yang ditampilkan untuk mengurangi kepadatan form.
+                                Kelola judul, ringkasan, dan isi halaman di sini.
                             </p>
                         </div>
 
                         <div className="grid gap-4">
                             <div>
                                 <Label className="mb-1.5 block">
-                                    {locale === 'id' ? 'Judul Halaman' : 'Page Title'}
+                                    Judul Halaman
                                 </Label>
                                 <Input
-                                    value={locale === 'id' ? form.data.title_id : form.data.title_en}
-                                    onChange={(e) => form.setData(locale === 'id' ? 'title_id' : 'title_en', e.target.value)}
+                                    value={form.data.title}
+                                    onChange={(e) => form.setData('title', e.target.value)}
                                 />
                             </div>
                             <div>
                                 <Label className="mb-1.5 block">
-                                    {locale === 'id' ? 'Ringkasan' : 'Excerpt'}
+                                    Ringkasan
                                 </Label>
                                 <Textarea
                                     rows={3}
-                                    value={locale === 'id' ? form.data.excerpt_id : form.data.excerpt_en}
-                                    onChange={(e) => form.setData(locale === 'id' ? 'excerpt_id' : 'excerpt_en', e.target.value)}
+                                    value={form.data.excerpt}
+                                    onChange={(e) => form.setData('excerpt', e.target.value)}
                                 />
                             </div>
                             <div>
                                 <Label className="mb-1.5 block">
-                                    {locale === 'id' ? 'Isi Halaman' : 'Page Body'}
+                                    Isi Halaman
                                 </Label>
                                 <div className="space-y-3">
                                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/20 px-3 py-2">
@@ -847,25 +810,17 @@ function StaticPageEditorDialog({ page, onClose }: { page: StaticPageSection; on
                                     </div>
                                     {bodyMode === 'visual' ? (
                                         <RichTextEditor
-                                            value={activeBodyValue}
-                                            onChange={(value) => form.setData(activeBodyKey, value)}
-                                            placeholder={
-                                                locale === 'id'
-                                                    ? 'Tulis isi halaman dengan paragraf, list, link, dan penekanan teks.'
-                                                    : 'Write the page body with paragraphs, lists, links, and emphasized text.'
-                                            }
+                                            value={form.data.body}
+                                            onChange={(value) => form.setData('body', value)}
+                                            placeholder="Tulis isi halaman dengan paragraf, daftar, link, dan penekanan teks."
                                         />
                                     ) : (
                                         <Textarea
                                             rows={14}
                                             className="min-h-72 font-mono text-xs leading-6"
-                                            value={activeBodyValue}
-                                            onChange={(e) => form.setData(activeBodyKey, e.target.value)}
-                                            placeholder={
-                                                locale === 'id'
-                                                    ? '<p>Tulis HTML halaman di sini...</p>'
-                                                    : '<p>Write the page HTML here...</p>'
-                                            }
+                                            value={form.data.body}
+                                            onChange={(e) => form.setData('body', e.target.value)}
+                                            placeholder="<p>Tulis HTML halaman di sini...</p>"
                                         />
                                     )}
                                 </div>
@@ -940,7 +895,7 @@ function EditResourceDialog({ item, resourceKey, label, resourceMeta, compact = 
 }
 
 function ResourceEditorForm({ submitLabel, resourceKey, resourceMeta, data, setData, images, setImages, processing, onSubmit, compact = false }: any) {
-    const { locale } = useAdminLocale();
+    const locale = 'id' as const;
     const fields = useMemo(() => resourceFieldDefinitions[resourceKey] ?? [], [resourceKey]);
     const onChange = useCallback((path: string, val: any) => {
         setData((prev: any) => ({ ...prev, payload: updateNestedValue(prev.payload, path, val) }));
@@ -958,29 +913,18 @@ function ResourceEditorForm({ submitLabel, resourceKey, resourceMeta, data, setD
                             {submitLabel}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                            Isi data mengikuti bahasa yang sedang aktif di switch.
+                            Isi data dengan format Bahasa Indonesia.
                         </p>
-                    </div>
-                    <div className="rounded-2xl border border-border bg-background p-4">
-                        <div className="flex items-center gap-3">
-                            <Languages className="h-4 w-4 text-muted-foreground" />
-                            <div className="space-y-1">
-                                <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
-                                    Mode Input Bahasa
-                                </p>
-                                <AdminLocaleSwitch />
-                            </div>
-                        </div>
                     </div>
                 </div>
 
                 <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                     <div className="mb-4">
                         <p className="text-sm font-semibold text-foreground">
-                            Konten {locale === 'id' ? 'Indonesia' : 'English'}
+                            Konten
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            Hanya field bahasa aktif yang ditampilkan untuk mengurangi kepadatan form.
+                            Lengkapi data sesuai kebutuhan.
                         </p>
                     </div>
                     <div className="grid gap-4">
@@ -1070,7 +1014,11 @@ function FieldRenderer({ field, value, resourceMeta, locale, images, setImages, 
         return (
             <div className={cn('space-y-2', compact ? '' : 'md:col-span-2')}>
                 <Label className={labelClasses}>{field.label}</Label>
-                <Comp className={cn(inputClasses, field.type === 'localized-textarea' && (compact ? 'min-h-28 py-3 leading-relaxed' : 'min-h-56 py-8 leading-relaxed'))} value={stringValue(value?.[locale])} onChange={e => onChange(`${field.path}.${locale}`, e.target.value)} />
+                <Comp
+                    className={cn(inputClasses, field.type === 'localized-textarea' && (compact ? 'min-h-28 py-3 leading-relaxed' : 'min-h-56 py-8 leading-relaxed'))}
+                    value={stringValue(value)}
+                    onChange={(e) => onChange(field.path, e.target.value)}
+                />
             </div>
         );
     }
@@ -1079,18 +1027,26 @@ function FieldRenderer({ field, value, resourceMeta, locale, images, setImages, 
         return (
             <div className={cn('space-y-2', compact ? '' : 'md:col-span-2')}>
                 <Label className={labelClasses}>{field.label}</Label>
-                <Textarea className={cn(inputClasses, compact ? 'min-h-28 py-3 leading-relaxed' : 'min-h-56 py-8 leading-relaxed')} value={joinLines(value?.[locale])} onChange={e => onChange(`${field.path}.${locale}`, splitLines(e.target.value))} placeholder="Masukkan satu item per baris..." />
+                <Textarea
+                    className={cn(inputClasses, compact ? 'min-h-28 py-3 leading-relaxed' : 'min-h-56 py-8 leading-relaxed')}
+                    value={joinLines(value)}
+                    onChange={(e) => onChange(field.path, splitLines(e.target.value))}
+                    placeholder="Masukkan satu item per baris..."
+                />
             </div>
         );
     }
 
     if (field.type === 'itinerary') {
-        const otherLocale = locale === 'id' ? 'en' : 'id';
         if (compact) {
             return (
                 <div className="space-y-2">
                     <Label className={labelClasses}>{field.label}</Label>
-                    <Textarea className="min-h-44 rounded-lg border border-border bg-background px-3 py-3 font-mono text-xs leading-loose transition-all focus:bg-white focus:ring-primary/20" value={serializeItinerary(value, locale)} onChange={e => onChange(field.path, parseItinerary(e.target.value, serializeItinerary(value, otherLocale), locale))} />
+                    <Textarea
+                        className="min-h-44 rounded-lg border border-border bg-background px-3 py-3 font-mono text-xs leading-loose transition-all focus:bg-white focus:ring-primary/20"
+                        value={serializeItinerary(value)}
+                        onChange={(e) => onChange(field.path, parseItinerary(e.target.value))}
+                    />
                 </div>
             );
         }
@@ -1099,9 +1055,13 @@ function FieldRenderer({ field, value, resourceMeta, locale, images, setImages, 
             <div className="space-y-4 md:col-span-2">
                 <div className="flex items-center justify-between px-2">
                     <Label className={labelClasses}>{field.label}</Label>
-                    <span className="text-[10px] font-black tracking-widest text-primary/40">FORMAT: JUDUL | DESC</span>
+                    <span className="text-[10px] font-black tracking-widest text-primary/40">FORMAT: JUDUL | DESKRIPSI</span>
                 </div>
-                <Textarea className="min-h-[400px] rounded-[1.5rem] border-2 border-border/60 bg-muted/10 px-6 py-10 font-mono text-xs font-bold leading-loose shadow-inner transition-all focus:bg-white focus:ring-primary/20" value={serializeItinerary(value, locale)} onChange={e => onChange(field.path, parseItinerary(e.target.value, serializeItinerary(value, otherLocale), locale))} />
+                <Textarea
+                    className="min-h-[400px] rounded-[1.5rem] border-2 border-border/60 bg-muted/10 px-6 py-10 font-mono text-xs font-bold leading-loose shadow-inner transition-all focus:bg-white focus:ring-primary/20"
+                    value={serializeItinerary(value)}
+                    onChange={(e) => onChange(field.path, parseItinerary(e.target.value))}
+                />
             </div>
         );
     }
@@ -1196,16 +1156,14 @@ function stringValue(v: any) { return v != null ? String(v) : ''; }
 function parseNumber(v: string) { const p = parseFloat(v); return isFinite(p) ? p : 0; }
 function joinLines(v: any) { return Array.isArray(v) ? v.join('\n') : ''; }
 function splitLines(v: string) { return v.split('\n').map(l => l.trim()).filter(Boolean); }
-function serializeItinerary(v: any, l: 'id' | 'en'): string { return Array.isArray(v) ? v.map(i => `${stringValue(i?.title?.[l])} | ${stringValue(i?.desc?.[l])}`).join('\n') : ''; }
-function parseItinerary(curr: string, other: string, l: 'id' | 'en'): any[] {
+function serializeItinerary(v: any): string { return Array.isArray(v) ? v.map(i => `${stringValue(i?.title)} | ${stringValue(i?.desc)}`).join('\n') : ''; }
+function parseItinerary(curr: string): any[] {
     const lines = curr.split('\n').filter(Boolean);
-    const others = other.split('\n');
     return lines.map((line, i) => {
         const [t, ...r] = line.split('|');
-        const [ot, ...or] = (others[i] || '|').split('|');
         return {
-            title: { id: l === 'id' ? t?.trim() : ot?.trim(), en: l === 'en' ? t?.trim() : ot?.trim() },
-            desc: { id: l === 'id' ? r.join('|').trim() : or.join('|').trim(), en: l === 'en' ? r.join('|').trim() : or.join('|').trim() }
+            title: t?.trim() ?? '',
+            desc: r.join('|').trim(),
         };
     });
 }

@@ -16,7 +16,6 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { useAdminLocale } from '@/contexts/admin-locale';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -104,7 +103,7 @@ function normalizePhone(phone: string): string {
 }
 
 export default function BookingRegisterIndex({ registrations }: Props) {
-    const { locale } = useAdminLocale();
+    const locale: 'id' | 'en' = 'id';
     const registrationItems = Array.isArray(registrations)
         ? registrations
         : Array.isArray(registrations?.data)
@@ -114,9 +113,11 @@ export default function BookingRegisterIndex({ registrations }: Props) {
 
     const filteredRegistrations = registrationItems.filter((registration) => {
         const packageName =
-            registration.travel_package.name?.[locale] ??
-            registration.travel_package.name?.id ??
-            '';
+            typeof registration.travel_package.name === 'string'
+                ? registration.travel_package.name
+                : (registration.travel_package.name?.[locale] ??
+                  registration.travel_package.name?.id ??
+                  '');
         const keyword = search.toLowerCase();
 
         return [
@@ -155,9 +156,11 @@ export default function BookingRegisterIndex({ registrations }: Props) {
 
     function openWhatsApp(registration: Registration): void {
         const packageName =
-            registration.travel_package.name?.[locale] ??
-            registration.travel_package.name?.id ??
-            'Paket Umroh';
+            typeof registration.travel_package.name === 'string'
+                ? registration.travel_package.name
+                : (registration.travel_package.name?.[locale] ??
+                  registration.travel_package.name?.id ??
+                  'Paket Umroh');
         const departureDate = formatDate(
             registration.departure_schedule.departure_date,
         );

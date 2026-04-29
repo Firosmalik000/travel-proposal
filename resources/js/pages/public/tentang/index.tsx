@@ -1,4 +1,3 @@
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     IslamicLantern,
@@ -114,7 +113,7 @@ const defaultValues = {
 };
 
 export default function Tentang() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const publicData = usePublicData();
     const page = usePublicPageContent('tentang-kami');
     const t = fallback[locale];

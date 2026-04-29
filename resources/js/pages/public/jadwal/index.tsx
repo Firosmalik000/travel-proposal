@@ -5,7 +5,6 @@ import {
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import { formatDate, usePublicData } from '@/lib/public-content';
 import { Head, Link } from '@inertiajs/react';
@@ -86,7 +85,7 @@ const content = {
 };
 
 export default function Jadwal() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const publicData = usePublicData();
     const t = content[locale];
     const schedules =

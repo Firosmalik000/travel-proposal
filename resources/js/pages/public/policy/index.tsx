@@ -1,4 +1,3 @@
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import { localize, usePublicPageContent } from '@/lib/public-content';
 import { Head, Link } from '@inertiajs/react';
@@ -8,14 +7,14 @@ type Props = {
 };
 
 export default function PolicyPage({ slug }: Props) {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const page = usePublicPageContent(slug);
 
-    const title = localize(page?.title, locale, locale === 'id' ? 'Kebijakan' : 'Policy');
+    const title = localize(page?.title, locale, 'Kebijakan');
     const excerpt = localize(page?.excerpt, locale);
     const bodyHtml = localize(page?.content?.body, locale);
-    const pdfUrl = `/${slug}.pdf?lang=${locale}`;
-    const pdfDownloadUrl = `/${slug}.pdf?lang=${locale}&download=1`;
+    const pdfUrl = `/${slug}.pdf`;
+    const pdfDownloadUrl = `/${slug}.pdf?download=1`;
     const showReadPdfButton = slug !== 'terms-conditions';
 
     return (

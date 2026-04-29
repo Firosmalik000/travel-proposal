@@ -21,9 +21,6 @@ class LegalDocument extends Model
     protected function casts(): array
     {
         return [
-            'title' => 'array',
-            'issued_by' => 'array',
-            'description' => 'array',
             'is_active' => 'boolean',
         ];
     }

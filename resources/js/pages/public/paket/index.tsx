@@ -2,7 +2,6 @@ import {
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     formatDate,
@@ -104,7 +103,7 @@ type PackageCard = {
 };
 
 export default function Paket() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const publicData = usePublicData();
     const paketPage = usePublicPageContent('paket-umroh');
     const { seoSettings } = usePage<SharedData>().props;

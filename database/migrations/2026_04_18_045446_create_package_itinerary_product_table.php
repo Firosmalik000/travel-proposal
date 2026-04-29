@@ -11,11 +11,11 @@ return new class extends Migration
         Schema::create('package_itinerary_product', function (Blueprint $table) {
             $table->id();
             $table->foreignId('package_itinerary_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('travel_product_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
 
-            $table->unique(['package_itinerary_id', 'travel_product_id'], 'pip_itinerary_product_unique');
+            $table->unique(['package_itinerary_id', 'product_id'], 'pip_itinerary_product_unique');
         });
     }
 

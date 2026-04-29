@@ -111,6 +111,8 @@ class HandleInertiaRequests extends Middleware
      */
     private function getPublicData(): array
     {
+        $this->ensureLandingHomeExists();
+
         return [
             'pages' => PageContent::query()
                 ->where('category', 'page')
@@ -132,7 +134,7 @@ class HandleInertiaRequests extends Middleware
                         ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
                         'passenger_count',
                     ),
-                    'testimonials:id,travel_package_id,rating',
+                    'testimonials:id,package_id,rating',
                 ])
                 ->where('is_active', true)
                 ->orderByDesc('is_featured')
@@ -209,7 +211,7 @@ class HandleInertiaRequests extends Middleware
                 ->get(['title', 'slug', 'excerpt', 'body', 'image_path', 'published_at', 'is_featured', 'reading_time_minutes'])
                 ->toArray(),
             'testimonials' => Testimonial::query()
-                ->with('travelPackage:id,name')
+                ->with('package:id,name')
                 ->where('is_active', true)
                 ->latest()
                 ->get()
@@ -218,7 +220,7 @@ class HandleInertiaRequests extends Middleware
                     'origin_city' => $testimonial->origin_city,
                     'quote' => $testimonial->quote,
                     'rating' => $testimonial->rating,
-                    'package_name' => $testimonial->travelPackage?->name,
+                    'package_name' => $testimonial->package?->name,
                 ])
                 ->values()
                 ->all(),
@@ -227,5 +229,225 @@ class HandleInertiaRequests extends Middleware
             'legal_documents' => LegalDocument::query()->where('is_active', true)->orderBy('sort_order')->get(['title', 'document_number', 'issued_by', 'description', 'sort_order'])->toArray(),
             'career_openings' => CareerOpening::query()->where('is_active', true)->orderBy('sort_order')->get(['title', 'location', 'employment_type', 'description', 'requirements', 'sort_order'])->toArray(),
         ];
+    }
+
+    private function ensureLandingHomeExists(): void
+    {
+        $homePage = PageContent::query()
+            ->where('category', 'page')
+            ->where('slug', 'home')
+            ->first();
+
+        $defaults = $this->landingHomeDefaultContent();
+
+        if (! $homePage) {
+            PageContent::query()->create([
+                'slug' => 'home',
+                'category' => 'page',
+                'title' => 'Home',
+                'excerpt' => 'Konten landing page utama.',
+                'content' => $defaults,
+                'is_active' => true,
+            ]);
+
+            return;
+        }
+
+        if (! is_array($homePage->content)) {
+            $homePage->content = $defaults;
+            $homePage->save();
+
+            return;
+        }
+
+        $merged = $this->mergeMissingRecursive($defaults, $homePage->content);
+
+        if ($merged !== $homePage->content) {
+            $homePage->content = $merged;
+            $homePage->save();
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function landingHomeDefaultContent(): array
+    {
+        return [
+            'hero' => [
+                'label' => config('branding.company_name'),
+                'title' => config('branding.company_subtitle'),
+                'description' => 'Pengalaman ibadah umroh yang khusyuk, nyaman, dan terarah bersama tim yang amanah.',
+                'image' => '/images/dummy.jpg',
+                'cta_label' => 'FREE KONSULTASI',
+                'secondary_cta_label' => 'Lihat Paket',
+                'secondary_cta_href' => '/paket-umroh',
+            ],
+            'timeline' => [
+                'label' => 'Alur Perjalanan yang Kami Jalankan',
+                'heading' => 'Sistem Perjalanan yang Jelas, Bukan Sekadar Janji',
+                'steps' => [
+                    [
+                        'icon' => 'users',
+                        'caption' => 'DAFTAR & KONSULTASI',
+                        'title' => 'Registrasi',
+                        'description' => 'Konsultasi & pilih paket yang sesuai.',
+                    ],
+                    [
+                        'icon' => 'credit-card',
+                        'caption' => 'DP / PELUNASAN',
+                        'title' => 'Pembayaran',
+                        'description' => 'Skema biaya jelas, konfirmasi transparan.',
+                    ],
+                    [
+                        'icon' => 'check-circle-2',
+                        'caption' => 'MANASIK & DOKUMEN',
+                        'title' => 'Persiapan Umroh',
+                        'description' => 'Manasik, perlengkapan, dan dokumen.',
+                    ],
+                    [
+                        'icon' => 'plane',
+                        'caption' => 'BERANGKAT BARENG',
+                        'title' => 'Keberangkatan',
+                        'description' => 'Briefing & pendampingan sebelum berangkat.',
+                    ],
+                    [
+                        'icon' => 'landmark',
+                        'caption' => 'BIMBINGAN IBADAH',
+                        'title' => 'Ibadah',
+                        'description' => 'Bimbingan ibadah sepanjang perjalanan.',
+                    ],
+                    [
+                        'icon' => 'calendar-days',
+                        'caption' => 'PULANG AMAN',
+                        'title' => 'Kepulangan',
+                        'description' => 'Kontrol perjalanan sampai tiba di tanah air.',
+                    ],
+                ],
+                'value_cards' => [
+                    [
+                        'icon' => 'shield-check',
+                        'title' => 'Transparansi Biaya',
+                        'description' => 'Rincian biaya jelas sejak awal, tanpa kejutan di tengah jalan.',
+                    ],
+                    [
+                        'icon' => 'calendar-days',
+                        'title' => 'Timeline Terencana',
+                        'description' => 'Jadwal terstruktur dari pendaftaran sampai kepulangan.',
+                    ],
+                    [
+                        'icon' => 'heart-handshake',
+                        'title' => 'Pendampingan Ibadah',
+                        'description' => 'Pembimbing berpengalaman memastikan ibadah lebih tenang dan khusyuk.',
+                    ],
+                    [
+                        'icon' => 'check-circle-2',
+                        'title' => 'Sistem Terstruktur',
+                        'description' => 'Proses administrasi, keberangkatan, dan pelayanan berjalan rapi.',
+                    ],
+                ],
+            ],
+            'problem' => [
+                'label' => 'PENTING DIKETAHUI',
+                'heading' => 'Banyak Jamaah Gagal Berangkat Bukan Karena Niat, Tapi Karena Salah Pilih Travel',
+                'badges' => [
+                    'Biaya tiba-tiba berubah di tengah jalan',
+                    'Minimnya informasi & komunikasi',
+                    'Jadwal keberangkatan tidak jelas',
+                    'Takut tertipu travel yang tidak amanah',
+                ],
+                'quote' => '“Kami memahami kekhawatiran itu. Karena itu, kami hadir dengan sistem yang jelas dan transparan.”',
+            ],
+            'stats' => [
+                ['value' => '15+', 'label' => 'Tahun Melayani'],
+                ['value' => '98%', 'label' => 'Kepuasan Jamaah'],
+                ['value' => '20K+', 'label' => 'Jamaah Berangkat'],
+                ['value' => '50+', 'label' => 'Program Terlaksana'],
+            ],
+            'about' => [
+                'label' => 'Tentang Kami',
+                'title' => 'Pelayanan Umroh yang Tertata dan Menenangkan',
+                'description' => 'Kami mengelola keberangkatan umroh dengan alur yang jelas, pendampingan ibadah, dan komunikasi yang transparan.',
+                'cta' => 'Baca Selengkapnya',
+                'image_primary' => '/images/dummy.jpg',
+                'image_secondary' => '/images/dummy.jpg',
+            ],
+            'packages' => [
+                'title' => 'Paket Unggulan',
+                'price_prefix' => 'Mulai',
+                'heading' => 'PAKET UMROH KAMI',
+                'cta_label' => 'Lihat Paket Lainnya',
+                'detail_label' => 'Lihat Detail',
+                'duration_suffix' => 'hari',
+                'fallback_name' => 'Paket Umroh',
+                'fallback_summary' => 'Detail paket akan tampil di sini.',
+            ],
+            'services' => [
+                'label' => 'Layanan Kami',
+                'title' => 'Apa yang Kami Tawarkan?',
+                'description' => 'Layanan umroh menyeluruh untuk menjaga perjalanan ibadah tetap aman, nyaman, dan terarah.',
+                'fallback_title_prefix' => 'Layanan',
+                'fallback_description' => 'Deskripsi layanan akan tampil di sini.',
+            ],
+            'gallery' => [
+                'title' => 'Galeri Perjalanan',
+                'description' => 'Momen-momen berharga selama perjalanan jamaah.',
+                'cta_label' => 'OUR HISTORY',
+                'images' => [],
+            ],
+            'faq' => [
+                'title' => 'Pertanyaan Umum',
+                'description' => 'Temukan jawaban untuk pertanyaan yang sering ditanyakan.',
+            ],
+            'testimonials' => [
+                'heading' => 'Kesan Jamaah',
+                'fallback_quote' => 'Testimoni jamaah akan tampil di sini.',
+            ],
+            'articles' => [
+                'label' => 'Artikel',
+                'heading' => 'News & Update Terbaru',
+                'cta_label' => 'Lihat Semua Artikel',
+                'read_more_label' => 'Baca selengkapnya',
+                'empty_title' => 'Belum ada artikel yang tampil.',
+                'empty_description' => 'Pastikan artikel sudah berstatus Terbit dan tanggal publikasinya tidak di masa depan.',
+                'fallback_item_title_prefix' => 'Artikel',
+            ],
+            'contact' => [
+                'label' => 'Kontak Cepat',
+                'title' => 'Siap berangkat? Konsultasi gratis dulu.',
+                'description' => 'Tim kami siap membantu memilih paket terbaik, jadwal, dan kebutuhan dokumen.',
+                'whatsapp_label' => 'Konsultasi WhatsApp',
+                'contact_label' => 'Lihat Kontak Lengkap',
+                'banner_image' => '/images/dummy.jpg',
+                'banner_kicker' => 'Konsultasi Gratis',
+                'banner_title' => 'AYO WUJUDKAN IBADAH KE TANAH SUCI BARENG {company_name}',
+                'secondary_label' => 'Lihat Paket',
+                'secondary_href' => '/paket-umroh',
+                'address_label' => 'Alamat',
+                'contact_info_label' => 'Kontak',
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $defaults
+     * @param  array<string, mixed>  $existing
+     * @return array<string, mixed>
+     */
+    private function mergeMissingRecursive(array $defaults, array $existing): array
+    {
+        foreach ($defaults as $key => $value) {
+            if (! array_key_exists($key, $existing)) {
+                $existing[$key] = $value;
+
+                continue;
+            }
+
+            if (is_array($value) && is_array($existing[$key])) {
+                $existing[$key] = $this->mergeMissingRecursive($value, $existing[$key]);
+            }
+        }
+
+        return $existing;
     }
 }

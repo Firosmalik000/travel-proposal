@@ -14,25 +14,50 @@ class StorePackageRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $localizedString = static function (mixed $value): string {
+            if (is_string($value)) {
+                return $value;
+            }
+
+            if (! is_array($value)) {
+                return '';
+            }
+
+            $id = trim((string) ($value['id'] ?? ''));
+            if ($id !== '') {
+                return $id;
+            }
+
+            return trim((string) ($value['en'] ?? ''));
+        };
+
         $name = $this->input('name');
-        if (! is_array($name)) {
-            $raw = $_POST;
+        if (is_array($name)) {
             $this->merge([
-                'name' => [
-                    'id' => $raw['name.id'] ?? '',
-                    'en' => $raw['name.en'] ?? '',
-                ],
+                'name' => $localizedString($name),
+            ]);
+        } elseif ($this->has('name.id')) {
+            $this->merge([
+                'name' => (string) $this->input('name.id'),
+            ]);
+        } elseif ($this->has('name.en')) {
+            $this->merge([
+                'name' => (string) $this->input('name.en'),
             ]);
         }
 
         $summary = $this->input('summary');
-        if (! is_array($summary)) {
-            $raw = $_POST;
+        if (is_array($summary)) {
             $this->merge([
-                'summary' => [
-                    'id' => $raw['summary.id'] ?? '',
-                    'en' => $raw['summary.en'] ?? '',
-                ],
+                'summary' => $localizedString($summary),
+            ]);
+        } elseif ($this->has('summary.id')) {
+            $this->merge([
+                'summary' => (string) $this->input('summary.id'),
+            ]);
+        } elseif ($this->has('summary.en')) {
+            $this->merge([
+                'summary' => (string) $this->input('summary.en'),
             ]);
         }
 
@@ -45,7 +70,22 @@ class StorePackageRequest extends FormRequest
         $itineraries = $this->input('itineraries');
         if (is_string($itineraries)) {
             $decoded = json_decode($itineraries, true);
-            $this->merge(['itineraries' => is_array($decoded) ? $decoded : []]);
+            $itineraries = is_array($decoded) ? $decoded : [];
+        }
+
+        if (is_array($itineraries)) {
+            $normalizedItineraries = collect($itineraries)
+                ->filter(fn ($itinerary) => is_array($itinerary))
+                ->map(function (array $itinerary) use ($localizedString): array {
+                    $itinerary['title'] = $localizedString($itinerary['title'] ?? '');
+                    $itinerary['description'] = $localizedString($itinerary['description'] ?? '');
+
+                    return $itinerary;
+                })
+                ->values()
+                ->all();
+
+            $this->merge(['itineraries' => $normalizedItineraries]);
         }
     }
 
@@ -54,9 +94,8 @@ class StorePackageRequest extends FormRequest
         $packageId = $this->route('package')?->id;
 
         return [
-            'slug' => ['required', 'string', 'max:100', Rule::unique('travel_packages', 'slug')->ignore($packageId)],
-            'name.id' => ['required', 'string', 'max:200'],
-            'name.en' => ['nullable', 'string', 'max:200'],
+            'slug' => ['required', 'string', 'max:100', Rule::unique('packages', 'slug')->ignore($packageId)],
+            'name' => ['required', 'string', 'max:200'],
             'package_type' => ['required', 'string', Rule::in(['reguler', 'vip', 'private', 'hemat', 'premium'])],
             'departure_city' => ['required', 'string', 'max:100'],
             'duration_days' => ['required', 'integer', 'min:1'],
@@ -70,8 +109,7 @@ class StorePackageRequest extends FormRequest
             'images.*' => ['image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
             'existing_images' => ['nullable', 'array'],
             'existing_images.*' => ['string'],
-            'summary.id' => ['nullable', 'string'],
-            'summary.en' => ['nullable', 'string'],
+            'summary' => ['nullable', 'string'],
             'content' => ['nullable', 'array'],
             'itineraries' => ['nullable', 'array'],
             'itineraries.*.activity_id' => ['nullable', 'integer', 'exists:activities,id'],
@@ -79,14 +117,12 @@ class StorePackageRequest extends FormRequest
             'itineraries.*.activity_ids.*' => ['integer', 'exists:activities,id'],
             'itineraries.*.day_number' => ['required', 'integer', 'min:1'],
             'itineraries.*.sort_order' => ['nullable', 'integer', 'min:1'],
-            'itineraries.*.title.id' => ['nullable', 'string', 'max:255'],
-            'itineraries.*.title.en' => ['nullable', 'string', 'max:255'],
-            'itineraries.*.description.id' => ['nullable', 'string'],
-            'itineraries.*.description.en' => ['nullable', 'string'],
+            'itineraries.*.title' => ['nullable', 'string', 'max:255'],
+            'itineraries.*.description' => ['nullable', 'string'],
             'itineraries.*.product_ids' => ['nullable', 'array'],
-            'itineraries.*.product_ids.*' => ['integer', 'exists:travel_products,id'],
+            'itineraries.*.product_ids.*' => ['integer', 'exists:products,id'],
             'product_ids' => ['nullable', 'array'],
-            'product_ids.*' => ['integer', 'exists:travel_products,id'],
+            'product_ids.*' => ['integer', 'exists:products,id'],
             'is_featured' => ['boolean'],
             'is_active' => ['boolean'],
         ];
@@ -95,7 +131,7 @@ class StorePackageRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.id.required' => 'Nama package (Indonesia) wajib diisi.',
+            'name.required' => 'Nama paket wajib diisi.',
             'original_price.gt' => 'Harga asli harus lebih besar dari harga jual.',
             'slug.unique' => 'Slug sudah digunakan.',
         ];

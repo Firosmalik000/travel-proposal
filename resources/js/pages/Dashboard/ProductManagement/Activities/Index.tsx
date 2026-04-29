@@ -1,4 +1,3 @@
-import { AdminLocaleSwitch } from '@/components/admin-locale-switch';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -11,7 +10,6 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
-import { useAdminLocale } from '@/contexts/admin-locale';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import {
@@ -29,8 +27,8 @@ import { toast } from 'sonner';
 type ActivityItem = {
     id: number;
     code: string;
-    name: { id: string; en: string };
-    description: { id: string; en: string };
+    name: string;
+    description: string | null;
     sort_order: number;
     is_active: boolean;
     created_at?: string | null;
@@ -53,20 +51,16 @@ type Props = {
 };
 
 type ActivityFormData = {
-    'name.id': string;
-    'name.en': string;
-    'description.id': string;
-    'description.en': string;
+    name: string;
+    description: string;
     sort_order: number;
     is_active: boolean;
 };
 
 function buildFormData(activity: ActivityItem | null): ActivityFormData {
     return {
-        'name.id': activity?.name?.id ?? '',
-        'name.en': activity?.name?.en ?? '',
-        'description.id': activity?.description?.id ?? '',
-        'description.en': activity?.description?.en ?? '',
+        name: activity?.name ?? '',
+        description: activity?.description ?? '',
         sort_order: activity?.sort_order ?? 1,
         is_active: activity?.is_active ?? true,
     };
@@ -98,31 +92,19 @@ function ActivityTableRow({
                 <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium text-foreground">
-                            {activity.name.id ||
-                                activity.name.en ||
-                                activity.code}
+                            {activity.name || activity.code}
                         </p>
                         <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                             {activity.code}
                         </span>
                     </div>
-                    {activity.name.en ? (
-                        <p className="text-xs text-muted-foreground">
-                            {activity.name.en}
-                        </p>
-                    ) : null}
                 </div>
             </td>
             <td className="px-4 py-4 text-muted-foreground">
                 <div className="max-w-xl space-y-1">
                     <p className="line-clamp-2">
-                        {activity.description.id || '-'}
+                        {activity.description || '-'}
                     </p>
-                    {activity.description.en ? (
-                        <p className="line-clamp-2 text-xs">
-                            {activity.description.en}
-                        </p>
-                    ) : null}
                 </div>
             </td>
             <td className="px-4 py-4 text-muted-foreground">
@@ -132,7 +114,7 @@ function ActivityTableRow({
                 <span
                     className={`rounded-full px-2.5 py-1 text-xs font-semibold ${activity.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}
                 >
-                    {activity.is_active ? 'Active' : 'Inactive'}
+                    {activity.is_active ? 'Aktif' : 'Nonaktif'}
                 </span>
             </td>
             <td className="px-4 py-4">
@@ -160,7 +142,6 @@ function ActivityTableRow({
 }
 
 export default function ActivitiesIndex({ activities, filters, stats }: Props) {
-    const { locale } = useAdminLocale();
     const [search, setSearch] = useState(filters.search);
     const [editingActivity, setEditingActivity] = useState<
         ActivityItem | null | 'new'
@@ -168,15 +149,8 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
 
     const form = useForm<ActivityFormData>(buildFormData(null));
 
-    const localeLabel = locale === 'id' ? 'Indonesia' : 'English';
-    const activeNameKey = locale === 'id' ? 'name.id' : 'name.en';
-    const activeDescriptionKey =
-        locale === 'id' ? 'description.id' : 'description.en';
-
     const generatedCodePreview = useMemo(() => {
-        return buildActivityCodePreview(
-            form.data['name.id'] || form.data['name.en'],
-        );
+        return buildActivityCodePreview(form.data.name);
     }, [form.data]);
 
     function updateFormField<K extends keyof ActivityFormData>(
@@ -236,14 +210,8 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
         event.preventDefault();
 
         const payload = {
-            name: {
-                id: form.data['name.id'],
-                en: form.data['name.en'],
-            },
-            description: {
-                id: form.data['description.id'],
-                en: form.data['description.en'],
-            },
+            name: form.data.name,
+            description: form.data.description,
             sort_order: form.data.sort_order,
             is_active: form.data.is_active,
         };
@@ -278,7 +246,7 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
     function destroyActivity(activity: ActivityItem) {
         if (
             !window.confirm(
-                `Hapus activity "${activity.name.id || activity.code}"?`,
+                `Hapus activity "${activity.name || activity.code}"?`,
             )
         ) {
             return;
@@ -297,12 +265,12 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
         <AppSidebarLayout
             breadcrumbs={[
                 {
-                    label: 'Activity Management',
+                    label: 'Manajemen Activity',
                     href: '/admin/product-management/activities',
                 },
             ]}
         >
-            <Head title="Activity Management" />
+            <Head title="Manajemen Activity" />
 
             <div className="space-y-6 p-4 md:p-6">
                 <div className="flex flex-col gap-4 rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
@@ -312,7 +280,7 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                             Product Management
                         </div>
                         <h1 className="text-2xl font-bold tracking-tight">
-                            Activity Management
+                            Manajemen Activity
                         </h1>
                         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
                             Kelola master activity untuk itinerary package.
@@ -445,23 +413,16 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                         <div className="min-w-0 space-y-1">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <p className="font-semibold text-foreground">
-                                                    {activity.name.id ||
-                                                        activity.name.en ||
-                                                        activity.code}
+                                                    {activity.name || activity.code}
                                                 </p>
                                                 <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                                                     {activity.code}
                                                 </span>
                                             </div>
-                                            {activity.name.en ? (
-                                                <p className="text-xs text-muted-foreground">
-                                                    {activity.name.en}
-                                                </p>
-                                            ) : null}
                                         </div>
                                         <div className="rounded-xl bg-muted px-3 py-2 text-right">
                                             <div className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                                                Order
+                                                Urutan
                                             </div>
                                             <div className="text-sm font-semibold text-foreground">
                                                 {activity.sort_order}
@@ -475,19 +436,14 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${activity.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}
                                             >
                                                 {activity.is_active
-                                                    ? 'Active'
-                                                    : 'Inactive'}
+                                                    ? 'Aktif'
+                                                    : 'Nonaktif'}
                                             </span>
                                         </div>
                                         <div className="space-y-1 text-sm text-muted-foreground">
                                             <p>
-                                                {activity.description.id || '-'}
+                                                {activity.description || '-'}
                                             </p>
-                                            {activity.description.en ? (
-                                                <p className="text-xs">
-                                                    {activity.description.en}
-                                                </p>
-                                            ) : null}
                                         </div>
                                     </div>
 
@@ -632,7 +588,7 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                     </SheetHeader>
 
                     <form onSubmit={submit} className="mt-6 space-y-5">
-                        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px]">
+                        <div className="grid gap-4">
                             <div className="rounded-2xl border border-border bg-muted/20 p-4">
                                 <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                                     Code Otomatis
@@ -645,82 +601,48 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                     dan menambahkan suffix bila ada yang sama.
                                 </p>
                             </div>
-                            <div className="rounded-2xl border border-border bg-background p-4">
-                                <div className="flex items-center gap-3">
-                                    <Languages className="h-4 w-4 text-muted-foreground" />
-                                    <div className="space-y-1">
-                                        <p className="text-xs font-medium tracking-[0.24em] text-muted-foreground uppercase">
-                                            Mode Input Bahasa
-                                        </p>
-                                        <AdminLocaleSwitch />
-                                    </div>
-                                </div>
-                            </div>
                         </div>
 
                         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                             <div className="mb-4">
                                 <p className="text-sm font-semibold text-foreground">
-                                    Konten {localeLabel}
+                                    Konten Activity
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                    Hanya field bahasa {localeLabel} yang
-                                    ditampilkan untuk mengurangi kepadatan form.
+                                    Lengkapi nama dan deskripsi activity.
                                 </p>
                             </div>
 
                             <div className="grid gap-4">
                                 <div>
                                     <Label className="mb-1.5 block">
-                                        {locale === 'id'
-                                            ? 'Nama Activity'
-                                            : 'Activity Name'}
+                                        Nama Activity
                                     </Label>
                                     <Input
-                                        value={form.data[activeNameKey]}
-                                        onChange={(event) =>
-                                            updateFormField(
-                                                activeNameKey,
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder={
-                                            locale === 'id'
-                                                ? 'Contoh: Briefing Keberangkatan'
-                                                : 'Example: Departure Briefing'
-                                        }
+                                        value={form.data.name}
+                                        onChange={(event) => updateFormField('name', event.target.value)}
+                                        placeholder="Contoh: Briefing Keberangkatan"
                                     />
-                                    {form.errors[activeNameKey] ? (
+                                    {form.errors.name ? (
                                         <p className="mt-1 text-xs text-destructive">
-                                            {form.errors[activeNameKey]}
+                                            {form.errors.name}
                                         </p>
                                     ) : null}
                                 </div>
 
                                 <div>
                                     <Label className="mb-1.5 block">
-                                        {locale === 'id'
-                                            ? 'Deskripsi Activity'
-                                            : 'Activity Description'}
+                                        Deskripsi Activity
                                     </Label>
                                     <Textarea
                                         rows={5}
-                                        value={form.data[activeDescriptionKey]}
-                                        onChange={(event) =>
-                                            updateFormField(
-                                                activeDescriptionKey,
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder={
-                                            locale === 'id'
-                                                ? 'Deskripsi activity untuk itinerary package'
-                                                : 'Activity description for package itinerary'
-                                        }
+                                        value={form.data.description}
+                                        onChange={(event) => updateFormField('description', event.target.value)}
+                                        placeholder="Deskripsi activity untuk itinerary package"
                                     />
-                                    {form.errors[activeDescriptionKey] ? (
+                                    {form.errors.description ? (
                                         <p className="mt-1 text-xs text-destructive">
-                                            {form.errors[activeDescriptionKey]}
+                                            {form.errors.description}
                                         </p>
                                     ) : null}
                                 </div>
@@ -728,7 +650,7 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div>
                                         <Label className="mb-1.5 block">
-                                            Sort Order
+                                            Urutan
                                         </Label>
                                         <Input
                                             type="number"

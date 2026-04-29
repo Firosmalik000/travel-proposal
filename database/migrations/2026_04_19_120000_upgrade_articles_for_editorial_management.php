@@ -14,8 +14,8 @@ return new class extends Migration
             $table->string('status')->default('draft')->after('content_type');
             $table->string('author_name')->nullable()->after('status');
             $table->json('tags')->nullable()->after('author_name');
-            $table->json('meta_title')->nullable()->after('tags');
-            $table->json('meta_description')->nullable()->after('meta_title');
+            $table->string('meta_title')->nullable()->after('tags');
+            $table->text('meta_description')->nullable()->after('meta_title');
             $table->string('og_image_path')->nullable()->after('meta_description');
             $table->unsignedInteger('reading_time_minutes')->default(1)->after('og_image_path');
             $table->unsignedInteger('views_count')->default(0)->after('reading_time_minutes');
@@ -42,7 +42,7 @@ return new class extends Migration
                     ->update([
                         'status' => $status,
                         'content_type' => 'umrah_education',
-                        'author_name' => 'Admin Travel',
+                        'author_name' => 'Admin',
                     ]);
             });
     }

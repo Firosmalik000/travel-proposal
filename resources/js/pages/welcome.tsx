@@ -1,1 +1,1 @@
-export { default } from './public/home/index';
+export { default } from './public/home/landing';

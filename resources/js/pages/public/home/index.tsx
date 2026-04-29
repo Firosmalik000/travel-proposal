@@ -1,4 +1,3 @@
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     IslamicOrnamentAbbasid,
@@ -297,7 +296,7 @@ function CountUpStat({ value, label }: StatItem) {
 }
 
 export default function Home() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const { seoSettings } = usePage<SharedData>().props;
     const seo = (seoSettings as Record<string, any>) ?? {};
     const publicData = usePublicData();

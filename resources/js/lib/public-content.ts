@@ -12,15 +12,15 @@ export type PublicSocialAccount = {
     url: string;
 };
 
-export function localize(value: unknown, locale: 'id' | 'en', fallback = ''): string {
+export function localize(value: unknown, locale: 'id' = 'id', fallback = ''): string {
     if (typeof value === 'string') {
         return value || fallback;
     }
 
     if (value && typeof value === 'object') {
         const localized = value as LocalizedField;
-        const preferredValue = locale === 'id' ? localized.id : localized.en;
-        const alternateValue = locale === 'id' ? localized.en : localized.id;
+        const preferredValue = locale === 'id' ? localized.id : undefined;
+        const alternateValue = localized.en;
 
         return preferredValue || fallback || alternateValue || '';
     }
@@ -99,26 +99,26 @@ export function whatsappLinkFromSeo(seo: Record<string, any> = {}, message?: str
     return whatsappLinkFromPhone(whatsappNumber, message);
 }
 
-export function formatPrice(value: number | string | null | undefined, locale: 'id' | 'en', currency = 'IDR'): string {
+export function formatPrice(value: number | string | null | undefined, locale: 'id' = 'id', currency = 'IDR'): string {
     if (value === null || value === undefined || value === '') {
-        return locale === 'id' ? 'Hubungi kami' : 'Contact us';
+        return 'Hubungi kami';
     }
 
     const numericValue = typeof value === 'number' ? value : Number(value);
 
-    return new Intl.NumberFormat(locale === 'id' ? 'id-ID' : 'en-US', {
+    return new Intl.NumberFormat('id-ID', {
         style: 'currency',
         currency,
         maximumFractionDigits: 0,
     }).format(numericValue);
 }
 
-export function formatDate(value: string | null | undefined, locale: 'id' | 'en'): string {
+export function formatDate(value: string | null | undefined, locale: 'id' = 'id'): string {
     if (! value) {
         return '';
     }
 
-    return new Intl.DateTimeFormat(locale === 'id' ? 'id-ID' : 'en-US', {
+    return new Intl.DateTimeFormat('id-ID', {
         day: '2-digit',
         month: 'long',
         year: 'numeric',

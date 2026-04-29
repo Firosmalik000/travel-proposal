@@ -1,10 +1,8 @@
-import { AdminLocaleSwitch } from '@/components/admin-locale-switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Textarea } from '@/components/ui/textarea';
-import { useAdminLocale } from '@/contexts/admin-locale';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
@@ -16,73 +14,49 @@ type Option = {
 
 type ArticleFormPayload = {
     id?: number;
-    title_id: string;
-    title_en: string;
+    title: string;
     slug: string;
-    excerpt_id: string;
-    excerpt_en: string;
-    body_id: string;
-    body_en: string;
+    excerpt: string;
+    body: string;
     image_path?: string | null;
     content_type: string;
     status: string;
     author_name: string;
     tags: string;
-    meta_title_id: string;
-    meta_title_en: string;
-    meta_description_id: string;
-    meta_description_en: string;
+    meta_title: string;
+    meta_description: string;
     og_image_path?: string | null;
     published_at: string;
     is_featured: boolean;
 };
 
 type ArticleFormData = {
-    title_id: string;
-    title_en: string;
+    _method?: string;
+    title: string;
     slug: string;
-    excerpt_id: string;
-    excerpt_en: string;
-    body_id: string;
-    body_en: string;
+    excerpt: string;
+    body: string;
     author_name: string;
     content_type: string;
     status: string;
     tags: string;
-    meta_title_id: string;
-    meta_title_en: string;
-    meta_description_id: string;
-    meta_description_en: string;
+    meta_title: string;
+    meta_description: string;
     published_at: string;
     is_featured: boolean;
     cover_image: File | null;
     og_image: File | null;
 };
 
-type LocalizedInputKey =
-    | 'title_id'
-    | 'title_en'
-    | 'excerpt_id'
-    | 'excerpt_en'
-    | 'body_id'
-    | 'body_en'
-    | 'meta_title_id'
-    | 'meta_title_en'
-    | 'meta_description_id'
-    | 'meta_description_en';
-
 const bodyTemplates = {
     intro: {
         id: 'Paragraf pembuka yang menjelaskan konteks utama artikel dan manfaatnya untuk pembaca.',
-        en: 'Opening paragraph that explains the main context of the article and why it matters to readers.',
     },
     checklist: {
         id: '- Poin penting pertama\n- Poin penting kedua\n- Poin penting ketiga',
-        en: '- First key point\n- Second key point\n- Third key point',
     },
     cta: {
         id: 'Butuh bantuan lebih lanjut? Hubungi tim kami untuk konsultasi dan pendampingan pendaftaran.',
-        en: 'Need more help? Contact our team for guidance and registration assistance.',
     },
 };
 
@@ -100,21 +74,33 @@ const statusDescriptions: Record<string, string> = {
     archived: 'Artikel disimpan dan disembunyikan dari public.',
 };
 
-function estimateReadingTime(value: string): number {
-    const words = value.trim().split(/\s+/).filter(Boolean).length;
+function asString(value: unknown): string {
+    if (value === null || value === undefined) {
+        return '';
+    }
+
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    return String(value);
+}
+
+function estimateReadingTime(value: unknown): number {
+    const words = asString(value).trim().split(/\s+/).filter(Boolean).length;
 
     return Math.max(1, Math.ceil(words / 180));
 }
 
-function paragraphBlocks(value: string): string[] {
-    return value
+function paragraphBlocks(value: unknown): string[] {
+    return asString(value)
         .split(/\n{2,}/)
         .map((paragraph) => paragraph.trim())
         .filter(Boolean);
 }
 
-function containsHtml(value: string): boolean {
-    return /<\/?[a-z][\s\S]*>/i.test(value);
+function containsHtml(value: unknown): boolean {
+    return /<\/?[a-z][\s\S]*>/i.test(asString(value));
 }
 
 function resolveFieldStatus(
@@ -154,41 +140,57 @@ export default function ArticleForm({
     statusOptions,
     mode,
 }: {
-    article: ArticleFormPayload;
+    article: ArticleFormPayload | Record<string, unknown>;
     contentTypeOptions: Option[];
     statusOptions: Option[];
     mode: 'create' | 'edit';
 }) {
-    const { locale } = useAdminLocale();
-    const [slugTouched, setSlugTouched] = useState(article.slug !== '');
+    const payload = article as Record<string, unknown>;
+    const [slugTouched, setSlugTouched] = useState(
+        asString(payload.slug) !== '',
+    );
     const form = useForm<ArticleFormData>({
-        title_id: article.title_id,
-        title_en: article.title_en,
-        slug: article.slug,
-        excerpt_id: article.excerpt_id,
-        excerpt_en: article.excerpt_en,
-        body_id: article.body_id,
-        body_en: article.body_en,
-        author_name: article.author_name,
-        content_type: article.content_type,
-        status: article.status,
-        tags: article.tags,
-        meta_title_id: article.meta_title_id,
-        meta_title_en: article.meta_title_en,
-        meta_description_id: article.meta_description_id,
-        meta_description_en: article.meta_description_en,
-        published_at: article.published_at,
-        is_featured: article.is_featured,
+        _method: undefined,
+        title: asString(payload.title),
+        slug: asString(payload.slug),
+        excerpt: asString(payload.excerpt),
+        body: asString(payload.body),
+        author_name: asString(payload.author_name),
+        content_type: asString(payload.content_type),
+        status: asString(payload.status),
+        tags: asString(payload.tags),
+        meta_title: asString(payload.meta_title),
+        meta_description: asString(payload.meta_description),
+        published_at: asString(payload.published_at),
+        is_featured: Boolean(payload.is_featured),
         cover_image: null as File | null,
         og_image: null as File | null,
     });
+    const coverImagePath = asString(payload.image_path);
+    const ogImagePath = asString(payload.og_image_path);
+
+    useEffect(() => {
+        const defaultContentType =
+            contentTypeOptions[0]?.value || 'umrah_education';
+        const defaultStatus = statusOptions[0]?.value || 'draft';
+
+        form.transform((data) => ({
+            ...data,
+            content_type: data.content_type || defaultContentType,
+            status: data.status || defaultStatus,
+        }));
+
+        return () => {
+            form.transform((data) => data);
+        };
+    }, [contentTypeOptions, form, statusOptions]);
 
     useEffect(() => {
         if (slugTouched) {
             return;
         }
 
-        const source = form.data.title_id || form.data.title_en;
+        const source = form.data.title;
         const generatedSlug = source
             .toLowerCase()
             .trim()
@@ -196,49 +198,36 @@ export default function ArticleForm({
             .replace(/^-+|-+$/g, '');
 
         form.setData('slug', generatedSlug);
-    }, [form, form.data.title_en, form.data.title_id, slugTouched]);
-
-    const localizedFields = useMemo<{
-        title: LocalizedInputKey;
-        excerpt: LocalizedInputKey;
-        body: LocalizedInputKey;
-        metaTitle: LocalizedInputKey;
-        metaDescription: LocalizedInputKey;
-    }>(
-        () => ({
-            title: locale === 'id' ? 'title_id' : 'title_en',
-            excerpt: locale === 'id' ? 'excerpt_id' : 'excerpt_en',
-            body: locale === 'id' ? 'body_id' : 'body_en',
-            metaTitle: locale === 'id' ? 'meta_title_id' : 'meta_title_en',
-            metaDescription:
-                locale === 'id' ? 'meta_description_id' : 'meta_description_en',
-        }),
-        [locale],
-    );
-
-    const copy = useMemo(
-        () => ({
-            localeName: locale === 'id' ? 'Indonesia' : 'English',
-            titleLabel: locale === 'id' ? 'Judul Indonesia' : 'Judul English',
-            excerptLabel:
-                locale === 'id' ? 'Excerpt Indonesia' : 'Excerpt English',
-            bodyLabel: locale === 'id' ? 'Body Indonesia' : 'Body English',
-            metaTitleLabel:
-                locale === 'id' ? 'Meta Title Indonesia' : 'Meta Title English',
-            metaDescriptionLabel:
-                locale === 'id'
-                    ? 'Meta Description Indonesia'
-                    : 'Meta Description English',
-        }),
-        [locale],
-    );
+    }, [form, form.data.title, slugTouched]);
 
     const submit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        if (mode === 'edit' && article.id) {
-            form.patch(`/admin/website-management/articles/${article.id}`, {
-                forceFormData: true,
+        const resolvedId = Number(payload.id || 0) || undefined;
+
+        if (mode === 'edit' && resolvedId) {
+            const url = `/admin/website-management/articles/${resolvedId}`;
+            const hasUpload =
+                form.data.cover_image !== null || form.data.og_image !== null;
+
+            form.patch(url, {
+                forceFormData: hasUpload,
+                onStart: () => {
+                    console.debug('[ArticleForm] submit start', {
+                        url,
+                        method: 'PATCH',
+                        hasUpload,
+                        content_type: form.data.content_type,
+                        status: form.data.status,
+                        title: form.data.title,
+                    });
+                },
+                onError: (errors) => {
+                    console.error('[ArticleForm] submit errors', errors);
+                },
+                onSuccess: () => {
+                    console.debug('[ArticleForm] submit success');
+                },
             });
 
             return;
@@ -246,11 +235,26 @@ export default function ArticleForm({
 
         form.post('/admin/website-management/articles', {
             forceFormData: true,
+            onStart: () => {
+                console.debug('[ArticleForm] submit start', {
+                    url: '/admin/website-management/articles',
+                    method: 'POST',
+                    content_type: form.data.content_type,
+                    status: form.data.status,
+                    title: form.data.title,
+                });
+            },
+            onError: (errors) => {
+                console.error('[ArticleForm] submit errors', errors);
+            },
+            onSuccess: () => {
+                console.debug('[ArticleForm] submit success');
+            },
         });
     };
 
     const insertTemplate = (template: string) => {
-        const field = localizedFields.body;
+        const field = 'body' as const;
         const nextValue =
             form.data[field].trim() === ''
                 ? template
@@ -259,54 +263,33 @@ export default function ArticleForm({
         form.setData(field, nextValue);
     };
 
-    const syncExcerptToEnglish = () => {
-        if (form.data.excerpt_en.trim() === '') {
-            form.setData('excerpt_en', form.data.excerpt_id);
-        }
-    };
-
-    const syncBodyToEnglish = () => {
-        if (form.data.body_en.trim() === '') {
-            form.setData('body_en', form.data.body_id);
-        }
-    };
-
-    const previewTitle =
-        form.data[localizedFields.title] ||
-        (locale === 'id' ? form.data.title_en : form.data.title_id);
-    const previewExcerpt =
-        form.data[localizedFields.excerpt] ||
-        (locale === 'id' ? form.data.excerpt_en : form.data.excerpt_id);
-    const previewBody =
-        form.data[localizedFields.body] ||
-        (locale === 'id' ? form.data.body_en : form.data.body_id);
-    const previewMetaTitle =
-        form.data[localizedFields.metaTitle] || previewTitle;
+    const previewTitle = form.data.title;
+    const previewExcerpt = form.data.excerpt;
+    const previewBody = form.data.body;
+    const previewMetaTitle = form.data.meta_title || previewTitle;
     const previewMetaDescription =
-        form.data[localizedFields.metaDescription] || previewExcerpt;
+        form.data.meta_description || previewExcerpt;
     const previewReadingTime = estimateReadingTime(previewBody);
     const previewParagraphs = paragraphBlocks(previewBody);
     const titleStatus = resolveFieldStatus(
-        form.data[localizedFields.title],
-        locale === 'id' ? form.data.title_en : form.data.title_id,
+        form.data.title,
+        '',
     );
     const excerptStatus = resolveFieldStatus(
-        form.data[localizedFields.excerpt],
-        locale === 'id' ? form.data.excerpt_en : form.data.excerpt_id,
+        form.data.excerpt,
+        '',
     );
     const bodyStatus = resolveFieldStatus(
-        form.data[localizedFields.body],
-        locale === 'id' ? form.data.body_en : form.data.body_id,
+        form.data.body,
+        '',
     );
     const metaTitleStatus = resolveFieldStatus(
-        form.data[localizedFields.metaTitle],
-        locale === 'id' ? form.data.meta_title_en : form.data.meta_title_id,
+        form.data.meta_title,
+        '',
     );
     const metaDescriptionStatus = resolveFieldStatus(
-        form.data[localizedFields.metaDescription],
-        locale === 'id'
-            ? form.data.meta_description_en
-            : form.data.meta_description_id,
+        form.data.meta_description,
+        '',
     );
 
     return (
@@ -321,7 +304,7 @@ export default function ArticleForm({
                     href:
                         mode === 'create'
                             ? '/admin/website-management/articles/create'
-                            : `/admin/website-management/articles/${article.id}/edit`,
+                            : `/admin/website-management/articles/${payload.id}/edit`,
                 },
             ]}
         >
@@ -341,7 +324,6 @@ export default function ArticleForm({
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        <AdminLocaleSwitch />
                         <Button type="button" variant="outline" asChild>
                             <Link href="/admin/website-management/articles">
                                 Kembali
@@ -371,13 +353,13 @@ export default function ArticleForm({
                                     Konten Artikel
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Sedang mengedit field bahasa{' '}
-                                    {copy.localeName}.
+                                    Lengkapi konten artikel untuk ditampilkan
+                                    di halaman public.
                                 </p>
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between gap-3">
-                                    <Label>{copy.titleLabel}</Label>
+                                    <Label>Judul Artikel</Label>
                                     <span
                                         className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${titleStatus.tone}`}
                                     >
@@ -385,12 +367,9 @@ export default function ArticleForm({
                                     </span>
                                 </div>
                                 <Input
-                                    value={form.data[localizedFields.title]}
+                                    value={form.data.title}
                                     onChange={(event) =>
-                                        form.setData(
-                                            localizedFields.title,
-                                            event.target.value,
-                                        )
+                                        form.setData('title', event.target.value)
                                     }
                                 />
                                 <p className="text-xs text-muted-foreground">
@@ -417,7 +396,7 @@ export default function ArticleForm({
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between gap-3">
-                                    <Label>{copy.excerptLabel}</Label>
+                                    <Label>Ringkasan</Label>
                                     <span
                                         className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${excerptStatus.tone}`}
                                     >
@@ -426,33 +405,19 @@ export default function ArticleForm({
                                 </div>
                                 <Textarea
                                     rows={4}
-                                    value={form.data[localizedFields.excerpt]}
+                                    value={form.data.excerpt}
                                     onChange={(event) =>
-                                        form.setData(
-                                            localizedFields.excerpt,
-                                            event.target.value,
-                                        )
+                                        form.setData('excerpt', event.target.value)
                                     }
                                 />
                                 <p className="text-xs text-muted-foreground">
                                     {excerptStatus.helper}
                                 </p>
-                                {locale === 'id' ? (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="h-auto px-0 text-xs text-muted-foreground"
-                                        onClick={syncExcerptToEnglish}
-                                    >
-                                        Pakai sebagai draft EN jika EN masih
-                                        kosong
-                                    </Button>
-                                ) : null}
                             </div>
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-3">
-                                        <Label>{copy.bodyLabel}</Label>
+                                        <Label>Body</Label>
                                         <span
                                             className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${bodyStatus.tone}`}
                                         >
@@ -466,7 +431,7 @@ export default function ArticleForm({
                                             size="sm"
                                             onClick={() =>
                                                 insertTemplate(
-                                                    bodyTemplates.intro[locale],
+                                                    bodyTemplates.intro.id,
                                                 )
                                             }
                                         >
@@ -478,9 +443,7 @@ export default function ArticleForm({
                                             size="sm"
                                             onClick={() =>
                                                 insertTemplate(
-                                                    bodyTemplates.checklist[
-                                                        locale
-                                                    ],
+                                                    bodyTemplates.checklist.id,
                                                 )
                                             }
                                         >
@@ -492,7 +455,7 @@ export default function ArticleForm({
                                             size="sm"
                                             onClick={() =>
                                                 insertTemplate(
-                                                    bodyTemplates.cta[locale],
+                                                    bodyTemplates.cta.id,
                                                 )
                                             }
                                         >
@@ -500,40 +463,15 @@ export default function ArticleForm({
                                         </Button>
                                     </div>
                                 </div>
-                                {locale === 'id' ? (
-                                    <RichTextEditor
-                                        value={form.data.body_id}
-                                        onChange={(value) =>
-                                            form.setData('body_id', value)
-                                        }
-                                        placeholder="Tulis isi artikel Indonesia dengan format heading, list, link, dan penekanan teks."
-                                    />
-                                ) : (
-                                    <Textarea
-                                        rows={14}
-                                        value={form.data.body_en}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'body_en',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="Tulis body English di sini. Jika dibiarkan kosong, sistem akan memakai versi Indonesia saat disimpan."
-                                    />
-                                )}
+                                <RichTextEditor
+                                    value={form.data.body}
+                                    onChange={(value) =>
+                                        form.setData('body', value)
+                                    }
+                                    placeholder="Tulis isi artikel dengan format heading, list, link, dan penekanan teks."
+                                />
                                 <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                                     <span>{bodyStatus.helper}</span>
-                                    {locale === 'id' ? (
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            className="h-auto px-0 text-xs"
-                                            onClick={syncBodyToEnglish}
-                                        >
-                                            Pakai sebagai draft EN jika EN masih
-                                            kosong
-                                        </Button>
-                                    ) : null}
                                 </div>
                                 <p className="text-xs text-muted-foreground">
                                     Pisahkan paragraf dengan satu baris kosong
@@ -548,7 +486,7 @@ export default function ArticleForm({
                             <h2 className="text-base font-semibold">SEO</h2>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between gap-3">
-                                    <Label>{copy.metaTitleLabel}</Label>
+                                    <Label>Meta Title</Label>
                                     <span
                                         className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${metaTitleStatus.tone}`}
                                     >
@@ -556,12 +494,9 @@ export default function ArticleForm({
                                     </span>
                                 </div>
                                 <Input
-                                    value={form.data[localizedFields.metaTitle]}
+                                    value={form.data.meta_title}
                                     onChange={(event) =>
-                                        form.setData(
-                                            localizedFields.metaTitle,
-                                            event.target.value,
-                                        )
+                                        form.setData('meta_title', event.target.value)
                                     }
                                 />
                                 <p className="text-xs text-muted-foreground">
@@ -570,7 +505,7 @@ export default function ArticleForm({
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between gap-3">
-                                    <Label>{copy.metaDescriptionLabel}</Label>
+                                    <Label>Meta Description</Label>
                                     <span
                                         className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${metaDescriptionStatus.tone}`}
                                     >
@@ -579,16 +514,9 @@ export default function ArticleForm({
                                 </div>
                                 <Textarea
                                     rows={4}
-                                    value={
-                                        form.data[
-                                            localizedFields.metaDescription
-                                        ]
-                                    }
+                                    value={form.data.meta_description}
                                     onChange={(event) =>
-                                        form.setData(
-                                            localizedFields.metaDescription,
-                                            event.target.value,
-                                        )
+                                        form.setData('meta_description', event.target.value)
                                     }
                                 />
                                 <p className="text-xs text-muted-foreground">
@@ -759,9 +687,9 @@ export default function ArticleForm({
                             <h2 className="text-base font-semibold">Media</h2>
                             <div className="space-y-2">
                                 <Label>Cover Image</Label>
-                                {article.image_path ? (
+                                {coverImagePath ? (
                                     <img
-                                        src={article.image_path}
+                                        src={coverImagePath}
                                         alt="cover"
                                         className="h-40 w-full rounded-xl object-cover"
                                     />
@@ -779,9 +707,9 @@ export default function ArticleForm({
                             </div>
                             <div className="space-y-2">
                                 <Label>OG Image</Label>
-                                {article.og_image_path ? (
+                                {ogImagePath ? (
                                     <img
-                                        src={article.og_image_path}
+                                        src={ogImagePath}
                                         alt="og"
                                         className="h-32 w-full rounded-xl object-cover"
                                     />
@@ -805,8 +733,7 @@ export default function ArticleForm({
                                     Live Preview
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Preview mengikuti bahasa aktif agar fokus
-                                    penulisan tetap rapi.
+                                    Preview artikel yang akan tampil di public.
                                 </p>
                             </div>
                             <div className="overflow-hidden rounded-[1.5rem] border border-border bg-background">
@@ -820,7 +747,7 @@ export default function ArticleForm({
                                                 form.data.content_type
                                             ] ?? form.data.content_type}
                                         </span>
-                                        <span>{copy.localeName}</span>
+                                        <span>Indonesia</span>
                                         {form.data.is_featured ? (
                                             <span>Featured</span>
                                         ) : null}

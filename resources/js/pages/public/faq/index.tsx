@@ -1,4 +1,3 @@
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import { localize, usePublicData } from '@/lib/public-content';
 import { Head } from '@inertiajs/react';
@@ -35,43 +34,12 @@ const content = {
             },
         ],
     },
-    en: {
-        title: 'Umrah FAQ',
-        meta: 'Frequently asked questions about umrah packages.',
-        subtitle: 'Quick answers to the most common questions.',
-        faqs: [
-            {
-                q: 'What is included in the price?',
-                a: 'Round-trip tickets, visa, hotel, meals, transport, manasik, and guides.',
-            },
-            {
-                q: 'Which documents are required?',
-                a: 'Passport, ID card, family card, 4x6 photo, and any additional requirements if needed.',
-            },
-            {
-                q: 'When is the manasik held?',
-                a: 'Manasik is held before departure and will be informed by our admin.',
-            },
-            {
-                q: 'Refund or reschedule policy?',
-                a: 'Follows airline, hotel, and vendor terms.',
-            },
-            {
-                q: 'Is there assistance for elderly pilgrims?',
-                a: 'Yes, elderly assistance is available based on needs.',
-            },
-            {
-                q: 'How far is the hotel from the mosque?',
-                a: 'Distance estimate is shared in the package details.',
-            },
-        ],
-    },
 };
 
 export default function Faq() {
-    const { locale } = usePublicLocale();
+    const locale = 'id' as const;
     const publicData = usePublicData();
-    const t = content[locale];
+    const t = content.id;
     const faqs =
         Array.isArray(publicData.faqs) && publicData.faqs.length > 0
             ? publicData.faqs.map((item: Record<string, unknown>) => ({

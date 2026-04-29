@@ -3,7 +3,6 @@ import {
     MotionGroup,
     MotionSection,
 } from '@/components/public-motion';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     localize,
@@ -13,7 +12,7 @@ import {
 import { Head } from '@inertiajs/react';
 
 export default function Galeri() {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const publicData = usePublicData();
     const page = usePublicPageContent('galeri');
     const items = Array.isArray(publicData.gallery) ? publicData.gallery : [];

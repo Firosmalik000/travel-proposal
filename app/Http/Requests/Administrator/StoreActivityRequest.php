@@ -14,24 +14,24 @@ class StoreActivityRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $name = $this->input('name');
-        if (! is_array($name)) {
-            $raw = $_POST;
+        if (is_array($name)) {
             $this->merge([
-                'name' => [
-                    'id' => $raw['name.id'] ?? '',
-                    'en' => $raw['name.en'] ?? '',
-                ],
+                'name' => (string) ($name['id'] ?? ''),
+            ]);
+        } elseif ($this->has('name.id')) {
+            $this->merge([
+                'name' => (string) $this->input('name.id'),
             ]);
         }
 
         $description = $this->input('description');
-        if (! is_array($description)) {
-            $raw = $_POST;
+        if (is_array($description)) {
             $this->merge([
-                'description' => [
-                    'id' => $raw['description.id'] ?? '',
-                    'en' => $raw['description.en'] ?? '',
-                ],
+                'description' => (string) ($description['id'] ?? ''),
+            ]);
+        } elseif ($this->has('description.id')) {
+            $this->merge([
+                'description' => (string) $this->input('description.id'),
             ]);
         }
     }
@@ -39,10 +39,8 @@ class StoreActivityRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name.id' => ['required', 'string', 'max:255'],
-            'name.en' => ['nullable', 'string', 'max:255'],
-            'description.id' => ['nullable', 'string'],
-            'description.en' => ['nullable', 'string'],
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
             'sort_order' => ['nullable', 'integer', 'min:1'],
             'is_active' => ['boolean'],
         ];

@@ -12,32 +12,32 @@ class ProductCategorySeeder extends Seeder
         $categories = [
             [
                 'key' => 'dokumen',
-                'name' => ['id' => 'Dokumen', 'en' => 'Documents'],
-                'description' => ['id' => 'Kategori untuk visa, paspor, dan dokumen pendukung jamaah.', 'en' => 'Category for visas, passports, and pilgrim supporting documents.'],
+                'name' => 'Dokumen',
+                'description' => 'Kategori untuk visa, paspor, dan dokumen pendukung jamaah.',
                 'sort_order' => 1,
             ],
             [
                 'key' => 'transportasi',
-                'name' => ['id' => 'Transportasi', 'en' => 'Transportation'],
-                'description' => ['id' => 'Kategori untuk tiket, bus, dan mobilitas perjalanan jamaah.', 'en' => 'Category for tickets, buses, and pilgrim travel mobility.'],
+                'name' => 'Transportasi',
+                'description' => 'Kategori untuk tiket, bus, dan mobilitas perjalanan jamaah.',
                 'sort_order' => 2,
             ],
             [
                 'key' => 'akomodasi',
-                'name' => ['id' => 'Akomodasi', 'en' => 'Accommodation'],
-                'description' => ['id' => 'Kategori untuk hotel dan fasilitas inap selama perjalanan.', 'en' => 'Category for hotels and stay facilities during the trip.'],
+                'name' => 'Akomodasi',
+                'description' => 'Kategori untuk hotel dan fasilitas inap selama perjalanan.',
                 'sort_order' => 3,
             ],
             [
                 'key' => 'layanan',
-                'name' => ['id' => 'Layanan', 'en' => 'Services'],
-                'description' => ['id' => 'Kategori untuk manasik, pendampingan, dan layanan operasional.', 'en' => 'Category for manasik, guidance, and operational services.'],
+                'name' => 'Layanan',
+                'description' => 'Kategori untuk manasik, pendampingan, dan layanan operasional.',
                 'sort_order' => 4,
             ],
             [
                 'key' => 'perlengkapan',
-                'name' => ['id' => 'Perlengkapan', 'en' => 'Equipment'],
-                'description' => ['id' => 'Kategori untuk perlengkapan ibadah dan kebutuhan perjalanan jamaah.', 'en' => 'Category for worship equipment and pilgrim travel needs.'],
+                'name' => 'Perlengkapan',
+                'description' => 'Kategori untuk perlengkapan ibadah dan kebutuhan perjalanan jamaah.',
                 'sort_order' => 5,
             ],
         ];

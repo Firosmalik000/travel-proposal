@@ -10,13 +10,13 @@ return new class extends Migration
     {
         Schema::create('package_itineraries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('travel_package_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('package_id')->constrained()->cascadeOnDelete();
             $table->unsignedSmallInteger('day_number');
-            $table->json('title')->nullable();
-            $table->json('description')->nullable();
+            $table->string('title')->nullable();
+            $table->text('description')->nullable();
             $table->timestamps();
 
-            $table->unique(['travel_package_id', 'day_number']);
+            $table->unique(['package_id', 'day_number']);
         });
     }
 

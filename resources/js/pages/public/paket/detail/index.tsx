@@ -5,7 +5,6 @@ import {
     IslamicOrnamentRow1Col1,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     normalizePackageHighlights,
@@ -19,6 +18,7 @@ import {
 } from '@/lib/public-content';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
 
 interface TravelPackagePageProps extends SharedData {
     travelPackage?: Record<string, any>;
@@ -45,7 +45,7 @@ function toStringArray(val: unknown): string[] {
 }
 
 export default function PaketDetail() {
-    const { locale } = usePublicLocale();
+    const locale = 'id' as const;
     const { travelPackage, seoSettings } =
         usePage<TravelPackagePageProps>().props;
     const seo = (seoSettings as Record<string, any>) ?? {};
@@ -68,11 +68,43 @@ export default function PaketDetail() {
     const summary = localize(pkg.summary, locale);
     const type = typeConfig[pkg.package_type] ?? typeConfig.reguler;
 
+    const packageImages = useMemo(() => {
+        const gallery = Array.isArray(content.gallery) ? content.gallery : [];
+        const candidates = [pkg.image_path, ...gallery]
+            .filter((value: unknown): value is string => typeof value === 'string')
+            .map((value) => value.trim())
+            .filter(Boolean);
+
+        return Array.from(new Set(candidates));
+    }, [content.gallery, pkg.image_path]);
+
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+    useEffect(() => {
+        setActiveImageIndex(0);
+    }, [pkg.slug]);
+
+    useEffect(() => {
+        if (packageImages.length <= 1) {
+            return;
+        }
+
+        const intervalId = window.setInterval(() => {
+            setActiveImageIndex((current) => (current + 1) % packageImages.length);
+        }, 2000);
+
+        return () => window.clearInterval(intervalId);
+    }, [packageImages.length]);
+
     const included = toStringArray(
-        content.included?.[locale] ?? content.included?.id,
+        content.included && typeof content.included === 'object' && !Array.isArray(content.included)
+            ? (content.included.id ?? content.included.en)
+            : content.included,
     );
     const excluded = toStringArray(
-        content.excluded?.[locale] ?? content.excluded?.id,
+        content.excluded && typeof content.excluded === 'object' && !Array.isArray(content.excluded)
+            ? (content.excluded.id ?? content.excluded.en)
+            : content.excluded,
     );
     const policy = localize(content.policy, locale);
     const packageHighlights = normalizePackageHighlights(content);
@@ -87,7 +119,7 @@ export default function PaketDetail() {
     );
     const nextSchedule = openSchedules[0] ?? null;
     const registrationLink = `/paket-umroh/${pkg.slug}/daftar${nextSchedule?.id ? `?schedule=${nextSchedule.id}` : ''}`;
-    const packagePdfDownloadUrl = `/paket-umroh/${pkg.slug}/sk.pdf?lang=${locale}&download=1`;
+    const packagePdfDownloadUrl = `/paket-umroh/${pkg.slug}/sk.pdf?download=1`;
 
     const whatsappMsg = encodeURIComponent(
         `Halo, saya tertarik dengan paket *${name}* (${pkg.code}). Mohon info lebih lanjut.`,
@@ -107,7 +139,7 @@ export default function PaketDetail() {
                         {/* Image */}
                         <div className="relative h-64 overflow-hidden lg:h-auto lg:min-h-[420px]">
                             <img
-                                src={pkg.image_path || '/images/dummy.jpg'}
+                                src={packageImages[activeImageIndex] || pkg.image_path || '/images/dummy.jpg'}
                                 alt={name}
                                 className="h-full w-full object-cover"
                             />
@@ -119,6 +151,29 @@ export default function PaketDetail() {
                                         `HEMAT ${pkg.discount_percent}%`}
                                 </div>
                             )}
+
+                            {packageImages.length > 1 ? (
+                                <div className="absolute right-0 bottom-0 left-0 z-10 p-3">
+                                    <div className="flex gap-2 overflow-x-auto rounded-2xl bg-black/35 p-2 backdrop-blur">
+                                        {packageImages.map((src, index) => (
+                                            <button
+                                                key={`${src}-${index}`}
+                                                type="button"
+                                                onClick={() => setActiveImageIndex(index)}
+                                                aria-label={`Lihat foto ${index + 1}`}
+                                                className={`h-12 w-16 shrink-0 overflow-hidden rounded-xl ring-2 transition ${index === activeImageIndex ? 'ring-white' : 'ring-white/20 hover:ring-white/40'}`}
+                                            >
+                                                <img
+                                                    src={src || '/images/dummy.jpg'}
+                                                    alt=""
+                                                    className="h-full w-full object-cover"
+                                                    loading="lazy"
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
 
                         {/* Info */}

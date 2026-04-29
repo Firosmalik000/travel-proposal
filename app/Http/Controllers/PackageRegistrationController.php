@@ -55,7 +55,7 @@ class PackageRegistrationController extends Controller
         $schedule = $request->selectedSchedule();
 
         if ($schedule !== null && (
-            $schedule->travel_package_id !== $travelPackage->id
+            $schedule->package_id !== $travelPackage->id
             || ! $schedule->is_active
             || $schedule->status !== 'open'
         )) {
@@ -65,7 +65,7 @@ class PackageRegistrationController extends Controller
         }
 
         $registration = PackageRegistration::query()->create([
-            'travel_package_id' => $travelPackage->id,
+            'package_id' => $travelPackage->id,
             'departure_schedule_id' => $schedule?->id,
             'full_name' => $request->string('full_name')->value(),
             'phone' => $request->string('phone')->value(),
@@ -76,7 +76,7 @@ class PackageRegistrationController extends Controller
             'status' => 'pending',
         ]);
 
-        $registration->load(['travelPackage', 'departureSchedule']);
+        $registration->load(['package', 'departureSchedule']);
 
         if ($schedule !== null) {
             $schedule->syncSeatAvailability();

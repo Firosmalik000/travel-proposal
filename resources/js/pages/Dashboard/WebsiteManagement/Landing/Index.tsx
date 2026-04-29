@@ -1,18 +1,29 @@
-import { AdminLocaleSwitch } from '@/components/admin-locale-switch';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { useAdminLocale } from '@/contexts/admin-locale';
+import { Button } from '@/components/ui/button'; 
+import { Checkbox } from '@/components/ui/checkbox'; 
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input'; 
+import { Label } from '@/components/ui/label'; 
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; 
+import { Textarea } from '@/components/ui/textarea'; 
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, useForm } from '@inertiajs/react';
 import {
+    ChevronDown,
+    Eye,
     FileText,
     Globe,
     Image as ImageIcon,
-    Languages,
     Layers3,
     Plus,
     Settings,
@@ -21,26 +32,23 @@ import {
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
-interface LocalizedValue {
-    id?: string;
-    en?: string;
-}
-
 interface LandingPageItem {
     id: number;
     slug: string;
-    title: LocalizedValue;
-    excerpt?: LocalizedValue | null;
+    title: string;
+    excerpt?: string | null;
     content: Record<string, any>;
     is_active: boolean;
 }
 
-interface EditableField {
-    path: string;
-    label: string;
-    multiline: boolean;
-    value: string;
-}
+interface EditableField { 
+    path: string; 
+    label: string; 
+    multiline: boolean; 
+    value: string; 
+} 
+
+type BackgroundType = 'default' | 'color' | 'image';
 
 interface ExtraSectionField {
     path: string;
@@ -80,11 +88,13 @@ const hiddenLandingSlugs = new Set([
 const landingSectionMap: Record<string, string[]> = {
     home: [
         'hero',
-        'stats',
-        'about',
+        'timeline',
+        'problem',
         'packages',
         'services',
         'gallery',
+        'testimonials',
+        'articles',
         'contact',
     ],
     'tentang-kami': ['hero', 'profile', 'stats', 'values'],
@@ -96,10 +106,14 @@ const landingSectionMap: Record<string, string[]> = {
 
 const sectionLabels: Record<string, string> = {
     hero: 'Hero Section',
+    timeline: 'Timeline & Value',
+    problem: 'Penting Diketahui',
     about: 'Tentang Kami',
     packages: 'Paket Unggulan',
     services: 'Layanan Kami',
     gallery: 'Galeri Foto',
+    testimonials: 'Testimoni',
+    articles: 'News / Artikel',
     contact: 'Kontak Kami',
     stats: 'Statistik Data',
     faq: 'Pertanyaan Umum',
@@ -132,20 +146,65 @@ const sectionLabels: Record<string, string> = {
     interest: 'Minat Pelanggan',
 };
 
+const iconOptions = [
+    { value: '', label: 'Tanpa ikon' },
+    { value: 'users', label: 'Users' },
+    { value: 'credit-card', label: 'Credit Card' },
+    { value: 'check-circle-2', label: 'Check Circle' },
+    { value: 'plane', label: 'Plane' },
+    { value: 'landmark', label: 'Landmark' },
+    { value: 'calendar-days', label: 'Calendar' },
+    { value: 'shield-check', label: 'Shield Check' },
+    { value: 'heart-handshake', label: 'Handshake' },
+    { value: 'map-pin', label: 'Map Pin' },
+] as const;
+
+function IconSelect({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+}) {
+    return (
+        <select
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+        >
+            {iconOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                    {option.label}
+                </option>
+            ))}
+        </select>
+    );
+}
+
 function Section({
     icon: Icon,
     title,
     desc,
     children,
+    collapsible = false,
+    open,
+    onOpenChange,
+    sectionId,
+    actions,
 }: {
     icon: React.ElementType;
     title: string;
     desc: string;
     children: React.ReactNode;
+    collapsible?: boolean;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    sectionId?: string;
+    actions?: React.ReactNode;
 }) {
-    return (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-            <div className="mb-4 flex items-start gap-3 border-b border-border pb-4">
+    const header = (
+        <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
+            <div className="flex items-start gap-3">
                 <div className="rounded-lg bg-primary/10 p-2">
                     <Icon className="h-4 w-4 text-primary" />
                 </div>
@@ -154,8 +213,51 @@ function Section({
                     <p className="text-xs text-muted-foreground">{desc}</p>
                 </div>
             </div>
-            <div className="space-y-4">{children}</div>
+            <div className="flex items-center gap-2">
+                {actions}
+                {collapsible ? (
+                    <ChevronDown
+                        className={`mt-1 h-4 w-4 text-muted-foreground transition ${open ? 'rotate-180' : ''}`}
+                    />
+                ) : null}
+            </div>
         </div>
+    );
+
+    if (!collapsible) {
+        return (
+            <div
+                id={sectionId}
+                className="rounded-2xl border border-border bg-card p-5 shadow-sm"
+            >
+                <div className="mb-4">{header}</div>
+                <div className="space-y-4">{children}</div>
+            </div>
+        );
+    }
+
+    return (
+        <Collapsible
+            open={Boolean(open)}
+            onOpenChange={(nextOpen) => onOpenChange?.(nextOpen)}
+        >
+            <div
+                id={sectionId}
+                className="rounded-2xl border border-border bg-card p-5 shadow-sm"
+            >
+                <CollapsibleTrigger asChild>
+                    <button
+                        type="button"
+                        className="mb-4 w-full text-left"
+                    >
+                        {header}
+                    </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <div className="space-y-4">{children}</div>
+                </CollapsibleContent>
+            </div>
+        </Collapsible>
     );
 }
 
@@ -233,9 +335,8 @@ export default function LandingIndex({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-1.5">
-                                <Languages className="h-4 w-4 text-muted-foreground" />
-                                <AdminLocaleSwitch />
+                            <div className="rounded-xl border border-border bg-muted/30 px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+                                Bahasa: Indonesia
                             </div>
                             <TabsList className="h-auto gap-1 rounded-xl border border-border bg-background p-1 shadow-sm">
                                 {visiblePages.map((page) => (
@@ -280,16 +381,10 @@ function LandingPageEditor({
 }: {
     page: LandingPageItem;
 }) {
-    const { locale } = useAdminLocale();
-    const isId = locale === 'id';
-    const localeLabel = isId ? 'Indonesia' : 'English';
-
     const { data, setData, post, processing } = useForm({
-        title_id: page.title?.id ?? '',
-        title_en: page.title?.en ?? '',
-        excerpt_id: page.excerpt?.id ?? '',
-        excerpt_en: page.excerpt?.en ?? '',
-        content: page.content ?? {},
+        title: page.title ?? '',
+        excerpt: page.excerpt ?? '',
+        content: stripLocaleData(page.content ?? {}),
         media: {} as Record<string, File | null>,
         is_active: page.is_active,
         _method: 'PATCH',
@@ -299,6 +394,48 @@ function LandingPageEditor({
         page.slug,
         data.content ?? {},
     );
+    const isHomePage = page.slug === 'home';
+    const previewUrl = isHomePage ? '/' : `/${page.slug}`;
+    const [activeSection, setActiveSection] = useState<string>(
+        contentSections[0]?.[0] ?? 'hero',
+    );
+    const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+        () =>
+            Object.fromEntries(
+                contentSections.map(([sectionKey]) => [
+                    sectionKey,
+                    ['hero', 'timeline', 'problem'].includes(sectionKey),
+                ]),
+            ),
+    );
+
+    useEffect(() => {
+        setOpenSections(
+            Object.fromEntries(
+                contentSections.map(([sectionKey]) => [
+                    sectionKey,
+                    ['hero', 'timeline', 'problem'].includes(sectionKey),
+                ]),
+            ),
+        );
+        setActiveSection(contentSections[0]?.[0] ?? 'hero');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page.id]);
+
+    const scrollToSection = (sectionKey: string) => {
+        const elementId = `landing_${page.slug}_${sectionKey}`;
+        const element =
+            typeof document !== 'undefined'
+                ? document.getElementById(elementId)
+                : null;
+
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        setActiveSection(sectionKey);
+        setOpenSections((current) => ({ ...current, [sectionKey]: true }));
+    };
 
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
@@ -315,6 +452,108 @@ function LandingPageEditor({
 
     return (
         <form className="space-y-5" onSubmit={submit}>
+            <div className="sticky top-3 z-30 rounded-2xl border border-border bg-background/90 p-3 shadow-sm backdrop-blur">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                        <span className="font-semibold text-foreground">
+                            {pageLabels[page.slug] ?? humanizeSegment(page.slug)}
+                        </span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="hidden sm:inline">
+                            Editor konten halaman
+                        </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex"
+                        >
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                            >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Preview
+                            </Button>
+                        </a>
+                        {isHomePage ? (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        setOpenSections(
+                                            Object.fromEntries(
+                                                contentSections.map(
+                                                    ([sectionKey]) => [
+                                                        sectionKey,
+                                                        false,
+                                                    ],
+                                                ),
+                                            ),
+                                        )
+                                    }
+                                >
+                                    Tutup Semua
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        setOpenSections(
+                                            Object.fromEntries(
+                                                contentSections.map(
+                                                    ([sectionKey]) => [
+                                                        sectionKey,
+                                                        true,
+                                                    ],
+                                                ),
+                                            ),
+                                        )
+                                    }
+                                >
+                                    Buka Semua
+                                </Button>
+                            </>
+                        ) : null}
+                        <Button type="submit" disabled={processing} size="sm">
+                            {processing ? 'Menyimpan...' : 'Simpan'}
+                        </Button>
+                    </div>
+                </div>
+
+                {isHomePage ? (
+                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+                        {contentSections.map(([sectionKey]) => {
+                            const label =
+                                sectionLabels[sectionKey] ??
+                                humanizeSegment(sectionKey);
+
+                            const isActive = activeSection === sectionKey;
+
+                            return (
+                                <button
+                                    key={sectionKey}
+                                    type="button"
+                                    onClick={() => scrollToSection(sectionKey)}
+                                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                                        isActive
+                                            ? 'border-primary bg-primary text-primary-foreground'
+                                            : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/45'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                ) : null}
+            </div>
             {/* 1. Status Halaman */}
             <Section
                 icon={Settings}
@@ -355,31 +594,21 @@ function LandingPageEditor({
             <Section
                 icon={Globe}
                 title="Informasi Utama"
-                desc={`Judul dan ringkasan halaman untuk bahasa ${localeLabel}.`}
+                desc="Judul dan ringkasan halaman untuk website."
             >
                 <Row>
                     <Field label="Judul Halaman">
                         <Input
-                            value={isId ? data.title_id : data.title_en}
-                            onChange={(e) =>
-                                setData(
-                                    isId ? 'title_id' : 'title_en',
-                                    e.target.value,
-                                )
-                            }
+                            value={data.title}
+                            onChange={(e) => setData('title', e.target.value)}
                             placeholder="Contoh: Beranda Utama"
                         />
                     </Field>
                     <Field label="Ringkasan (Excerpt)">
                         <Textarea
                             rows={2}
-                            value={isId ? data.excerpt_id : data.excerpt_en}
-                            onChange={(e) =>
-                                setData(
-                                    isId ? 'excerpt_id' : 'excerpt_en',
-                                    e.target.value,
-                                )
-                            }
+                            value={data.excerpt}
+                            onChange={(e) => setData('excerpt', e.target.value)}
                             placeholder="Deskripsi singkat halaman ini..."
                         />
                     </Field>
@@ -387,10 +616,63 @@ function LandingPageEditor({
             </Section>
 
             {/* 3. Section Konten Dinamis */}
-            {contentSections.map(([sectionKey, sectionValue]) => {
+            <div
+                className={
+                    isHomePage
+                        ? 'grid gap-5 lg:grid-cols-[16rem_1fr] lg:items-start'
+                        : 'space-y-5'
+                }
+            >
+                {isHomePage ? (
+                    <div className="hidden lg:block">
+                        <div className="sticky top-28 rounded-2xl border border-border bg-card p-4 shadow-sm">
+                            <p className="text-xs font-bold tracking-[0.24em] text-muted-foreground uppercase">
+                                Navigasi Section
+                            </p>
+                            <div className="mt-3 space-y-1">
+                                {contentSections.map(([sectionKey]) => {
+                                    const label =
+                                        sectionLabels[sectionKey] ??
+                                        humanizeSegment(sectionKey);
+                                    const isActive =
+                                        activeSection === sectionKey;
+
+                                    return (
+                                        <button
+                                            key={sectionKey}
+                                            type="button"
+                                            onClick={() =>
+                                                scrollToSection(sectionKey)
+                                            }
+                                            className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
+                                                isActive
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'text-foreground hover:bg-muted/40'
+                                            }`}
+                                        >
+                                            <span className="truncate">
+                                                {label}
+                                            </span>
+                                            <span className="text-xs opacity-75">
+                                                {openSections[sectionKey]
+                                                    ? 'Buka'
+                                                    : 'Tutup'}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+
+                <div className={isHomePage ? 'space-y-5' : ''}>
+                    {contentSections.map(([sectionKey, sectionValue]) => {
                 const label =
                     sectionLabels[sectionKey] ?? humanizeSegment(sectionKey);
-                const desc = `Kelola konten ${label.toLowerCase()} untuk bahasa ${localeLabel}.`;
+                const desc = `Kelola konten ${label.toLowerCase()} untuk website.`;
+                const sectionId = `landing_${page.slug}_${sectionKey}`;
+                const isSectionOpen = openSections[sectionKey] ?? true;
 
                 if (page.slug === 'tentang-kami' && sectionKey === 'stats') {
                     return (
@@ -399,10 +681,10 @@ function LandingPageEditor({
                             icon={Layers3}
                             title={label}
                             desc={desc}
+                            sectionId={sectionId}
                         >
                             <StatsSectionEditor
                                 content={data.content}
-                                locale={locale}
                                 setContent={(content) =>
                                     setData('content', content)
                                 }
@@ -418,10 +700,10 @@ function LandingPageEditor({
                             icon={Layers3}
                             title={label}
                             desc={desc}
+                            sectionId={sectionId}
                         >
                             <ValuesSectionEditor
                                 content={data.content}
-                                locale={locale}
                                 setContent={(content) =>
                                     setData('content', content)
                                 }
@@ -437,6 +719,15 @@ function LandingPageEditor({
                             icon={Layers3}
                             title={label}
                             desc={desc}
+                            sectionId={sectionId}
+                            collapsible
+                            open={isSectionOpen}
+                            onOpenChange={(nextOpen) =>
+                                setOpenSections((current) => ({
+                                    ...current,
+                                    [sectionKey]: nextOpen,
+                                }))
+                            }
                         >
                             <div className="space-y-5">
                                 <Row>
@@ -444,16 +735,15 @@ function LandingPageEditor({
                                         {
                                             label:
                                                 data.content?.services?.label ??
-                                                {},
+                                                '',
                                             title:
                                                 data.content?.services?.title ??
-                                                {},
+                                                '',
                                             description:
                                                 data.content?.services
-                                                    ?.description ?? {},
+                                                    ?.description ?? '',
                                         },
                                         'services',
-                                        locale,
                                     ).map((field) => (
                                         <Field
                                             key={field.path}
@@ -493,7 +783,6 @@ function LandingPageEditor({
                                 </Row>
                                 <ServiceItemsEditor
                                     content={data.content}
-                                    locale={locale}
                                     setContent={(content) =>
                                         setData('content', content)
                                     }
@@ -510,31 +799,90 @@ function LandingPageEditor({
                             icon={ImageIcon}
                             title={label}
                             desc={desc}
+                            sectionId={sectionId}
+                            collapsible
+                            open={isSectionOpen}
+                            onOpenChange={(nextOpen) =>
+                                setOpenSections((current) => ({
+                                    ...current,
+                                    [sectionKey]: nextOpen,
+                                }))
+                            }
                         >
                             <GallerySectionEditor
                                 content={data.content}
-                                locale={locale}
-                                media={data.media}
                                 setContent={(content) =>
                                     setData('content', content)
                                 }
-                                setMedia={(media) => setData('media', media)}
                             />
                         </Section>
                     );
                 }
 
-                if (page.slug === 'home' && sectionKey === 'stats') {
+                if (page.slug === 'home' && sectionKey === 'timeline') {
                     return (
                         <Section
                             key={sectionKey}
                             icon={Layers3}
                             title={label}
                             desc={desc}
+                            sectionId={sectionId}
+                            collapsible
+                            open={isSectionOpen}
+                            onOpenChange={(nextOpen) =>
+                                setOpenSections((current) => ({
+                                    ...current,
+                                    [sectionKey]: nextOpen,
+                                }))
+                            }
                         >
-                            <StatsSectionEditor
+                            <SectionBackgroundEditor
+                                sectionKey={sectionKey}
                                 content={data.content}
-                                locale={locale}
+                                media={data.media}
+                                setContent={(content) =>
+                                    setData('content', content)
+                                }
+                                setMedia={(media) => setData('media', media)}
+                            />
+                            <TimelineSectionEditor
+                                content={data.content}
+                                setContent={(content) =>
+                                    setData('content', content)
+                                }
+                            />
+                        </Section>
+                    );
+                }
+
+                if (page.slug === 'home' && sectionKey === 'problem') {
+                    return (
+                        <Section
+                            key={sectionKey}
+                            icon={Layers3}
+                            title={label}
+                            desc={desc}
+                            sectionId={sectionId}
+                            collapsible
+                            open={isSectionOpen}
+                            onOpenChange={(nextOpen) =>
+                                setOpenSections((current) => ({
+                                    ...current,
+                                    [sectionKey]: nextOpen,
+                                }))
+                            }
+                        >
+                            <SectionBackgroundEditor
+                                sectionKey={sectionKey}
+                                content={data.content}
+                                media={data.media}
+                                setContent={(content) =>
+                                    setData('content', content)
+                                }
+                                setMedia={(media) => setData('media', media)}
+                            />
+                            <ProblemSectionEditor
+                                content={data.content}
                                 setContent={(content) =>
                                     setData('content', content)
                                 }
@@ -546,30 +894,181 @@ function LandingPageEditor({
                 const fields = collectEditableFields(
                     sectionValue,
                     sectionKey,
-                    locale,
                 );
-                if (fields.length === 0) {
-                    return null;
-                }
 
-                return (
-                    <Section
-                        key={sectionKey}
-                        icon={FileText}
-                        title={label}
-                        desc={desc}
-                    >
-                        <Row>
-                            {[
-                                ...fields,
-                                ...buildExtraSectionFields(
-                                    page.slug,
+                const visibleFields = 
+                    page.slug === 'home' && sectionKey === 'contact' 
+                        ? fields.filter( 
+                              (field) => 
+                                  field.path !== 'contact.office_hours_label' && 
+                                  field.path !== 
+                                      'contact.office_hours_lines', 
+                          ) 
+                        : fields; 
+                if (visibleFields.length === 0) { 
+                    return null; 
+                } 
+
+                const showOfficeHoursNotice =
+                    page.slug === 'home' && sectionKey === 'contact';
+ 
+                return ( 
+                    <Section 
+                        key={sectionKey} 
+                        icon={FileText} 
+                        title={label} 
+                        desc={desc} 
+                        sectionId={sectionId}
+                        collapsible={isHomePage}
+                        open={isHomePage ? isSectionOpen : undefined}
+                        onOpenChange={
+                            isHomePage
+                                ? (nextOpen) =>
+                                      setOpenSections((current) => ({
+                                          ...current,
+                                          [sectionKey]: nextOpen,
+                                      }))
+                                : undefined
+                        }
+                    > 
+                        {showOfficeHoursNotice ? (
+                            <div className="rounded-2xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                                Jam operasional (office hours) sekarang diatur di{' '}
+                                <span className="font-medium text-foreground">
+                                    Website Management -&gt; SEO
+                                </span>
+                                .
+                            </div>
+                        ) : null}
+                        <Row> 
+                            {[ 
+                                ...visibleFields, 
+                                ...buildExtraSectionFields( 
+                                    page.slug, 
                                     sectionKey,
                                     data.content,
-                                    locale,
                                 ),
-                            ].map((field) =>
-                                isImageField(field.path) ? (
+                            ].map((field) => {
+                                if (isBackgroundTypeField(field.path)) {
+                                    return (
+                                        <div
+                                            key={field.path}
+                                            className="sm:col-span-2"
+                                        >
+                                            <Field label={field.label}>
+                                                <Select
+                                                    value={
+                                                        (field.value as BackgroundType) ??
+                                                        'default'
+                                                    }
+                                                    onValueChange={(value) =>
+                                                        setData(
+                                                            'content',
+                                                            updateNestedValue(
+                                                                data.content,
+                                                                field.path,
+                                                                value,
+                                                            ),
+                                                        )
+                                                    }
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Default" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="default">
+                                                            Default (pakai desain sekarang)
+                                                        </SelectItem>
+                                                        <SelectItem value="color">
+                                                            Warna
+                                                        </SelectItem>
+                                                        <SelectItem value="image">
+                                                            Foto
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </Field>
+                                        </div>
+                                    );
+                                }
+
+                                if (isBackgroundColorField(field.path)) {
+                                    const section = field.path.split('.')[0];
+                                    const backgroundType = String(
+                                        getNestedValue(
+                                            data.content,
+                                            `${section}.background.type`,
+                                        ) ?? 'default',
+                                    );
+
+                                    if (backgroundType !== 'color') {
+                                        return null;
+                                    }
+
+                                    return (
+                                        <div
+                                            key={field.path}
+                                            className="sm:col-span-2"
+                                        >
+                                            <Field label={field.label}>
+                                                <div className="flex items-center gap-3">
+                                                    <Input
+                                                        type="color"
+                                                        value={
+                                                            field.value ||
+                                                            '#ffffff'
+                                                        }
+                                                        onChange={(e) =>
+                                                            setData(
+                                                                'content',
+                                                                updateNestedValue(
+                                                                    data.content,
+                                                                    field.path,
+                                                                    e.target
+                                                                        .value,
+                                                                ),
+                                                            )
+                                                        }
+                                                        className="h-10 w-14 p-1"
+                                                    />
+                                                    <Input
+                                                        value={field.value}
+                                                        onChange={(e) =>
+                                                            setData(
+                                                                'content',
+                                                                updateNestedValue(
+                                                                    data.content,
+                                                                    field.path,
+                                                                    e.target
+                                                                        .value,
+                                                                ),
+                                                            )
+                                                        }
+                                                        placeholder="#fff7ef"
+                                                    />
+                                                </div>
+                                            </Field>
+                                        </div>
+                                    );
+                                }
+
+                                if (isImageField(field.path)) {
+                                    const section = field.path.split('.')[0];
+                                    const backgroundType = String(
+                                        getNestedValue(
+                                            data.content,
+                                            `${section}.background.type`,
+                                        ) ?? 'default',
+                                    );
+
+                                    if (
+                                        field.path.endsWith('.background.image') &&
+                                        backgroundType !== 'image'
+                                    ) {
+                                        return null;
+                                    }
+
+                                    return (
                                     <div
                                         key={field.path}
                                         className="sm:col-span-2"
@@ -591,7 +1090,10 @@ function LandingPageEditor({
                                             />
                                         </Field>
                                     </div>
-                                ) : (
+                                    );
+                                }
+
+                                return (
                                     <Field key={field.path} label={field.label}>
                                         {field.multiline ? (
                                             <Textarea
@@ -623,12 +1125,14 @@ function LandingPageEditor({
                                             />
                                         )}
                                     </Field>
-                                ),
-                            )}
-                        </Row>
-                    </Section>
-                );
+                                );
+                            })}
+                        </Row> 
+                    </Section> 
+                ); 
             })}
+                </div>
+            </div>
 
             <div className="flex justify-end pb-8 pt-4">
                 <Button type="submit" disabled={processing} size="lg">
@@ -641,11 +1145,9 @@ function LandingPageEditor({
 
 function ServiceItemsEditor({
     content,
-    locale,
     setContent,
 }: {
     content: Record<string, any>;
-    locale: 'id' | 'en';
     setContent: (content: Record<string, any>) => void;
 }) {
     const items = Array.isArray(content?.services?.items)
@@ -658,7 +1160,7 @@ function ServiceItemsEditor({
             ...(next.services ?? {}),
             items: [
                 ...items,
-                { title: { id: '', en: '' }, description: { id: '', en: '' } },
+                { icon: '', title: '', description: '' },
             ],
         };
         setContent(next);
@@ -714,19 +1216,38 @@ function ServiceItemsEditor({
                             </Button>
                         </div>
                         <Row>
+                            <Field label="Ikon">
+                                <IconSelect
+                                    value={String(
+                                        getNestedValue(
+                                            content,
+                                            `services.items.${index}.icon`,
+                                        ) ?? '',
+                                    )}
+                                    onChange={(value) =>
+                                        setContent(
+                                            updateNestedValue(
+                                                content,
+                                                `services.items.${index}.icon`,
+                                                value,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
                             <Field label="Judul">
                                 <Input
                                     value={String(
                                         getNestedValue(
                                             content,
-                                            `services.items.${index}.title.${locale}`,
+                                            `services.items.${index}.title`,
                                         ) ?? '',
                                     )}
                                     onChange={(e) =>
                                         setContent(
                                             updateNestedValue(
                                                 content,
-                                                `services.items.${index}.title.${locale}`,
+                                                `services.items.${index}.title`,
                                                 e.target.value,
                                             ),
                                         )
@@ -739,14 +1260,14 @@ function ServiceItemsEditor({
                                     value={String(
                                         getNestedValue(
                                             content,
-                                            `services.items.${index}.description.${locale}`,
+                                            `services.items.${index}.description`,
                                         ) ?? '',
                                     )}
                                     onChange={(e) =>
                                         setContent(
                                             updateNestedValue(
                                                 content,
-                                                `services.items.${index}.description.${locale}`,
+                                                `services.items.${index}.description`,
                                                 e.target.value,
                                             ),
                                         )
@@ -768,11 +1289,9 @@ function ServiceItemsEditor({
 
 function ValuesSectionEditor({
     content,
-    locale,
     setContent,
 }: {
     content: Record<string, any>;
-    locale: 'id' | 'en';
     setContent: (content: Record<string, any>) => void;
 }) {
     const values = Array.isArray(content?.values) ? content.values : [];
@@ -781,7 +1300,7 @@ function ValuesSectionEditor({
         const nextContent = structuredClone(content ?? {});
         nextContent.values = [
             ...values,
-            { title: { id: '', en: '' }, description: { id: '', en: '' } },
+            { title: '', description: '' },
         ];
         setContent(nextContent);
     };
@@ -840,14 +1359,14 @@ function ValuesSectionEditor({
                                     value={String(
                                         getNestedValue(
                                             content,
-                                            `values.${index}.title.${locale}`,
+                                            `values.${index}.title`,
                                         ) ?? '',
                                     )}
                                     onChange={(e) =>
                                         setContent(
                                             updateNestedValue(
                                                 content,
-                                                `values.${index}.title.${locale}`,
+                                                `values.${index}.title`,
                                                 e.target.value,
                                             ),
                                         )
@@ -860,14 +1379,14 @@ function ValuesSectionEditor({
                                     value={String(
                                         getNestedValue(
                                             content,
-                                            `values.${index}.description.${locale}`,
+                                            `values.${index}.description`,
                                         ) ?? '',
                                     )}
                                     onChange={(e) =>
                                         setContent(
                                             updateNestedValue(
                                                 content,
-                                                `values.${index}.description.${locale}`,
+                                                `values.${index}.description`,
                                                 e.target.value,
                                             ),
                                         )
@@ -884,11 +1403,9 @@ function ValuesSectionEditor({
 
 function StatsSectionEditor({
     content,
-    locale,
     setContent,
 }: {
     content: Record<string, any>;
-    locale: 'id' | 'en';
     setContent: (content: Record<string, any>) => void;
 }) {
     const stats = Array.isArray(content?.stats) ? content.stats : [];
@@ -899,7 +1416,7 @@ function StatsSectionEditor({
             ...stats,
             {
                 value: '',
-                label: { id: '', en: '' },
+                label: '',
             },
         ];
         setContent(nextContent);
@@ -964,14 +1481,14 @@ function StatsSectionEditor({
                                     value={String(
                                         getNestedValue(
                                             content,
-                                            `stats.${index}.label.${locale}`,
+                                            `stats.${index}.label`,
                                         ) ?? '',
                                     )}
                                     onChange={(e) =>
                                         setContent(
                                             updateNestedValue(
                                                 content,
-                                                `stats.${index}.label.${locale}`,
+                                                `stats.${index}.label`,
                                                 e.target.value,
                                             ),
                                         )
@@ -1008,7 +1525,7 @@ function getOrderedContentSections(
     return allowedSections.map((key) => [key, content?.[key] ?? {}]);
 }
 
-function ImageField({
+function ImageField({ 
     label,
     value,
     file,
@@ -1074,51 +1591,341 @@ function ImageField({
 
 function GallerySectionEditor({
     content,
-    locale,
+    setContent,
+}: {
+    content: Record<string, any>;
+    setContent: (content: Record<string, any>) => void;
+}) {
+    const baseFields = collectEditableFields(
+        {
+            title: content?.gallery?.title ?? '',
+            description: content?.gallery?.description ?? '',
+        },
+        'gallery',
+    );
+
+    return (
+        <div className="space-y-6">
+            <Row>
+                {baseFields.map((field) => (
+                    <Field key={field.path} label={field.label}>
+                        {field.multiline ? (
+                            <Textarea
+                                value={field.value}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            field.path,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                            />
+                        ) : (
+                            <Input
+                                value={field.value}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            field.path,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                            />
+                        )}
+                    </Field>
+                ))}
+            </Row>
+
+            <div className="rounded-xl border border-border bg-muted/10 p-4 text-sm text-muted-foreground">
+                Foto galeri di homepage sekarang terpusat dari menu{' '}
+                <span className="font-semibold text-foreground">Gallery</span>{' '}
+                (3 foto pertama), jadi tidak perlu input foto di sini.
+            </div>
+        </div>
+    );
+}
+
+function collectEditableFields(
+    value: unknown,
+    path: string,
+): EditableField[] {
+    if (value === null || value === undefined) {
+        return [];
+    }
+
+    if (isLocalizedRecord(value)) {
+        const localizedValue = String(value.id ?? '');
+
+        return [
+            {
+                path,
+                label: humanizePath(path),
+                multiline: shouldUseTextarea(path, localizedValue),
+                value: localizedValue,
+            },
+        ];
+    }
+
+    if (Array.isArray(value)) {
+        return value.flatMap((item, index) =>
+            collectEditableFields(item, `${path}.${index}`),
+        );
+    }
+
+    if (typeof value === 'object') {
+        return Object.entries(value as Record<string, unknown>).flatMap(
+            ([key, nestedValue]) =>
+                collectEditableFields(nestedValue, `${path}.${key}`),
+        );
+    }
+
+    if (typeof value === 'string' || typeof value === 'number') {
+        const stringified = String(value);
+
+        return [
+            {
+                path,
+                label: humanizePath(path),
+                multiline: shouldUseTextarea(path, stringified),
+                value: stringified,
+            },
+        ];
+    }
+
+    return [];
+}
+
+function buildExtraSectionFields( 
+    pageSlug: string, 
+    sectionKey: string, 
+    content: Record<string, any>, 
+): EditableField[] { 
+    if (pageSlug === 'home') {
+        const typeValue = String(
+            getNestedValue(content, `${sectionKey}.background.type`) ??
+                'default',
+        );
+        const colorValue = String(
+            getNestedValue(content, `${sectionKey}.background.color`) ?? '',
+        );
+        const imageValue = String(
+            getNestedValue(content, `${sectionKey}.background.image`) ?? '',
+        );
+
+        return [
+            {
+                path: `${sectionKey}.background.type`,
+                label: 'Background',
+                multiline: false,
+                value: typeValue,
+            },
+            {
+                path: `${sectionKey}.background.color`,
+                label: 'Background Color',
+                multiline: false,
+                value: colorValue,
+            },
+            {
+                path: `${sectionKey}.background.image`,
+                label: 'Background Image',
+                multiline: false,
+                value: imageValue,
+            },
+        ];
+    }
+
+    if (pageSlug === 'tentang-kami' && sectionKey === 'profile') { 
+        return [ 
+            { 
+                path: 'profile.image_primary', 
+                label: 'Foto Utama', 
+                multiline: false,
+                value: String(
+                    getNestedValue(content, 'profile.image_primary') ?? '',
+                ),
+            },
+            {
+                path: 'profile.image_secondary',
+                label: 'Foto Kedua',
+                multiline: false,
+                value: String(
+                    getNestedValue(content, 'profile.image_secondary') ?? '',
+                ),
+            },
+        ];
+    }
+
+    if (pageSlug !== 'home' || sectionKey !== 'gallery') { 
+        return []; 
+    } 
+ 
+    return []; 
+} 
+
+function SectionBackgroundEditor({
+    sectionKey,
+    content,
     media,
     setContent,
     setMedia,
 }: {
+    sectionKey: string;
     content: Record<string, any>;
-    locale: 'id' | 'en';
     media: Record<string, File | null>;
     setContent: (content: Record<string, any>) => void;
     setMedia: (media: Record<string, File | null>) => void;
 }) {
+    const typePath = `${sectionKey}.background.type`;
+    const colorPath = `${sectionKey}.background.color`;
+    const imagePath = `${sectionKey}.background.image`;
+    const backgroundType = String(getNestedValue(content, typePath) ?? 'default');
+
+    return (
+        <div className="rounded-2xl border border-border bg-muted/20 p-4">
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Background
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <Field label="Mode">
+                    <Select
+                        value={(backgroundType as BackgroundType) ?? 'default'}
+                        onValueChange={(value) =>
+                            setContent(updateNestedValue(content, typePath, value))
+                        }
+                    >
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Default" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="default">
+                                Default (pakai desain sekarang)
+                            </SelectItem>
+                            <SelectItem value="color">Warna</SelectItem>
+                            <SelectItem value="image">Foto</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </Field>
+
+                {backgroundType === 'color' ? (
+                    <Field label="Warna">
+                        <div className="flex items-center gap-3">
+                            <Input
+                                type="color"
+                                value={String(
+                                    getNestedValue(content, colorPath) ??
+                                        '#ffffff',
+                                )}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            colorPath,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                                className="h-10 w-14 p-1"
+                            />
+                            <Input
+                                value={String(getNestedValue(content, colorPath) ?? '')}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            colorPath,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                                placeholder="#fff7ef"
+                            />
+                        </div>
+                    </Field>
+                ) : null}
+
+                {backgroundType === 'image' ? (
+                    <div className="sm:col-span-2">
+                        <Field label="Foto Background">
+                            <ImageField
+                                label="Background Image"
+                                value={String(getNestedValue(content, imagePath) ?? '')}
+                                file={media[imagePath] ?? null}
+                                onChange={(file) =>
+                                    setMedia({
+                                        ...media,
+                                        [imagePath]: file,
+                                    })
+                                }
+                            />
+                        </Field>
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    );
+}
+
+function TimelineSectionEditor({
+    content,
+    setContent,
+}: {
+    content: Record<string, any>;
+    setContent: (content: Record<string, any>) => void;
+}) {
     const baseFields = collectEditableFields(
         {
-            title: content?.gallery?.title ?? {},
-            description: content?.gallery?.description ?? {},
+            label: content?.timeline?.label ?? '',
+            heading: content?.timeline?.heading ?? '',
         },
-        'gallery',
-        locale,
+        'timeline',
     );
-    const galleryImages = Array.isArray(content?.gallery?.images)
-        ? content.gallery.images
+    const steps = Array.isArray(content?.timeline?.steps)
+        ? content.timeline.steps
+        : [];
+    const valueCards = Array.isArray(content?.timeline?.value_cards)
+        ? content.timeline.value_cards
         : [];
 
-    const addGalleryImage = () => {
+    const addStep = () => {
         setContent(
-            updateNestedValue(content, 'gallery.images', [
-                ...galleryImages,
-                {
-                    src: '',
-                    alt: { id: '', en: '' },
-                },
+            updateNestedValue(content, 'timeline.steps', [
+                ...steps,
+                { icon: '', caption: '', title: '', description: '' },
             ]),
         );
     };
 
-    const removeGalleryImage = (index: number) => {
-        const nextImages = galleryImages.filter(
-            (_: unknown, itemIndex: number) => itemIndex !== index,
+    const removeStep = (index: number) => {
+        setContent(
+            updateNestedValue(
+                content,
+                'timeline.steps',
+                steps.filter((_: unknown, i: number) => i !== index),
+            ),
         );
-        const nextContent = structuredClone(content ?? {});
-        if (!nextContent.gallery) {
-            nextContent.gallery = {};
-        }
-        nextContent.gallery.images = nextImages;
-        setContent(nextContent);
+    };
+
+    const addValueCard = () => {
+        setContent(
+            updateNestedValue(content, 'timeline.value_cards', [
+                ...valueCards,
+                { icon: '', title: '', description: '' },
+            ]),
+        );
+    };
+
+    const removeValueCard = (index: number) => {
+        setContent(
+            updateNestedValue(
+                content,
+                'timeline.value_cards',
+                valueCards.filter((_: unknown, i: number) => i !== index),
+            ),
+        );
     };
 
     return (
@@ -1157,200 +1964,361 @@ function GallerySectionEditor({
                 ))}
             </Row>
 
-            <div className="flex items-center justify-between border-t border-border pt-4">
-                <div>
-                    <p className="text-sm font-semibold">Foto Galeri</p>
-                    <p className="text-xs text-muted-foreground">
-                        Tambahkan foto manual untuk beranda.
-                    </p>
+            <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-semibold">Step Timeline</p>
+                        <p className="text-xs text-muted-foreground">
+                            Judul, caption, dan deskripsi tiap langkah.
+                        </p>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addStep}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Tambah Step
+                    </Button>
                 </div>
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addGalleryImage}
-                >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Tambah Foto
-                </Button>
-            </div>
-
-            <div className="space-y-4">
-                {galleryImages.map((_: unknown, index: number) => {
-                    const imagePath = `gallery.images.${index}.src`;
-                    const altPath = `gallery.images.${index}.alt.${locale}`;
-
-                    return (
+                <div className="space-y-2">
+                    {steps.map((_: unknown, index: number) => (
                         <div
-                            key={imagePath}
-                            className="rounded-xl border border-border bg-muted/10 p-4"
+                            key={`timeline_step_${index}`}
+                            className="space-y-3 rounded-xl border border-border bg-muted/10 p-4"
                         >
-                            <div className="mb-4 flex items-center justify-between">
-                                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                                    Foto {index + 1}
+                            <div className="flex items-start justify-between gap-3">
+                                <p className="text-sm font-semibold">
+                                    Step {index + 1}
                                 </p>
                                 <Button
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => removeGalleryImage(index)}
-                                    className="h-7 text-destructive hover:text-destructive"
+                                    onClick={() => removeStep(index)}
+                                    className="h-8 text-destructive hover:text-destructive"
                                 >
-                                    <Trash2 className="mr-2 h-3.5 w-3.5" />
-                                    Hapus
+                                    <Trash2 className="h-4 w-4" />
                                 </Button>
                             </div>
-
-                            <div className="space-y-4">
-                                <ImageField
-                                    label={`Foto Galeri ${index + 1}`}
-                                    value={String(
-                                        getNestedValue(content, imagePath) ??
-                                            '',
-                                    )}
-                                    file={media[imagePath] ?? null}
-                                    onChange={(file) =>
-                                        setMedia({
-                                            ...media,
-                                            [imagePath]: file,
-                                        })
-                                    }
-                                />
-                                <Field label={`Alt Text (Penjelasan Foto)`}>
+                            <Row>
+                                <Field label="Ikon">
+                                    <IconSelect
+                                        value={String(
+                                            getNestedValue(
+                                                content,
+                                                `timeline.steps.${index}.icon`,
+                                            ) ?? '',
+                                        )}
+                                        onChange={(value) =>
+                                            setContent(
+                                                updateNestedValue(
+                                                    content,
+                                                    `timeline.steps.${index}.icon`,
+                                                    value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
+                                <Field label="Caption (kecil)">
                                     <Input
                                         value={String(
-                                            getNestedValue(content, altPath) ??
-                                                '',
+                                            getNestedValue(
+                                                content,
+                                                `timeline.steps.${index}.caption`,
+                                            ) ?? '',
                                         )}
                                         onChange={(e) =>
                                             setContent(
                                                 updateNestedValue(
                                                     content,
-                                                    altPath,
+                                                    `timeline.steps.${index}.caption`,
                                                     e.target.value,
                                                 ),
                                             )
                                         }
                                     />
                                 </Field>
-                            </div>
+                                <Field label="Judul">
+                                    <Input
+                                        value={String(
+                                            getNestedValue(
+                                                content,
+                                                `timeline.steps.${index}.title`,
+                                            ) ?? '',
+                                        )}
+                                        onChange={(e) =>
+                                            setContent(
+                                                updateNestedValue(
+                                                    content,
+                                                    `timeline.steps.${index}.title`,
+                                                    e.target.value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
+                            </Row>
+                            <Field label="Deskripsi">
+                                <Textarea
+                                    rows={2}
+                                    value={String(
+                                        getNestedValue(
+                                            content,
+                                            `timeline.steps.${index}.description`,
+                                        ) ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        setContent(
+                                            updateNestedValue(
+                                                content,
+                                                `timeline.steps.${index}.description`,
+                                                e.target.value,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
                         </div>
-                    );
-                })}
+                    ))}
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-semibold">Value Cards</p>
+                        <p className="text-xs text-muted-foreground">
+                            4 kartu nilai di bawah timeline.
+                        </p>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addValueCard}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Tambah Card
+                    </Button>
+                </div>
+                <div className="space-y-2">
+                    {valueCards.map((_: unknown, index: number) => (
+                        <div
+                            key={`timeline_value_${index}`}
+                            className="space-y-3 rounded-xl border border-border bg-muted/10 p-4"
+                        >
+                            <div className="flex items-start justify-between gap-3">
+                                <p className="text-sm font-semibold">
+                                    Card {index + 1}
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeValueCard(index)}
+                                    className="h-8 text-destructive hover:text-destructive"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <Row>
+                                <Field label="Ikon">
+                                    <IconSelect
+                                        value={String(
+                                            getNestedValue(
+                                                content,
+                                                `timeline.value_cards.${index}.icon`,
+                                            ) ?? '',
+                                        )}
+                                        onChange={(value) =>
+                                            setContent(
+                                                updateNestedValue(
+                                                    content,
+                                                    `timeline.value_cards.${index}.icon`,
+                                                    value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
+                                <Field label="Judul">
+                                    <Input
+                                        value={String(
+                                            getNestedValue(
+                                                content,
+                                                `timeline.value_cards.${index}.title`,
+                                            ) ?? '',
+                                        )}
+                                        onChange={(e) =>
+                                            setContent(
+                                                updateNestedValue(
+                                                    content,
+                                                    `timeline.value_cards.${index}.title`,
+                                                    e.target.value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
+                                <Field label="Deskripsi">
+                                    <Textarea
+                                        rows={2}
+                                        value={String(
+                                            getNestedValue(
+                                                content,
+                                                `timeline.value_cards.${index}.description`,
+                                            ) ?? '',
+                                        )}
+                                        onChange={(e) =>
+                                            setContent(
+                                                updateNestedValue(
+                                                    content,
+                                                    `timeline.value_cards.${index}.description`,
+                                                    e.target.value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
+                            </Row>
+                        </div>
+                    ))}
+                </div>
             </div>
         </div>
     );
 }
 
-function collectEditableFields(
-    value: unknown,
-    path: string,
-    locale: 'id' | 'en',
-): EditableField[] {
-    if (value === null || value === undefined) {
-        return [];
-    }
+function ProblemSectionEditor({
+    content,
+    setContent,
+}: {
+    content: Record<string, any>;
+    setContent: (content: Record<string, any>) => void;
+}) {
+    const baseFields = collectEditableFields(
+        {
+            label: content?.problem?.label ?? '',
+            heading: content?.problem?.heading ?? '',
+            quote: content?.problem?.quote ?? '',
+        },
+        'problem',
+    );
+    const badges = Array.isArray(content?.problem?.badges)
+        ? content.problem.badges
+        : [];
 
-    if (isLocalizedRecord(value)) {
-        const localizedValue = String(value[locale] ?? '');
-
-        return [
-            {
-                path: `${path}.${locale}`,
-                label: humanizePath(path),
-                multiline: shouldUseTextarea(path, localizedValue),
-                value: localizedValue,
-            },
-        ];
-    }
-
-    if (Array.isArray(value)) {
-        return value.flatMap((item, index) =>
-            collectEditableFields(item, `${path}.${index}`, locale),
+    const addBadge = () => {
+        setContent(
+            updateNestedValue(content, 'problem.badges', [...badges, '']),
         );
-    }
+    };
 
-    if (typeof value === 'object') {
-        return Object.entries(value as Record<string, unknown>).flatMap(
-            ([key, nestedValue]) =>
-                collectEditableFields(nestedValue, `${path}.${key}`, locale),
+    const removeBadge = (index: number) => {
+        setContent(
+            updateNestedValue(
+                content,
+                'problem.badges',
+                badges.filter((_: unknown, i: number) => i !== index),
+            ),
         );
-    }
+    };
 
-    if (typeof value === 'string' || typeof value === 'number') {
-        const stringified = String(value);
+    return (
+        <div className="space-y-6">
+            <Row>
+                {baseFields.map((field) => (
+                    <Field key={field.path} label={field.label}>
+                        {field.multiline ? (
+                            <Textarea
+                                value={field.value}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            field.path,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                            />
+                        ) : (
+                            <Input
+                                value={field.value}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            field.path,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                            />
+                        )}
+                    </Field>
+                ))}
+            </Row>
 
-        return [
-            {
-                path,
-                label: humanizePath(path),
-                multiline: shouldUseTextarea(path, stringified),
-                value: stringified,
-            },
-        ];
-    }
-
-    return [];
-}
-
-function buildExtraSectionFields(
-    pageSlug: string,
-    sectionKey: string,
-    content: Record<string, any>,
-    locale: 'id' | 'en',
-): EditableField[] {
-    if (pageSlug === 'tentang-kami' && sectionKey === 'profile') {
-        return [
-            {
-                path: 'profile.image_primary',
-                label: 'Foto Utama',
-                multiline: false,
-                value: String(
-                    getNestedValue(content, 'profile.image_primary') ?? '',
-                ),
-            },
-            {
-                path: 'profile.image_secondary',
-                label: 'Foto Kedua',
-                multiline: false,
-                value: String(
-                    getNestedValue(content, 'profile.image_secondary') ?? '',
-                ),
-            },
-        ];
-    }
-
-    if (pageSlug !== 'home' || sectionKey !== 'gallery') {
-        return [];
-    }
-
-    const extraFields: ExtraSectionField[] = [
-        { path: 'gallery.images.0.src', label: 'Foto Galeri 1' },
-        { path: 'gallery.images.0.alt.id', label: 'Alt Foto 1 ID' },
-        { path: 'gallery.images.0.alt.en', label: 'Alt Foto 1 EN' },
-        { path: 'gallery.images.1.src', label: 'Foto Galeri 2' },
-        { path: 'gallery.images.1.alt.id', label: 'Alt Foto 2 ID' },
-        { path: 'gallery.images.1.alt.en', label: 'Alt Foto 2 EN' },
-        { path: 'gallery.images.2.src', label: 'Foto Galeri 3' },
-        { path: 'gallery.images.2.alt.id', label: 'Alt Foto 3 ID' },
-        { path: 'gallery.images.2.alt.en', label: 'Alt Foto 3 EN' },
-        { path: 'gallery.images.3.src', label: 'Foto Galeri 4' },
-        { path: 'gallery.images.3.alt.id', label: 'Alt Foto 4 ID' },
-        { path: 'gallery.images.3.alt.en', label: 'Alt Foto 4 EN' },
-    ];
-
-    return extraFields
-        .filter((field) =>
-            locale === 'id'
-                ? !field.path.endsWith('.en')
-                : !field.path.endsWith('.id'),
-        )
-        .map((field) => ({
-            path: field.path,
-            label: field.label,
-            multiline: Boolean(field.multiline),
-            value: String(getNestedValue(content, field.path) ?? ''),
-        }));
+            <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className="text-sm font-semibold">Badge Masalah</p>
+                        <p className="text-xs text-muted-foreground">
+                            Chip merah di section “Penting Diketahui”.
+                        </p>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addBadge}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Tambah Badge
+                    </Button>
+                </div>
+                <div className="space-y-2">
+                    {badges.map((_: unknown, index: number) => (
+                        <div
+                            key={`problem_badge_${index}`}
+                            className="flex items-center gap-3 rounded-xl border border-border bg-muted/10 p-3"
+                        >
+                            <Input
+                                value={String(
+                                    getNestedValue(
+                                        content,
+                                        `problem.badges.${index}`,
+                                    ) ?? '',
+                                )}
+                                onChange={(e) =>
+                                    setContent(
+                                        updateNestedValue(
+                                            content,
+                                            `problem.badges.${index}`,
+                                            e.target.value,
+                                        ),
+                                    )
+                                }
+                            />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeBadge(index)}
+                                className="h-8 text-destructive hover:text-destructive"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 function isLocalizedRecord(
@@ -1367,6 +2335,31 @@ function isLocalizedRecord(
         'en' in record &&
         Object.keys(record).every((key) => key === 'id' || key === 'en')
     );
+}
+
+function stripLocaleData(value: unknown): any {
+    if (value === null || value === undefined) {
+        return value;
+    }
+
+    if (isLocalizedRecord(value)) {
+        return String(value.id ?? '');
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => stripLocaleData(item));
+    }
+
+    if (typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value as Record<string, unknown>).map(([k, v]) => [
+                k,
+                stripLocaleData(v),
+            ]),
+        );
+    }
+
+    return value;
 }
 
 function getNestedValue(source: Record<string, any>, path: string): unknown {
@@ -1399,13 +2392,22 @@ function shouldUseTextarea(path: string, value: string): boolean {
     );
 }
 
-function isImageField(path: string): boolean {
-    return (
-        path.endsWith('.image') ||
-        path.endsWith('.image_primary') ||
-        path.endsWith('.image_secondary') ||
-        path.endsWith('.src')
-    );
+function isImageField(path: string): boolean { 
+    return ( 
+        path.endsWith('.image') || 
+        path.endsWith('.image_primary') || 
+        path.endsWith('.image_secondary') || 
+        path.endsWith('.background.image') ||
+        path.endsWith('.src') 
+    ); 
+} 
+
+function isBackgroundTypeField(path: string): boolean {
+    return path.endsWith('.background.type');
+}
+
+function isBackgroundColorField(path: string): boolean {
+    return path.endsWith('.background.color');
 }
 
 function humanizePath(path: string): string {

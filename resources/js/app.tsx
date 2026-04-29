@@ -6,8 +6,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
 import { Toaster } from 'sonner';
-import { AdminLocaleProvider } from './contexts/admin-locale';
-import { PublicLocaleProvider } from './contexts/public-locale';
 
 const rawAppName = import.meta.env.VITE_APP_NAME || 'Travel Proposal';
 const appName = rawAppName
@@ -26,11 +24,7 @@ createInertiaApp({
 
         root.render(
             <StrictMode>
-                <AdminLocaleProvider>
-                    <PublicLocaleProvider>
-                        <App {...props} />
-                    </PublicLocaleProvider>
-                </AdminLocaleProvider>
+                <App {...props} />
                 <Toaster
                     position="top-right"
                     expand={true}

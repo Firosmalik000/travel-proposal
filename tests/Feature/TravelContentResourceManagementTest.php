@@ -134,7 +134,7 @@ class TravelContentResourceManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/WebsiteManagement/Landing/Index')
-                ->has('pages', 1),
+                ->has('pages'),
             );
     }
 

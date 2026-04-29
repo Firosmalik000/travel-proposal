@@ -7,7 +7,6 @@ import {
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
-import { usePublicLocale } from '@/contexts/public-locale';
 import PublicLayout from '@/layouts/PublicLayout';
 import { formatDate, localize } from '@/lib/public-content';
 import { Head, Link, router } from '@inertiajs/react';
@@ -77,7 +76,7 @@ export default function ArtikelIndex({
     };
     contentTypeOptions: FilterOption[];
 }) {
-    const { locale } = usePublicLocale();
+    const locale: 'id' | 'en' = 'id';
     const t = content[locale];
     const [search, setSearch] = useState(filters.search);
     const [contentType, setContentType] = useState(filters.content_type);

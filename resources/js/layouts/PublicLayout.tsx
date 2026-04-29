@@ -5,22 +5,15 @@ import {
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
 import {
-    usePublicLocale,
-    type PublicLocale,
-} from '@/contexts/public-locale';
-import { useAppearance } from '@/hooks/use-appearance';
-import {
     getPublicSocialAccounts,
     whatsappLinkFromSeo,
 } from '@/lib/public-content';
-import { Link, router, usePage } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     ChevronDown,
     Facebook,
     Instagram,
     Music2,
-    Moon,
-    Sun,
     Twitter,
     Youtube,
 } from 'lucide-react';
@@ -73,52 +66,6 @@ const content = {
         languageLabel: 'Bahasa',
         themeLabel: 'Tema',
     },
-    en: {
-        nav: [
-            { label: 'Umrah Packages', href: '/paket-umroh' },
-            { label: 'Schedule', href: '/jadwal-keberangkatan' },
-            { label: 'About Us', href: '/tentang-kami' },
-            { label: 'Contact', href: '/kontak' },
-        ],
-        signIn: 'Sign In',
-        contactCta: 'Contact Us',
-        footerIntro:
-            'Plan your sacred journey with a trusted, professional, and transparent umrah partner.',
-        footer: [
-            {
-                heading: 'Company',
-                links: [
-                    { label: 'About Us', href: '/tentang-kami' },
-                    { label: 'Licenses', href: '/legalitas' },
-                    { label: 'Contact', href: '/kontak' },
-                    { label: 'Careers', href: '/karier' },
-                ],
-            },
-            {
-                heading: 'Explore',
-                links: [
-                    { label: 'Umrah Packages', href: '/paket-umroh' },
-                    { label: 'Schedule', href: '/jadwal-keberangkatan' },
-                    { label: 'Services', href: '/layanan' },
-                    { label: 'Articles', href: '/artikel' },
-                ],
-            },
-            {
-                heading: 'Policy',
-                links: [
-                    { label: 'FAQ', href: '/faq' },
-                    { label: 'Terms & Conditions', href: '/terms-conditions' },
-                    { label: 'Privacy Policy', href: '/privacy-policy' },
-                    { label: 'Refund Policy', href: '/refund-policy' },
-                    { label: 'Disclaimer', href: '/disclaimer' },
-                ],
-            },
-        ],
-        copyright: (year: number) =>
-            `(c) ${year} Amanah Haramain Travel. All rights reserved.`,
-        languageLabel: 'Language',
-        themeLabel: 'Theme',
-    },
 };
 
 const packageNavItems = [
@@ -134,9 +81,8 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
     const headerRef = useRef<HTMLElement | null>(null);
     const page = usePage();
     const { branding, seoSettings, publicBranding } = usePage<any>().props;
-    const { appearance, updateAppearance } = useAppearance();
-    const { locale, setLocale } = usePublicLocale();
-    const t = content[locale];
+    const locale = 'id' as const;
+    const t = content.id;
     const seo = (seoSettings as Record<string, any>) ?? {};
     const resolvedLogoPath = publicBranding?.logo_path ?? branding.logo_path;
     const contactLink = whatsappLinkFromSeo(seo);
@@ -155,19 +101,21 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                 social.platform.toLowerCase() as keyof typeof socialIconMap
             ] ?? Instagram,
     }));
+    const resolvedPathname =
+        typeof window !== 'undefined'
+            ? window.location.pathname
+            : String(page.url ?? '').split('?')[0] ?? '';
+    const isHomePage = resolvedPathname === '/';
+    const shouldUseSolidHeader = scrolled || mobileOpen || !isHomePage;
 
-    const isDark = (() => {
-        if (appearance === 'dark') {
-            return true;
+    useEffect(() => {
+        if (typeof document === 'undefined') {
+            return;
         }
-        if (appearance === 'light') {
-            return false;
-        }
-        if (typeof window === 'undefined') {
-            return false;
-        }
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    })();
+
+        document.documentElement.classList.remove('dark');
+        document.documentElement.style.colorScheme = 'light';
+    }, []);
 
     useEffect(() => {
         let rafId: number | null = null;
@@ -204,16 +152,6 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
     useEffect(() => {
         setMobileOpen(false);
     }, [page.url]);
-
-    const handleLocaleChange = (next: PublicLocale) => {
-        if (next === locale) {
-            return;
-        }
-
-        setLocale(next);
-        // Re-fetch shared props so CMS/localized fields update reliably without hard refresh.
-        router.reload({ preserveScroll: true, preserveState: true });
-    };
 
     useEffect(() => {
         if (!mobileOpen) {
@@ -286,21 +224,25 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
 
             <header
                 ref={headerRef}
-                className={`fixed top-0 right-0 left-0 z-50 transition-all duration-300 ${scrolled ? 'shadow-md' : ''}`}
+                className={`fixed top-0 right-0 left-0 z-50 transition-all duration-300 ${shouldUseSolidHeader ? 'shadow-md' : ''}`}
             >
                 <div className="absolute inset-0 overflow-hidden">
                     <div
                         className={`absolute inset-0 transition-all duration-300 ${
-                            scrolled
+                            shouldUseSolidHeader
                                 ? 'bg-[linear-gradient(90deg,rgba(93,8,18,0.98)_0%,rgba(142,16,27,0.96)_34%,rgba(189,49,34,0.93)_64%,rgba(230,156,50,0.92)_100%)]'
-                                : 'bg-[linear-gradient(90deg,rgba(93,8,18,0.92)_0%,rgba(142,16,27,0.88)_34%,rgba(189,49,34,0.84)_64%,rgba(230,156,50,0.82)_100%)]'
+                                : 'bg-transparent'
                         }`}
                     />
-                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.28)_0%,rgba(0,0,0,0.14)_58%,transparent_100%)] dark:hidden" />
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_30%,rgba(255,214,146,0.18)_0%,transparent_52%),radial-gradient(circle_at_82%_26%,rgba(189,49,34,0.14)_0%,transparent_56%)] opacity-70" />
-                    <div className="pointer-events-none absolute inset-y-0 left-[12%] w-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.2)_18%,transparent_62%)] opacity-60 blur-xl" />
-                    <div className="pointer-events-none absolute top-0 right-8 h-full w-36 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.12)_48%,transparent_100%)] opacity-80" />
-                    <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-white/42 to-transparent" />
+                    {shouldUseSolidHeader ? (
+                        <>
+                            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.28)_0%,rgba(0,0,0,0.14)_58%,transparent_100%)] dark:hidden" />
+                            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_30%,rgba(255,214,146,0.18)_0%,transparent_52%),radial-gradient(circle_at_82%_26%,rgba(189,49,34,0.14)_0%,transparent_56%)] opacity-70" />
+                            <div className="pointer-events-none absolute inset-y-0 left-[12%] w-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.2)_18%,transparent_62%)] opacity-60 blur-xl" />
+                            <div className="pointer-events-none absolute top-0 right-8 h-full w-36 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.12)_48%,transparent_100%)] opacity-80" />
+                            <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-white/42 to-transparent" />
+                        </>
+                    ) : null}
                 </div>
 
                 <div className="relative container mx-auto flex items-center justify-between gap-4 p-4">
@@ -361,32 +303,6 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                         )}
                     </nav>
                     <div className="hidden items-center gap-3 lg:flex">
-                        <div className="flex items-center rounded-full border border-white/16 bg-white/10 px-1 py-1 text-xs font-semibold text-white/70">
-                            {(['id', 'en'] as PublicLocale[]).map((lang) => (
-                                <button
-                                    key={lang}
-                                    type="button"
-                                    className={`rounded-full px-3 py-1 transition ${locale === lang ? 'bg-white text-[#7a0d17]' : 'hover:text-white'}`}
-                                    onClick={() => handleLocaleChange(lang)}
-                                >
-                                    {lang.toUpperCase()}
-                                </button>
-                            ))}
-                        </div>
-                        <button
-                            type="button"
-                            aria-label={t.themeLabel}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/16 bg-white/10 text-white transition hover:bg-white/16"
-                            onClick={() =>
-                                updateAppearance(isDark ? 'light' : 'dark')
-                            }
-                        >
-                            {isDark ? (
-                                <Sun className="h-4 w-4" />
-                            ) : (
-                                <Moon className="h-4 w-4" />
-                            )}
-                        </button>
                         {contactLink ? (
                             <a
                                 className="inline-flex items-center justify-center rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-[#7a0d17] transition hover:bg-[#fff4db]"
@@ -483,41 +399,6 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                             ),
                         )}
                         <div className="mt-2 flex flex-col gap-2">
-                            <div className="flex items-center justify-between rounded-xl border border-white/12 bg-white/8 px-3 py-2">
-                                <span className="text-xs font-semibold text-white/66">
-                                    {t.languageLabel}
-                                </span>
-                                <div className="flex items-center rounded-full border border-white/14 bg-black/10 px-1 py-1 text-xs font-semibold text-white/68">
-                                    {(['id', 'en'] as PublicLocale[]).map(
-                                        (lang) => (
-                                            <button
-                                                key={lang}
-                                                type="button"
-                                                className={`rounded-full px-3 py-1 transition ${locale === lang ? 'bg-white text-[#7a0d17]' : 'hover:text-white'}`}
-                                                onClick={() =>
-                                                    handleLocaleChange(lang)
-                                                }
-                                            >
-                                                {lang.toUpperCase()}
-                                            </button>
-                                        ),
-                                    )}
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                className="inline-flex items-center justify-between rounded-xl border border-white/12 bg-white/8 px-3 py-2 text-sm font-semibold text-white"
-                                onClick={() =>
-                                    updateAppearance(isDark ? 'light' : 'dark')
-                                }
-                            >
-                                <span>{t.themeLabel}</span>
-                                {isDark ? (
-                                    <Sun className="h-4 w-4" />
-                                ) : (
-                                    <Moon className="h-4 w-4" />
-                                )}
-                            </button>
                             {contactLink ? (
                                 <a
                                     className="inline-flex items-center justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-[#7a0d17] transition hover:bg-[#fff4db]"
@@ -543,9 +424,15 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                 />
             )}
 
-            <main className="relative z-10 pt-[var(--public-header-h)]">
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/28 via-white/10 to-transparent dark:from-white/[0.03] dark:via-transparent" />
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(230,156,50,0.10)_0%,transparent_40%),radial-gradient(circle_at_86%_22%,rgba(189,49,34,0.08)_0%,transparent_46%),radial-gradient(circle_at_78%_92%,rgba(93,8,18,0.06)_0%,transparent_55%)] opacity-70 dark:opacity-35" />
+            <main
+                className={`relative z-10 ${isHomePage ? 'pt-0' : 'pt-[var(--public-header-h)]'}`}
+            >
+                {!isHomePage ? (
+                    <>
+                        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-white/28 via-white/10 to-transparent dark:from-white/[0.03] dark:via-transparent" />
+                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_10%,rgba(230,156,50,0.10)_0%,transparent_40%),radial-gradient(circle_at_86%_22%,rgba(189,49,34,0.08)_0%,transparent_46%),radial-gradient(circle_at_78%_92%,rgba(93,8,18,0.06)_0%,transparent_55%)] opacity-70 dark:opacity-35" />
+                    </>
+                ) : null}
                 {children}
             </main>
 

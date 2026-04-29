@@ -31,8 +31,7 @@ class ArticleController extends Controller
                     $innerQuery
                         ->whereRaw('LOWER(slug) like ?', ["%{$search}%"])
                         ->orWhereRaw('LOWER(author_name) like ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, "$.id"))) like ?', ["%{$search}%"])
-                        ->orWhereRaw('LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, "$.en"))) like ?', ["%{$search}%"]);
+                        ->orWhereRaw('LOWER(title) like ?', ["%{$search}%"]);
                 });
             })
             ->when($filters['status'] !== '', fn ($query) => $query->where('status', $filters['status']))
@@ -107,15 +106,9 @@ class ArticleController extends Controller
 
     private function payload(StoreArticleRequest $request, ?Article $article = null): array
     {
-        $titleId = trim($request->string('title_id')->value());
-        $titleEn = trim($request->string('title_en')->value());
-        $excerptId = trim($request->string('excerpt_id')->value());
-        $excerptEn = trim($request->string('excerpt_en')->value());
-        $bodyId = trim($request->string('body_id')->value());
-        $bodyEn = trim($request->string('body_en')->value());
-        [$titleId, $titleEn] = $this->normalizeLocalizedPair($titleId, $titleEn);
-        [$excerptId, $excerptEn] = $this->normalizeLocalizedPair($excerptId, $excerptEn);
-        [$bodyId, $bodyEn] = $this->normalizeLocalizedPair($bodyId, $bodyEn);
+        $title = trim($request->string('title')->value());
+        $excerpt = trim($request->string('excerpt')->value());
+        $body = trim($request->string('body')->value());
         $status = $request->string('status')->value();
         $publishedAt = $request->filled('published_at') ? $request->date('published_at') : null;
 
@@ -139,35 +132,23 @@ class ArticleController extends Controller
             $ogImagePath = '/storage/'.$request->file('og_image')->store('articles', 'public');
         }
 
-        [$metaTitleId, $metaTitleEn] = $this->normalizeLocalizedPair(
-            trim($request->string('meta_title_id')->value()),
-            trim($request->string('meta_title_en')->value()),
-        );
-        [$metaDescriptionId, $metaDescriptionEn] = $this->normalizeLocalizedPair(
-            trim($request->string('meta_description_id')->value()),
-            trim($request->string('meta_description_en')->value()),
-        );
+        $metaTitle = trim($request->string('meta_title')->value());
+        $metaDescription = trim($request->string('meta_description')->value());
 
         return [
-            'title' => ['id' => $titleId, 'en' => $titleEn],
-            'slug' => $this->resolveSlug($request->string('slug')->value(), $titleId, $titleEn),
-            'excerpt' => ['id' => $excerptId, 'en' => $excerptEn],
-            'body' => ['id' => $bodyId, 'en' => $bodyEn],
+            'title' => $title,
+            'slug' => $this->resolveSlug($request->string('slug')->value(), $title),
+            'excerpt' => $excerpt !== '' ? $excerpt : null,
+            'body' => $body !== '' ? $body : null,
             'image_path' => $imagePath,
             'content_type' => $request->string('content_type')->value(),
             'status' => $status,
             'author_name' => $this->resolveAuthorName($request),
             'tags' => $this->parseTags($request->string('tags')->value()),
-            'meta_title' => [
-                'id' => $metaTitleId,
-                'en' => $metaTitleEn,
-            ],
-            'meta_description' => [
-                'id' => $metaDescriptionId,
-                'en' => $metaDescriptionEn,
-            ],
+            'meta_title' => $metaTitle !== '' ? $metaTitle : null,
+            'meta_description' => $metaDescription !== '' ? $metaDescription : null,
             'og_image_path' => $ogImagePath,
-            'reading_time_minutes' => $this->estimateReadingTime([$bodyId, $bodyEn]),
+            'reading_time_minutes' => $this->estimateReadingTime($body),
             'published_at' => $publishedAt,
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $status !== Article::STATUS_ARCHIVED,
@@ -197,22 +178,17 @@ class ArticleController extends Controller
     {
         return [
             'id' => $article->id,
-            'title_id' => (string) ($article->title['id'] ?? ''),
-            'title_en' => (string) ($article->title['en'] ?? ''),
+            'title' => (string) ($article->title ?? ''),
             'slug' => $article->slug,
-            'excerpt_id' => (string) ($article->excerpt['id'] ?? ''),
-            'excerpt_en' => (string) ($article->excerpt['en'] ?? ''),
-            'body_id' => (string) ($article->body['id'] ?? ''),
-            'body_en' => (string) ($article->body['en'] ?? ''),
+            'excerpt' => (string) ($article->excerpt ?? ''),
+            'body' => (string) ($article->body ?? ''),
             'image_path' => $article->image_path,
             'content_type' => $article->content_type,
             'status' => $article->status,
             'author_name' => $article->author_name,
             'tags' => implode(', ', $article->tags ?? []),
-            'meta_title_id' => (string) ($article->meta_title['id'] ?? ''),
-            'meta_title_en' => (string) ($article->meta_title['en'] ?? ''),
-            'meta_description_id' => (string) ($article->meta_description['id'] ?? ''),
-            'meta_description_en' => (string) ($article->meta_description['en'] ?? ''),
+            'meta_title' => (string) ($article->meta_title ?? ''),
+            'meta_description' => (string) ($article->meta_description ?? ''),
             'og_image_path' => $article->og_image_path,
             'published_at' => $article->published_at?->format('Y-m-d\TH:i'),
             'is_featured' => $article->is_featured,
@@ -222,22 +198,17 @@ class ArticleController extends Controller
     private function defaultArticlePayload(?string $defaultAuthorName = null): array
     {
         return [
-            'title_id' => '',
-            'title_en' => '',
+            'title' => '',
             'slug' => '',
-            'excerpt_id' => '',
-            'excerpt_en' => '',
-            'body_id' => '',
-            'body_en' => '',
+            'excerpt' => '',
+            'body' => '',
             'image_path' => '',
             'content_type' => Article::TYPE_UMRAH_EDUCATION,
             'status' => Article::STATUS_DRAFT,
-            'author_name' => $defaultAuthorName ?: 'Admin Travel',
+            'author_name' => $defaultAuthorName ?: 'Admin',
             'tags' => '',
-            'meta_title_id' => '',
-            'meta_title_en' => '',
-            'meta_description_id' => '',
-            'meta_description_en' => '',
+            'meta_title' => '',
+            'meta_description' => '',
             'og_image_path' => '',
             'published_at' => '',
             'is_featured' => false,
@@ -247,10 +218,10 @@ class ArticleController extends Controller
     private function contentTypeOptions(): array
     {
         return [
-            ['value' => Article::TYPE_TRAVEL_UPDATE, 'label' => 'Travel Update'],
-            ['value' => Article::TYPE_COMPANY_NEWS, 'label' => 'Company News'],
-            ['value' => Article::TYPE_UMRAH_EDUCATION, 'label' => 'Umrah Education'],
-            ['value' => Article::TYPE_GENERAL_NEWS, 'label' => 'General News'],
+            ['value' => Article::TYPE_TRAVEL_UPDATE, 'label' => 'Update Perjalanan'],
+            ['value' => Article::TYPE_COMPANY_NEWS, 'label' => 'Berita Perusahaan'],
+            ['value' => Article::TYPE_UMRAH_EDUCATION, 'label' => 'Edukasi Umroh'],
+            ['value' => Article::TYPE_GENERAL_NEWS, 'label' => 'Info Umum'],
         ];
     }
 
@@ -258,20 +229,20 @@ class ArticleController extends Controller
     {
         return [
             ['value' => Article::STATUS_DRAFT, 'label' => 'Draft'],
-            ['value' => Article::STATUS_SCHEDULED, 'label' => 'Scheduled'],
-            ['value' => Article::STATUS_PUBLISHED, 'label' => 'Published'],
-            ['value' => Article::STATUS_ARCHIVED, 'label' => 'Archived'],
+            ['value' => Article::STATUS_SCHEDULED, 'label' => 'Terjadwal'],
+            ['value' => Article::STATUS_PUBLISHED, 'label' => 'Terbit'],
+            ['value' => Article::STATUS_ARCHIVED, 'label' => 'Arsip'],
         ];
     }
 
     private function localizedTitle(Article $article): string
     {
-        return (string) ($article->title['id'] ?? $article->title['en'] ?? $article->slug);
+        return (string) ($article->title ?? $article->slug);
     }
 
-    private function resolveSlug(string $providedSlug, string $titleId, string $titleEn): string
+    private function resolveSlug(string $providedSlug, string $title): string
     {
-        $base = trim($providedSlug) !== '' ? $providedSlug : ($titleId !== '' ? $titleId : $titleEn);
+        $base = trim($providedSlug) !== '' ? $providedSlug : $title;
 
         return Str::slug($base);
     }
@@ -290,27 +261,7 @@ class ArticleController extends Controller
             return $authenticatedAuthorName;
         }
 
-        return 'Admin Travel';
-    }
-
-    /**
-     * @return array{0: string, 1: string}
-     */
-    private function normalizeLocalizedPair(string $indonesianValue, string $englishValue): array
-    {
-        if ($indonesianValue === '' && $englishValue === '') {
-            return ['', ''];
-        }
-
-        if ($indonesianValue === '') {
-            $indonesianValue = $englishValue;
-        }
-
-        if ($englishValue === '') {
-            $englishValue = $indonesianValue;
-        }
-
-        return [$indonesianValue, $englishValue];
+        return 'Admin';
     }
 
     private function parseTags(string $tagString): array
@@ -323,10 +274,9 @@ class ArticleController extends Controller
             ->all();
     }
 
-    private function estimateReadingTime(array $bodyValues): int
+    private function estimateReadingTime(string $body): int
     {
-        $text = implode(' ', array_filter($bodyValues));
-        $wordCount = str_word_count(strip_tags($text));
+        $wordCount = str_word_count(strip_tags($body));
 
         return max(1, (int) ceil($wordCount / 180));
     }

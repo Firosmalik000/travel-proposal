@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\NormalizesLocalizedStrings;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -10,6 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class TravelPackage extends Model
 {
     use HasFactory;
+    use NormalizesLocalizedStrings;
+
+    protected $table = 'packages';
 
     protected $fillable = [
         'code',
@@ -33,8 +37,6 @@ class TravelPackage extends Model
     protected function casts(): array
     {
         return [
-            'name' => 'array',
-            'summary' => 'array',
             'content' => 'array',
             'price' => 'decimal:2',
             'original_price' => 'decimal:2',
@@ -42,6 +44,16 @@ class TravelPackage extends Model
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function setNameAttribute(mixed $value): void
+    {
+        $this->attributes['name'] = $this->normalizeLocalizedString($value);
+    }
+
+    public function setSummaryAttribute(mixed $value): void
+    {
+        $this->attributes['summary'] = $this->normalizeNullableLocalizedString($value);
     }
 
     public function hasDiscount(): bool
@@ -60,12 +72,12 @@ class TravelPackage extends Model
 
     public function schedules(): HasMany
     {
-        return $this->hasMany(DepartureSchedule::class);
+        return $this->hasMany(DepartureSchedule::class, 'package_id');
     }
 
     public function products(): BelongsToMany
     {
-        return $this->belongsToMany(TravelProduct::class, 'travel_package_product')
+        return $this->belongsToMany(TravelProduct::class, 'package_product', 'package_id', 'product_id')
             ->withPivot('sort_order')
             ->withTimestamps()
             ->orderByPivot('sort_order');
@@ -73,16 +85,18 @@ class TravelPackage extends Model
 
     public function testimonials(): HasMany
     {
-        return $this->hasMany(Testimonial::class);
+        return $this->hasMany(Testimonial::class, 'package_id');
     }
 
     public function registrations(): HasMany
     {
-        return $this->hasMany(PackageRegistration::class);
+        return $this->hasMany(PackageRegistration::class, 'package_id');
     }
 
     public function itineraries(): HasMany
     {
-        return $this->hasMany(PackageItinerary::class)->orderBy('sort_order')->orderBy('day_number');
+        return $this->hasMany(PackageItinerary::class, 'package_id')
+            ->orderBy('sort_order')
+            ->orderBy('day_number');
     }
 }

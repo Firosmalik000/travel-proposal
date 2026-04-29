@@ -16,7 +16,7 @@ return new class extends Migration
         }
 
         Schema::table('package_itineraries', function (Blueprint $table) {
-            $table->json('activity_ids')->nullable()->after('travel_package_id');
+            $table->json('activity_ids')->nullable()->after('package_id');
         });
     }
 

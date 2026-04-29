@@ -22,9 +22,6 @@ class CareerOpening extends Model
     protected function casts(): array
     {
         return [
-            'title' => 'array',
-            'description' => 'array',
-            'requirements' => 'array',
             'is_active' => 'boolean',
         ];
     }

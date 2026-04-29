@@ -166,11 +166,8 @@ class ActivitySeeder extends Seeder
         ];
     }
 
-    private function loc(string $id, ?string $en = null): array
+    private function loc(string $id, ?string $en = null): string
     {
-        return [
-            'id' => $id,
-            'en' => $en ?? $id,
-        ];
+        return $id;
     }
 }

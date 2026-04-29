@@ -74,43 +74,31 @@ return new class extends Migration
 
         $pages = [
             'terms-conditions' => [
-                'title' => ['id' => 'Syarat & Ketentuan', 'en' => 'Terms & Conditions'],
-                'excerpt' => ['id' => 'Aturan penggunaan layanan dan portal.', 'en' => 'Rules for using the services and portal.'],
+                'title' => 'Syarat & Ketentuan',
+                'excerpt' => 'Aturan penggunaan layanan dan portal.',
                 'content' => [
-                    'body' => [
-                        'id' => 'Tuliskan syarat dan ketentuan layanan di sini.',
-                        'en' => 'Write the service terms and conditions here.',
-                    ],
+                    'body' => 'Tuliskan syarat dan ketentuan layanan di sini.',
                 ],
             ],
             'privacy-policy' => [
-                'title' => ['id' => 'Kebijakan Privasi', 'en' => 'Privacy Policy'],
-                'excerpt' => ['id' => 'Penjelasan penggunaan dan perlindungan data pengguna.', 'en' => 'Explanation of user data usage and protection.'],
+                'title' => 'Kebijakan Privasi',
+                'excerpt' => 'Penjelasan penggunaan dan perlindungan data pengguna.',
                 'content' => [
-                    'body' => [
-                        'id' => 'Tuliskan kebijakan privasi di sini.',
-                        'en' => 'Write the privacy policy here.',
-                    ],
+                    'body' => 'Tuliskan kebijakan privasi di sini.',
                 ],
             ],
             'refund-policy' => [
-                'title' => ['id' => 'Kebijakan Refund', 'en' => 'Refund Policy'],
-                'excerpt' => ['id' => 'Aturan refund, reschedule, dan pembatalan.', 'en' => 'Rules for refunds, reschedules, and cancellations.'],
+                'title' => 'Kebijakan Refund',
+                'excerpt' => 'Aturan refund, reschedule, dan pembatalan.',
                 'content' => [
-                    'body' => [
-                        'id' => 'Tuliskan kebijakan refund dan pembatalan di sini.',
-                        'en' => 'Write the refund and cancellation policy here.',
-                    ],
+                    'body' => 'Tuliskan kebijakan refund dan pembatalan di sini.',
                 ],
             ],
             'disclaimer' => [
-                'title' => ['id' => 'Disclaimer', 'en' => 'Disclaimer'],
-                'excerpt' => ['id' => 'Pernyataan batas tanggung jawab layanan.', 'en' => 'Statement of service liability limitations.'],
+                'title' => 'Disclaimer',
+                'excerpt' => 'Pernyataan batas tanggung jawab layanan.',
                 'content' => [
-                    'body' => [
-                        'id' => 'Tuliskan disclaimer resmi di sini.',
-                        'en' => 'Write the official disclaimer here.',
-                    ],
+                    'body' => 'Tuliskan disclaimer resmi di sini.',
                 ],
             ],
         ];
@@ -127,8 +115,8 @@ return new class extends Migration
             DB::table('page_contents')->insert([
                 'slug' => $slug,
                 'category' => 'page',
-                'title' => json_encode($page['title'], JSON_THROW_ON_ERROR),
-                'excerpt' => json_encode($page['excerpt'], JSON_THROW_ON_ERROR),
+                'title' => $page['title'],
+                'excerpt' => $page['excerpt'],
                 'content' => json_encode($page['content'], JSON_THROW_ON_ERROR),
                 'is_active' => true,
                 'created_at' => now(),

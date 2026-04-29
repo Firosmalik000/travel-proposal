@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('team_members', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->json('role');
-            $table->json('bio')->nullable();
+            $table->string('role');
+            $table->text('bio')->nullable();
             $table->string('image_path')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
@@ -23,10 +23,10 @@ return new class extends Migration
 
         Schema::create('legal_documents', function (Blueprint $table) {
             $table->id();
-            $table->json('title');
+            $table->string('title');
             $table->string('document_number')->nullable();
-            $table->json('issued_by')->nullable();
-            $table->json('description')->nullable();
+            $table->string('issued_by')->nullable();
+            $table->text('description')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -38,7 +38,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('category')->nullable();
-            $table->json('description')->nullable();
+            $table->text('description')->nullable();
             $table->string('logo_path')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
@@ -50,11 +50,11 @@ return new class extends Migration
 
         Schema::create('career_openings', function (Blueprint $table) {
             $table->id();
-            $table->json('title');
+            $table->string('title');
             $table->string('location')->nullable();
             $table->string('employment_type')->nullable();
-            $table->json('description');
-            $table->json('requirements')->nullable();
+            $table->longText('description');
+            $table->text('requirements')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();

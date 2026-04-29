@@ -30,12 +30,9 @@ class TravelContentSeeder extends Seeder
         $this->seedCareerOpenings();
     }
 
-    private function localize(string $id, ?string $en = null): array
+    private function localize(string $id, ?string $en = null): string
     {
-        return [
-            'id' => $id,
-            'en' => $en ?? $id,
-        ];
+        return $id;
     }
 
     /**
@@ -551,13 +548,13 @@ class TravelContentSeeder extends Seeder
     private function seedTestimonials(array $packages): void
     {
         $rows = [
-            ['name' => 'Ibu Rahma', 'origin_city' => 'Jakarta', 'travel_package_id' => $packages['ASF-REG-10']->id, 'quote' => $this->localize('Pelayanan rapi dari awal. Manasik jelas, hotel sesuai info, dan pembimbing sabar.', 'The service was organized from the start. Manasik was clear, the hotel matched the information, and the guide was patient.'), 'rating' => 5, 'is_featured' => true],
-            ['name' => 'Pak Hadi', 'origin_city' => 'Surabaya', 'travel_package_id' => $packages['ASF-PREM-12']->id, 'quote' => $this->localize('Tim admin responsif, dokumen dibantu sampai tuntas, keberangkatan terasa tenang.', 'The admin team was responsive, the documents were handled well, and departure felt calm.'), 'rating' => 5, 'is_featured' => true],
-            ['name' => 'Bu Siti', 'origin_city' => 'Makassar', 'travel_package_id' => $packages['ASF-HEMAT-09']->id, 'quote' => $this->localize('Hotel dekat, jadwal jelas, tim pendamping sangat membantu.', 'The hotel was convenient, the schedule was clear, and the support team was very helpful.'), 'rating' => 5, 'is_featured' => false],
+            ['name' => 'Ibu Rahma', 'origin_city' => 'Jakarta', 'package_id' => $packages['ASF-REG-10']->id, 'quote' => $this->localize('Pelayanan rapi dari awal. Manasik jelas, hotel sesuai info, dan pembimbing sabar.', 'The service was organized from the start. Manasik was clear, the hotel matched the information, and the guide was patient.'), 'rating' => 5, 'is_featured' => true],
+            ['name' => 'Pak Hadi', 'origin_city' => 'Surabaya', 'package_id' => $packages['ASF-PREM-12']->id, 'quote' => $this->localize('Tim admin responsif, dokumen dibantu sampai tuntas, keberangkatan terasa tenang.', 'The admin team was responsive, the documents were handled well, and departure felt calm.'), 'rating' => 5, 'is_featured' => true],
+            ['name' => 'Bu Siti', 'origin_city' => 'Makassar', 'package_id' => $packages['ASF-HEMAT-09']->id, 'quote' => $this->localize('Hotel dekat, jadwal jelas, tim pendamping sangat membantu.', 'The hotel was convenient, the schedule was clear, and the support team was very helpful.'), 'rating' => 5, 'is_featured' => false],
         ];
 
         foreach ($rows as $row) {
-            Testimonial::query()->updateOrCreate(['name' => $row['name'], 'travel_package_id' => $row['travel_package_id']], $row + ['is_active' => true]);
+            Testimonial::query()->updateOrCreate(['name' => $row['name'], 'package_id' => $row['package_id']], $row + ['is_active' => true]);
         }
     }
 

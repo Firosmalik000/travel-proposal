@@ -11,7 +11,7 @@ class PackageRegistration extends Model
     use HasFactory;
 
     protected $fillable = [
-        'travel_package_id',
+        'package_id',
         'departure_schedule_id',
         'full_name',
         'phone',
@@ -29,13 +29,18 @@ class PackageRegistration extends Model
         ];
     }
 
-    public function travelPackage(): BelongsTo
+    public function package(): BelongsTo
     {
-        return $this->belongsTo(TravelPackage::class);
+        return $this->belongsTo(TravelPackage::class, 'package_id');
     }
 
     public function departureSchedule(): BelongsTo
     {
         return $this->belongsTo(DepartureSchedule::class);
+    }
+
+    public function travelPackage(): BelongsTo
+    {
+        return $this->package();
     }
 }

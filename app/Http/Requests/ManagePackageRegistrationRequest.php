@@ -16,7 +16,7 @@ class ManagePackageRegistrationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'travel_package_id' => ['required', 'integer', 'exists:travel_packages,id'],
+            'travel_package_id' => ['required', 'integer', 'exists:packages,id'],
             'departure_schedule_id' => ['nullable', 'integer', 'exists:departure_schedules,id'],
             'full_name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'max:30'],
@@ -50,35 +50,22 @@ class ManagePackageRegistrationRequest extends FormRequest
     {
         $validator->after(function ($validator): void {
             $schedule = $this->selectedSchedule();
-
             if ($schedule === null) {
                 return;
             }
 
-            if ($schedule->travel_package_id !== $this->integer('travel_package_id')) {
-                $validator->errors()->add(
-                    'departure_schedule_id',
-                    'Jadwal keberangkatan harus sesuai dengan paket yang dipilih.',
-                );
+            if ($schedule->package_id !== $this->integer('travel_package_id')) {
+                $validator->errors()->add('departure_schedule_id', 'Jadwal keberangkatan harus sesuai dengan paket yang dipilih.');
             }
 
             if (! $schedule->is_active || $schedule->status !== 'open') {
-                $validator->errors()->add(
-                    'departure_schedule_id',
-                    'Jadwal keberangkatan harus aktif dan berstatus open.',
-                );
+                $validator->errors()->add('departure_schedule_id', 'Jadwal keberangkatan harus aktif dan berstatus open.');
             }
 
             $currentRegistration = $this->route('registration');
-            $excludingRegistrationId = $currentRegistration instanceof PackageRegistration
-                ? $currentRegistration->id
-                : null;
-
+            $excludingRegistrationId = $currentRegistration instanceof PackageRegistration ? $currentRegistration->id : null;
             if ($schedule->availableSeatsCount($excludingRegistrationId) < $this->integer('passenger_count')) {
-                $validator->errors()->add(
-                    'departure_schedule_id',
-                    'Seat tersedia pada jadwal ini tidak mencukupi untuk jumlah jamaah yang dipilih.',
-                );
+                $validator->errors()->add('departure_schedule_id', 'Seat tersedia pada jadwal ini tidak mencukupi untuk jumlah jamaah yang dipilih.');
             }
         });
     }
@@ -86,7 +73,6 @@ class ManagePackageRegistrationRequest extends FormRequest
     public function selectedSchedule(): ?DepartureSchedule
     {
         $scheduleId = $this->integer('departure_schedule_id');
-
         if ($scheduleId === 0) {
             return null;
         }

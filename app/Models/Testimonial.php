@@ -13,7 +13,7 @@ class Testimonial extends Model
     protected $fillable = [
         'name',
         'origin_city',
-        'travel_package_id',
+        'package_id',
         'quote',
         'rating',
         'is_featured',
@@ -23,14 +23,13 @@ class Testimonial extends Model
     protected function casts(): array
     {
         return [
-            'quote' => 'array',
             'is_featured' => 'boolean',
             'is_active' => 'boolean',
         ];
     }
 
-    public function travelPackage(): BelongsTo
+    public function package(): BelongsTo
     {
-        return $this->belongsTo(TravelPackage::class);
+        return $this->belongsTo(TravelPackage::class, 'package_id');
     }
 }
