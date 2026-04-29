@@ -61,7 +61,7 @@ export function IslamicOrnamentKhatam({ className }: OrnamentProps) {
                 <g opacity="0.9" strokeWidth="1.55">
                     {accentDiamonds.map((d, idx) => (
                         <rect
-                            // eslint-disable-next-line react/no-array-index-key
+                             
                             key={idx}
                             x={d.x - 3.6}
                             y={d.y - 3.6}
@@ -118,7 +118,7 @@ export function IslamicOrnamentRosette({ className }: OrnamentProps) {
                 <g opacity="0.9" strokeWidth="1.65">
                     {cornerDots.map((p, idx) => (
                         <circle
-                            // eslint-disable-next-line react/no-array-index-key
+                             
                             key={idx}
                             cx={p.x}
                             cy={p.y}
@@ -177,7 +177,7 @@ export function IslamicOrnamentRow1Col1({ className }: OrnamentProps) {
                 <g opacity="0.9" strokeWidth="1.6">
                     {accentDiamonds.map((d, idx) => (
                         <rect
-                            // eslint-disable-next-line react/no-array-index-key
+                             
                             key={idx}
                             x={d.x - 3.9}
                             y={d.y - 3.9}
@@ -252,7 +252,7 @@ export function IslamicOrnamentAbbasid({ className }: OrnamentProps) {
                 <g opacity="0.9" strokeWidth="1.6">
                     {cornerBricks.map((b, idx) => (
                         <rect
-                            // eslint-disable-next-line react/no-array-index-key
+                             
                             key={idx}
                             x={b.x}
                             y={b.y}
@@ -262,7 +262,7 @@ export function IslamicOrnamentAbbasid({ className }: OrnamentProps) {
                     ))}
                     {midBricks.map((b, idx) => (
                         <rect
-                            // eslint-disable-next-line react/no-array-index-key
+                             
                             key={`m_${idx}`}
                             x={b.x}
                             y={b.y}
@@ -315,7 +315,7 @@ export function IslamicOrnamentOttoman({ className }: OrnamentProps) {
                 <g opacity="0.9" strokeWidth="1.55">
                     {ringDots.map((p, idx) => (
                         <circle
-                            // eslint-disable-next-line react/no-array-index-key
+                             
                             key={idx}
                             cx={p.x}
                             cy={p.y}
@@ -327,7 +327,7 @@ export function IslamicOrnamentOttoman({ className }: OrnamentProps) {
                 <g opacity="0.92" strokeWidth="1.65">
                     {petals.map((p, idx) => (
                         <path
-                            // eslint-disable-next-line react/no-array-index-key
+                             
                             key={idx}
                             d="M50 17 C58 29 58 41 50 44 C42 41 42 29 50 17 Z"
                             transform={`rotate(${p.rot} 50 50)`}

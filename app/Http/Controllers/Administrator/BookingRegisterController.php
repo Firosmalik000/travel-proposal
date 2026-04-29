@@ -7,15 +7,21 @@ use App\Http\Requests\ManagePackageRegistrationRequest;
 use App\Models\DepartureSchedule;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
+use App\Services\PdfBrandingService;
+use App\Services\PdfRenderer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
-use Mpdf\Mpdf;
 
 class BookingRegisterController extends Controller
 {
+    public function __construct(
+        private readonly PdfRenderer $pdfRenderer,
+        private readonly PdfBrandingService $pdfBrandingService,
+    ) {}
+
     public function index(): Response
     {
         return Inertia::render('Dashboard/Booking/Register/Index', [
@@ -41,8 +47,126 @@ class BookingRegisterController extends Controller
         ]);
     }
 
+    public function listingPdf(Request $request): HttpResponse
+    {
+        $generatedAt = now();
+        $locale = 'id';
+        $branding = $this->pdfBrandingService->branding();
+        $seo = $this->pdfBrandingService->seo();
+
+        $filters = [
+            'search' => trim((string) $request->string('search')->value()),
+            'status' => in_array($request->string('status')->value(), ['pending', 'registered', 'cancelled'], true)
+                ? $request->string('status')->value()
+                : 'registered',
+            'travel_package_id' => $request->integer('travel_package_id') ?: null,
+        ];
+
+        $travelPackage = $filters['travel_package_id']
+            ? TravelPackage::query()->find($filters['travel_package_id'])
+            : null;
+
+        $rows = PackageRegistration::query()
+            ->with([
+                'package:id,code,name',
+                'departureSchedule:id,departure_date,departure_city',
+            ])
+            ->when($filters['travel_package_id'], function ($query) use ($filters): void {
+                $query->where('package_id', (int) $filters['travel_package_id']);
+            })
+            ->when($filters['search'] !== '', function ($query) use ($filters): void {
+                $search = (string) $filters['search'];
+                $query->where(function ($registrationQuery) use ($search): void {
+                    $registrationQuery
+                        ->where('full_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('origin_city', 'like', "%{$search}%")
+                        ->orWhereHas('package', function ($packageQuery) use ($search): void {
+                            $packageQuery->where('code', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($filters['status'], function ($query) use ($filters): void {
+                $query->where('status', (string) $filters['status']);
+            })
+            ->latest()
+            ->limit(500)
+            ->get()
+            ->map(function (PackageRegistration $registration): array {
+                $bookingCode = sprintf(
+                    'BK-%s-%04d',
+                    $registration->created_at?->format('ymd') ?? now()->format('ymd'),
+                    $registration->id,
+                );
+
+                $packageName = (string) ($registration->package?->name['id'] ?? $registration->package?->code ?? '-');
+                $packageCode = (string) ($registration->package?->code ?? '-');
+                $departureDate = $registration->departureSchedule?->departure_date?->toDateString() ?? '-';
+                $departureCity = (string) ($registration->departureSchedule?->departure_city ?? '-');
+
+                return [
+                    'booking_code' => $bookingCode,
+                    'full_name' => $registration->full_name,
+                    'phone' => $registration->phone,
+                    'origin_city' => $registration->origin_city,
+                    'package' => trim(sprintf('%s (%s)', $packageName, $packageCode)),
+                    'departure' => $departureDate !== '-'
+                        ? sprintf('%s • %s', $departureDate, $departureCity)
+                        : '-',
+                ];
+            })
+            ->values()
+            ->all();
+
+        $packageLabel = $travelPackage
+            ? (string) ($travelPackage->name['id'] ?? $travelPackage->code ?? 'Paket')
+            : 'Semua paket';
+
+        $safeFilename = preg_replace('/[^A-Za-z0-9._-]+/', '-', sprintf(
+            'booking-listing-%s.pdf',
+            now()->format('Ymd-His'),
+        )) ?: 'booking-listing.pdf';
+
+        return $this->pdfRenderer->renderInline(
+            view: 'pdf.booking-listing',
+            data: [
+                'filters' => [
+                    'search' => (string) $filters['search'],
+                    'status' => (string) $filters['status'],
+                    'package_label' => $packageLabel,
+                ],
+                'rows' => $rows,
+            ],
+            filename: $safeFilename,
+            mpdfConfig: [
+                'orientation' => 'L',
+                'margin_left' => 10,
+                'margin_right' => 10,
+                'margin_top' => 34,
+                'margin_bottom' => 22,
+            ],
+            headerView: 'pdf.partials.header',
+            headerData: [
+                'locale' => $locale,
+                'branding' => $branding,
+                'seo' => $seo,
+                'generatedAt' => $generatedAt,
+            ],
+            footerView: 'pdf.partials.footer',
+            footerData: [
+                'branding' => $branding,
+            ],
+        );
+    }
+
     public function participantPdf(PackageRegistration $registration): HttpResponse
     {
+        $generatedAt = now();
+        $locale = 'id';
+        $branding = $this->pdfBrandingService->branding();
+        $seo = $this->pdfBrandingService->seo();
+
         $registration->loadMissing([
             'package:id,code,name,package_type,departure_city,duration_days,price,currency',
             'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
@@ -87,27 +211,31 @@ class BookingRegisterController extends Controller
             ];
         }
 
-        $html = view('pdf.participants', [
-            'bookingCode' => $bookingCode,
-            'metaRows' => $metaRows,
-            'participantRows' => $participantRows,
-            'notes' => (string) ($registration->notes ?? ''),
-        ])->render();
-
-        $mpdf = new Mpdf([
-            'mode' => 'utf-8',
-            'format' => 'A4',
-            'margin_top' => 12,
-            'margin_bottom' => 12,
-            'margin_left' => 12,
-            'margin_right' => 12,
-        ]);
-        $mpdf->WriteHTML($html);
-
-        return response($mpdf->Output('', 'S'), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="peserta-'.$bookingCode.'.pdf"',
-        ]);
+        return $this->pdfRenderer->renderInline(
+            view: 'pdf.participants',
+            data: [
+                'bookingCode' => $bookingCode,
+                'metaRows' => $metaRows,
+                'participantRows' => $participantRows,
+                'notes' => (string) ($registration->notes ?? ''),
+            ],
+            filename: 'peserta-'.$bookingCode.'.pdf',
+            mpdfConfig: [
+                'margin_top' => 34,
+                'margin_bottom' => 22,
+            ],
+            headerView: 'pdf.partials.header',
+            headerData: [
+                'locale' => $locale,
+                'branding' => $branding,
+                'seo' => $seo,
+                'generatedAt' => $generatedAt,
+            ],
+            footerView: 'pdf.partials.footer',
+            footerData: [
+                'branding' => $branding,
+            ],
+        );
     }
 
     public function markRegistered(PackageRegistration $registration): RedirectResponse

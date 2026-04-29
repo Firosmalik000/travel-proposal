@@ -121,9 +121,7 @@ export default function PaketDetail() {
     const registrationLink = `/paket-umroh/${pkg.slug}/daftar${nextSchedule?.id ? `?schedule=${nextSchedule.id}` : ''}`;
     const packagePdfDownloadUrl = `/paket-umroh/${pkg.slug}/sk.pdf?download=1`;
 
-    const whatsappMsg = encodeURIComponent(
-        `Halo, saya tertarik dengan paket *${name}* (${pkg.code}). Mohon info lebih lanjut.`,
-    );
+    const whatsappMsg = `Halo, saya tertarik dengan paket *${name}* (${pkg.code}). Mohon info lebih lanjut.`;
     const waLink = whatsappLinkFromSeo(seo, whatsappMsg);
 
     return (

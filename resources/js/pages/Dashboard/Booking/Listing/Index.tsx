@@ -233,7 +233,7 @@ export default function BookingListingIndex({
         filters.status || 'registered',
     );
     const [packageFilter, setPackageFilter] = useState(
-        filters.travel_package_id ? String(filters.travel_package_id) : '',
+        filters.travel_package_id ? String(filters.travel_package_id) : 'all',
     );
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingRegistration, setEditingRegistration] =
@@ -316,7 +316,8 @@ export default function BookingListingIndex({
             {
                 search: nextSearch || undefined,
                 status: nextStatus || 'registered',
-                travel_package_id: nextPackageId || undefined,
+                travel_package_id:
+                    nextPackageId === 'all' ? undefined : nextPackageId,
             },
             {
                 preserveState: true,
@@ -331,7 +332,9 @@ export default function BookingListingIndex({
             debouncedSearch === (filters.search ?? '') &&
             statusFilter === (filters.status || 'registered') &&
             packageFilter ===
-                (filters.travel_package_id ? String(filters.travel_package_id) : '')
+                (filters.travel_package_id
+                    ? String(filters.travel_package_id)
+                    : 'all')
         ) {
             return;
         }
@@ -546,7 +549,7 @@ export default function BookingListingIndex({
                                     className="pl-9"
                                 />
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
                                 <Select
                                     value={packageFilter}
                                     onValueChange={(value) => {
@@ -557,7 +560,7 @@ export default function BookingListingIndex({
                                         <SelectValue placeholder="Semua paket" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">
+                                        <SelectItem value="all">
                                             Semua paket
                                         </SelectItem>
                                         {packageOptions.map((travelPackage) => (
@@ -565,9 +568,10 @@ export default function BookingListingIndex({
                                                 key={travelPackage.id}
                                                 value={String(travelPackage.id)}
                                             >
-                                                {travelPackage.code
-                                                    ? `${travelPackage.code} - ${packageDisplayName(travelPackage, locale)}`
-                                                    : packageDisplayName(travelPackage, locale)}
+                                                {packageDisplayName(
+                                                    travelPackage,
+                                                    locale,
+                                                )}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
