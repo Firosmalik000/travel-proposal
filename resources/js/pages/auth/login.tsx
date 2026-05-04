@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthSplitLayout from '@/layouts/auth/auth-split-layout';
-import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
@@ -16,14 +15,9 @@ import { useState } from 'react';
 interface LoginProps {
     status?: string;
     canResetPassword: boolean;
-    canRegister: boolean;
 }
 
-export default function Login({
-    status,
-    canResetPassword,
-    canRegister,
-}: LoginProps) {
+export default function Login({ status, canResetPassword }: LoginProps) {
     const [showPassword, setShowPassword] = useState(false);
 
     return (
@@ -42,7 +36,8 @@ export default function Login({
             )}
 
             <Form
-                {...store.form()}
+                action={store.url()}
+                method="post"
                 resetOnSuccess={['password']}
                 className="flex flex-col gap-6"
             >
@@ -181,18 +176,6 @@ export default function Login({
                                 </div>
                             </div>
                         </div>
-                        {canRegister && (
-                            <div className="text-center text-xs text-slate-600 dark:text-slate-300">
-                                Belum punya akun?{' '}
-                                <TextLink
-                                    href={register()}
-                                    tabIndex={6}
-                                    className="font-semibold text-primary transition-colors duration-200 hover:text-primary/80 dark:text-amber-300 dark:hover:text-amber-200"
-                                >
-                                    Daftar
-                                </TextLink>
-                            </div>
-                        )}
                     </>
                 )}
             </Form>

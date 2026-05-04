@@ -10,6 +10,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Eye, ImagePlus, Plus, Search, SquarePen, Trash2 } from 'lucide-react';
@@ -60,11 +61,17 @@ function GalleryTableRow({
     item,
     onEdit,
     onDelete,
+    canEdit,
+    canDelete,
 }: {
     item: GalleryItemRow;
     onEdit: (item: GalleryItemRow) => void;
     onDelete: (item: GalleryItemRow) => void;
+    canEdit: boolean;
+    canDelete: boolean;
 }) {
+    const showActions = canEdit || canDelete;
+
     return (
         <tr key={item.id} className="border-b border-border last:border-b-0">
             <td className="px-4 py-4">
@@ -105,34 +112,45 @@ function GalleryTableRow({
                 </span>
             </td>
             <td className="px-4 py-4 text-right">
-                <div className="inline-flex items-center gap-2">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(item)}
-                        className="h-9 rounded-xl"
-                    >
-                        <SquarePen className="mr-2 h-4 w-4" />
-                        Edit
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onDelete(item)}
-                        className="h-9 rounded-xl"
-                    >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Hapus
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div className="inline-flex items-center gap-2">
+                        {canEdit ? (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onEdit(item)}
+                                className="h-9 rounded-xl"
+                            >
+                                <SquarePen className="mr-2 h-4 w-4" />
+                                Edit
+                            </Button>
+                        ) : null}
+                        {canDelete ? (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => onDelete(item)}
+                                className="h-9 rounded-xl"
+                            >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Hapus
+                            </Button>
+                        ) : null}
+                    </div>
+                ) : null}
             </td>
         </tr>
     );
 }
 
 export default function GalleryManagement({ items, stats }: Props) {
+    const { can } = usePermission('gallery_management');
+    const canCreate = can('create');
+    const canEdit = can('edit');
+    const canDelete = can('delete');
+    const showActions = canEdit || canDelete;
     const [search, setSearch] = useState('');
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editing, setEditing] = useState<GalleryItemRow | null>(null);
@@ -169,12 +187,20 @@ export default function GalleryManagement({ items, stats }: Props) {
     }, [items, search]);
 
     const openCreate = () => {
+        if (!canCreate) {
+            return;
+        }
+
         setEditing(null);
         form.setData(buildFormData(null));
         setDrawerOpen(true);
     };
 
     const openEdit = (item: GalleryItemRow) => {
+        if (!canEdit) {
+            return;
+        }
+
         setEditing(item);
         form.setData({ ...buildFormData(item), _method: 'PATCH' });
         setDrawerOpen(true);
@@ -211,6 +237,10 @@ export default function GalleryManagement({ items, stats }: Props) {
     };
 
     const destroyItem = (item: GalleryItemRow) => {
+        if (!canDelete) {
+            return;
+        }
+
         if (!window.confirm('Hapus foto galeri ini?')) {
             return;
         }
@@ -246,10 +276,12 @@ export default function GalleryManagement({ items, stats }: Props) {
                             .
                         </p>
                     </div>
-                    <Button onClick={openCreate}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah Foto
-                    </Button>
+                    {canCreate ? (
+                        <Button onClick={openCreate}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah Foto
+                        </Button>
+                    ) : null}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
@@ -282,7 +314,7 @@ export default function GalleryManagement({ items, stats }: Props) {
                 <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="relative w-full sm:max-w-sm">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -302,9 +334,11 @@ export default function GalleryManagement({ items, stats }: Props) {
                                     <th className="px-4 py-3">Foto</th>
                                     <th className="px-4 py-3">Deskripsi</th>
                                     <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3 text-right">
-                                        Aksi
-                                    </th>
+                                    {showActions ? (
+                                        <th className="px-4 py-3 text-right">
+                                            Aksi
+                                        </th>
+                                    ) : null}
                                 </tr>
                             </thead>
                             <tbody>
@@ -315,12 +349,14 @@ export default function GalleryManagement({ items, stats }: Props) {
                                             item={item}
                                             onEdit={openEdit}
                                             onDelete={destroyItem}
+                                            canEdit={canEdit}
+                                            canDelete={canDelete}
                                         />
                                     ))
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={4}
+                                            colSpan={showActions ? 4 : 3}
                                             className="px-4 py-10 text-center text-muted-foreground"
                                         >
                                             Belum ada foto galeri.
@@ -337,7 +373,9 @@ export default function GalleryManagement({ items, stats }: Props) {
                 <SheetContent className="w-full max-w-xl sm:max-w-xl">
                     <SheetHeader>
                         <SheetTitle>
-                            {editing ? 'Edit Foto Galeri' : 'Tambah Foto Galeri'}
+                            {editing
+                                ? 'Edit Foto Galeri'
+                                : 'Tambah Foto Galeri'}
                         </SheetTitle>
                         <SheetDescription>
                             Foto yang diupload akan tampil di halaman{' '}
@@ -415,7 +453,10 @@ export default function GalleryManagement({ items, stats }: Props) {
                                     <Checkbox
                                         checked={form.data.is_active}
                                         onCheckedChange={(v) =>
-                                            form.setData('is_active', Boolean(v))
+                                            form.setData(
+                                                'is_active',
+                                                Boolean(v),
+                                            )
                                         }
                                     />
                                     <span className="text-sm text-muted-foreground">

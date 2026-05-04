@@ -161,9 +161,7 @@ function buildFormData(pkg: Package | null): PackageFormData {
     const nameId =
         typeof pkg?.name === 'string' ? pkg.name : (pkg?.name?.id ?? '');
     const nameEn =
-        typeof pkg?.name === 'string'
-            ? pkg.name
-            : (pkg?.name?.en ?? nameId);
+        typeof pkg?.name === 'string' ? pkg.name : (pkg?.name?.en ?? nameId);
     const summaryId =
         typeof pkg?.summary === 'string'
             ? pkg.summary
@@ -603,14 +601,19 @@ export function PackageForm({
         Number(form.data.duration_days) || 0,
     );
     const currentItineraryDay = Number(activeItineraryTab.replace('day-', ''));
-    const packageHighlights = Array.isArray(form.data.content?.highlights)
-        ? (form.data.content.highlights as PackageHighlightItem[])
+
+    const contentObject =
+        form.data.content && typeof form.data.content === 'object'
+            ? (form.data.content as Record<string, unknown>)
+            : {};
+    const packageHighlights = Array.isArray(contentObject.highlights)
+        ? (contentObject.highlights as PackageHighlightItem[])
         : [];
     const errors = form.errors;
 
     function updatePackageHighlights(nextHighlights: PackageHighlightItem[]) {
         form.setData('content', {
-            ...form.data.content,
+            ...contentObject,
             highlights: nextHighlights,
         });
     }
@@ -906,7 +909,9 @@ export function PackageForm({
                                     type="button"
                                     variant="outline"
                                     className="gap-2"
-                                    onClick={() => imageInputRef.current?.click()}
+                                    onClick={() =>
+                                        imageInputRef.current?.click()
+                                    }
                                 >
                                     <Plus className="h-4 w-4" />
                                     Tambah Foto
@@ -992,7 +997,7 @@ export function PackageForm({
                                     className="flex h-24 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
                                 >
                                     <Plus className="h-5 w-5" />
-                                    <span className="text-[10px] font-medium uppercase tracking-wider">
+                                    <span className="text-[10px] font-medium tracking-wider uppercase">
                                         Tambah Foto
                                     </span>
                                 </button>

@@ -17,6 +17,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { Eye, Package, Plus, Search, SquarePen, Trash2 } from 'lucide-react';
@@ -81,11 +82,17 @@ function ProductTableRow({
     product,
     onEdit,
     onDelete,
+    canEdit,
+    canDelete,
 }: {
     product: ProductItem;
     onEdit: (product: ProductItem) => void;
     onDelete: (product: ProductItem) => void;
+    canEdit: boolean;
+    canDelete: boolean;
 }) {
+    const showActions = canEdit || canDelete;
+
     return (
         <tr key={product.id} className="border-b border-border last:border-b-0">
             <td className="px-4 py-4">
@@ -125,24 +132,30 @@ function ProductTableRow({
                 </span>
             </td>
             <td className="px-4 py-4">
-                <div className="flex justify-end gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(product)}
-                    >
-                        <SquarePen className="mr-1 h-4 w-4" />
-                        Edit
-                    </Button>
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onDelete(product)}
-                    >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        Hapus
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div className="flex justify-end gap-2">
+                        {canEdit ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onEdit(product)}
+                            >
+                                <SquarePen className="mr-1 h-4 w-4" />
+                                Edit
+                            </Button>
+                        ) : null}
+                        {canDelete ? (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => onDelete(product)}
+                            >
+                                <Trash2 className="mr-1 h-4 w-4" />
+                                Hapus
+                            </Button>
+                        ) : null}
+                    </div>
+                ) : null}
             </td>
         </tr>
     );
@@ -154,6 +167,11 @@ export default function ProductsIndex({
     stats,
     product_type_options: productTypeOptions,
 }: Props) {
+    const { can } = usePermission('product');
+    const canCreate = can('create');
+    const canEdit = can('edit');
+    const canDelete = can('delete');
+    const showActions = canEdit || canDelete;
     const [search, setSearch] = useState(filters.search);
     const [productType, setProductType] = useState(filters.product_type);
     const [editingProduct, setEditingProduct] = useState<
@@ -181,12 +199,20 @@ export default function ProductsIndex({
     }
 
     function openCreateSheet() {
+        if (!canCreate) {
+            return;
+        }
+
         form.setData(buildFormData(null));
         form.clearErrors();
         setEditingProduct('new');
     }
 
     function openEditSheet(product: ProductItem) {
+        if (!canEdit) {
+            return;
+        }
+
         form.setData(buildFormData(product));
         form.clearErrors();
         setEditingProduct(product);
@@ -248,7 +274,13 @@ export default function ProductsIndex({
     }
 
     function destroyProduct(product: ProductItem) {
-        if (!window.confirm(`Hapus produk "${product.name || product.code}"?`)) {
+        if (!canDelete) {
+            return;
+        }
+
+        if (
+            !window.confirm(`Hapus produk "${product.name || product.code}"?`)
+        ) {
             return;
         }
 
@@ -287,10 +319,12 @@ export default function ProductsIndex({
                             komponen paket.
                         </p>
                     </div>
-                    <Button onClick={openCreateSheet} className="shrink-0">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah Produk
-                    </Button>
+                    {canCreate ? (
+                        <Button onClick={openCreateSheet} className="shrink-0">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah Produk
+                        </Button>
+                    ) : null}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
@@ -348,7 +382,7 @@ export default function ProductsIndex({
                                 Cari Produk
                             </Label>
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
@@ -404,14 +438,16 @@ export default function ProductsIndex({
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full text-left text-sm">
-                            <thead className="bg-muted/30 text-xs uppercase text-muted-foreground">
+                            <thead className="bg-muted/30 text-xs text-muted-foreground uppercase">
                                 <tr>
                                     <th className="px-4 py-3">Produk</th>
                                     <th className="px-4 py-3">Deskripsi</th>
                                     <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3 text-right">
-                                        Aksi
-                                    </th>
+                                    {showActions ? (
+                                        <th className="px-4 py-3 text-right">
+                                            Aksi
+                                        </th>
+                                    ) : null}
                                 </tr>
                             </thead>
                             <tbody>
@@ -422,12 +458,14 @@ export default function ProductsIndex({
                                             product={product}
                                             onEdit={openEditSheet}
                                             onDelete={destroyProduct}
+                                            canEdit={canEdit}
+                                            canDelete={canDelete}
                                         />
                                     ))
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={4}
+                                            colSpan={showActions ? 4 : 3}
                                             className="px-4 py-10 text-center text-sm text-muted-foreground"
                                         >
                                             {filters.search ||
@@ -564,14 +602,16 @@ export default function ProductsIndex({
                                                 <SelectValue placeholder="Pilih tipe" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {productTypeOptions.map((opt) => (
-                                                    <SelectItem
-                                                        key={opt.value}
-                                                        value={opt.value}
-                                                    >
-                                                        {opt.label}
-                                                    </SelectItem>
-                                                ))}
+                                                {productTypeOptions.map(
+                                                    (opt) => (
+                                                        <SelectItem
+                                                            key={opt.value}
+                                                            value={opt.value}
+                                                        >
+                                                            {opt.label}
+                                                        </SelectItem>
+                                                    ),
+                                                )}
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -597,10 +637,7 @@ export default function ProductsIndex({
                                     <Input
                                         value={form.data.name}
                                         onChange={(e) =>
-                                            form.setData(
-                                                'name',
-                                                e.target.value,
-                                            )
+                                            form.setData('name', e.target.value)
                                         }
                                         placeholder="Visa Umroh"
                                     />
@@ -680,4 +717,3 @@ export default function ProductsIndex({
         </AppSidebarLayout>
     );
 }
-

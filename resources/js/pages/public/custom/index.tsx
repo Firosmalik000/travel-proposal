@@ -4,13 +4,9 @@ import {
     MotionSection,
 } from '@/components/public-motion';
 import PublicLayout from '@/layouts/PublicLayout';
-import {
-    localize,
-    usePublicPageContent,
-    whatsappLinkFromSeo,
-} from '@/lib/public-content';
+import { localize, usePublicPageContent } from '@/lib/public-content';
 import { type SharedData } from '@/types';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState, type ReactNode } from 'react';
 
 const indonesianDepartureCities = [
@@ -50,6 +46,12 @@ const content = {
             title: 'Isi kebutuhan singkat Anda',
             description:
                 'Form ini membantu kami memahami kebutuhan dasar sebelum tim admin menghubungi Anda.',
+            contactTitle: 'Kontak PIC',
+            contactDescription:
+                'Data ini dipakai admin untuk follow up. Setelah disetujui, request akan diproses jadi booking.',
+            fullName: 'Nama PIC',
+            whatsapp: 'Nomor WhatsApp',
+            email: 'Email (opsional)',
             groupType: 'Jenis Rombongan',
             groupOptions: [
                 'Keluarga',
@@ -67,13 +69,17 @@ const content = {
                 'Jadwal fleksibel',
                 'Pendampingan ibadah',
             ],
+            room: 'Preferensi Kamar',
+            roomOptions: ['Double', 'Triple', 'Quad', 'Fleksibel'],
             notes: 'Catatan Tambahan',
             notesPlaceholder:
                 'Contoh: ingin kamar triple, rombongan lansia, butuh city tour, atau ingin berangkat saat liburan sekolah.',
-            cta: 'Kirim Brief ke WhatsApp',
+            previewTitle: 'Ringkasan request',
+            cta: 'Kirim Request',
         },
         guide: {
             title: 'Agar proses custom lebih cepat',
+            checklistTitle: 'Checklist request',
             items: [
                 'Tentukan jumlah jamaah yang paling mendekati.',
                 'Pilih bulan keberangkatan perkiraan terlebih dahulu.',
@@ -106,6 +112,12 @@ const content = {
             title: 'Fill in your brief requirements',
             description:
                 'This form helps us understand the essentials before our team contacts you.',
+            contactTitle: 'Primary Contact',
+            contactDescription:
+                'We will use this to follow up. Once approved, the request will be processed into a booking.',
+            fullName: 'Contact Name',
+            whatsapp: 'WhatsApp Number',
+            email: 'Email (optional)',
             groupType: 'Group Type',
             groupOptions: [
                 'Family',
@@ -123,13 +135,17 @@ const content = {
                 'Flexible schedule',
                 'Better guidance',
             ],
+            room: 'Room Preference',
+            roomOptions: ['Double', 'Triple', 'Quad', 'Flexible'],
             notes: 'Additional Notes',
             notesPlaceholder:
                 'Example: need triple rooms, elderly pilgrims, city tour, or school holiday departure.',
-            cta: 'Send Brief via WhatsApp',
+            previewTitle: 'Request summary',
+            cta: 'Send Request',
         },
         guide: {
             title: 'To make the custom process faster',
+            checklistTitle: 'Request checklist',
             items: [
                 'Set the closest estimate for the number of pilgrims.',
                 'Choose the approximate departure month first.',
@@ -163,26 +179,56 @@ export default function Custom() {
     const seo = (seoSettings as Record<string, any>) ?? {};
     const t = content[locale];
 
+    const [fullName, setFullName] = useState('');
+    const [whatsapp, setWhatsapp] = useState('');
+    const [email, setEmail] = useState('');
     const [groupType, setGroupType] = useState(t.planner.groupOptions[0]);
-    const [pilgrims, setPilgrims] = useState('');
+    const [pilgrims, setPilgrims] = useState<number | ''>('');
     const [city, setCity] = useState('');
     const [month, setMonth] = useState('');
-    const [budget, setBudget] = useState('');
+    const [budget, setBudget] = useState<number | ''>('');
     const [focus, setFocus] = useState(t.planner.focusOptions[0]);
+    const [room, setRoom] = useState(t.planner.roomOptions[0]);
     const [notes, setNotes] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
+    const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
-    const whatsappLink = whatsappLinkFromSeo(
-        seo,
-        buildCustomInquiryMessage(locale, {
-            groupType,
-            pilgrims,
-            city,
-            month,
-            budget,
-            focus,
-            notes,
-        }),
-    );
+    const sanitizedWhatsapp = normalizePhone(whatsapp);
+    const adminWhatsappRaw = String(seo?.contact?.whatsapp ?? '').trim();
+    const adminWhatsapp = normalizePhone(adminWhatsappRaw);
+
+    const isFullNameValid = fullName.trim() !== '';
+    const isWhatsappValid = sanitizedWhatsapp !== '';
+    const isPilgrimsValid = typeof pilgrims === 'number' && pilgrims > 0;
+    const isCityValid = city.trim() !== '';
+    const isMonthValid = month.trim() !== '';
+
+    const missingFields: string[] = [];
+    if (!isFullNameValid) {
+        missingFields.push(t.planner.fullName);
+    }
+    if (!isWhatsappValid) {
+        missingFields.push(t.planner.whatsapp);
+    }
+    if (!isPilgrimsValid) {
+        missingFields.push(t.planner.pilgrims);
+    }
+    if (!isCityValid) {
+        missingFields.push(t.planner.city);
+    }
+    if (!isMonthValid) {
+        missingFields.push(t.planner.month);
+    }
+
+    const isFormValid =
+        isFullNameValid &&
+        isWhatsappValid &&
+        isPilgrimsValid &&
+        isCityValid &&
+        isMonthValid;
+
+    const shouldShowValidation = hasAttemptedSubmit && !submitSuccess;
 
     return (
         <PublicLayout>
@@ -245,7 +291,7 @@ export default function Custom() {
 
                         <MotionCard className="mt-6 rounded-2xl border border-border bg-background/70 p-5">
                             <h3 className="font-semibold text-foreground">
-                                {t.guide.title}
+                                {t.guide.checklistTitle}
                             </h3>
                             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
                                 {t.guide.items.map((item) => (
@@ -267,16 +313,124 @@ export default function Custom() {
                             className="mt-6 grid gap-4 md:grid-cols-2"
                             onSubmit={(event) => {
                                 event.preventDefault();
-                                if (!whatsappLink) {
+                                if (isSubmitting) {
                                     return;
                                 }
-                                window.open(
-                                    whatsappLink,
-                                    '_blank',
-                                    'noopener,noreferrer',
+
+                                setHasAttemptedSubmit(true);
+                                if (!isFormValid) {
+                                    return;
+                                }
+
+                                setIsSubmitting(true);
+                                setSubmitSuccess(false);
+                                router.post(
+                                    '/custom-umroh',
+                                    {
+                                        full_name: fullName.trim(),
+                                        phone: sanitizedWhatsapp,
+                                        email:
+                                            email.trim() === ''
+                                                ? null
+                                                : email.trim(),
+                                        origin_city: city.trim(),
+                                        passenger_count: pilgrims,
+                                        group_type: groupType,
+                                        departure_month: month.trim(),
+                                        budget:
+                                            typeof budget === 'number'
+                                                ? budget
+                                                : null,
+                                        focus,
+                                        room_preference: room,
+                                        notes:
+                                            notes.trim() === ''
+                                                ? null
+                                                : notes.trim(),
+                                    },
+                                    {
+                                        preserveScroll: true,
+                                        onSuccess: () => {
+                                            setSubmitSuccess(true);
+                                            setFullName('');
+                                            setWhatsapp('');
+                                            setEmail('');
+                                            setPilgrims('');
+                                            setCity('');
+                                            setMonth('');
+                                            setBudget('');
+                                            setNotes('');
+                                            setHasAttemptedSubmit(false);
+                                        },
+                                        onFinish: () => setIsSubmitting(false),
+                                    },
                                 );
                             }}
                         >
+                            <div className="md:col-span-2">
+                                <div className="rounded-2xl border border-border bg-background/70 p-4">
+                                    <p className="font-semibold text-foreground">
+                                        {t.planner.contactTitle}
+                                    </p>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        {t.planner.contactDescription}
+                                    </p>
+
+                                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                        <FormField label={t.planner.fullName}>
+                                            <input
+                                                className={`${fieldClassName} ${shouldShowValidation && !isFullNameValid ? 'border-destructive focus:border-destructive' : ''}`}
+                                                placeholder={
+                                                    locale === 'id'
+                                                        ? 'Contoh: Ahmad Fauzi'
+                                                        : 'Example: Ahmad Fauzi'
+                                                }
+                                                value={fullName}
+                                                onChange={(event) =>
+                                                    setFullName(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                        </FormField>
+
+                                        <FormField label={t.planner.whatsapp}>
+                                            <input
+                                                className={`${fieldClassName} ${shouldShowValidation && !isWhatsappValid ? 'border-destructive focus:border-destructive' : ''}`}
+                                                inputMode="tel"
+                                                placeholder={
+                                                    locale === 'id'
+                                                        ? 'Contoh: 081234567890'
+                                                        : 'Example: 081234567890'
+                                                }
+                                                value={whatsapp}
+                                                onChange={(event) =>
+                                                    setWhatsapp(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                        </FormField>
+
+                                        <div className="md:col-span-2">
+                                            <FormField label={t.planner.email}>
+                                                <input
+                                                    className={fieldClassName}
+                                                    type="email"
+                                                    placeholder="opsional"
+                                                    value={email}
+                                                    onChange={(event) =>
+                                                        setEmail(
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </FormField>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <FormField label={t.planner.groupType}>
                                 <select
                                     className={fieldClassName}
@@ -295,15 +449,30 @@ export default function Custom() {
 
                             <FormField label={t.planner.pilgrims}>
                                 <input
-                                    className={fieldClassName}
+                                    className={`${fieldClassName} ${shouldShowValidation && !isPilgrimsValid ? 'border-destructive focus:border-destructive' : ''}`}
+                                    type="number"
+                                    min={1}
+                                    step={1}
                                     placeholder={
                                         locale === 'id'
                                             ? 'Contoh: 12 orang'
                                             : 'Example: 12 people'
                                     }
-                                    value={pilgrims}
+                                    value={
+                                        pilgrims === '' ? '' : String(pilgrims)
+                                    }
                                     onChange={(event) =>
-                                        setPilgrims(event.target.value)
+                                        setPilgrims(
+                                            event.target.value === ''
+                                                ? ''
+                                                : Math.max(
+                                                      1,
+                                                      Number.parseInt(
+                                                          event.target.value,
+                                                          10,
+                                                      ) || 1,
+                                                  ),
+                                        )
                                     }
                                 />
                             </FormField>
@@ -311,7 +480,7 @@ export default function Custom() {
                             <FormField label={t.planner.city}>
                                 <input
                                     list="custom-umroh-departure-cities"
-                                    className={fieldClassName}
+                                    className={`${fieldClassName} ${shouldShowValidation && !isCityValid ? 'border-destructive focus:border-destructive' : ''}`}
                                     placeholder={
                                         locale === 'id'
                                             ? 'Pilih atau cari kota keberangkatan'
@@ -336,7 +505,8 @@ export default function Custom() {
 
                             <FormField label={t.planner.month}>
                                 <input
-                                    className={fieldClassName}
+                                    className={`${fieldClassName} ${shouldShowValidation && !isMonthValid ? 'border-destructive focus:border-destructive' : ''}`}
+                                    type="month"
                                     placeholder={
                                         locale === 'id'
                                             ? 'Contoh: Desember 2026'
@@ -352,14 +522,27 @@ export default function Custom() {
                             <FormField label={t.planner.budget}>
                                 <input
                                     className={fieldClassName}
+                                    type="number"
+                                    min={0}
+                                    step={100000}
                                     placeholder={
                                         locale === 'id'
                                             ? 'Contoh: 35.000.000'
                                             : 'Example: 35,000,000'
                                     }
-                                    value={budget}
+                                    value={budget === '' ? '' : String(budget)}
                                     onChange={(event) =>
-                                        setBudget(event.target.value)
+                                        setBudget(
+                                            event.target.value === ''
+                                                ? ''
+                                                : Math.max(
+                                                      0,
+                                                      Number.parseInt(
+                                                          event.target.value,
+                                                          10,
+                                                      ) || 0,
+                                                  ),
+                                        )
                                     }
                                 />
                             </FormField>
@@ -373,6 +556,22 @@ export default function Custom() {
                                     }
                                 >
                                     {t.planner.focusOptions.map((option) => (
+                                        <option key={option} value={option}>
+                                            {option}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormField>
+
+                            <FormField label={t.planner.room}>
+                                <select
+                                    className={fieldClassName}
+                                    value={room}
+                                    onChange={(event) =>
+                                        setRoom(event.target.value)
+                                    }
+                                >
+                                    {t.planner.roomOptions.map((option) => (
                                         <option key={option} value={option}>
                                             {option}
                                         </option>
@@ -396,18 +595,20 @@ export default function Custom() {
                             <div className="md:col-span-2">
                                 <div className="rounded-2xl border border-border bg-background/70 p-4 text-sm text-muted-foreground">
                                     <p className="font-semibold text-foreground">
-                                        {locale === 'id'
-                                            ? 'Preview brief yang akan dikirim'
-                                            : 'Brief preview to be sent'}
+                                        {t.planner.previewTitle}
                                     </p>
                                     <pre className="mt-3 font-sans text-sm whitespace-pre-wrap text-muted-foreground">
                                         {buildCustomInquiryMessage(locale, {
+                                            fullName,
+                                            whatsapp: sanitizedWhatsapp,
+                                            email,
                                             groupType,
                                             pilgrims,
                                             city,
                                             month,
                                             budget,
                                             focus,
+                                            room,
                                             notes,
                                         })}
                                     </pre>
@@ -415,16 +616,59 @@ export default function Custom() {
                             </div>
 
                             <div className="md:col-span-2">
+                                {submitSuccess ? (
+                                    <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                        {locale === 'id'
+                                            ? 'Request custom umroh berhasil dikirim. Tim admin akan follow up.'
+                                            : 'Your custom umrah request has been submitted. Our admin team will follow up.'}
+                                    </div>
+                                ) : null}
                                 <button
                                     className="inline-flex w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground disabled:pointer-events-none disabled:opacity-50"
-                                    disabled={!whatsappLink}
+                                    type="submit"
+                                    disabled={isSubmitting}
                                 >
-                                    {localize(
-                                        page?.content?.cta,
-                                        locale,
-                                        t.planner.cta,
-                                    )}
+                                    {isSubmitting
+                                        ? locale === 'id'
+                                            ? 'Mengirim...'
+                                            : 'Submitting...'
+                                        : t.planner.cta}
                                 </button>
+                                {shouldShowValidation &&
+                                !isFormValid &&
+                                missingFields.length > 0 ? (
+                                    <p className="mt-2 text-center text-xs text-muted-foreground">
+                                        {locale === 'id'
+                                            ? `Lengkapi dulu: ${missingFields.join(', ')}.`
+                                            : `Please complete: ${missingFields.join(', ')}.`}
+                                    </p>
+                                ) : null}
+                                {adminWhatsapp ? (
+                                    <a
+                                        className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-border bg-background px-6 py-3 text-sm font-semibold text-foreground hover:bg-muted/30"
+                                        href={`https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(
+                                            buildCustomInquiryMessage(locale, {
+                                                fullName,
+                                                whatsapp: sanitizedWhatsapp,
+                                                email,
+                                                groupType,
+                                                pilgrims,
+                                                city,
+                                                month,
+                                                budget,
+                                                focus,
+                                                room,
+                                                notes,
+                                            }),
+                                        )}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        {locale === 'id'
+                                            ? 'Konsultasi WhatsApp (opsional)'
+                                            : 'WhatsApp consultation (optional)'}
+                                    </a>
+                                ) : null}
                             </div>
                         </form>
                     </MotionCard>
@@ -452,28 +696,57 @@ function FormField({
 const fieldClassName =
     'w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary';
 
+function normalizePhone(phone: string): string {
+    const cleanedPhone = phone.replace(/[^\d]/g, '');
+
+    if (!cleanedPhone) {
+        return '';
+    }
+
+    if (cleanedPhone.startsWith('0')) {
+        return `62${cleanedPhone.slice(1)}`;
+    }
+
+    return cleanedPhone;
+}
+
 function buildCustomInquiryMessage(
     locale: 'id' | 'en',
     payload: {
+        fullName: string;
+        whatsapp: string;
+        email: string;
         groupType: string;
-        pilgrims: string;
+        pilgrims: number | '';
         city: string;
         month: string;
-        budget: string;
+        budget: number | '';
         focus: string;
+        room: string;
         notes: string;
     },
 ): string {
+    const formattedBudget =
+        typeof payload.budget === 'number' && Number.isFinite(payload.budget)
+            ? new Intl.NumberFormat(locale === 'id' ? 'id-ID' : 'en-US').format(
+                  payload.budget,
+              )
+            : '-';
+
     if (locale === 'en') {
         return [
             'Hello, I want to request a custom Umrah package.',
             '',
+            `Contact name: ${payload.fullName || '-'}`,
+            `WhatsApp: ${payload.whatsapp || '-'}`,
+            `Email: ${payload.email || '-'}`,
             `Group type: ${payload.groupType}`,
             `Pilgrims: ${payload.pilgrims || '-'}`,
             `Departure city: ${payload.city || '-'}`,
             `Estimated month: ${payload.month || '-'}`,
-            `Budget per pilgrim: ${payload.budget || '-'}`,
+            `Budget per pilgrim: ${formattedBudget}`,
             `Main priority: ${payload.focus || '-'}`,
+            `Room preference: ${payload.room || '-'}`,
             `Additional notes: ${payload.notes || '-'}`,
         ].join('\n');
     }
@@ -481,12 +754,16 @@ function buildCustomInquiryMessage(
     return [
         'Halo, saya ingin request paket custom umroh.',
         '',
+        `Nama PIC: ${payload.fullName || '-'}`,
+        `WhatsApp: ${payload.whatsapp || '-'}`,
+        `Email: ${payload.email || '-'}`,
         `Jenis rombongan: ${payload.groupType}`,
         `Jumlah jamaah: ${payload.pilgrims || '-'}`,
         `Kota keberangkatan: ${payload.city || '-'}`,
         `Perkiraan bulan berangkat: ${payload.month || '-'}`,
-        `Budget per jamaah: ${payload.budget || '-'}`,
+        `Budget per jamaah: ${formattedBudget}`,
         `Prioritas utama: ${payload.focus || '-'}`,
+        `Preferensi kamar: ${payload.room || '-'}`,
         `Catatan tambahan: ${payload.notes || '-'}`,
     ].join('\n');
 }

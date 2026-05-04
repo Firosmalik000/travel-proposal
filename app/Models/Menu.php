@@ -6,11 +6,10 @@ use App\Traits\HasAuditTrail;
 use App\Traits\SoftDeletesWithActive;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Menu extends Model
 {
-    use HasFactory, HasAuditTrail, SoftDeletesWithActive;
+    use HasAuditTrail, HasFactory, SoftDeletesWithActive;
 
     /**
      * The attributes that are mass assignable.
@@ -41,26 +40,18 @@ class Menu extends Model
     ];
 
     /**
-     * Get all user accesses for this menu.
-     */
-    public function userAccesses(): HasMany
-    {
-        return $this->hasMany(UserAccess::class);
-    }
-
-    /**
      * Get all menu keys recursively (including nested children).
      */
     public function getAllMenuKeys(): array
     {
         $keys = [$this->menu_key];
 
-        if (!empty($this->children)) {
+        if (! empty($this->children)) {
             foreach ($this->children as $child) {
                 $keys[] = $child['menu_key'] ?? null;
 
                 // Level 2 children
-                if (!empty($child['children'])) {
+                if (! empty($child['children'])) {
                     foreach ($child['children'] as $grandChild) {
                         $keys[] = $grandChild['menu_key'] ?? null;
                     }
@@ -76,7 +67,7 @@ class Menu extends Model
      */
     public function hasChildren(): bool
     {
-        return !empty($this->children);
+        return ! empty($this->children);
     }
 
     /**

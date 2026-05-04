@@ -1,5 +1,5 @@
-import { usePage } from '@inertiajs/react';
 import { type SharedData } from '@/types';
+import { usePage } from '@inertiajs/react';
 
 export interface LocalizedField {
     id?: string;
@@ -12,7 +12,11 @@ export type PublicSocialAccount = {
     url: string;
 };
 
-export function localize(value: unknown, locale: 'id' = 'id', fallback = ''): string {
+export function localize(
+    value: unknown,
+    locale: 'id' = 'id',
+    fallback = '',
+): string {
     if (typeof value === 'string') {
         return value || fallback;
     }
@@ -40,17 +44,22 @@ export function usePublicPageContent(slug: string): Record<string, any> | null {
     return publicData.pages?.[slug] ?? null;
 }
 
-export function normalizePhoneNumber(value: unknown, fallback = '6281234567890'): string {
-    const digits = String(value ?? '')
-        .replace(/[^\d]/g, '');
+export function normalizePhoneNumber(
+    value: unknown,
+    fallback = '6281234567890',
+): string {
+    const digits = String(value ?? '').replace(/[^\d]/g, '');
 
     return digits || fallback;
 }
 
-export function whatsappLinkFromPhone(phone: unknown, message?: string): string {
+export function whatsappLinkFromPhone(
+    phone: unknown,
+    message?: string,
+): string {
     const baseUrl = `https://wa.me/${normalizePhoneNumber(phone)}`;
 
-    if (! message) {
+    if (!message) {
         return baseUrl;
     }
 
@@ -69,19 +78,32 @@ export function getPublicEmail(seo: Record<string, any> = {}): string {
     return String(seo.contact?.email ?? '');
 }
 
-export function getPublicAddress(seo: Record<string, any> = {}): LocalizedField | string {
+export function getPublicAddress(
+    seo: Record<string, any> = {},
+): LocalizedField | string {
     return seo.contact?.address?.full ?? '';
 }
 
 export function getPublicMapLink(seo: Record<string, any> = {}): string {
-    return String(seo.contact?.address?.mapLink ?? seo.contact?.mapLink ?? seo.contact?.map_link ?? '');
+    return String(
+        seo.contact?.address?.mapLink ??
+            seo.contact?.mapLink ??
+            seo.contact?.map_link ??
+            '',
+    );
 }
 
-export function getPublicSocialAccounts(seo: Record<string, any> = {}): PublicSocialAccount[] {
-    const accounts = Array.isArray(seo.social?.accounts) ? seo.social.accounts : [];
+export function getPublicSocialAccounts(
+    seo: Record<string, any> = {},
+): PublicSocialAccount[] {
+    const accounts = Array.isArray(seo.social?.accounts)
+        ? seo.social.accounts
+        : [];
 
     return accounts
-        .filter((item: Record<string, unknown>) => String(item?.url ?? '').trim())
+        .filter((item: Record<string, unknown>) =>
+            String(item?.url ?? '').trim(),
+        )
         .map((item: Record<string, unknown>, index: number) => ({
             platform: String(item.platform ?? `social-${index + 1}`),
             label: String(item.label ?? item.platform ?? `Social ${index + 1}`),
@@ -89,17 +111,24 @@ export function getPublicSocialAccounts(seo: Record<string, any> = {}): PublicSo
         }));
 }
 
-export function whatsappLinkFromSeo(seo: Record<string, any> = {}, message?: string): string {
+export function whatsappLinkFromSeo(
+    seo: Record<string, any> = {},
+    message?: string,
+): string {
     const whatsappNumber = getPublicWhatsappNumber(seo);
 
-    if (! String(whatsappNumber).trim()) {
+    if (!String(whatsappNumber).trim()) {
         return '';
     }
 
     return whatsappLinkFromPhone(whatsappNumber, message);
 }
 
-export function formatPrice(value: number | string | null | undefined, locale: 'id' = 'id', currency = 'IDR'): string {
+export function formatPrice(
+    value: number | string | null | undefined,
+    _locale: 'id' = 'id',
+    currency = 'IDR',
+): string {
     if (value === null || value === undefined || value === '') {
         return 'Hubungi kami';
     }
@@ -113,8 +142,11 @@ export function formatPrice(value: number | string | null | undefined, locale: '
     }).format(numericValue);
 }
 
-export function formatDate(value: string | null | undefined, locale: 'id' = 'id'): string {
-    if (! value) {
+export function formatDate(
+    value: string | null | undefined,
+    _locale: 'id' = 'id',
+): string {
+    if (!value) {
         return '';
     }
 

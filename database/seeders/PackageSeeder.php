@@ -348,7 +348,17 @@ class PackageSeeder extends Seeder
             $codes = $row['products'];
             unset($row['products']);
 
-            $package = TravelPackage::query()->updateOrCreate(['code' => $row['code']], $row);
+            $package = TravelPackage::query()
+                ->where('code', $row['code'])
+                ->orWhere('slug', $row['slug'])
+                ->first();
+
+            if ($package) {
+                $package->update($row);
+            } else {
+                $package = TravelPackage::query()->create($row);
+            }
+
             $this->syncProducts($package, $products, $codes);
             $packages[$row['code']] = $package;
         }

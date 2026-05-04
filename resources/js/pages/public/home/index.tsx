@@ -1,13 +1,12 @@
-import PublicLayout from '@/layouts/PublicLayout';
 import {
+    IslamicLantern,
     IslamicOrnamentAbbasid,
     IslamicOrnamentKhatam,
-    IslamicLantern,
-    IslamicOrnamentOttoman,
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentRow1Col1,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
+import PublicLayout from '@/layouts/PublicLayout';
 import {
     formatDate,
     formatPrice,
@@ -23,12 +22,7 @@ import {
 import { type SharedData } from '@/types';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { Head, Link, usePage } from '@inertiajs/react';
-import {
-    animate,
-    motion,
-    useInView,
-    type Variants,
-} from 'framer-motion';
+import { animate, motion, useInView, type Variants } from 'framer-motion';
 import {
     CheckCircle,
     Clock,
@@ -46,7 +40,7 @@ import {
     Users,
     Youtube,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 type StatItem = {
     value: string;
@@ -498,9 +492,7 @@ export default function Home() {
             <Head title={localize(homePage?.title, locale)} />
 
             <main className="relative bg-background">
-                <section
-                    className="hero-section relative flex min-h-[90vh] flex-col justify-end overflow-hidden sm:min-h-[86vh]"
-                >
+                <section className="hero-section relative flex min-h-[90vh] flex-col justify-end overflow-hidden sm:min-h-[86vh]">
                     <div className="hero-bg absolute inset-0">
                         <img
                             src={heroImage}
@@ -526,7 +518,11 @@ export default function Home() {
                         className="relative z-10 container mx-auto px-4 sm:px-6"
                         initial="hidden"
                         whileInView="show"
-                        viewport={{ once: false, amount: 0.15, margin: '12% 0px 30% 0px' }}
+                        viewport={{
+                            once: false,
+                            amount: 0.15,
+                            margin: '12% 0px 30% 0px',
+                        }}
                         variants={heroStagger}
                     >
                         <div className="max-w-4xl pt-24 pb-12 sm:pt-32 sm:pb-16 md:pt-40 md:pb-24 lg:pt-48">
@@ -585,7 +581,11 @@ export default function Home() {
                             className="relative z-10 border-t border-white/10 bg-black/70"
                             initial="hidden"
                             whileInView="show"
-                            viewport={{ once: false, amount: 0.2, margin: '12% 0px 30% 0px' }}
+                            viewport={{
+                                once: false,
+                                amount: 0.2,
+                                margin: '12% 0px 30% 0px',
+                            }}
                             variants={sectionStagger}
                         >
                             <div className="container mx-auto px-4 sm:px-6">
@@ -603,110 +603,108 @@ export default function Home() {
                     ) : null}
                 </section>
 
-                <section className="about-section relative isolate overflow-hidden py-16 sm:py-24 [content-visibility:auto] [contain-intrinsic-size:1px_900px] [contain:paint]">
+                <section className="about-section relative isolate overflow-hidden py-16 [contain:paint] [contain-intrinsic-size:1px_900px] [content-visibility:auto] sm:py-24">
                     <div className="pointer-events-none absolute inset-0 -z-10">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_24%,rgba(230,156,50,0.26)_0%,transparent_54%),radial-gradient(circle_at_82%_18%,rgba(189,49,34,0.18)_0%,transparent_50%),radial-gradient(circle_at_88%_70%,rgba(142,16,27,0.14)_0%,transparent_58%),radial-gradient(circle_at_20%_90%,rgba(93,8,18,0.10)_0%,transparent_62%),conic-gradient(from_210deg_at_20%_58%,rgba(230,156,50,0.12)_0deg,transparent_140deg,rgba(189,49,34,0.10)_230deg,transparent_360deg),linear-gradient(135deg,rgba(255,255,255,0.32)_0%,transparent_38%,rgba(230,156,50,0.10)_72%,transparent_100%),linear-gradient(180deg,transparent_0%,rgba(93,8,18,0.05)_62%,transparent_100%)] opacity-95 dark:opacity-40" />
                         <IslamicOrnamentRow1Col1 className="absolute top-[8%] left-[-4%] h-[18rem] w-[18rem] rotate-[-12deg] text-primary/15 sm:h-[22rem] sm:w-[22rem]" />
-                        <IslamicLantern className="absolute bottom-[-20%] right-[0%] h-[18rem] w-[12rem] rotate-[10deg] text-accent/14 sm:h-[24rem] sm:w-[16rem]" />
+                        <IslamicLantern className="absolute right-[0%] bottom-[-20%] h-[18rem] w-[12rem] rotate-[10deg] text-accent/14 sm:h-[24rem] sm:w-[16rem]" />
                     </div>
 
                     <div className="container mx-auto grid items-center gap-10 px-4 sm:px-6 md:gap-16 lg:grid-cols-2">
-                    <motion.div
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={viewport}
-                        variants={slideLeftStrong}
-                    >
-                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-primary uppercase">
-                            {aboutLabel}
-                        </span>
-                        <h2 className="font-heading mt-5 text-3xl leading-[1.2] font-extrabold text-foreground sm:text-4xl md:text-5xl">
-                            {aboutTitle}
-                        </h2>
-                        <p className="mt-6 text-sm leading-relaxed text-muted-foreground sm:text-base">
-                            {aboutDescription}
-                        </p>
                         <motion.div
-                            className="mt-8 flex flex-wrap gap-3"
                             initial="hidden"
                             whileInView="show"
                             viewport={viewport}
-                            variants={sectionStagger}
+                            variants={slideLeftStrong}
                         >
-                            {[
-                                {
-                                    icon: Shield,
-                                    label:
-                                        locale === 'id'
-                                            ? 'Izin Resmi Kemenag'
-                                            : 'Official License',
-                                },
-                                {
-                                    icon: Users,
-                                    label:
-                                        locale === 'id'
-                                            ? '20K+ Jamaah'
-                                            : '20K+ Pilgrims',
-                                },
-                                { icon: Star, label: 'Rating 4.9/5' },
-                            ].map(({ icon: Icon, label }) => (
-                                <motion.div
-                                    key={label}
-                                    className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-[0.7rem] font-bold text-foreground shadow-xs sm:text-xs"
-                                    variants={cardBurst}
-                                >
-                                    <Icon className="h-3.5 w-3.5 text-primary" />
-                                    {label}
-                                </motion.div>
-                            ))}
-                        </motion.div>
-                        <motion.div
-                            variants={slideUpStrong}
-                            initial="hidden"
-                            whileInView="show"
-                            viewport={viewport}
-                        >
-                            <Link
-                                href="/tentang-kami"
-                                className="mt-10 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-8 py-4 text-sm font-bold text-background transition-all hover:scale-105 hover:bg-foreground/85 active:scale-95 sm:w-auto"
-                            >
-                                {aboutCta}
-                                <ArrowRightIcon className="h-4 w-4" />
-                            </Link>
-                        </motion.div>
-                    </motion.div>
-                    <motion.div
-                        className="relative mt-8 h-[320px] sm:mt-0 sm:h-[400px] md:h-[480px]"
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={viewport}
-                        variants={slideRightStrong}
-                    >
-                        <img
-                            src={aboutPrimaryImage}
-                            alt={aboutTitle}
-                            className="h-full w-4/5 rounded-3xl object-cover shadow-2xl transition-transform duration-500 hover:scale-[1.02] sm:w-3/4"
-                        />
-                        <img
-                            src={aboutSecondaryImage}
-                            alt={aboutTitle}
-                            className="absolute right-0 -bottom-4 w-3/5 rounded-2xl border-4 border-background shadow-2xl sm:-bottom-8 sm:w-1/2 sm:border-8"
-                        />
-                        <div
-                            className="absolute top-[-1rem] right-4 flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 shadow-xl shadow-primary/30 sm:right-8"
-                        >
-                            <CheckCircle className="h-4 w-4 text-white" />
-                            <span className="text-[0.7rem] font-bold text-white sm:text-xs">
-                                {locale === 'id'
-                                    ? 'Terpercaya Sejak 2009'
-                                    : 'Trusted Since 2009'}
+                            <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-primary uppercase">
+                                {aboutLabel}
                             </span>
-                        </div>
-                    </motion.div>
+                            <h2 className="font-heading mt-5 text-3xl leading-[1.2] font-extrabold text-foreground sm:text-4xl md:text-5xl">
+                                {aboutTitle}
+                            </h2>
+                            <p className="mt-6 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                                {aboutDescription}
+                            </p>
+                            <motion.div
+                                className="mt-8 flex flex-wrap gap-3"
+                                initial="hidden"
+                                whileInView="show"
+                                viewport={viewport}
+                                variants={sectionStagger}
+                            >
+                                {[
+                                    {
+                                        icon: Shield,
+                                        label:
+                                            locale === 'id'
+                                                ? 'Izin Resmi Kemenag'
+                                                : 'Official License',
+                                    },
+                                    {
+                                        icon: Users,
+                                        label:
+                                            locale === 'id'
+                                                ? '20K+ Jamaah'
+                                                : '20K+ Pilgrims',
+                                    },
+                                    { icon: Star, label: 'Rating 4.9/5' },
+                                ].map(({ icon: Icon, label }) => (
+                                    <motion.div
+                                        key={label}
+                                        className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-[0.7rem] font-bold text-foreground shadow-xs sm:text-xs"
+                                        variants={cardBurst}
+                                    >
+                                        <Icon className="h-3.5 w-3.5 text-primary" />
+                                        {label}
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                            <motion.div
+                                variants={slideUpStrong}
+                                initial="hidden"
+                                whileInView="show"
+                                viewport={viewport}
+                            >
+                                <Link
+                                    href="/tentang-kami"
+                                    className="mt-10 inline-flex w-full items-center justify-center gap-2 rounded-full bg-foreground px-8 py-4 text-sm font-bold text-background transition-all hover:scale-105 hover:bg-foreground/85 active:scale-95 sm:w-auto"
+                                >
+                                    {aboutCta}
+                                    <ArrowRightIcon className="h-4 w-4" />
+                                </Link>
+                            </motion.div>
+                        </motion.div>
+                        <motion.div
+                            className="relative mt-8 h-[320px] sm:mt-0 sm:h-[400px] md:h-[480px]"
+                            initial="hidden"
+                            whileInView="show"
+                            viewport={viewport}
+                            variants={slideRightStrong}
+                        >
+                            <img
+                                src={aboutPrimaryImage}
+                                alt={aboutTitle}
+                                className="h-full w-4/5 rounded-3xl object-cover shadow-2xl transition-transform duration-500 hover:scale-[1.02] sm:w-3/4"
+                            />
+                            <img
+                                src={aboutSecondaryImage}
+                                alt={aboutTitle}
+                                className="absolute right-0 -bottom-4 w-3/5 rounded-2xl border-4 border-background shadow-2xl sm:-bottom-8 sm:w-1/2 sm:border-8"
+                            />
+                            <div className="absolute top-[-1rem] right-4 flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 shadow-xl shadow-primary/30 sm:right-8">
+                                <CheckCircle className="h-4 w-4 text-white" />
+                                <span className="text-[0.7rem] font-bold text-white sm:text-xs">
+                                    {locale === 'id'
+                                        ? 'Terpercaya Sejak 2009'
+                                        : 'Trusted Since 2009'}
+                                </span>
+                            </div>
+                        </motion.div>
                     </div>
                 </section>
 
-                <section className="packages-section relative isolate overflow-hidden bg-secondary/30 py-16 sm:py-24 [content-visibility:auto] [contain-intrinsic-size:1px_900px] [contain:paint]">
+                <section className="packages-section relative isolate overflow-hidden bg-secondary/30 py-16 [contain:paint] [contain-intrinsic-size:1px_900px] [content-visibility:auto] sm:py-24">
                     <div className="pointer-events-none absolute inset-0 -z-10">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(230,156,50,0.28)_0%,transparent_52%),radial-gradient(circle_at_88%_22%,rgba(142,16,27,0.18)_0%,transparent_56%),radial-gradient(circle_at_78%_82%,rgba(189,49,34,0.14)_0%,transparent_60%),conic-gradient(from_190deg_at_62%_34%,rgba(230,156,50,0.10)_0deg,transparent_150deg,rgba(93,8,18,0.10)_250deg,transparent_360deg),linear-gradient(135deg,rgba(255,255,255,0.40)_0%,transparent_34%,rgba(230,156,50,0.12)_70%,transparent_100%),linear-gradient(180deg,rgba(93,8,18,0.06)_0%,transparent_34%,rgba(230,156,50,0.08)_100%)] opacity-95 dark:opacity-34" />
                         <IslamicOrnamentAbbasid className="absolute top-[10%] right-[-4%] h-[18rem] w-[18rem] rotate-[6deg] text-primary/15 sm:h-[22rem] sm:w-[22rem]" />
@@ -781,9 +779,7 @@ export default function Home() {
                                     />
                                     <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
                                     {index === 0 ? (
-                                        <div
-                                            className="absolute top-4 left-4 rounded-full bg-accent px-3 py-1 text-xs font-bold text-white shadow"
-                                        >
+                                        <div className="absolute top-4 left-4 rounded-full bg-accent px-3 py-1 text-xs font-bold text-white shadow">
                                             {locale === 'id'
                                                 ? 'Terlaris'
                                                 : 'Best Seller'}
@@ -833,74 +829,74 @@ export default function Home() {
                     </div>
 
                     <div className="container mx-auto grid items-start gap-12 px-4 sm:px-6 md:gap-16 lg:grid-cols-2">
-                    <motion.div
-                        className="services-header lg:sticky lg:top-24"
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={viewport}
-                        variants={sectionStagger}
-                    >
-                        <motion.span
-                            className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold tracking-widest text-primary uppercase"
-                            variants={slideUpStrong}
+                        <motion.div
+                            className="services-header lg:sticky lg:top-24"
+                            initial="hidden"
+                            whileInView="show"
+                            viewport={viewport}
+                            variants={sectionStagger}
                         >
-                            {servicesLabel}
-                        </motion.span>
-                        <motion.h2
-                            className="font-heading mt-5 text-3xl leading-tight font-extrabold text-foreground sm:text-4xl md:text-5xl"
-                            variants={slideUpStrong}
-                        >
-                            {servicesTitle}
-                        </motion.h2>
-                        <motion.p
-                            className="mt-5 text-base leading-relaxed text-muted-foreground"
-                            variants={slideUpStrong}
-                        >
-                            {servicesDescription}
-                        </motion.p>
-                        <motion.div variants={slideUpStrong}>
-                            <Link
-                                href="/layanan"
-                                className="mt-8 inline-flex items-center gap-2 rounded-full border-2 border-primary px-6 py-3 text-sm font-bold text-primary transition-all hover:scale-105 hover:bg-primary hover:text-white"
+                            <motion.span
+                                className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold tracking-widest text-primary uppercase"
+                                variants={slideUpStrong}
                             >
-                                {locale === 'id'
-                                    ? 'Semua Layanan'
-                                    : 'All Services'}
-                                <ArrowRightIcon className="h-4 w-4" />
-                            </Link>
-                        </motion.div>
-                    </motion.div>
-                    <motion.div
-                        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
-                        initial="hidden"
-                        whileInView="show"
-                        viewport={viewport}
-                        variants={sectionStagger}
-                    >
-                        {serviceItems.map((item) => (
-                            <motion.div
-                                key={item.number}
-                                className="service-card group relative overflow-hidden rounded-3xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl"
-                                variants={cardBurst}
+                                {servicesLabel}
+                            </motion.span>
+                            <motion.h2
+                                className="font-heading mt-5 text-3xl leading-tight font-extrabold text-foreground sm:text-4xl md:text-5xl"
+                                variants={slideUpStrong}
                             >
-                                <div className="absolute top-[-1.5rem] right-[-1.5rem] h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-150 group-hover:bg-primary/10" />
-                                <p className="font-heading text-4xl font-black text-primary/15 transition-colors group-hover:text-primary/25">
-                                    {item.number}
-                                </p>
-                                <h3 className="font-heading mt-3 text-lg font-bold text-foreground">
-                                    {item.title}
-                                </h3>
-                                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                                    {item.description}
-                                </p>
+                                {servicesTitle}
+                            </motion.h2>
+                            <motion.p
+                                className="mt-5 text-base leading-relaxed text-muted-foreground"
+                                variants={slideUpStrong}
+                            >
+                                {servicesDescription}
+                            </motion.p>
+                            <motion.div variants={slideUpStrong}>
+                                <Link
+                                    href="/layanan"
+                                    className="mt-8 inline-flex items-center gap-2 rounded-full border-2 border-primary px-6 py-3 text-sm font-bold text-primary transition-all hover:scale-105 hover:bg-primary hover:text-white"
+                                >
+                                    {locale === 'id'
+                                        ? 'Semua Layanan'
+                                        : 'All Services'}
+                                    <ArrowRightIcon className="h-4 w-4" />
+                                </Link>
                             </motion.div>
-                        ))}
-                    </motion.div>
+                        </motion.div>
+                        <motion.div
+                            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                            initial="hidden"
+                            whileInView="show"
+                            viewport={viewport}
+                            variants={sectionStagger}
+                        >
+                            {serviceItems.map((item) => (
+                                <motion.div
+                                    key={item.number}
+                                    className="service-card group relative overflow-hidden rounded-3xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl"
+                                    variants={cardBurst}
+                                >
+                                    <div className="absolute top-[-1.5rem] right-[-1.5rem] h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-150 group-hover:bg-primary/10" />
+                                    <p className="font-heading text-4xl font-black text-primary/15 transition-colors group-hover:text-primary/25">
+                                        {item.number}
+                                    </p>
+                                    <h3 className="font-heading mt-3 text-lg font-bold text-foreground">
+                                        {item.title}
+                                    </h3>
+                                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                                        {item.description}
+                                    </p>
+                                </motion.div>
+                            ))}
+                        </motion.div>
                     </div>
                 </section>
 
                 {latestArticles.length > 0 ? (
-                    <section className="relative isolate overflow-hidden container mx-auto px-4 py-20 sm:px-6 sm:py-24">
+                    <section className="relative isolate container mx-auto overflow-hidden px-4 py-20 sm:px-6 sm:py-24">
                         <div className="pointer-events-none absolute inset-0 -z-10">
                             <IslamicOrnamentZellige className="absolute top-[-10%] right-[2%] h-[18rem] w-[18rem] rotate-[10deg] text-primary/15 sm:h-[22rem] sm:w-[22rem]" />
                             <IslamicLantern className="absolute bottom-[-28%] left-[2%] h-[18rem] w-[12rem] -rotate-[8deg] text-accent/12 sm:h-[24rem] sm:w-[16rem]" />
@@ -986,11 +982,11 @@ export default function Home() {
                     </section>
                 ) : null}
 
-                <section className="gallery-section relative isolate overflow-hidden bg-foreground py-16 sm:py-24 [content-visibility:auto] [contain-intrinsic-size:1px_900px] [contain:paint]">
+                <section className="gallery-section relative isolate overflow-hidden bg-foreground py-16 [contain:paint] [contain-intrinsic-size:1px_900px] [content-visibility:auto] sm:py-24">
                     <div className="pointer-events-none absolute inset-0 -z-10">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_14%,rgba(230,156,50,0.42)_0%,transparent_52%),radial-gradient(circle_at_84%_20%,rgba(189,49,34,0.34)_0%,transparent_56%),radial-gradient(circle_at_78%_86%,rgba(142,16,27,0.26)_0%,transparent_62%),conic-gradient(from_210deg_at_18%_70%,rgba(230,156,50,0.14)_0deg,transparent_110deg,rgba(189,49,34,0.12)_220deg,transparent_360deg),linear-gradient(90deg,rgba(255,255,255,0.06)_0%,transparent_28%,transparent_72%,rgba(255,220,157,0.08)_100%),linear-gradient(180deg,rgba(0,0,0,0.74)_0%,rgba(0,0,0,0.22)_34%,rgba(0,0,0,0.82)_100%)] opacity-92" />
                         <IslamicOrnamentRow1Col1 className="absolute top-[8%] left-[-6%] h-[22rem] w-[22rem] rotate-[-6deg] text-white/15 mix-blend-overlay sm:h-[28rem] sm:w-[28rem]" />
-                        <IslamicLantern className="absolute bottom-[-30%] right-[2%] h-[20rem] w-[13rem] rotate-[12deg] text-white/14 sm:h-[26rem] sm:w-[17rem]" />
+                        <IslamicLantern className="absolute right-[2%] bottom-[-30%] h-[20rem] w-[13rem] rotate-[12deg] text-white/14 sm:h-[26rem] sm:w-[17rem]" />
                     </div>
                     <motion.div
                         className="container mx-auto px-4 sm:px-6"
@@ -1097,7 +1093,7 @@ export default function Home() {
                 </section>
 
                 {hasContactPanel ? (
-                    <section className="contact-section container mx-auto px-4 pb-16 sm:px-6 sm:pb-24 [content-visibility:auto] [contain-intrinsic-size:1px_900px]">
+                    <section className="contact-section container mx-auto px-4 pb-16 [contain-intrinsic-size:1px_900px] [content-visibility:auto] sm:px-6 sm:pb-24">
                         <motion.div
                             className="relative overflow-hidden rounded-[32px] bg-linear-to-br from-foreground via-foreground to-primary px-6 py-12 text-background shadow-2xl sm:rounded-[48px] sm:px-12 sm:py-16 lg:px-16"
                             initial={{ opacity: 0, y: 56, scale: 0.96 }}
@@ -1110,9 +1106,7 @@ export default function Home() {
                         >
                             <div className="pointer-events-none absolute inset-0">
                                 <IslamicLantern className="absolute top-[-22%] left-[0%] h-[18rem] w-[12rem] rotate-[-8deg] text-white/14 sm:h-[24rem] sm:w-[16rem]" />
-                                <IslamicOrnamentAbbasid
-                                    className="absolute bottom-[-20%] right-[-6%] h-[22rem] w-[22rem] rotate-[14deg] text-white/15 mix-blend-overlay sm:h-[28rem] sm:w-[28rem]"
-                                />
+                                <IslamicOrnamentAbbasid className="absolute right-[-6%] bottom-[-20%] h-[22rem] w-[22rem] rotate-[14deg] text-white/15 mix-blend-overlay sm:h-[28rem] sm:w-[28rem]" />
                             </div>
                             <div className="relative grid gap-12 lg:grid-cols-[1.2fr_0.8fr]">
                                 <motion.div
@@ -1185,7 +1179,7 @@ export default function Home() {
                                                     <p className="text-[0.6rem] font-bold tracking-widest text-background/50 uppercase">
                                                         {label}
                                                     </p>
-                                                    <p className="mt-1 break-words text-sm font-bold sm:text-base">
+                                                    <p className="mt-1 text-sm font-bold break-words sm:text-base">
                                                         {value}
                                                     </p>
                                                 </div>
@@ -1194,7 +1188,7 @@ export default function Home() {
                                     )}
                                     {contactSocials.length > 0 ? (
                                         <motion.div
-                                            className="mt-4 pt-6 border-t border-white/10"
+                                            className="mt-4 border-t border-white/10 pt-6"
                                             variants={slideUpStrong}
                                         >
                                             <p className="text-[0.6rem] font-bold tracking-widest text-background/50 uppercase">

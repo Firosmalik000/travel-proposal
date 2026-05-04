@@ -4,9 +4,10 @@ namespace App\Console\Commands;
 
 use App\Models\Menu;
 use App\Models\User;
-use App\Models\UserAccess;
+use App\Support\MenuPermissionService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 
 class ResetAdminPassword extends Command
 {
@@ -57,14 +58,23 @@ class ResetAdminPassword extends Command
             ->values()
             ->all();
 
-        $access = array_fill_keys($menuKeys, self::ALL_PERMISSIONS);
+        MenuPermissionService::ensurePermissionsExist();
 
-        UserAccess::query()->updateOrCreate(
-            ['user_id' => $user->id],
-            ['access' => $access],
-        );
+        $permissionNames = [];
+        foreach ($menuKeys as $menuKey) {
+            foreach (self::ALL_PERMISSIONS as $action) {
+                $permissionNames[] = MenuPermissionService::permissionName((string) $menuKey, (string) $action);
+            }
+        }
 
-        $this->info('Semua permission ('.count($access).' menu) diberikan ke '.$email);
+        $permissions = Permission::query()
+            ->where('guard_name', 'web')
+            ->whereIn('name', $permissionNames)
+            ->get();
+
+        $user->syncPermissions($permissions);
+
+        $this->info('Semua permission ('.count($menuKeys).' menu) diberikan ke '.$email);
         $this->line("Login: {$email} / {$password}");
 
         return self::SUCCESS;

@@ -46,7 +46,7 @@ export function NavUser() {
                                 <span className="truncate font-bold">
                                     {auth.user.name}
                                 </span>
-                                <span className="truncate text-[0.7rem] text-muted-foreground font-medium">
+                                <span className="truncate text-[0.7rem] font-medium text-muted-foreground">
                                     {auth.user.email}
                                 </span>
                             </div>

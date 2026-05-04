@@ -1,38 +1,41 @@
 import PublicLayout from '@/layouts/PublicLayout';
-import { 
-    getPublicAddress, 
-    getPublicEmail, 
-    getPublicPhoneNumber, 
+import {
     formatPrice,
+    getPublicAddress,
+    getPublicEmail,
+    getPublicPhoneNumber,
     localize,
     usePublicData,
     usePublicPageContent,
-    whatsappLinkFromSeo, 
-} from '@/lib/public-content'; 
-import { Head, Link, usePage } from '@inertiajs/react'; 
+    whatsappLinkFromSeo,
+} from '@/lib/public-content';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { 
-    CalendarDays, 
-    CheckCircle2, 
+import {
     Building2,
-    CreditCard, 
+    CalendarDays,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    CreditCard,
     HeartHandshake,
     Images,
     Landmark,
     MapPin,
     Plane,
     ShieldCheck,
+    Star,
     Stars,
-    Zap,
     Users,
-} from 'lucide-react'; 
-import type { ComponentType } from 'react'; 
- 
-type SectionBackgroundConfig = { 
-    type?: 'default' | 'color' | 'image'; 
-    color?: string | null; 
-    image?: string | null; 
-}; 
+    Zap,
+} from 'lucide-react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
+
+type SectionBackgroundConfig = {
+    type?: 'default' | 'color' | 'image';
+    color?: string | null;
+    image?: string | null;
+};
 
 function sectionStyleFromBackground(
     background: SectionBackgroundConfig | null,
@@ -64,8 +67,8 @@ function sectionStyleFromBackground(
 
     return undefined;
 }
- 
-type StepItem = { 
+
+type StepItem = {
     title: string;
     description: string;
     caption: string;
@@ -141,27 +144,41 @@ export default function PublicHomeLanding() {
     const heroBackgroundType = heroBackgroundConfig?.type ?? 'default';
     const heroLabel = String(hero.label ?? '');
     const heroTitle = String(hero.title ?? '');
-    const heroDescription = String(
-        hero.description ?? '',
-    );
+    const heroDescription = String(hero.description ?? '');
     const heroImage = String(hero.image ?? heroBackground);
     const heroCtaLabel = String(hero.cta_label ?? '');
     const heroSecondaryCtaLabel = String(hero.secondary_cta_label ?? '');
-    const heroSecondaryCtaHref = String(hero.secondary_cta_href ?? '/paket-umroh');
+    const heroSecondaryCtaHref = String(
+        hero.secondary_cta_href ?? '/paket-umroh',
+    );
     const packagesHeading = String(homeContent.packages?.heading ?? '');
     const packagesCtaLabel = String(homeContent.packages?.cta_label ?? '');
-    const packagesDetailLabel = String(homeContent.packages?.detail_label ?? '');
-    const packagesDurationSuffix = String(homeContent.packages?.duration_suffix ?? '');
-    const packagesFallbackName = String(homeContent.packages?.fallback_name ?? '');
-    const packagesFallbackSummary = String(homeContent.packages?.fallback_summary ?? '');
+    const packagesDetailLabel = String(
+        homeContent.packages?.detail_label ?? '',
+    );
+    const packagesDurationSuffix = String(
+        homeContent.packages?.duration_suffix ?? '',
+    );
+    const packagesFallbackName = String(
+        homeContent.packages?.fallback_name ?? '',
+    );
+    const packagesFallbackSummary = String(
+        homeContent.packages?.fallback_summary ?? '',
+    );
     const servicesTitle = String(homeContent.services?.title ?? '');
-    const servicesFallbackTitlePrefix = String(homeContent.services?.fallback_title_prefix ?? '');
-    const servicesFallbackDescription = String(homeContent.services?.fallback_description ?? '');
+    const servicesFallbackTitlePrefix = String(
+        homeContent.services?.fallback_title_prefix ?? '',
+    );
+    const servicesFallbackDescription = String(
+        homeContent.services?.fallback_description ?? '',
+    );
     const galleryTitle = String(homeContent.gallery?.title ?? '');
     const galleryDescription = String(homeContent.gallery?.description ?? '');
     const galleryCtaLabel = String(homeContent.gallery?.cta_label ?? '');
     const testimonialHeading = String(homeContent.testimonials?.heading ?? '');
-    const testimonialsFallbackQuote = String(homeContent.testimonials?.fallback_quote ?? '');
+    const testimonialsFallbackQuote = String(
+        homeContent.testimonials?.fallback_quote ?? '',
+    );
     const articlesHeading = String(homeContent.articles?.heading ?? '');
     const articlesCtaLabel = String(homeContent.articles?.cta_label ?? '');
     const articlesLabel = String(homeContent.articles?.label ?? '');
@@ -172,7 +189,9 @@ export default function PublicHomeLanding() {
         homeContent.articles?.fallback_item_title_prefix ?? '',
     );
     const articlesEmptyTitle = String(homeContent.articles?.empty_title ?? '');
-    const articlesEmptyDescription = String(homeContent.articles?.empty_description ?? '');
+    const articlesEmptyDescription = String(
+        homeContent.articles?.empty_description ?? '',
+    );
 
     const contact = (homeContent.contact as Record<string, any>) ?? {};
     const timeline = (homeContent.timeline as Record<string, any>) ?? {};
@@ -204,7 +223,9 @@ export default function PublicHomeLanding() {
     const contactBannerTitle = String(contact.banner_title ?? '');
     const contactWhatsappLabel = String(contact.whatsapp_label ?? '');
     const contactSecondaryLabel = String(contact.secondary_label ?? '');
-    const contactSecondaryHref = String(contact.secondary_href ?? '/paket-umroh');
+    const contactSecondaryHref = String(
+        contact.secondary_href ?? '/paket-umroh',
+    );
     const contactAddressLabel = String(contact.address_label ?? '');
     const contactInfoLabel = String(contact.contact_info_label ?? '');
     const contactOfficeHoursLabel = 'Jam Operasional';
@@ -226,9 +247,14 @@ export default function PublicHomeLanding() {
                       iconMap[
                           String(step?.icon ?? '') as keyof typeof iconMap
                       ] ??
-                      [Users, CreditCard, CheckCircle2, Plane, Landmark, CalendarDays][
-                          index
-                      ] ??
+                      [
+                          Users,
+                          CreditCard,
+                          CheckCircle2,
+                          Plane,
+                          Landmark,
+                          CalendarDays,
+                      ][index] ??
                       Users,
               }))
               .filter((step: StepItem) => step.title.trim() !== '')
@@ -250,24 +276,21 @@ export default function PublicHomeLanding() {
                           index
                       ] ??
                       ShieldCheck,
-                  tone: (['rose', 'amber', 'red', 'orange'][index] ?? 'rose') as CardItem['tone'],
+                  tone: (['rose', 'amber', 'red', 'orange'][index] ??
+                      'rose') as CardItem['tone'],
               }))
               .filter((card: CardItem) => card.title.trim() !== '')
         : [];
 
     const problem = (homeContent.problem as Record<string, any>) ?? {};
     const problemLabel = String(problem.label ?? '');
-    const problemHeading = String(
-        problem.heading ?? '',
-    );
+    const problemHeading = String(problem.heading ?? '');
     const problemBadges = Array.isArray(problem.badges)
         ? (problem.badges as string[])
               .map((badge) => String(badge))
               .filter(Boolean)
         : [];
-    const problemQuote = String(
-        problem.quote ?? '',
-    );
+    const problemQuote = String(problem.quote ?? '');
 
     const packageCards = packages.slice(0, 3);
     const galleryPreviewImages = galleryItems
@@ -358,6 +381,58 @@ export default function PublicHomeLanding() {
               } as const)
             : ({} as const);
 
+    const testimonialsSliderRef = useRef<HTMLDivElement | null>(null);
+    const [isTestimonialsPaused, setIsTestimonialsPaused] = useState(false);
+
+    function scrollTestimonials(direction: 'prev' | 'next'): void {
+        const slider = testimonialsSliderRef.current;
+        if (!slider) {
+            return;
+        }
+
+        const scrollAmount = Math.max(slider.clientWidth * 0.85, 280);
+        slider.scrollBy({
+            left: direction === 'next' ? scrollAmount : -scrollAmount,
+            behavior: 'smooth',
+        });
+    }
+
+    useEffect(() => {
+        if (
+            !animationsEnabled ||
+            isTestimonialsPaused ||
+            testimonials.length <= 1
+        ) {
+            return;
+        }
+
+        const slider = testimonialsSliderRef.current;
+        if (!slider) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            const activeSlider = testimonialsSliderRef.current;
+            if (!activeSlider) {
+                return;
+            }
+
+            const isAtEnd =
+                activeSlider.scrollLeft + activeSlider.clientWidth >=
+                activeSlider.scrollWidth - 12;
+
+            if (isAtEnd) {
+                activeSlider.scrollTo({ left: 0, behavior: 'smooth' });
+                return;
+            }
+
+            const scrollAmount = Math.max(activeSlider.clientWidth * 0.85, 280);
+            activeSlider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }, 4200);
+
+        return () => window.clearInterval(interval);
+    }, [animationsEnabled, isTestimonialsPaused, testimonials.length]);
+
     return (
         <PublicLayout>
             <Head title={String(branding?.company_name ?? heroTitle)} />
@@ -422,18 +497,20 @@ export default function PublicHomeLanding() {
                                     {heroLabel}
                                 </motion.p>
                                 <motion.h1
-                                    className="mt-4 font-heading text-3xl font-extrabold tracking-tight text-white sm:text-5xl"
+                                    className="font-heading mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-5xl"
                                     variants={fadeUp}
                                     initial="hidden"
                                     whileInView="show"
                                     viewport={inViewViewport}
                                 >
-                                    {heroTitle.split('\n').map((line, index) => (
-                                        <span key={index}>
-                                            {line}
-                                            {index === 0 ? <br /> : null}
-                                        </span>
-                                    ))}
+                                    {heroTitle
+                                        .split('\n')
+                                        .map((line, index) => (
+                                            <span key={index}>
+                                                {line}
+                                                {index === 0 ? <br /> : null}
+                                            </span>
+                                        ))}
                                 </motion.h1>
                                 <motion.p
                                     className="mt-6 max-w-xl text-sm leading-relaxed text-white/82 sm:text-base"
@@ -516,7 +593,10 @@ export default function PublicHomeLanding() {
                     </div>
 
                     <div className="relative container mx-auto px-6">
-                        <motion.div className="text-center" {...getInViewProps(fadeDown)}>
+                        <motion.div
+                            className="text-center"
+                            {...getInViewProps(fadeDown)}
+                        >
                             <p className="text-xs font-bold tracking-[0.24em] text-[#7a0d17]/70 uppercase">
                                 {timelineLabel}
                             </p>
@@ -527,7 +607,7 @@ export default function PublicHomeLanding() {
                             {...getInViewProps(fadeIn)}
                         >
                             <div className="relative">
-                                <div className="pointer-events-none absolute left-6 right-6 top-6 hidden h-0.5 rounded-full bg-white/22 sm:block" />
+                                <div className="pointer-events-none absolute top-6 right-6 left-6 hidden h-0.5 rounded-full bg-white/22 sm:block" />
                                 <motion.div
                                     className="flex gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-6 sm:gap-5 sm:overflow-visible sm:pb-0"
                                     {...getInViewProps(stagger)}
@@ -555,7 +635,7 @@ export default function PublicHomeLanding() {
                                                 <p className="mt-3 text-[0.6rem] font-extrabold tracking-[0.22em] text-white/72 uppercase">
                                                     {item.caption}
                                                 </p>
-                                                <p className="mt-1 font-heading text-sm font-extrabold text-white">
+                                                <p className="font-heading mt-1 text-sm font-extrabold text-white">
                                                     {item.title}
                                                 </p>
                                                 <p className="mt-2 text-xs leading-relaxed text-white/70">
@@ -569,7 +649,7 @@ export default function PublicHomeLanding() {
                         </motion.div>
 
                         <motion.h2
-                            className="mt-10 text-center font-heading text-2xl font-extrabold text-[#2a120c] sm:text-3xl"
+                            className="font-heading mt-10 text-center text-2xl font-extrabold text-[#2a120c] sm:text-3xl"
                             {...getInViewProps(fadeUp)}
                         >
                             {timelineHeading}
@@ -626,12 +706,10 @@ export default function PublicHomeLanding() {
 
                 <section
                     className="relative overflow-hidden bg-[#f3d8b5] py-14 sm:py-18"
-                    style={
-                        sectionStyleFromBackground(
-                            (problem.background as SectionBackgroundConfig | null) ??
-                                null,
-                        )
-                    }
+                    style={sectionStyleFromBackground(
+                        (problem.background as SectionBackgroundConfig | null) ??
+                            null,
+                    )}
                 >
                     <div className="container mx-auto px-6">
                         <motion.div
@@ -641,7 +719,7 @@ export default function PublicHomeLanding() {
                             <p className="text-center text-xs font-bold tracking-[0.24em] text-[#7a0d17]/70 uppercase">
                                 {problemLabel}
                             </p>
-                            <h2 className="mt-4 text-center font-heading text-2xl font-extrabold text-[#2a120c] sm:text-3xl">
+                            <h2 className="font-heading mt-4 text-center text-2xl font-extrabold text-[#2a120c] sm:text-3xl">
                                 {problemHeading}
                             </h2>
 
@@ -723,7 +801,10 @@ export default function PublicHomeLanding() {
                                             variants={fadeUp}
                                         >
                                             <img
-                                                src={galleryPreviewImages[0] ?? '/images/dummy.jpg'}
+                                                src={
+                                                    galleryPreviewImages[0] ??
+                                                    '/images/dummy.jpg'
+                                                }
                                                 alt="Dokumentasi 1"
                                                 className="h-52 w-full object-cover sm:h-64"
                                             />
@@ -735,7 +816,10 @@ export default function PublicHomeLanding() {
                                             variants={fadeUp}
                                         >
                                             <img
-                                                src={galleryPreviewImages[1] ?? '/images/dummy.jpg'}
+                                                src={
+                                                    galleryPreviewImages[1] ??
+                                                    '/images/dummy.jpg'
+                                                }
                                                 alt="Dokumentasi 2"
                                                 className="h-24 w-full object-cover sm:h-30"
                                             />
@@ -745,7 +829,10 @@ export default function PublicHomeLanding() {
                                             variants={fadeUp}
                                         >
                                             <img
-                                                src={galleryPreviewImages[2] ?? '/images/dummy.jpg'}
+                                                src={
+                                                    galleryPreviewImages[2] ??
+                                                    '/images/dummy.jpg'
+                                                }
                                                 alt="Dokumentasi 3"
                                                 className="h-24 w-full object-cover sm:h-30"
                                             />
@@ -773,7 +860,7 @@ export default function PublicHomeLanding() {
                 >
                     <div className="container mx-auto px-6">
                         <motion.h2
-                            className="text-center font-heading text-3xl font-extrabold text-[#2a120c]"
+                            className="font-heading text-center text-3xl font-extrabold text-[#2a120c]"
                             {...getInViewProps(fadeDown)}
                         >
                             {servicesTitle}
@@ -786,11 +873,16 @@ export default function PublicHomeLanding() {
                             {services.slice(0, 4).map((item, index) => {
                                 const Icon =
                                     iconMap[
-                                        String(item?.icon ?? '') as keyof typeof iconMap
-                                    ] ??
-                                    iconMap.plane;
-                                const title = String(item?.title ?? item?.name ?? '');
-                                const description = String(item?.description ?? '');
+                                        String(
+                                            item?.icon ?? '',
+                                        ) as keyof typeof iconMap
+                                    ] ?? iconMap.plane;
+                                const title = String(
+                                    item?.title ?? item?.name ?? '',
+                                );
+                                const description = String(
+                                    item?.description ?? '',
+                                );
                                 const cardVariants =
                                     index % 4 === 0
                                         ? fadeLeft
@@ -841,7 +933,7 @@ export default function PublicHomeLanding() {
                             >
                                 {packagesHeading}
                             </motion.h2>
-                            <div className="sm:absolute sm:right-0 sm:top-1/2 sm:-translate-y-1/2">
+                            <div className="sm:absolute sm:top-1/2 sm:right-0 sm:-translate-y-1/2">
                                 <Link
                                     href="/paket-umroh"
                                     className="inline-flex items-center justify-center rounded-full bg-white/12 px-6 py-3 text-sm font-extrabold text-white ring-1 ring-white/18 transition hover:bg-white/16"
@@ -899,6 +991,10 @@ export default function PublicHomeLanding() {
                                     pkg.price,
                                     pkg.currency,
                                 );
+                                const ratingAvg = Number(pkg.rating_avg ?? 0);
+                                const ratingCount = Number(
+                                    pkg.rating_count ?? 0,
+                                );
 
                                 return (
                                     <motion.div
@@ -906,7 +1002,7 @@ export default function PublicHomeLanding() {
                                         className="group relative overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/10"
                                         variants={cardVariants}
                                     >
-                                        <div className="absolute right-4 top-4 z-10 flex flex-col items-end gap-2">
+                                        <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
                                             {pkg.original_price ? (
                                                 <div className="inline-flex items-center gap-1 rounded-full bg-rose-600/95 px-3 py-1 text-[11px] font-extrabold text-white shadow-sm ring-1 ring-white/20">
                                                     <Zap className="h-3.5 w-3.5" />
@@ -935,8 +1031,8 @@ export default function PublicHomeLanding() {
                                                 className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
-                                            <div className="absolute bottom-4 left-4 right-4">
-                                                <p className="line-clamp-2 font-heading text-sm font-extrabold text-white">
+                                            <div className="absolute right-4 bottom-4 left-4">
+                                                <p className="font-heading line-clamp-2 text-sm font-extrabold text-white">
                                                     {name}
                                                 </p>
                                                 <p className="mt-1 text-xs font-semibold text-white/85">
@@ -978,7 +1074,8 @@ export default function PublicHomeLanding() {
                                                             <CalendarDays className="h-4 w-4 shrink-0 text-[#7a0d17]/80" />
                                                         </span>
                                                         <span className="line-clamp-1">
-                                                            Berangkat {departureDate}
+                                                            Berangkat{' '}
+                                                            {departureDate}
                                                         </span>
                                                     </div>
                                                 ) : null}
@@ -998,6 +1095,37 @@ export default function PublicHomeLanding() {
                                                         {packagesDetailLabel}
                                                     </Link>
                                                 </div>
+                                                {ratingAvg > 0 ? (
+                                                    <div className="mt-2 flex items-center gap-2 text-xs">
+                                                        <div className="flex items-center">
+                                                            {[
+                                                                1, 2, 3, 4, 5,
+                                                            ].map((value) => (
+                                                                <Star
+                                                                    key={value}
+                                                                    className={`h-4 w-4 ${
+                                                                        value <=
+                                                                        Math.round(
+                                                                            ratingAvg,
+                                                                        )
+                                                                            ? 'fill-amber-400 text-amber-400'
+                                                                            : 'text-[#2a120c]/20'
+                                                                    }`}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                        <span className="font-semibold text-[#2a120c]">
+                                                            {ratingAvg.toFixed(
+                                                                1,
+                                                            )}
+                                                        </span>
+                                                        {ratingCount > 0 ? (
+                                                            <span className="text-[#2a120c]/60">
+                                                                ({ratingCount})
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                ) : null}
                                                 <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#2a120c]/70">
                                                     {summary}
                                                 </p>
@@ -1035,8 +1163,7 @@ export default function PublicHomeLanding() {
                                 className="absolute inset-0"
                                 style={{
                                     backgroundColor: String(
-                                        testimonialsBackground?.color ??
-                                            '#000',
+                                        testimonialsBackground?.color ?? '#000',
                                     ),
                                 }}
                             />
@@ -1052,14 +1179,42 @@ export default function PublicHomeLanding() {
 
                     <div className="container mx-auto px-6">
                         <motion.h2
-                            className="text-center font-heading text-3xl font-extrabold text-white"
+                            className="font-heading text-center text-3xl font-extrabold text-white"
                             {...getInViewProps(fadeDown)}
                         >
                             {testimonialHeading}
                         </motion.h2>
 
+                        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => scrollTestimonials('prev')}
+                                className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-xs font-extrabold text-white ring-1 ring-white/18 transition hover:bg-white/16"
+                                aria-label="Sebelumnya"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                                Sebelumnya
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => scrollTestimonials('next')}
+                                className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-xs font-extrabold text-white ring-1 ring-white/18 transition hover:bg-white/16"
+                                aria-label="Berikutnya"
+                            >
+                                Berikutnya
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="relative mt-10">
                         <motion.div
-                            className="mt-10 grid gap-6 md:grid-cols-3"
+                            ref={testimonialsSliderRef}
+                            onMouseEnter={() => setIsTestimonialsPaused(true)}
+                            onMouseLeave={() => setIsTestimonialsPaused(false)}
+                            onFocusCapture={() => setIsTestimonialsPaused(true)}
+                            onBlurCapture={() => setIsTestimonialsPaused(false)}
+                            className="relative right-1/2 left-1/2 -mx-[50vw] flex w-screen snap-x snap-mandatory gap-6 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:px-10 lg:px-14 [&::-webkit-scrollbar]:hidden"
                             {...getInViewProps(stagger)}
                         >
                             {testimonials.map((testimonial, index) => {
@@ -1069,8 +1224,13 @@ export default function PublicHomeLanding() {
                                     .map((part) => part.slice(0, 1))
                                     .join('')
                                     .toUpperCase();
-                                const rating = Number.isFinite(testimonial.rating)
-                                    ? Math.max(1, Math.min(5, testimonial.rating))
+                                const rating = Number.isFinite(
+                                    testimonial.rating,
+                                )
+                                    ? Math.max(
+                                          1,
+                                          Math.min(5, testimonial.rating),
+                                      )
                                     : 5;
                                 const cardVariants =
                                     index % 3 === 0
@@ -1082,7 +1242,7 @@ export default function PublicHomeLanding() {
                                 return (
                                     <motion.div
                                         key={testimonial.name}
-                                        className="relative overflow-hidden rounded-2xl bg-white/95 p-6 shadow-xl ring-1 ring-black/10"
+                                        className="relative w-[260px] shrink-0 snap-start overflow-hidden rounded-2xl bg-white/95 p-6 shadow-xl ring-1 ring-black/10 sm:w-[300px] lg:w-[320px]"
                                         variants={cardVariants}
                                     >
                                         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#f09c35]/18 to-transparent" />
@@ -1137,7 +1297,7 @@ export default function PublicHomeLanding() {
                                 <p className="text-xs font-bold tracking-[0.24em] text-[#7a0d17]/70 uppercase">
                                     {articlesLabel}
                                 </p>
-                                <h2 className="mt-2 font-heading text-3xl font-extrabold text-[#2a120c]">
+                                <h2 className="font-heading mt-2 text-3xl font-extrabold text-[#2a120c]">
                                     {articlesHeading}
                                 </h2>
                             </div>
@@ -1169,14 +1329,13 @@ export default function PublicHomeLanding() {
                                     const href = slug
                                         ? `/artikel/${slug}`
                                         : '/artikel';
-                                    const image =
-                                        article.image_path
-                                            ? String(
-                                                  article.image_path,
-                                              ).startsWith('/')
-                                                ? String(article.image_path)
-                                                : `/storage/${article.image_path}`
-                                            : '/images/dummy.jpg';
+                                    const image = article.image_path
+                                        ? String(article.image_path).startsWith(
+                                              '/',
+                                          )
+                                            ? String(article.image_path)
+                                            : `/storage/${article.image_path}`
+                                        : '/images/dummy.jpg';
                                     const cardVariants =
                                         index % 4 === 0
                                             ? fadeLeft
@@ -1204,7 +1363,7 @@ export default function PublicHomeLanding() {
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent opacity-85" />
                                                 </div>
                                                 <div className="p-6">
-                                                    <p className="line-clamp-2 font-heading text-base font-extrabold text-[#2a120c]">
+                                                    <p className="font-heading line-clamp-2 text-base font-extrabold text-[#2a120c]">
                                                         {title}
                                                     </p>
                                                     {excerpt ? (
@@ -1243,10 +1402,10 @@ export default function PublicHomeLanding() {
                     style={sectionStyleFromBackground(contactBackground)}
                 >
                     <div className="container mx-auto px-6">
-                            <motion.div
-                                className="grid gap-8 lg:grid-cols-12 lg:items-stretch"
-                                {...getInViewProps(stagger)}
-                            >
+                        <motion.div
+                            className="grid gap-8 lg:grid-cols-12 lg:items-stretch"
+                            {...getInViewProps(stagger)}
+                        >
                             <motion.div
                                 className="overflow-hidden rounded-[28px] bg-black/85 lg:col-span-7"
                                 variants={fadeLeft}
@@ -1258,11 +1417,11 @@ export default function PublicHomeLanding() {
                                         className="h-full w-full object-cover opacity-70"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-tr from-black/80 via-black/40 to-transparent" />
-                                    <div className="absolute bottom-6 left-6 right-6">
+                                    <div className="absolute right-6 bottom-6 left-6">
                                         <p className="text-xs font-bold tracking-[0.24em] text-white/75 uppercase">
                                             {contactBannerKicker}
                                         </p>
-                                        <p className="mt-2 font-heading text-2xl font-extrabold text-white">
+                                        <p className="font-heading mt-2 text-2xl font-extrabold text-white">
                                             {contactBannerTitle.replace(
                                                 '{company_name}',
                                                 String(
@@ -1294,7 +1453,7 @@ export default function PublicHomeLanding() {
                             </motion.div>
 
                             <motion.div
-                                className="rounded-[28px] bg-white p-7 shadow-sm ring-1 ring-black/5 lg:col-span-5 sm:p-8"
+                                className="rounded-[28px] bg-white p-7 shadow-sm ring-1 ring-black/5 sm:p-8 lg:col-span-5"
                                 variants={fadeRight}
                             >
                                 <div className="space-y-6">

@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
+import { type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 import { type ComponentProps } from 'react';
-import { type SharedData } from '@/types';
 
 export default function AppLogoIcon({
     className,

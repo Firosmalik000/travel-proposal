@@ -1,10 +1,4 @@
-import { MotionCard, MotionSection } from '@/components/public-motion';
-import {
-    IslamicOrnamentOttoman,
-    IslamicOrnamentOttomanAccent,
-    IslamicOrnamentRow1Col1,
-    IslamicOrnamentZellige,
-} from '@/components/public-ornaments';
+﻿import { MotionCard, MotionSection } from '@/components/public-motion';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     normalizePackageHighlights,
@@ -16,6 +10,12 @@ import {
     localize,
     whatsappLinkFromSeo,
 } from '@/lib/public-content';
+import {
+    absoluteUrl,
+    canonicalUrl,
+    jsonLdBreadcrumb,
+    jsonLdProduct,
+} from '@/lib/seo-jsonld';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
@@ -31,11 +31,11 @@ const typeConfig: Record<string, { label: string; color: string }> = {
 };
 
 const productTypeEmoji: Record<string, string> = {
-    dokumen: '📄',
-    transportasi: '✈️',
-    akomodasi: '🏨',
-    layanan: '🛎️',
-    perlengkapan: '🎒',
+    dokumen: 'ðŸ“„',
+    transportasi: 'âœˆï¸',
+    akomodasi: 'ðŸ¨',
+    layanan: 'ðŸ›Žï¸',
+    perlengkapan: 'ðŸŽ’',
 };
 
 function toStringArray(val: unknown): string[] {
@@ -46,8 +46,8 @@ function toStringArray(val: unknown): string[] {
 
 export default function PaketDetail() {
     const locale = 'id' as const;
-    const { travelPackage, seoSettings } =
-        usePage<TravelPackagePageProps>().props;
+    const page = usePage<TravelPackagePageProps>();
+    const { travelPackage, seoSettings } = page.props;
     const seo = (seoSettings as Record<string, any>) ?? {};
     const whatsappLink = whatsappLinkFromSeo(seo);
 
@@ -71,7 +71,9 @@ export default function PaketDetail() {
     const packageImages = useMemo(() => {
         const gallery = Array.isArray(content.gallery) ? content.gallery : [];
         const candidates = [pkg.image_path, ...gallery]
-            .filter((value: unknown): value is string => typeof value === 'string')
+            .filter(
+                (value: unknown): value is string => typeof value === 'string',
+            )
             .map((value) => value.trim())
             .filter(Boolean);
 
@@ -79,6 +81,27 @@ export default function PaketDetail() {
     }, [content.gallery, pkg.image_path]);
 
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+    const canonical = canonicalUrl(seo, page.url);
+    const ogImageCandidate = packageImages[0] ?? pkg.image_path ?? null;
+    const ogImage = ogImageCandidate
+        ? absoluteUrl(seo?.advanced?.canonicalBase, ogImageCandidate)
+        : null;
+
+    const breadcrumbJsonLd = jsonLdBreadcrumb([
+        { name: 'Home', url: canonicalUrl(seo, '/') },
+        { name: 'Paket Umroh', url: canonicalUrl(seo, '/paket-umroh') },
+        { name, url: canonical },
+    ]);
+
+    const productJsonLd = jsonLdProduct({
+        name,
+        description: summary,
+        url: canonical,
+        image: ogImage,
+        currency: pkg.currency ?? 'IDR',
+        price: pkg.price ?? null,
+    });
 
     useEffect(() => {
         setActiveImageIndex(0);
@@ -90,29 +113,62 @@ export default function PaketDetail() {
         }
 
         const intervalId = window.setInterval(() => {
-            setActiveImageIndex((current) => (current + 1) % packageImages.length);
+            setActiveImageIndex(
+                (current) => (current + 1) % packageImages.length,
+            );
         }, 2000);
 
         return () => window.clearInterval(intervalId);
     }, [packageImages.length]);
 
     const included = toStringArray(
-        content.included && typeof content.included === 'object' && !Array.isArray(content.included)
+        content.included &&
+            typeof content.included === 'object' &&
+            !Array.isArray(content.included)
             ? (content.included.id ?? content.included.en)
             : content.included,
     );
     const excluded = toStringArray(
-        content.excluded && typeof content.excluded === 'object' && !Array.isArray(content.excluded)
+        content.excluded &&
+            typeof content.excluded === 'object' &&
+            !Array.isArray(content.excluded)
             ? (content.excluded.id ?? content.excluded.en)
             : content.excluded,
     );
     const policy = localize(content.policy, locale);
     const packageHighlights = normalizePackageHighlights(content);
-    const itineraries = [...(pkg.itineraries ?? [])].sort(
-        (leftItem: any, rightItem: any) =>
-            (leftItem.sort_order ?? leftItem.day_number) -
-            (rightItem.sort_order ?? rightItem.day_number),
-    );
+    const itineraries = useMemo(() => {
+        const rawItems = Array.isArray(pkg.itineraries) ? pkg.itineraries : [];
+
+        return rawItems
+            .map((item: any, index: number) => {
+                const dayNumber = Number(item?.day_number);
+                const sortOrder = Number(item?.sort_order);
+
+                return {
+                    ...item,
+                    day_number:
+                        Number.isFinite(dayNumber) && dayNumber > 0
+                            ? dayNumber
+                            : index + 1,
+                    sort_order: Number.isFinite(sortOrder) ? sortOrder : null,
+                    _key: String(
+                        item?.id ??
+                            `${item?.day_number ?? index + 1}-${item?.sort_order ?? index}`,
+                    ),
+                };
+            })
+            .sort((left: any, right: any) => {
+                const leftSort = Number.isFinite(Number(left.sort_order))
+                    ? Number(left.sort_order)
+                    : Number(left.day_number);
+                const rightSort = Number.isFinite(Number(right.sort_order))
+                    ? Number(right.sort_order)
+                    : Number(right.day_number);
+
+                return leftSort - rightSort;
+            });
+    }, [pkg.itineraries]);
 
     const openSchedules = (pkg.schedules ?? []).filter(
         (s: any) => s.status === 'open',
@@ -127,17 +183,67 @@ export default function PaketDetail() {
     return (
         <PublicLayout>
             <Head title={`${name} | Paket Umroh`}>
-                <meta name="description" content={summary} />
+                <meta
+                    name="description"
+                    content={summary}
+                    head-key="meta-description"
+                />
+                <meta property="og:type" content="product" head-key="og-type" />
+                <meta property="og:title" content={name} head-key="og-title" />
+                <meta
+                    property="og:description"
+                    content={summary}
+                    head-key="og-description"
+                />
+                {canonical ? (
+                    <link
+                        rel="canonical"
+                        href={canonical}
+                        head-key="link-canonical"
+                    />
+                ) : null}
+                {canonical ? (
+                    <meta
+                        property="og:url"
+                        content={canonical}
+                        head-key="og-url"
+                    />
+                ) : null}
+                {ogImage ? (
+                    <meta
+                        property="og:image"
+                        content={ogImage}
+                        head-key="og-image"
+                    />
+                ) : null}
+                <script
+                    type="application/ld+json"
+                    head-key="jsonld-breadcrumb"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(breadcrumbJsonLd),
+                    }}
+                />
+                <script
+                    type="application/ld+json"
+                    head-key="jsonld-product"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(productJsonLd),
+                    }}
+                />
             </Head>
 
-            {/* ── Hero ── */}
+            {/* â”€â”€ Hero â”€â”€ */}
             <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-6 sm:px-6">
                 <MotionCard className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
                     <div className="grid lg:grid-cols-2">
                         {/* Image */}
                         <div className="relative h-64 overflow-hidden lg:h-auto lg:min-h-[420px]">
                             <img
-                                src={packageImages[activeImageIndex] || pkg.image_path || '/images/dummy.jpg'}
+                                src={
+                                    packageImages[activeImageIndex] ||
+                                    pkg.image_path ||
+                                    '/images/dummy.jpg'
+                                }
                                 alt={name}
                                 className="h-full w-full object-cover"
                             />
@@ -157,12 +263,17 @@ export default function PaketDetail() {
                                             <button
                                                 key={`${src}-${index}`}
                                                 type="button"
-                                                onClick={() => setActiveImageIndex(index)}
+                                                onClick={() =>
+                                                    setActiveImageIndex(index)
+                                                }
                                                 aria-label={`Lihat foto ${index + 1}`}
                                                 className={`h-12 w-16 shrink-0 overflow-hidden rounded-xl ring-2 transition ${index === activeImageIndex ? 'ring-white' : 'ring-white/20 hover:ring-white/40'}`}
                                             >
                                                 <img
-                                                    src={src || '/images/dummy.jpg'}
+                                                    src={
+                                                        src ||
+                                                        '/images/dummy.jpg'
+                                                    }
                                                     alt=""
                                                     className="h-full w-full object-cover"
                                                     loading="lazy"
@@ -186,7 +297,7 @@ export default function PaketDetail() {
                                     </span>
                                     {pkg.is_featured && (
                                         <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                                            ★ Featured
+                                            â˜… Featured
                                         </span>
                                     )}
                                     <span className="rounded-full bg-muted px-3 py-1 font-mono text-xs text-muted-foreground">
@@ -206,7 +317,7 @@ export default function PaketDetail() {
                                                 key={s}
                                                 className={`text-lg ${s <= Math.round(pkg.rating_avg) ? 'text-amber-400' : 'text-muted-foreground/20'}`}
                                             >
-                                                ★
+                                                â˜…
                                             </span>
                                         ))}
                                         <span className="text-sm font-semibold">
@@ -362,12 +473,12 @@ export default function PaketDetail() {
 
                                 {nextSchedule && (
                                     <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">
-                                        📅 Berangkat{' '}
+                                        ðŸ“… Berangkat{' '}
                                         {formatDate(
                                             nextSchedule.departure_date,
                                             locale,
                                         )}{' '}
-                                        · {nextSchedule.seats_available} seat
+                                        Â· {nextSchedule.seats_available} seat
                                         tersisa
                                     </p>
                                 )}
@@ -394,11 +505,11 @@ export default function PaketDetail() {
                 </MotionCard>
             </MotionSection>
 
-            {/* ── Jadwal ── */}
+            {/* â”€â”€ Jadwal â”€â”€ */}
             {pkg.schedules?.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
                     <h2 className="public-heading mb-3 text-xl font-bold text-foreground">
-                        📅 Jadwal Keberangkatan
+                        ðŸ“… Jadwal Keberangkatan
                     </h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {pkg.schedules.map((s: any, i: number) => {
@@ -440,7 +551,7 @@ export default function PaketDetail() {
                                         </p>
                                     )}
                                     <p className="mt-0.5 text-xs text-muted-foreground">
-                                        📍 {s.departure_city}
+                                        ðŸ“ {s.departure_city}
                                     </p>
                                     <div className="mt-2 flex items-center gap-2">
                                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
@@ -466,7 +577,7 @@ export default function PaketDetail() {
                 </section>
             )}
 
-            {/* ── Included / Excluded ── */}
+            {/* â”€â”€ Included / Excluded â”€â”€ */}
             {itineraries.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
                     <div className="mb-3">
@@ -495,7 +606,7 @@ export default function PaketDetail() {
                                 <tbody className="divide-y divide-border">
                                     {itineraries.map((itinerary: any) => (
                                         <tr
-                                            key={itinerary.day_number}
+                                            key={itinerary._key}
                                             className="align-top"
                                         >
                                             <td className="px-4 py-4 sm:px-5">
@@ -509,37 +620,144 @@ export default function PaketDetail() {
                                                 ) &&
                                                 itinerary.activities.length >
                                                     0 ? (
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {itinerary.activities.map(
-                                                            (activity: any) => (
-                                                                <span
-                                                                    key={
-                                                                        activity.id
-                                                                    }
-                                                                    className="inline-flex rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-foreground"
-                                                                >
-                                                                    {localize(
-                                                                        activity.name,
-                                                                        locale,
-                                                                    )}
-                                                                </span>
-                                                            ),
+                                                    <div className="space-y-2">
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {itinerary.activities.map(
+                                                                (
+                                                                    activity: any,
+                                                                ) => {
+                                                                    const activityLabel =
+                                                                        localize(
+                                                                            activity?.name,
+                                                                            locale,
+                                                                        ) ||
+                                                                        String(
+                                                                            activity?.code ??
+                                                                                '',
+                                                                        ) ||
+                                                                        'Activity';
+
+                                                                    return (
+                                                                        <span
+                                                                            key={
+                                                                                activity.id ??
+                                                                                activity.code ??
+                                                                                itinerary._key
+                                                                            }
+                                                                            className="inline-flex rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-foreground"
+                                                                        >
+                                                                            {
+                                                                                activityLabel
+                                                                            }
+                                                                        </span>
+                                                                    );
+                                                                },
+                                                            )}
+                                                        </div>
+
+                                                        {(itinerary.title ||
+                                                            itinerary.description) && (
+                                                            <div className="space-y-1">
+                                                                {itinerary.title && (
+                                                                    <div className="text-sm font-semibold text-foreground">
+                                                                        {localize(
+                                                                            itinerary.title,
+                                                                            locale,
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                {itinerary.description && (
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {localize(
+                                                                            itinerary.description,
+                                                                            locale,
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 ) : itinerary.activity ? (
-                                                    <span className="inline-flex rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-foreground">
-                                                        {localize(
-                                                            itinerary.activity
-                                                                .name,
-                                                            locale,
+                                                    <div className="space-y-2">
+                                                        <span className="inline-flex rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-foreground">
+                                                            {localize(
+                                                                itinerary
+                                                                    .activity
+                                                                    ?.name,
+                                                                locale,
+                                                            ) ||
+                                                                String(
+                                                                    itinerary
+                                                                        .activity
+                                                                        ?.code ??
+                                                                        '',
+                                                                ) ||
+                                                                (itinerary.title
+                                                                    ? localize(
+                                                                          itinerary.title,
+                                                                          locale,
+                                                                      )
+                                                                    : 'Activity')}
+                                                        </span>
+
+                                                        {(itinerary.title ||
+                                                            itinerary.description) && (
+                                                            <div className="space-y-1">
+                                                                {itinerary.title && (
+                                                                    <div className="text-sm font-semibold text-foreground">
+                                                                        {localize(
+                                                                            itinerary.title,
+                                                                            locale,
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                {itinerary.description && (
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {localize(
+                                                                            itinerary.description,
+                                                                            locale,
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         )}
-                                                    </span>
+                                                    </div>
                                                 ) : (
-                                                    <span className="text-muted-foreground">
-                                                        Belum ada activity yang
-                                                        di-assign untuk hari
-                                                        ini.
-                                                    </span>
+                                                    <div className="space-y-2">
+                                                        {(itinerary.title ||
+                                                            itinerary.description) && (
+                                                            <div className="space-y-1">
+                                                                {itinerary.title && (
+                                                                    <div className="text-sm font-semibold text-foreground">
+                                                                        {localize(
+                                                                            itinerary.title,
+                                                                            locale,
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                {itinerary.description && (
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        {localize(
+                                                                            itinerary.description,
+                                                                            locale,
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {!itinerary.title &&
+                                                            !itinerary.description && (
+                                                                <span className="text-muted-foreground">
+                                                                    Belum ada
+                                                                    activity
+                                                                    yang
+                                                                    di-assign
+                                                                    untuk hari
+                                                                    ini.
+                                                                </span>
+                                                            )}
+                                                    </div>
                                                 )}
                                             </td>
                                         </tr>
@@ -557,7 +775,7 @@ export default function PaketDetail() {
                         {included.length > 0 && (
                             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/20">
                                 <h2 className="mb-3 font-bold text-emerald-700 dark:text-emerald-300">
-                                    ✅ Sudah Termasuk
+                                    âœ… Sudah Termasuk
                                 </h2>
                                 <ul className="space-y-2">
                                     {included.map((item: string, i: number) => (
@@ -566,7 +784,7 @@ export default function PaketDetail() {
                                             className="flex items-start gap-2 text-sm text-foreground"
                                         >
                                             <span className="mt-0.5 text-emerald-500">
-                                                ✓
+                                                âœ“
                                             </span>{' '}
                                             {item}
                                         </li>
@@ -577,7 +795,7 @@ export default function PaketDetail() {
                         {excluded.length > 0 && (
                             <div className="rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-800 dark:bg-red-950/20">
                                 <h2 className="mb-3 font-bold text-red-700 dark:text-red-300">
-                                    ❌ Tidak Termasuk
+                                    âŒ Tidak Termasuk
                                 </h2>
                                 <ul className="space-y-2">
                                     {excluded.map((item: string, i: number) => (
@@ -586,7 +804,7 @@ export default function PaketDetail() {
                                             className="flex items-start gap-2 text-sm text-foreground"
                                         >
                                             <span className="mt-0.5 text-red-400">
-                                                ✗
+                                                âœ—
                                             </span>{' '}
                                             {item}
                                         </li>
@@ -598,11 +816,11 @@ export default function PaketDetail() {
                 </section>
             )}
 
-            {/* ── Produk dalam Paket ── */}
+            {/* â”€â”€ Produk dalam Paket â”€â”€ */}
             {pkg.products?.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
                     <h2 className="public-heading mb-3 text-xl font-bold text-foreground">
-                        📦 Komponen Paket
+                        ðŸ“¦ Komponen Paket
                     </h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {pkg.products.map((p: any, i: number) => (
@@ -611,7 +829,7 @@ export default function PaketDetail() {
                                 className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
                             >
                                 <span className="text-2xl">
-                                    {productTypeEmoji[p.product_type] ?? '📦'}
+                                    {productTypeEmoji[p.product_type] ?? 'ðŸ“¦'}
                                 </span>
                                 <span className="text-sm font-medium text-foreground">
                                     {localize(p.name, locale)}
@@ -622,11 +840,11 @@ export default function PaketDetail() {
                 </section>
             )}
 
-            {/* ── Kebijakan ── */}
+            {/* â”€â”€ Kebijakan â”€â”€ */}
             {policy && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
                     <h2 className="public-heading mb-3 text-xl font-bold text-foreground">
-                        📋 Kebijakan
+                        ðŸ“‹ Kebijakan
                     </h2>
                     <div className="rounded-2xl border border-border bg-muted/30 p-5 text-sm leading-relaxed text-foreground">
                         {policy}
@@ -654,11 +872,11 @@ export default function PaketDetail() {
                 </section>
             )}
 
-            {/* ── Testimoni ── */}
+            {/* â”€â”€ Testimoni â”€â”€ */}
             {pkg.testimonials?.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
                     <h2 className="public-heading mb-3 text-xl font-bold text-foreground">
-                        💬 Testimoni Jamaah
+                        ðŸ’¬ Testimoni Jamaah
                     </h2>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {pkg.testimonials.map((t: any, i: number) => (
@@ -676,7 +894,7 @@ export default function PaketDetail() {
                                                     : 'text-muted-foreground/20'
                                             }
                                         >
-                                            ★
+                                            â˜…
                                         </span>
                                     ))}
                                 </div>
@@ -688,16 +906,58 @@ export default function PaketDetail() {
                                         {t.name}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        {t.origin_city}
+                                        {[
+                                            t.origin_city,
+                                            t.departure_schedule?.departure_date
+                                                ? `${formatDate(
+                                                      t.departure_schedule
+                                                          .departure_date,
+                                                      locale,
+                                                  )}${
+                                                      t.departure_schedule
+                                                          ?.departure_city
+                                                          ? ` â€¢ ${t.departure_schedule.departure_city}`
+                                                          : ''
+                                                  }`
+                                                : null,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' â€¢ ')}
                                     </p>
                                 </div>
+
+                                {Array.isArray(t.photos) &&
+                                    t.photos.length > 0 && (
+                                        <div className="mt-4 grid grid-cols-3 gap-2">
+                                            {t.photos
+                                                .slice(0, 6)
+                                                .map(
+                                                    (
+                                                        src: string,
+                                                        index: number,
+                                                    ) => (
+                                                        <div
+                                                            key={`${src}-${index}`}
+                                                            className="aspect-square overflow-hidden rounded-xl border border-border bg-muted"
+                                                        >
+                                                            <img
+                                                                src={src}
+                                                                alt={`Foto testimoni ${t.name}`}
+                                                                className="h-full w-full object-cover"
+                                                                loading="lazy"
+                                                            />
+                                                        </div>
+                                                    ),
+                                                )}
+                                        </div>
+                                    )}
                             </div>
                         ))}
                     </div>
                 </section>
             )}
 
-            {/* ── CTA Bottom ── */}
+            {/* â”€â”€ CTA Bottom â”€â”€ */}
             <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
                 <MotionCard className="flex flex-col items-center justify-between gap-4 rounded-2xl bg-primary px-6 py-8 text-center text-primary-foreground sm:flex-row sm:text-left">
                     <div>

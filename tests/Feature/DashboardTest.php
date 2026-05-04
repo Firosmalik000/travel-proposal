@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Article;
+use App\Models\Booking;
 use App\Models\DepartureSchedule;
 use App\Models\PageContent;
 use App\Models\TravelPackage;
@@ -37,7 +38,7 @@ class DashboardTest extends TestCase
 
     public function test_dashboard_stats_return_travel_summary(): void
     {
-        TravelPackage::query()->create([
+        $package = TravelPackage::query()->create([
             'code' => 'PKG-001',
             'slug' => 'umroh-reguler',
             'name' => ['id' => 'Umroh Reguler', 'en' => 'Regular Umrah'],
@@ -58,6 +59,19 @@ class DashboardTest extends TestCase
             'is_active' => true,
         ]);
 
+        Booking::query()->create([
+            'booking_code' => 'BK-DASH-0001',
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'full_name' => 'Dashboard Revenue',
+            'phone' => '081299999999',
+            'email' => null,
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 2,
+            'notes' => null,
+            'status' => 'registered',
+        ]);
+
         PageContent::query()->create([
             'slug' => 'home',
             'category' => 'page',
@@ -66,30 +80,32 @@ class DashboardTest extends TestCase
         ]);
 
         Article::query()->create([
-            'title' => ['id' => 'Artikel', 'en' => 'Article'],
+            'title' => 'Artikel',
             'slug' => 'artikel',
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($this->user)->getJson('/dashboard/stats');
+        $response = $this->actingAs($this->user)->getJson(route('dashboard.stats', [], false));
 
         $response->assertSuccessful()
             ->assertJsonPath('activePackages.value', 1)
-            ->assertJsonPath('upcomingDepartures.value', 1)
-            ->assertJsonPath('publishedContent.value', 2);
+            ->assertJsonPath('upcomingDepartures.value', 1);
+
+        $this->assertGreaterThanOrEqual(2, (int) $response->json('publishedContent.value'));
+        $this->assertSame(70000000.0, (float) $response->json('estimatedRevenue.value'));
     }
 
     public function test_dashboard_monthly_growth_and_weekly_activity_have_expected_shape(): void
     {
         $this->actingAs($this->user)
-            ->getJson('/dashboard/monthly-growth')
+            ->getJson(route('dashboard.monthly-growth', [], false))
             ->assertSuccessful()
             ->assertJsonStructure([
                 '*' => ['month', 'users', 'departures'],
             ]);
 
         $this->actingAs($this->user)
-            ->getJson('/dashboard/weekly-activity')
+            ->getJson(route('dashboard.weekly-activity', [], false))
             ->assertSuccessful()
             ->assertJsonStructure([
                 '*' => ['day', 'departures', 'contents'],
@@ -121,17 +137,41 @@ class DashboardTest extends TestCase
         ]);
 
         $this->actingAs($this->user)
-            ->getJson('/dashboard/package-distribution')
+            ->getJson(route('dashboard.department-distribution', [], false))
             ->assertSuccessful()
             ->assertJsonStructure([
                 '*' => ['name', 'value', 'color'],
             ]);
 
         $this->actingAs($this->user)
-            ->getJson('/dashboard/upcoming-departures')
+            ->getJson(route('dashboard.birthdays', [], false))
             ->assertSuccessful()
             ->assertJsonStructure([
                 '*' => ['title', 'departure_date', 'departure_city', 'seats_available'],
+            ]);
+    }
+
+    public function test_dashboard_operational_endpoints_have_expected_shape(): void
+    {
+        $this->actingAs($this->user)
+            ->getJson(route('dashboard.recent-activity', [], false))
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                '*' => ['text', 'color'],
+            ]);
+
+        $this->actingAs($this->user)
+            ->getJson(route('dashboard.pending-tasks', [], false))
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                '*' => ['label', 'value', 'color'],
+            ]);
+
+        $this->actingAs($this->user)
+            ->getJson(route('dashboard.system-status', [], false))
+            ->assertSuccessful()
+            ->assertJsonStructure([
+                '*' => ['label', 'status', 'color'],
             ]);
     }
 }

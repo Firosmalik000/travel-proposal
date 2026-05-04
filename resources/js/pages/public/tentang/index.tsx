@@ -1,10 +1,10 @@
-import PublicLayout from '@/layouts/PublicLayout';
 import {
     IslamicLantern,
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentRow1Col1,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
+import PublicLayout from '@/layouts/PublicLayout';
 import {
     localize,
     usePublicData,
@@ -271,7 +271,7 @@ export default function Tentang() {
 
                         {/* Stats bar */}
                         {stats.length > 0 && (
-                             <motion.div
+                            <motion.div
                                 className="mt-16 grid grid-cols-2 divide-x divide-white/10 rounded-[24px] border border-white/10 bg-white/8 md:grid-cols-4"
                                 initial="initial"
                                 animate="animate"
@@ -284,20 +284,22 @@ export default function Tentang() {
                                     },
                                 }}
                             >
-                                {stats.map((s: { value: string; label: string }) => (
-                                    <motion.div
-                                        key={s.label}
-                                        className="px-6 py-6 text-center"
-                                        variants={slideUp}
-                                    >
-                                        <p className="font-heading text-2xl font-bold text-white sm:text-3xl">
-                                            {s.value}
-                                        </p>
-                                        <p className="mt-1 text-[0.65rem] font-bold tracking-wider text-white/50 uppercase sm:text-xs">
-                                            {s.label}
-                                        </p>
-                                    </motion.div>
-                                ))}
+                                {stats.map(
+                                    (s: { value: string; label: string }) => (
+                                        <motion.div
+                                            key={s.label}
+                                            className="px-6 py-6 text-center"
+                                            variants={slideUp}
+                                        >
+                                            <p className="font-heading text-2xl font-bold text-white sm:text-3xl">
+                                                {s.value}
+                                            </p>
+                                            <p className="mt-1 text-[0.65rem] font-bold tracking-wider text-white/50 uppercase sm:text-xs">
+                                                {s.label}
+                                            </p>
+                                        </motion.div>
+                                    ),
+                                )}
                             </motion.div>
                         )}
                     </motion.div>
@@ -307,7 +309,7 @@ export default function Tentang() {
                 <section className="profile-section relative isolate overflow-hidden py-16 sm:py-24">
                     <div className="pointer-events-none absolute inset-0 -z-10">
                         <IslamicOrnamentZellige className="absolute top-[-18%] left-[-6%] h-[18rem] w-[18rem] -rotate-[10deg] text-primary/12 sm:h-[22rem] sm:w-[22rem]" />
-                        <IslamicOrnamentOttomanAccent className="absolute bottom-[-34%] right-[-6%] h-[22rem] w-[22rem] rotate-[12deg] text-accent/12 sm:h-[28rem] sm:w-[28rem]" />
+                        <IslamicOrnamentOttomanAccent className="absolute right-[-6%] bottom-[-34%] h-[22rem] w-[22rem] rotate-[12deg] text-accent/12 sm:h-[28rem] sm:w-[28rem]" />
                     </div>
                     <div className="container mx-auto grid items-center gap-10 px-4 sm:px-6 md:gap-16 lg:grid-cols-2">
                         <motion.div
@@ -317,79 +319,81 @@ export default function Tentang() {
                             viewport={viewport}
                             transition={{ duration: 0.9, ease: 'easeOut' }}
                         >
-                        <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-primary uppercase">
-                            {locale === 'id' ? 'Profil Kami' : 'Our Profile'}
-                        </span>
-                        <h2 className="font-heading mt-5 text-3xl leading-[1.2] font-extrabold text-foreground sm:text-4xl md:text-5xl">
-                            {profileTitle}
-                        </h2>
-                        <p className="mt-6 text-sm leading-relaxed text-muted-foreground sm:text-base">
-                            {profileDesc}
-                        </p>
-                        <div className="mt-8 space-y-4">
-                            {[
-                                locale === 'id'
-                                    ? 'Izin resmi Kementerian Agama RI'
-                                    : 'Official Ministry of Religious Affairs license',
-                                locale === 'id'
-                                    ? 'Lebih dari 20.000 jamaah telah berangkat'
-                                    : 'More than 20,000 pilgrims have departed',
-                                locale === 'id'
-                                    ? 'Pembimbing bersertifikat & berpengalaman'
-                                    : 'Certified & experienced worship guides',
-                                locale === 'id'
-                                    ? 'Layanan 24/7 selama perjalanan ibadah'
-                                    : '24/7 service throughout the worship journey',
-                            ].map((item) => (
-                                <div
-                                    key={item}
-                                    className="flex items-start gap-3"
-                                >
-                                    <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
-                                    <span className="text-sm font-medium text-foreground sm:text-base">
-                                        {item}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
+                            <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-[0.7rem] font-bold tracking-widest text-primary uppercase">
+                                {locale === 'id'
+                                    ? 'Profil Kami'
+                                    : 'Our Profile'}
+                            </span>
+                            <h2 className="font-heading mt-5 text-3xl leading-[1.2] font-extrabold text-foreground sm:text-4xl md:text-5xl">
+                                {profileTitle}
+                            </h2>
+                            <p className="mt-6 text-sm leading-relaxed text-muted-foreground sm:text-base">
+                                {profileDesc}
+                            </p>
+                            <div className="mt-8 space-y-4">
+                                {[
+                                    locale === 'id'
+                                        ? 'Izin resmi Kementerian Agama RI'
+                                        : 'Official Ministry of Religious Affairs license',
+                                    locale === 'id'
+                                        ? 'Lebih dari 20.000 jamaah telah berangkat'
+                                        : 'More than 20,000 pilgrims have departed',
+                                    locale === 'id'
+                                        ? 'Pembimbing bersertifikat & berpengalaman'
+                                        : 'Certified & experienced worship guides',
+                                    locale === 'id'
+                                        ? 'Layanan 24/7 selama perjalanan ibadah'
+                                        : '24/7 service throughout the worship journey',
+                                ].map((item) => (
+                                    <div
+                                        key={item}
+                                        className="flex items-start gap-3"
+                                    >
+                                        <CheckCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                                        <span className="text-sm font-medium text-foreground sm:text-base">
+                                            {item}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </motion.div>
                         <div className="profile-img relative mt-8 h-[300px] sm:mt-0 sm:h-[400px] md:h-[480px]">
-                        <motion.img
-                            src={
-                                page?.content?.profile?.image_primary ||
-                                '/images/dummy.jpg'
-                            }
-                            alt={profileTitle}
-                            className="h-full w-4/5 rounded-3xl object-cover shadow-2xl sm:w-3/4"
-                            initial={{ opacity: 0, x: 60 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            viewport={viewport}
-                            transition={{ duration: 0.9, ease: 'easeOut' }}
-                        />
-                        <motion.img
-                            src={
-                                page?.content?.profile?.image_secondary ||
-                                '/images/dummy.jpg'
-                            }
-                            alt={teamTitle}
-                            className="absolute right-0 -bottom-4 w-3/5 rounded-2xl border-4 border-background shadow-2xl sm:-bottom-8 sm:w-1/2 sm:border-8"
-                            initial={{ opacity: 0, scale: 0.8, y: 40 }}
-                            whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                            viewport={viewport}
-                            transition={{
-                                duration: 0.8,
-                                ease: 'backOut',
-                                delay: 0.2,
-                            }}
-                        />
-                        <div className="absolute -top-4 right-4 flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 shadow-xl shadow-primary/30 sm:right-8">
-                            <Users className="h-4 w-4 text-white" />
-                            <span className="text-[0.7rem] font-bold text-white sm:text-xs">
-                                {locale === 'id'
-                                    ? 'Berpengalaman Sejak 2009'
-                                    : 'Experienced Since 2009'}
-                            </span>
-                        </div>
+                            <motion.img
+                                src={
+                                    page?.content?.profile?.image_primary ||
+                                    '/images/dummy.jpg'
+                                }
+                                alt={profileTitle}
+                                className="h-full w-4/5 rounded-3xl object-cover shadow-2xl sm:w-3/4"
+                                initial={{ opacity: 0, x: 60 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={viewport}
+                                transition={{ duration: 0.9, ease: 'easeOut' }}
+                            />
+                            <motion.img
+                                src={
+                                    page?.content?.profile?.image_secondary ||
+                                    '/images/dummy.jpg'
+                                }
+                                alt={teamTitle}
+                                className="absolute right-0 -bottom-4 w-3/5 rounded-2xl border-4 border-background shadow-2xl sm:-bottom-8 sm:w-1/2 sm:border-8"
+                                initial={{ opacity: 0, scale: 0.8, y: 40 }}
+                                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                                viewport={viewport}
+                                transition={{
+                                    duration: 0.8,
+                                    ease: 'backOut',
+                                    delay: 0.2,
+                                }}
+                            />
+                            <div className="absolute -top-4 right-4 flex items-center gap-2 rounded-2xl bg-primary px-4 py-3 shadow-xl shadow-primary/30 sm:right-8">
+                                <Users className="h-4 w-4 text-white" />
+                                <span className="text-[0.7rem] font-bold text-white sm:text-xs">
+                                    {locale === 'id'
+                                        ? 'Berpengalaman Sejak 2009'
+                                        : 'Experienced Since 2009'}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </section>

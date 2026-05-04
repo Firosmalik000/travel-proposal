@@ -1,10 +1,18 @@
 import { usePage } from '@inertiajs/react';
 
-type Permission = 'view' | 'create' | 'edit' | 'delete' | 'import' | 'export' | 'approve' | 'reject';
+type Permission =
+    | 'view'
+    | 'create'
+    | 'edit'
+    | 'delete'
+    | 'import'
+    | 'export'
+    | 'approve'
+    | 'reject';
 
-interface PageProps {
+interface PageProps extends Record<string, unknown> {
     auth: {
-        user: any;
+        user: unknown;
         permissions: Record<string, Permission[]> | null;
     };
 }
@@ -34,7 +42,10 @@ export function usePermission(menuKey?: string) {
      * @param permission - Permission to check (view, create, edit, delete, import, export, approve, reject)
      * @returns boolean - true if user has permission
      */
-    const hasPermission = (menuKeyParam: string, permission: Permission): boolean => {
+    const hasPermission = (
+        menuKeyParam: string,
+        permission: Permission,
+    ): boolean => {
         // If no permissions data, deny access
         if (!auth.permissions) {
             return false;
@@ -57,7 +68,9 @@ export function usePermission(menuKey?: string) {
      */
     const can = (permission: Permission): boolean => {
         if (!menuKey) {
-            console.warn('usePermission: menuKey not provided. Use hasPermission() instead or provide menuKey to usePermission()');
+            console.warn(
+                'usePermission: menuKey not provided. Use hasPermission() instead or provide menuKey to usePermission()',
+            );
             return false;
         }
 
@@ -76,7 +89,9 @@ export function usePermission(menuKey?: string) {
             return false;
         }
 
-        return permissions.some(permission => hasPermission(menuKey, permission));
+        return permissions.some((permission) =>
+            hasPermission(menuKey, permission),
+        );
     };
 
     /**
@@ -91,7 +106,9 @@ export function usePermission(menuKey?: string) {
             return false;
         }
 
-        return permissions.every(permission => hasPermission(menuKey, permission));
+        return permissions.every((permission) =>
+            hasPermission(menuKey, permission),
+        );
     };
 
     /**

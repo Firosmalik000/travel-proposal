@@ -39,7 +39,7 @@ class DepartureSchedule extends Model
 
     public function registrations(): HasMany
     {
-        return $this->hasMany(PackageRegistration::class);
+        return $this->hasMany(Booking::class);
     }
 
     public function bookedPassengerCount(?int $excludingRegistrationId = null): int

@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+﻿import { cn } from '@/lib/utils';
 import { Bold, Italic, Link2, List, ListOrdered, Pilcrow, RemoveFormatting } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Button } from './button';
@@ -63,7 +63,7 @@ export function RichTextEditor({
                     <Italic className="mr-2 h-4 w-4" />
                     Italic
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => applyCommand('formatBlock', '<p>')}>
+                <Button type="button" size="sm" variant="outline" onClick={() => applyCommand('formatBlock', 'p')}>
                     <Pilcrow className="mr-2 h-4 w-4" />
                     Paragraf
                 </Button>
@@ -95,10 +95,11 @@ export function RichTextEditor({
                     ref={editorRef}
                     contentEditable
                     suppressContentEditableWarning
-                    className="min-h-72 px-4 py-4 text-sm leading-7 text-foreground outline-none"
+                    className="min-h-72 px-4 py-4 text-sm leading-7 text-foreground outline-none [&_p]:my-3 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-1"
                     onInput={(event) => onChange(event.currentTarget.innerHTML)}
                 />
             </div>
         </div>
     );
 }
+

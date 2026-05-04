@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Menu;
 use App\Models\User;
-use App\Models\UserAccess;
+use App\Support\MenuPermissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -21,9 +21,7 @@ class ProductManagementNavigationTest extends TestCase
             ->get(route('products.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard/Administrator/Content/Index')
-                ->where('heading', 'Product Management')
-                ->where('breadcrumbHref', '/admin/product-management/products')
+                ->component('Dashboard/ProductManagement/Products/Index')
             );
     }
 
@@ -35,9 +33,7 @@ class ProductManagementNavigationTest extends TestCase
             ->get(route('product-categories.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard/Administrator/Content/Index')
-                ->where('heading', 'Product Category')
-                ->where('breadcrumbHref', '/admin/product-management/categories')
+                ->component('Dashboard/ProductManagement/Categories/Index')
             );
     }
 
@@ -131,14 +127,13 @@ class ProductManagementNavigationTest extends TestCase
             'is_active' => true,
         ]);
 
-        UserAccess::query()->create([
-            'user_id' => $user->id,
-            'access' => [
-                'landing_page' => ['view'],
-                'product_category' => ['view'],
-                'product' => ['view'],
-                'package' => ['view'],
-            ],
+        MenuPermissionService::ensurePermissionsExist();
+
+        $user->givePermissionTo([
+            'menu.landing_page.view',
+            'menu.product_category.view',
+            'menu.product.view',
+            'menu.package.view',
         ]);
 
         $menus = $this->actingAs($user)

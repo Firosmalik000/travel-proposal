@@ -16,6 +16,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -103,6 +104,9 @@ function normalizePhone(phone: string): string {
 }
 
 export default function BookingRegisterIndex({ registrations }: Props) {
+    const { can } = usePermission('booking_register');
+    const canApprove = can('approve');
+    const canDelete = can('delete');
     const locale: 'id' | 'en' = 'id';
     const registrationItems = Array.isArray(registrations)
         ? registrations
@@ -190,6 +194,10 @@ export default function BookingRegisterIndex({ registrations }: Props) {
     }
 
     function markAsRegistered(registration: Registration): void {
+        if (!canApprove) {
+            return;
+        }
+
         router.put(
             `/admin/booking-management/register/${registration.id}/mark-registered`,
             {},
@@ -200,6 +208,10 @@ export default function BookingRegisterIndex({ registrations }: Props) {
     }
 
     function deleteRegistration(registration: Registration): void {
+        if (!canDelete) {
+            return;
+        }
+
         if (!window.confirm(`Hapus data register ${registration.full_name}?`)) {
             return;
         }
@@ -235,7 +247,7 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                     </p>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                     {stats.map((stat) => (
                         <Card key={stat.label}>
                             <CardContent className="flex items-center justify-between p-5">
@@ -264,7 +276,7 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                 umroh.
                             </CardDescription>
                         </div>
-                        <div className="relative max-w-md">
+                        <div className="relative w-full max-w-md">
                             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                             <Input
                                 value={search}
@@ -291,192 +303,202 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                 </p>
                             </div>
                         ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Pendaftar</TableHead>
-                                        <TableHead>Paket</TableHead>
-                                        <TableHead>Jadwal</TableHead>
-                                        <TableHead>Kontak</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Masuk</TableHead>
-                                        <TableHead className="text-right">
-                                            Aksi
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredRegistrations.map(
-                                        (registration) => {
-                                            const packageName =
-                                                registration.travel_package
-                                                    .name?.[locale] ??
-                                                registration.travel_package.name
-                                                    ?.id ??
-                                                '-';
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Pendaftar</TableHead>
+                                            <TableHead>Paket</TableHead>
+                                            <TableHead>Jadwal</TableHead>
+                                            <TableHead>Kontak</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Masuk</TableHead>
+                                            <TableHead className="text-right">
+                                                Aksi
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredRegistrations.map(
+                                            (registration) => {
+                                                const packageName =
+                                                    registration.travel_package
+                                                        .name?.[locale] ??
+                                                    registration.travel_package
+                                                        .name?.id ??
+                                                    '-';
 
-                                            return (
-                                                <TableRow key={registration.id}>
-                                                    <TableCell className="min-w-52">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
-                                                                {
-                                                                    registration.full_name
-                                                                }
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {
-                                                                    registration.origin_city
-                                                                }{' '}
-                                                                -{' '}
-                                                                {
-                                                                    registration.passenger_count
-                                                                }{' '}
-                                                                pax
-                                                            </p>
-                                                            {registration.notes && (
-                                                                <p className="line-clamp-2 text-sm text-muted-foreground">
+                                                return (
+                                                    <TableRow
+                                                        key={registration.id}
+                                                    >
+                                                        <TableCell className="min-w-52">
+                                                            <div className="space-y-1">
+                                                                <p className="font-medium">
                                                                     {
-                                                                        registration.notes
+                                                                        registration.full_name
                                                                     }
                                                                 </p>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="min-w-52">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
-                                                                {packageName}
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {registration
-                                                                    .travel_package
-                                                                    .code ??
-                                                                    '-'}
-                                                            </p>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="min-w-44">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
-                                                                {formatDate(
-                                                                    registration
-                                                                        .departure_schedule
-                                                                        .departure_date,
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {
+                                                                        registration.origin_city
+                                                                    }{' '}
+                                                                    -{' '}
+                                                                    {
+                                                                        registration.passenger_count
+                                                                    }{' '}
+                                                                    pax
+                                                                </p>
+                                                                {registration.notes && (
+                                                                    <p className="line-clamp-2 text-sm text-muted-foreground">
+                                                                        {
+                                                                            registration.notes
+                                                                        }
+                                                                    </p>
                                                                 )}
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {registration
-                                                                    .departure_schedule
-                                                                    .departure_city ??
-                                                                    '-'}
-                                                            </p>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="min-w-44">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="min-w-52">
+                                                            <div className="space-y-1">
+                                                                <p className="font-medium">
+                                                                    {
+                                                                        packageName
+                                                                    }
+                                                                </p>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {registration
+                                                                        .travel_package
+                                                                        .code ??
+                                                                        '-'}
+                                                                </p>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="min-w-44">
+                                                            <div className="space-y-1">
+                                                                <p className="font-medium">
+                                                                    {formatDate(
+                                                                        registration
+                                                                            .departure_schedule
+                                                                            .departure_date,
+                                                                    )}
+                                                                </p>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {registration
+                                                                        .departure_schedule
+                                                                        .departure_city ??
+                                                                        '-'}
+                                                                </p>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="min-w-44">
+                                                            <div className="space-y-1">
+                                                                <p className="font-medium">
+                                                                    {
+                                                                        registration.phone
+                                                                    }
+                                                                </p>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    {registration.email ??
+                                                                        '-'}
+                                                                </p>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge
+                                                                variant={statusBadgeVariant(
+                                                                    registration.status,
+                                                                )}
+                                                                className="capitalize"
+                                                            >
                                                                 {
-                                                                    registration.phone
+                                                                    registration.status
                                                                 }
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {registration.email ??
-                                                                    '-'}
-                                                            </p>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge
-                                                            variant={statusBadgeVariant(
-                                                                registration.status,
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
+                                                            {formatDateTime(
+                                                                registration.created_at,
                                                             )}
-                                                            className="capitalize"
-                                                        >
-                                                            {
-                                                                registration.status
-                                                            }
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-                                                        {formatDateTime(
-                                                            registration.created_at,
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex justify-end gap-2">
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() =>
-                                                                    markAsRegistered(
-                                                                        registration,
-                                                                    )
-                                                                }
-                                                            >
-                                                                Registered
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() =>
-                                                                    openWhatsApp(
-                                                                        registration,
-                                                                    )
-                                                                }
-                                                            >
-                                                                WA
-                                                            </Button>
-                                                            {registration.email && (
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex justify-end gap-2">
+                                                                {canApprove ? (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() =>
+                                                                            markAsRegistered(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Registered
+                                                                    </Button>
+                                                                ) : null}
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() =>
+                                                                        openWhatsApp(
+                                                                            registration,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    WA
+                                                                </Button>
+                                                                {registration.email && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="icon"
+                                                                        asChild
+                                                                    >
+                                                                        <a
+                                                                            href={`mailto:${registration.email}`}
+                                                                            aria-label={`Email ${registration.full_name}`}
+                                                                        >
+                                                                            <Mail className="h-4 w-4" />
+                                                                        </a>
+                                                                    </Button>
+                                                                )}
                                                                 <Button
                                                                     type="button"
                                                                     variant="outline"
                                                                     size="icon"
-                                                                    asChild
+                                                                    onClick={() =>
+                                                                        copyContact(
+                                                                            registration,
+                                                                        )
+                                                                    }
+                                                                    aria-label={`Salin kontak ${registration.full_name}`}
                                                                 >
-                                                                    <a
-                                                                        href={`mailto:${registration.email}`}
-                                                                        aria-label={`Email ${registration.full_name}`}
-                                                                    >
-                                                                        <Mail className="h-4 w-4" />
-                                                                    </a>
+                                                                    <Copy className="h-4 w-4" />
                                                                 </Button>
-                                                            )}
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="icon"
-                                                                onClick={() =>
-                                                                    copyContact(
-                                                                        registration,
-                                                                    )
-                                                                }
-                                                                aria-label={`Salin kontak ${registration.full_name}`}
-                                                            >
-                                                                <Copy className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                type="button"
-                                                                variant="destructive"
-                                                                size="sm"
-                                                                onClick={() =>
-                                                                    deleteRegistration(
-                                                                        registration,
-                                                                    )
-                                                                }
-                                                            >
-                                                                Hapus
-                                                            </Button>
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        },
-                                    )}
-                                </TableBody>
-                            </Table>
+                                                                {canDelete ? (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="destructive"
+                                                                        size="sm"
+                                                                        onClick={() =>
+                                                                            deleteRegistration(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Hapus
+                                                                    </Button>
+                                                                ) : null}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            },
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -484,4 +506,3 @@ export default function BookingRegisterIndex({ registrations }: Props) {
         </AppSidebarLayout>
     );
 }
-

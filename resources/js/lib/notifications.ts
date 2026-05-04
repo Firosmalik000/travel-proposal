@@ -27,12 +27,18 @@ export const showSuccess = (message: string, title: string = 'Success!') => {
     });
 };
 
-export const showError = (message: string, title: string = 'Error!', details?: string) => {
+export const showError = (
+    message: string,
+    title: string = 'Error!',
+    details?: string,
+) => {
     return Swal.fire({
         icon: 'error',
         title: title,
         text: message,
-        footer: details ? `<small class="text-gray-600">${details}</small>` : undefined,
+        footer: details
+            ? `<small class="text-gray-600">${details}</small>`
+            : undefined,
         confirmButtonColor: '#0f766e',
         confirmButtonText: 'OK',
     });
@@ -62,7 +68,7 @@ export const showConfirm = (
     message: string,
     title: string = 'Are you sure?',
     confirmButtonText: string = 'Yes',
-    cancelButtonText: string = 'Cancel'
+    cancelButtonText: string = 'Cancel',
 ) => {
     return Swal.fire({
         icon: 'question',
@@ -86,12 +92,16 @@ export const handleApiError = (error: any) => {
         const status = error.response.status;
         const data = error.response.data;
 
-        errorMessage = data.message || `Error ${status}: ${error.response.statusText}`;
+        errorMessage =
+            data.message || `Error ${status}: ${error.response.statusText}`;
 
         // Add validation errors if available
         if (data.errors) {
             const validationErrors = Object.entries(data.errors)
-                .map(([field, messages]) => `${field}: ${(messages as string[]).join(', ')}`)
+                .map(
+                    ([field, messages]) =>
+                        `${field}: ${(messages as string[]).join(', ')}`,
+                )
                 .join('<br>');
             errorDetails = `<div class="text-left mt-2"><strong>Validation Errors:</strong><br>${validationErrors}</div>`;
         }

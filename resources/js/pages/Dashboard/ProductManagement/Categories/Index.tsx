@@ -10,6 +10,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import {
@@ -70,13 +71,22 @@ function CategoryTableRow({
     category,
     onEdit,
     onDelete,
+    canEdit,
+    canDelete,
 }: {
     category: CategoryItem;
     onEdit: (category: CategoryItem) => void;
     onDelete: (category: CategoryItem) => void;
+    canEdit: boolean;
+    canDelete: boolean;
 }) {
+    const showActions = canEdit || canDelete;
+
     return (
-        <tr key={category.id} className="border-b border-border last:border-b-0">
+        <tr
+            key={category.id}
+            className="border-b border-border last:border-b-0"
+        >
             <td className="px-4 py-4">
                 <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -109,24 +119,30 @@ function CategoryTableRow({
                 </span>
             </td>
             <td className="px-4 py-4">
-                <div className="flex justify-end gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(category)}
-                    >
-                        <SquarePen className="mr-1 h-4 w-4" />
-                        Edit
-                    </Button>
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onDelete(category)}
-                    >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        Hapus
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div className="flex justify-end gap-2">
+                        {canEdit ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onEdit(category)}
+                            >
+                                <SquarePen className="mr-1 h-4 w-4" />
+                                Edit
+                            </Button>
+                        ) : null}
+                        {canDelete ? (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => onDelete(category)}
+                            >
+                                <Trash2 className="mr-1 h-4 w-4" />
+                                Hapus
+                            </Button>
+                        ) : null}
+                    </div>
+                ) : null}
             </td>
         </tr>
     );
@@ -137,6 +153,11 @@ export default function ProductCategoriesIndex({
     filters,
     stats,
 }: Props) {
+    const { can } = usePermission('product_category');
+    const canCreate = can('create');
+    const canEdit = can('edit');
+    const canDelete = can('delete');
+    const showActions = canEdit || canDelete;
     const [search, setSearch] = useState(filters.search);
     const [editingCategory, setEditingCategory] = useState<
         CategoryItem | null | 'new'
@@ -162,12 +183,20 @@ export default function ProductCategoriesIndex({
     }
 
     function openCreateSheet() {
+        if (!canCreate) {
+            return;
+        }
+
         form.setData(buildFormData(null));
         form.clearErrors();
         setEditingCategory('new');
     }
 
     function openEditSheet(category: CategoryItem) {
+        if (!canEdit) {
+            return;
+        }
+
         form.setData(buildFormData(category));
         form.clearErrors();
         setEditingCategory(category);
@@ -224,7 +253,15 @@ export default function ProductCategoriesIndex({
     }
 
     function destroyCategory(category: CategoryItem) {
-        if (!window.confirm(`Hapus kategori "${category.name || category.key}"?`)) {
+        if (!canDelete) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Hapus kategori "${category.name || category.key}"?`,
+            )
+        ) {
             return;
         }
 
@@ -263,10 +300,12 @@ export default function ProductCategoriesIndex({
                             travel. Kategori ini dipakai sebagai tipe produk.
                         </p>
                     </div>
-                    <Button onClick={openCreateSheet} className="shrink-0">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah Kategori
-                    </Button>
+                    {canCreate ? (
+                        <Button onClick={openCreateSheet} className="shrink-0">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah Kategori
+                        </Button>
+                    ) : null}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
@@ -324,7 +363,7 @@ export default function ProductCategoriesIndex({
                                 Cari Kategori
                             </Label>
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
@@ -354,14 +393,16 @@ export default function ProductCategoriesIndex({
                     </div>
                     <div className="overflow-x-auto">
                         <table className="min-w-full text-left text-sm">
-                            <thead className="bg-muted/30 text-xs uppercase text-muted-foreground">
+                            <thead className="bg-muted/30 text-xs text-muted-foreground uppercase">
                                 <tr>
                                     <th className="px-4 py-3">Kategori</th>
                                     <th className="px-4 py-3">Deskripsi</th>
                                     <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3 text-right">
-                                        Aksi
-                                    </th>
+                                    {showActions ? (
+                                        <th className="px-4 py-3 text-right">
+                                            Aksi
+                                        </th>
+                                    ) : null}
                                 </tr>
                             </thead>
                             <tbody>
@@ -372,12 +413,14 @@ export default function ProductCategoriesIndex({
                                             category={category}
                                             onEdit={openEditSheet}
                                             onDelete={destroyCategory}
+                                            canEdit={canEdit}
+                                            canDelete={canDelete}
                                         />
                                     ))
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={4}
+                                            colSpan={showActions ? 4 : 3}
                                             className="px-4 py-10 text-center text-sm text-muted-foreground"
                                         >
                                             {filters.search
@@ -456,9 +499,7 @@ export default function ProductCategoriesIndex({
 
                             <div className="grid gap-4">
                                 <div>
-                                    <Label className="mb-1.5 block">
-                                        Key
-                                    </Label>
+                                    <Label className="mb-1.5 block">Key</Label>
                                     <Input
                                         value={form.data.key}
                                         onChange={(e) =>
@@ -473,16 +514,11 @@ export default function ProductCategoriesIndex({
                                     ) : null}
                                 </div>
                                 <div>
-                                    <Label className="mb-1.5 block">
-                                        Nama
-                                    </Label>
+                                    <Label className="mb-1.5 block">Nama</Label>
                                     <Input
                                         value={form.data.name}
                                         onChange={(e) =>
-                                            form.setData(
-                                                'name',
-                                                e.target.value,
-                                            )
+                                            form.setData('name', e.target.value)
                                         }
                                         placeholder="Layanan"
                                     />
@@ -561,4 +597,3 @@ export default function ProductCategoriesIndex({
         </AppSidebarLayout>
     );
 }
-

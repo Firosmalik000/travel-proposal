@@ -52,7 +52,9 @@ export default function PolicyPage({ slug }: Props) {
                                 href="/"
                                 className="mt-6 inline-flex items-center justify-center rounded-full bg-foreground px-6 py-3 text-sm font-bold text-background transition hover:bg-foreground/90"
                             >
-                                {locale === 'id' ? 'Kembali ke Beranda' : 'Back to Home'}
+                                {locale === 'id'
+                                    ? 'Kembali ke Beranda'
+                                    : 'Back to Home'}
                             </Link>
                         </div>
                     ) : (
@@ -90,8 +92,10 @@ export default function PolicyPage({ slug }: Props) {
                             <div className="my-6 h-px bg-border" />
                             {bodyHtml ? (
                                 <div
-                                    className="text-sm leading-relaxed text-muted-foreground sm:text-base [&_a]:font-semibold [&_a]:text-primary [&_a]:underline [&_h2]:mt-8 [&_h2]:text-xl [&_h2]:font-extrabold [&_h2]:text-foreground [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-foreground [&_p]:mt-4 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mt-2"
-                                    dangerouslySetInnerHTML={{ __html: bodyHtml }}
+                                    className="text-sm leading-relaxed text-muted-foreground sm:text-base [&_a]:font-semibold [&_a]:text-primary [&_a]:underline [&_h2]:mt-8 [&_h2]:text-xl [&_h2]:font-extrabold [&_h2]:text-foreground [&_h3]:mt-6 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-foreground [&_li]:mt-2 [&_p]:mt-4 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-6"
+                                    dangerouslySetInnerHTML={{
+                                        __html: bodyHtml,
+                                    }}
                                 />
                             ) : (
                                 <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">

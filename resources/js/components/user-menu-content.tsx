@@ -5,10 +5,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { edit } from '@/routes/profile';
-import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { type SharedData } from '@/types';
+import { Link, router, usePage } from '@inertiajs/react';
+import { LogOut, Settings, Undo2 } from 'lucide-react';
 
 export function UserMenuContent() {
+    const { auth } = usePage<SharedData>().props;
     const cleanup = useMobileNavigation();
 
     const handleLogout = () => {
@@ -32,6 +34,23 @@ export function UserMenuContent() {
                     </Link>
                 </DropdownMenuItem>
             </DropdownMenuGroup>
+            {auth.impersonation?.is_impersonating && (
+                <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                        <Link
+                            className="block w-full"
+                            href="/impersonation/stop"
+                            method="post"
+                            as="button"
+                            onClick={cleanup}
+                        >
+                            <Undo2 className="mr-2" />
+                            Stop impersonating
+                        </Link>
+                    </DropdownMenuItem>
+                </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
                 <Link

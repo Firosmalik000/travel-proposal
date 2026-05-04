@@ -44,4 +44,8 @@ return [
         ],
     ],
 
+    'notifications' => [
+        'admin_email' => env('ADMIN_NOTIFICATION_EMAIL', env('BOOKING_NOTIFICATION_EMAIL', env('MAIL_FROM_ADDRESS'))),
+    ],
+
 ];

@@ -1,5 +1,12 @@
 import type { PackageHighlightItem } from '@/lib/package-highlights';
 
+export type PackageContent = {
+    highlights?: PackageHighlightItem[];
+    included?: { id?: string[]; en?: string[] };
+    excluded?: { id?: string[]; en?: string[] };
+    policy?: { id?: string; en?: string };
+};
+
 export type Schedule = {
     id: number;
     departure_date: string;
@@ -84,7 +91,7 @@ export type PackageFormData = {
     images: File[];
     'summary.id': string;
     'summary.en': string;
-    content: Record<string, any>;
+    content: PackageContent;
     itineraries: ItineraryInput[];
     product_ids: number[];
     is_featured: boolean;

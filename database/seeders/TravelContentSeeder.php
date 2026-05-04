@@ -487,7 +487,7 @@ class TravelContentSeeder extends Seeder
                         'Kami menyesuaikan jadwal, hotel, maskapai, dan itinerary sesuai kebutuhan rombongan.',
                         'We tailor schedules, hotels, airlines, and itineraries to your group needs.',
                     ),
-                    'cta' => $this->localize('Konsultasi WhatsApp', 'WhatsApp Consultation'),
+                    'cta' => $this->localize('Kirim Request', 'Submit Request'),
                 ],
             ],
             [

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Article;
+use App\Models\Booking;
 use App\Models\DepartureSchedule;
 use App\Models\PageContent;
 use App\Models\Testimonial;
@@ -30,6 +31,17 @@ class DashboardController extends Controller
             ? round((($totalUsers - $previousMonthUsers) / $previousMonthUsers) * 100, 1)
             : 0;
 
+        $revenueCurrency = Booking::query()
+            ->join('packages', 'bookings.package_id', '=', 'packages.id')
+            ->where('bookings.status', 'registered')
+            ->whereNotNull('packages.currency')
+            ->value('packages.currency') ?? 'IDR';
+
+        $estimatedRevenue = (float) (Booking::query()
+            ->join('packages', 'bookings.package_id', '=', 'packages.id')
+            ->where('bookings.status', 'registered')
+            ->sum(DB::raw('bookings.passenger_count * packages.price')) ?? 0);
+
         return response()->json([
             'totalUsers' => [
                 'value' => $totalUsers,
@@ -43,6 +55,11 @@ class DashboardController extends Controller
             'upcomingDepartures' => [
                 'value' => DepartureSchedule::query()->where('is_active', true)->whereDate('departure_date', '>=', Carbon::today())->count(),
                 'description' => 'Jadwal keberangkatan terjadwal',
+            ],
+            'estimatedRevenue' => [
+                'value' => $estimatedRevenue,
+                'currency' => $revenueCurrency,
+                'description' => 'Estimasi revenue dari booking registered',
             ],
             'publishedContent' => [
                 'value' => PageContent::query()->where('is_active', true)->count() + Article::query()->where('is_active', true)->count(),

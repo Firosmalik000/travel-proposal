@@ -60,11 +60,6 @@ export function DataTable<TData, TValue>({
     },
   });
 
-  // helper untuk menampilkan header label di mobile card view
-  const visibleHeaders = table
-    .getHeaderGroups()[0]
-    ?.headers.filter((h) => !h.isPlaceholder) ?? [];
-
   return (
     <div className="space-y-4">
       {searchKey && (
@@ -118,10 +113,9 @@ export function DataTable<TData, TValue>({
                   <div key={cell.id} className="min-w-0">
                     <div className="text-muted-foreground text-xs">
                       {/* label: render header for the column */}
-                      {flexRender(
-                        cell.column.columnDef.header,
-                        cell.getContext()
-                      )}
+                      {typeof cell.column.columnDef.header === 'string'
+                        ? cell.column.columnDef.header
+                        : cell.column.id}
                     </div>
                     <div className="mt-1 text-sm font-medium break-words">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

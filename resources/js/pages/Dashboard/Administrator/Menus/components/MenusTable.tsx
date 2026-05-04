@@ -1,6 +1,7 @@
-import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
+import { usePermission } from '@/hooks/use-permission';
+import { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Trash2 } from 'lucide-react';
 
 export interface Menu {
@@ -23,6 +24,10 @@ interface Props {
 }
 
 export function MenusTable({ menus, onEdit, onDelete }: Props) {
+    const { can } = usePermission('menu_management');
+    const canEdit = can('edit');
+    const canDelete = can('delete');
+
     const columns: ColumnDef<Menu>[] = [
         {
             id: 'number',
@@ -37,22 +42,30 @@ export function MenusTable({ menus, onEdit, onDelete }: Props) {
             header: () => <div className="text-center">Aksi</div>,
             cell: ({ row }) => {
                 const menu = row.original;
+                if (!canEdit && !canDelete) {
+                    return null;
+                }
+
                 return (
                     <div className="flex justify-center gap-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onEdit(menu)}
-                        >
-                            <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => onDelete(menu)}
-                        >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {canEdit && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onEdit(menu)}
+                            >
+                                <Pencil className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {canDelete && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onDelete(menu)}
+                            >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        )}
                     </div>
                 );
             },
@@ -114,5 +127,12 @@ export function MenusTable({ menus, onEdit, onDelete }: Props) {
         },
     ];
 
-    return <DataTable columns={columns} data={menus} searchKey="name" searchPlaceholder="Cari menu..." />;
+    return (
+        <DataTable
+            columns={columns}
+            data={menus}
+            searchKey="name"
+            searchPlaceholder="Cari menu..."
+        />
+    );
 }

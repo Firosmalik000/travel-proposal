@@ -28,11 +28,73 @@ class PdfRenderer
         ?string $footerView = null,
         array $footerData = [],
     ): Response {
+        return $this->render(
+            view: $view,
+            data: $data,
+            filename: $filename,
+            disposition: 'inline',
+            mpdfConfig: $mpdfConfig,
+            headerView: $headerView,
+            headerData: $headerData,
+            footerView: $footerView,
+            footerData: $footerData,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $headerData
+     * @param  array<string, mixed>  $footerData
+     */
+    public function renderDownload(
+        string $view,
+        array $data,
+        string $filename,
+        array $mpdfConfig = [],
+        ?string $headerView = null,
+        array $headerData = [],
+        ?string $footerView = null,
+        array $footerData = [],
+    ): Response {
+        return $this->render(
+            view: $view,
+            data: $data,
+            filename: $filename,
+            disposition: 'attachment',
+            mpdfConfig: $mpdfConfig,
+            headerView: $headerView,
+            headerData: $headerData,
+            footerView: $footerView,
+            footerData: $footerData,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $mpdfConfig
+     * @param  array<string, mixed>  $headerData
+     * @param  array<string, mixed>  $footerData
+     */
+    private function render(
+        string $view,
+        array $data,
+        string $filename,
+        string $disposition,
+        array $mpdfConfig = [],
+        ?string $headerView = null,
+        array $headerData = [],
+        ?string $footerView = null,
+        array $footerData = [],
+    ): Response {
         $html = view($view, $data)->render();
 
-        $tmpDir = storage_path('app/mpdf');
+        $tmpDir = storage_path('framework/cache');
         if (! File::exists($tmpDir)) {
             File::makeDirectory($tmpDir, recursive: true);
+        }
+
+        if (! File::isWritable($tmpDir)) {
+            $tmpDir = sys_get_temp_dir();
         }
 
         $mpdf = new Mpdf(array_merge([
@@ -63,7 +125,7 @@ class PdfRenderer
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+            'Content-Disposition' => $disposition.'; filename="'.$filename.'"',
             'Cache-Control' => 'private, max-age=0, must-revalidate',
             'Pragma' => 'public',
         ]);

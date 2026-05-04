@@ -7,6 +7,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import packages from '@/routes/packages';
 import { Head, router } from '@inertiajs/react';
@@ -41,6 +42,10 @@ export default function PackagesIndex({
     activityOptions,
 }: Props) {
     const locale: 'id' | 'en' = 'id';
+    const { can } = usePermission('package');
+    const canCreate = can('create');
+    const canEdit = can('edit');
+    const canDelete = can('delete');
     const safePackageList = Array.isArray(packageList) ? packageList : [];
     const safeProductOptions = Array.isArray(productOptions)
         ? productOptions
@@ -56,7 +61,7 @@ export default function PackagesIndex({
         const localizedName =
             typeof pkg.name === 'string'
                 ? pkg.name
-                : (pkg.name?.[locale] || pkg.name?.id || '');
+                : pkg.name?.[locale] || pkg.name?.id || '';
 
         return (
             localizedName.toLowerCase().includes(search.toLowerCase()) ||
@@ -66,6 +71,10 @@ export default function PackagesIndex({
     });
 
     function handleDelete(pkg: Package) {
+        if (!canDelete) {
+            return;
+        }
+
         if (
             !confirm(
                 `Hapus package "${pkg.name?.id || pkg.code}"? Semua jadwal terkait juga akan dihapus.`,
@@ -141,6 +150,22 @@ export default function PackagesIndex({
           ]
         : [];
 
+    function openCreatePackage(): void {
+        if (!canCreate) {
+            return;
+        }
+
+        setEditingPkg('new');
+    }
+
+    function openEditPackage(pkg: Package): void {
+        if (!canEdit) {
+            return;
+        }
+
+        setEditingPkg(pkg);
+    }
+
     return (
         <AppSidebarLayout
             breadcrumbs={[
@@ -160,14 +185,16 @@ export default function PackagesIndex({
                             dan jadwal keberangkatan.
                         </p>
                     </div>
-                    <Button
-                        size="default"
-                        onClick={() => setEditingPkg('new')}
-                        className="shrink-0"
-                    >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah Package
-                    </Button>
+                    {canCreate ? (
+                        <Button
+                            size="default"
+                            onClick={openCreatePackage}
+                            className="shrink-0"
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah Package
+                        </Button>
+                    ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -193,7 +220,7 @@ export default function PackagesIndex({
                     ))}
                 </div>
 
-                <div className="relative max-w-md">
+                <div className="relative w-full max-w-md">
                     <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         className="h-10 pr-4 pl-9"
@@ -224,13 +251,15 @@ export default function PackagesIndex({
                                 : 'Klik "Tambah Package" untuk mulai.'}
                         </p>
                         {!search ? (
-                            <Button
-                                className="mt-4"
-                                onClick={() => setEditingPkg('new')}
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Tambah Package Pertama
-                            </Button>
+                            canCreate ? (
+                                <Button
+                                    className="mt-4"
+                                    onClick={openCreatePackage}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Tambah Package Pertama
+                                </Button>
+                            ) : null
                         ) : null}
                     </div>
                 ) : (
@@ -240,13 +269,13 @@ export default function PackagesIndex({
                                 key={pkg.id}
                                 pkg={pkg}
                                 locale={locale}
-                                onEdit={(selectedPackage) =>
-                                    setEditingPkg(selectedPackage)
-                                }
+                                onEdit={openEditPackage}
                                 onDelete={handleDelete}
                                 onManageSchedules={(selectedPackage) =>
                                     setSchedulePkg(selectedPackage)
                                 }
+                                canEdit={canEdit}
+                                canDelete={canDelete}
                             />
                         ))}
                     </div>
@@ -262,7 +291,7 @@ export default function PackagesIndex({
                     className="w-full overflow-y-auto border-l-0 bg-transparent p-0 shadow-none sm:max-w-[880px]"
                 >
                     <div className="flex min-h-full flex-col bg-background">
-                        <div className="border-b border-border/70 bg-[radial-gradient(circle_at_top_left,_rgba(190,24,93,0.10),_transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] px-6 py-6">
+                        <div className="border-b border-border/70 bg-[radial-gradient(circle_at_top_left,_rgba(190,24,93,0.10),_transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] px-4 py-5 sm:px-6 sm:py-6">
                             <SheetHeader className="p-0 pr-10">
                                 <div className="mb-4 inline-flex w-fit items-center rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold tracking-[0.24em] text-rose-700 uppercase">
                                     {editingPkg === 'new'
@@ -367,7 +396,7 @@ export default function PackagesIndex({
                             </div>
                         </div>
 
-                        <div className="flex-1 bg-[linear-gradient(180deg,rgba(248,250,252,0.86),rgba(255,255,255,1))] px-6 py-6">
+                        <div className="flex-1 bg-[linear-gradient(180deg,rgba(248,250,252,0.86),rgba(255,255,255,1))] px-4 py-5 sm:px-6 sm:py-6">
                             <div className="mx-auto max-w-4xl rounded-[2rem] border border-border/70 bg-card/96 p-5 shadow-[0_20px_60px_-32px_rgba(15,23,42,0.28)] backdrop-blur">
                                 <PackageForm
                                     pkg={editingPackage}

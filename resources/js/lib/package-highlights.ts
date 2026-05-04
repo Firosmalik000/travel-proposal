@@ -5,12 +5,12 @@ import {
     Clock3,
     Hotel,
     MapPin,
-    type LucideIcon,
     Plane,
     ShieldCheck,
     Sparkles,
     Star,
     Users,
+    type LucideIcon,
 } from 'lucide-react';
 
 export type LocalizedText = {
@@ -80,7 +80,10 @@ function hasText(value: LocalizedText): boolean {
     return Boolean(value.id.trim() || value.en.trim());
 }
 
-function normalizeHighlightItem(item: unknown, index: number): PackageHighlightItem | null {
+function normalizeHighlightItem(
+    item: unknown,
+    index: number,
+): PackageHighlightItem | null {
     if (typeof item !== 'object' || item === null) {
         return null;
     }
@@ -101,7 +104,9 @@ function normalizeHighlightItem(item: unknown, index: number): PackageHighlightI
     };
 }
 
-function legacyHighlightContent(content: Record<string, any>): PackageHighlightItem[] {
+function legacyHighlightContent(
+    content: Record<string, any>,
+): PackageHighlightItem[] {
     return [
         {
             id: 'legacy-airline',
@@ -130,11 +135,13 @@ function legacyHighlightContent(content: Record<string, any>): PackageHighlightI
     ].filter((item) => hasText(item.value));
 }
 
-export function normalizePackageHighlights(content: Record<string, any>): PackageHighlightItem[] {
+export function normalizePackageHighlights(
+    content: Record<string, any>,
+): PackageHighlightItem[] {
     const contentHighlights = Array.isArray(content.highlights)
         ? content.highlights
-            .map((item, index) => normalizeHighlightItem(item, index))
-            .filter((item): item is PackageHighlightItem => item !== null)
+              .map((item, index) => normalizeHighlightItem(item, index))
+              .filter((item): item is PackageHighlightItem => item !== null)
         : [];
 
     if (contentHighlights.length > 0) {
@@ -144,7 +151,9 @@ export function normalizePackageHighlights(content: Record<string, any>): Packag
     return legacyHighlightContent(content);
 }
 
-export function normalizePackageContent(content: Record<string, any>): Record<string, any> {
+export function normalizePackageContent(
+    content: Record<string, any>,
+): Record<string, any> {
     return {
         ...content,
         highlights: normalizePackageHighlights(content),

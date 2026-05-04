@@ -130,7 +130,7 @@ export default function Jadwal() {
             <MotionSection className="relative isolate overflow-hidden pb-16 sm:pb-20">
                 <div className="pointer-events-none absolute inset-0 -z-10">
                     <IslamicOrnamentKhatam className="absolute top-[12%] left-[-6%] h-[18rem] w-[18rem] -rotate-[8deg] text-primary/10 sm:h-[22rem] sm:w-[22rem]" />
-                    <IslamicOrnamentOttomanAccent className="absolute bottom-[-34%] right-[-8%] h-[22rem] w-[22rem] rotate-[14deg] text-accent/10 sm:h-[28rem] sm:w-[28rem]" />
+                    <IslamicOrnamentOttomanAccent className="absolute right-[-8%] bottom-[-34%] h-[22rem] w-[22rem] rotate-[14deg] text-accent/10 sm:h-[28rem] sm:w-[28rem]" />
                 </div>
                 <div className="container mx-auto px-4 sm:px-6">
                     <MotionCard className="rounded-2xl border border-border bg-card/90 shadow-sm">

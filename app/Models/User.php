@@ -4,16 +4,16 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, HasRoles, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -54,14 +54,6 @@ class User extends Authenticatable
         ];
     }
 
-    /**
-     * Get all user accesses for this user.
-     */
-    public function userAccesses(): HasMany
-    {
-        return $this->hasMany(UserAccess::class);
-    }
-
     public function profile(): HasOne
     {
         return $this->hasOne(UserProfile::class);
@@ -82,6 +74,10 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
+        if ($this->hasRole('Super Admin')) {
+            return true;
+        }
+
         return $this->email === 'admin@asfartour.co.id' || $this->username === 'admin';
     }
 

@@ -14,8 +14,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { MoreHorizontal, Plus, Search } from 'lucide-react';
 import { useState } from 'react';
 
@@ -91,6 +92,10 @@ export default function ArticleIndex({
         featured: number;
     };
 }) {
+    const { can } = usePermission('articles_management');
+    const canCreate = can('create');
+    const canEdit = can('edit');
+    const canDelete = can('delete');
     const [search, setSearch] = useState(filters.search);
     const [status, setStatus] = useState(filters.status);
     const [contentType, setContentType] = useState(filters.content_type);
@@ -119,6 +124,10 @@ export default function ArticleIndex({
     };
 
     const destroyArticle = (articleId: number) => {
+        if (!canDelete) {
+            return;
+        }
+
         if (!window.confirm('Hapus artikel ini?')) {
             return;
         }
@@ -130,6 +139,10 @@ export default function ArticleIndex({
 
     const handleArticleAction = (action: string, article: ArticleRow) => {
         if (action === 'edit') {
+            if (!canEdit) {
+                return;
+            }
+
             openDrawer(
                 `/admin/website-management/articles/${article.id}/edit`,
                 'Edit Artikel',
@@ -171,20 +184,22 @@ export default function ArticleIndex({
                             artikel edukasi umrah dari satu modul editorial.
                         </p>
                     </div>
-                    <Button asChild>
-                        <button
-                            type="button"
-                            onClick={() =>
-                                openDrawer(
-                                    '/admin/website-management/articles/create',
-                                    'Artikel Baru',
-                                )
-                            }
-                        >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Artikel Baru
-                        </button>
-                    </Button>
+                    {canCreate ? (
+                        <Button asChild>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    openDrawer(
+                                        '/admin/website-management/articles/create',
+                                        'Artikel Baru',
+                                    )
+                                }
+                            >
+                                <Plus className="mr-2 h-4 w-4" />
+                                Artikel Baru
+                            </button>
+                        </Button>
+                    ) : null}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-4">
@@ -299,7 +314,9 @@ export default function ArticleIndex({
                             router.reload({
                                 preserveScroll: true,
                                 preserveState: true,
-                            });
+                            } as unknown as Parameters<
+                                typeof router.reload
+                            >[0]);
                         }
                     }}
                 >
@@ -569,15 +586,19 @@ export default function ArticleIndex({
                                                         </div>
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        <SelectItem value="edit">
-                                                            Edit artikel
-                                                        </SelectItem>
+                                                        {canEdit ? (
+                                                            <SelectItem value="edit">
+                                                                Edit artikel
+                                                            </SelectItem>
+                                                        ) : null}
                                                         <SelectItem value="preview">
                                                             Preview artikel
                                                         </SelectItem>
-                                                        <SelectItem value="delete">
-                                                            Hapus artikel
-                                                        </SelectItem>
+                                                        {canDelete ? (
+                                                            <SelectItem value="delete">
+                                                                Hapus artikel
+                                                            </SelectItem>
+                                                        ) : null}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -635,4 +656,3 @@ export default function ArticleIndex({
         </AppSidebarLayout>
     );
 }
-

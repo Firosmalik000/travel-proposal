@@ -1,11 +1,18 @@
-import {
+﻿import {
     MotionCard,
     MotionGroup,
     MotionSection,
 } from '@/components/public-motion';
 import PublicLayout from '@/layouts/PublicLayout';
 import { formatDate, localize } from '@/lib/public-content';
-import { Head, Link } from '@inertiajs/react';
+import {
+    absoluteUrl,
+    canonicalUrl,
+    jsonLdArticle,
+    jsonLdBreadcrumb,
+} from '@/lib/seo-jsonld';
+import { type SharedData } from '@/types';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 type ArticleItem = {
     id: number;
@@ -63,6 +70,9 @@ export default function ArticleShow({
 }) {
     const locale: 'id' | 'en' = 'id';
     const t = content[locale];
+    const page = usePage<SharedData>();
+    const seo = (page.props.seoSettings as Record<string, any>) ?? {};
+
     const articleTitle = localize(
         article.meta_title || article.title,
         locale,
@@ -75,13 +85,82 @@ export default function ArticleShow({
     );
     const articleBody = localize(article.body, locale);
 
+    const canonical = canonicalUrl(seo, page.url);
+    const ogImageCandidate =
+        article.og_image_path || article.image_path || null;
+    const ogImage = ogImageCandidate
+        ? absoluteUrl(seo?.advanced?.canonicalBase, ogImageCandidate)
+        : null;
+
+    const breadcrumbJsonLd = jsonLdBreadcrumb([
+        { name: 'Home', url: canonicalUrl(seo, '/') },
+        { name: 'Artikel', url: canonicalUrl(seo, '/artikel') },
+        { name: articleTitle, url: canonical },
+    ]);
+
+    const articleJsonLd = jsonLdArticle({
+        headline: articleTitle,
+        description: articleDescription,
+        url: canonical,
+        image: ogImage,
+        datePublished: article.published_at ?? null,
+        authorName: article.author_name ?? null,
+    });
+
     return (
         <PublicLayout>
             <Head title={articleTitle}>
-                <meta name="description" content={articleDescription} />
-                {article.og_image_path ? (
-                    <meta property="og:image" content={article.og_image_path} />
+                <meta
+                    name="description"
+                    content={articleDescription}
+                    head-key="meta-description"
+                />
+                <meta property="og:type" content="article" head-key="og-type" />
+                <meta
+                    property="og:title"
+                    content={articleTitle}
+                    head-key="og-title"
+                />
+                <meta
+                    property="og:description"
+                    content={articleDescription}
+                    head-key="og-description"
+                />
+                {canonical ? (
+                    <link
+                        rel="canonical"
+                        href={canonical}
+                        head-key="link-canonical"
+                    />
                 ) : null}
+                {canonical ? (
+                    <meta
+                        property="og:url"
+                        content={canonical}
+                        head-key="og-url"
+                    />
+                ) : null}
+                {ogImage ? (
+                    <meta
+                        property="og:image"
+                        content={ogImage}
+                        head-key="og-image"
+                    />
+                ) : null}
+                <script
+                    type="application/ld+json"
+                    head-key="jsonld-breadcrumb"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(breadcrumbJsonLd),
+                    }}
+                />
+                <script
+                    type="application/ld+json"
+                    head-key="jsonld-article"
+                    dangerouslySetInnerHTML={{
+                        __html: JSON.stringify(articleJsonLd),
+                    }}
+                />
             </Head>
 
             <MotionSection className="mx-auto w-full max-w-4xl px-4 pt-6 pb-10 sm:px-6">

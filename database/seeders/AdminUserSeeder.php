@@ -2,92 +2,36 @@
 
 namespace Database\Seeders;
 
-use App\Models\Menu;
 use App\Models\User;
-use App\Models\UserAccess;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class AdminUserSeeder extends Seeder
 {
-    /**
-     * @var array<int, string>
-     */
-    private array $allPermissions = ['view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'reject'];
-
     public function run(): void
     {
-        $menus = Menu::query()->orderBy('order')->get();
-        $adminAccess = [];
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        foreach ($menus as $menu) {
-            foreach ($this->extractAllMenuKeys($menu) as $menuKey) {
-                $adminAccess[$menuKey] = $this->allPermissions;
-            }
-        }
+        $this->assignRoleToUserEmail('operasional@asfartour.co.id', 'Operasional');
+        $this->assignRoleToUserEmail('marketing@asfartour.co.id', 'ContentEditor');
+        $this->assignRoleToUserEmail('cs@asfartour.co.id', 'CS');
+        $this->assignRoleToUserEmail('admin@asfartour.co.id', 'Super Admin');
 
-        $this->syncAccess('admin@asfartour.co.id', $adminAccess);
+        $noAccessRole = Role::query()->firstOrCreate(['name' => 'NoAccess', 'guard_name' => 'web']);
+        $noAccessRole->syncPermissions([]);
 
-        $websiteManagementPermissions = [
-            'dashboard' => ['view'],
-            'website_management' => ['view'],
-            'landing_page' => ['view', 'create', 'edit'],
-            'content_management' => ['view', 'create', 'edit'],
-            'gallery_management' => ['view', 'create', 'edit'],
-            'product_management' => ['view'],
-            'product_category' => ['view', 'create', 'edit'],
-            'product' => ['view', 'create', 'edit'],
-            'package' => ['view', 'create', 'edit'],
-            'seo_settings' => ['view', 'edit'],
-            'branding' => ['view', 'edit'],
-        ];
-
-        $contentEditorPermissions = [
-            'dashboard' => ['view'],
-            'website_management' => ['view'],
-            'landing_page' => ['view', 'edit'],
-            'content_management' => ['view', 'create', 'edit'],
-            'gallery_management' => ['view', 'create', 'edit'],
-            'product_management' => ['view'],
-            'product_category' => ['view'],
-            'product' => ['view'],
-            'package' => ['view'],
-        ];
-
-        $this->syncAccess('operasional@asfartour.co.id', $websiteManagementPermissions);
-        $this->syncAccess('marketing@asfartour.co.id', $contentEditorPermissions);
-        $this->syncAccess('cs@asfartour.co.id', $contentEditorPermissions);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    private function extractAllMenuKeys(Menu $menu): array
-    {
-        $keys = [$menu->menu_key];
-
-        foreach ($menu->children ?? [] as $child) {
-            if (isset($child['menu_key'])) {
-                $keys[] = $child['menu_key'];
-            }
-
-            foreach ($child['children'] ?? [] as $grandChild) {
-                if (isset($grandChild['menu_key'])) {
-                    $keys[] = $grandChild['menu_key'];
-                }
-            }
-        }
-
-        return array_values(array_unique(array_filter($keys)));
-    }
-
-    private function syncAccess(string $email, array $access): void
+    private function assignRoleToUserEmail(string $email, string $roleName): void
     {
         $user = User::query()->where('email', $email)->first();
-
         if (! $user) {
             return;
         }
 
-        UserAccess::query()->updateOrCreate(
-            ['user_id' => $user->id],
-            ['access' => $access],
-        );
+        $role = Role::query()->firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+        $user->syncRoles([$role->name]);
     }
 }

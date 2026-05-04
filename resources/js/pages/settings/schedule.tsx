@@ -56,13 +56,11 @@ export default function Schedule({ settings }: Props) {
                             <CardHeader className="gap-3">
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="space-y-1">
-                                        <CardTitle>
-                                            Auto Cancellation
-                                        </CardTitle>
+                                        <CardTitle>Auto Cancellation</CardTitle>
                                         <p className="text-sm text-muted-foreground">
-                                            Aktifkan atau nonaktifkan proses auto
-                                            cancellation yang dijalankan oleh
-                                            scheduler server.
+                                            Aktifkan atau nonaktifkan proses
+                                            auto cancellation yang dijalankan
+                                            oleh scheduler server.
                                         </p>
                                     </div>
                                     <Badge
@@ -91,15 +89,14 @@ export default function Schedule({ settings }: Props) {
                                         <p className="text-sm text-muted-foreground">
                                             Saat aktif, command scheduler bisa
                                             melanjutkan proses pembatalan
-                                            otomatis. Saat nonaktif, command bisa
-                                            dilewati dari sisi aplikasi.
+                                            otomatis. Saat nonaktif, command
+                                            bisa dilewati dari sisi aplikasi.
                                         </p>
                                     </div>
                                     <Switch
                                         id="auto_cancellation_enabled"
                                         checked={
-                                            form.data
-                                                .auto_cancellation_enabled
+                                            form.data.auto_cancellation_enabled
                                         }
                                         onCheckedChange={(checked) =>
                                             form.setData(
@@ -112,10 +109,7 @@ export default function Schedule({ settings }: Props) {
 
                                 {form.errors.auto_cancellation_enabled && (
                                     <p className="text-sm text-destructive">
-                                        {
-                                            form.errors
-                                                .auto_cancellation_enabled
-                                        }
+                                        {form.errors.auto_cancellation_enabled}
                                     </p>
                                 )}
 

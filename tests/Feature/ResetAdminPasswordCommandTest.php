@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Menu;
-use App\Models\UserAccess;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -38,16 +38,13 @@ class ResetAdminPasswordCommandTest extends TestCase
             '--password' => 'secret123',
         ])->assertSuccessful();
 
-        $access = UserAccess::query()
-            ->whereHas('user', fn ($query) => $query->where('email', 'admin@asfartour.co.id'))
-            ->first();
+        $user = User::query()->where('email', 'admin@asfartour.co.id')->first();
 
-        $this->assertNotNull($access);
-        $this->assertArrayHasKey('website_management', $access->access);
-        $this->assertArrayHasKey('articles_management', $access->access);
-        $this->assertContains('view', $access->access['articles_management']);
-        $this->assertContains('create', $access->access['articles_management']);
-        $this->assertContains('edit', $access->access['articles_management']);
-        $this->assertContains('delete', $access->access['articles_management']);
+        $this->assertNotNull($user);
+        $this->assertTrue($user->can('menu.website_management.view'));
+        $this->assertTrue($user->can('menu.articles_management.view'));
+        $this->assertTrue($user->can('menu.articles_management.create'));
+        $this->assertTrue($user->can('menu.articles_management.edit'));
+        $this->assertTrue($user->can('menu.articles_management.delete'));
     }
 }

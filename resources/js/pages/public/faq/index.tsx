@@ -47,7 +47,9 @@ export default function Faq() {
                   a: localize(item.answer, locale),
               }))
             : t.faqs;
-    const normalizedFaqs = faqs.filter((item) => Boolean(item?.q) && Boolean(item?.a));
+    const normalizedFaqs = faqs.filter(
+        (item) => Boolean(item?.q) && Boolean(item?.a),
+    );
 
     return (
         <PublicLayout>

@@ -17,7 +17,7 @@ class BookingRegistrationNotifier
 
     private function sendEmailNotification(PackageRegistration $registration): void
     {
-        $notificationEmail = config('services.booking.notification_email');
+        $notificationEmail = config('services.notifications.admin_email');
 
         if (! is_string($notificationEmail) || $notificationEmail === '') {
             return;

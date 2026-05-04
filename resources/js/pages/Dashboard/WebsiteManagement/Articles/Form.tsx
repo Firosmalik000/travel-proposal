@@ -5,7 +5,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Textarea } from '@/components/ui/textarea';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type Option = {
     value: string;
@@ -267,26 +267,13 @@ export default function ArticleForm({
     const previewExcerpt = form.data.excerpt;
     const previewBody = form.data.body;
     const previewMetaTitle = form.data.meta_title || previewTitle;
-    const previewMetaDescription =
-        form.data.meta_description || previewExcerpt;
+    const previewMetaDescription = form.data.meta_description || previewExcerpt;
     const previewReadingTime = estimateReadingTime(previewBody);
     const previewParagraphs = paragraphBlocks(previewBody);
-    const titleStatus = resolveFieldStatus(
-        form.data.title,
-        '',
-    );
-    const excerptStatus = resolveFieldStatus(
-        form.data.excerpt,
-        '',
-    );
-    const bodyStatus = resolveFieldStatus(
-        form.data.body,
-        '',
-    );
-    const metaTitleStatus = resolveFieldStatus(
-        form.data.meta_title,
-        '',
-    );
+    const titleStatus = resolveFieldStatus(form.data.title, '');
+    const excerptStatus = resolveFieldStatus(form.data.excerpt, '');
+    const bodyStatus = resolveFieldStatus(form.data.body, '');
+    const metaTitleStatus = resolveFieldStatus(form.data.meta_title, '');
     const metaDescriptionStatus = resolveFieldStatus(
         form.data.meta_description,
         '',
@@ -353,8 +340,8 @@ export default function ArticleForm({
                                     Konten Artikel
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    Lengkapi konten artikel untuk ditampilkan
-                                    di halaman public.
+                                    Lengkapi konten artikel untuk ditampilkan di
+                                    halaman public.
                                 </p>
                             </div>
                             <div className="space-y-2">
@@ -369,7 +356,10 @@ export default function ArticleForm({
                                 <Input
                                     value={form.data.title}
                                     onChange={(event) =>
-                                        form.setData('title', event.target.value)
+                                        form.setData(
+                                            'title',
+                                            event.target.value,
+                                        )
                                     }
                                 />
                                 <p className="text-xs text-muted-foreground">
@@ -407,7 +397,10 @@ export default function ArticleForm({
                                     rows={4}
                                     value={form.data.excerpt}
                                     onChange={(event) =>
-                                        form.setData('excerpt', event.target.value)
+                                        form.setData(
+                                            'excerpt',
+                                            event.target.value,
+                                        )
                                     }
                                 />
                                 <p className="text-xs text-muted-foreground">
@@ -496,7 +489,10 @@ export default function ArticleForm({
                                 <Input
                                     value={form.data.meta_title}
                                     onChange={(event) =>
-                                        form.setData('meta_title', event.target.value)
+                                        form.setData(
+                                            'meta_title',
+                                            event.target.value,
+                                        )
                                     }
                                 />
                                 <p className="text-xs text-muted-foreground">
@@ -516,7 +512,10 @@ export default function ArticleForm({
                                     rows={4}
                                     value={form.data.meta_description}
                                     onChange={(event) =>
-                                        form.setData('meta_description', event.target.value)
+                                        form.setData(
+                                            'meta_description',
+                                            event.target.value,
+                                        )
                                     }
                                 />
                                 <p className="text-xs text-muted-foreground">
@@ -807,4 +806,3 @@ export default function ArticleForm({
         </AppSidebarLayout>
     );
 }
-

@@ -4,8 +4,9 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { initializeTheme } from './hooks/use-appearance';
 import { Toaster } from 'sonner';
+import { initializeTheme } from './hooks/use-appearance';
+import RootLayout from './layouts/root-layout';
 
 const rawAppName = import.meta.env.VITE_APP_NAME || 'Travel Proposal';
 const appName = rawAppName
@@ -18,7 +19,15 @@ createInertiaApp({
         resolvePageComponent(
             `./pages/${name}.tsx`,
             import.meta.glob('./pages/**/*.tsx'),
-        ),
+        ).then((module: any) => {
+            const page: any = module.default;
+            page.layout =
+                page.layout ??
+                ((pageEl: React.ReactNode) => (
+                    <RootLayout>{pageEl}</RootLayout>
+                ));
+            return module;
+        }),
     setup({ el, App, props }) {
         const root = createRoot(el);
 

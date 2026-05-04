@@ -34,6 +34,10 @@
                 <td><strong>{{ $filters['package_label'] }}</strong></td>
             </tr>
             <tr>
+                <td>Tipe Booking</td>
+                <td><strong>{{ $filters['booking_type'] ?? 'regular' }}</strong></td>
+            </tr>
+            <tr>
                 <td>Pencarian</td>
                 <td><strong>{{ $filters['search'] !== '' ? $filters['search'] : '-' }}</strong></td>
             </tr>
@@ -53,6 +57,8 @@
                     <th>Nama</th>
                     <th style="width: 14%">WhatsApp</th>
                     <th style="width: 14%">Kota Asal</th>
+                    <th style="width: 6%">Pax</th>
+                    <th style="width: 12%">Revenue</th>
                     <th style="width: 17%">Paket</th>
                     <th style="width: 13%">Berangkat</th>
                 </tr>
@@ -65,16 +71,20 @@
                         <td>{{ $row['full_name'] }}</td>
                         <td>{{ $row['phone'] }}</td>
                         <td>{{ $row['origin_city'] }}</td>
+                        <td style="text-align: right">{{ $row['pax'] ?? '-' }}</td>
+                        <td style="text-align: right">
+                            {{ $row['revenue']['currency'] ?? 'IDR' }}
+                            {{ number_format((float) ($row['revenue']['amount'] ?? 0), 0, ',', '.') }}
+                        </td>
                         <td>{{ $row['package'] }}</td>
                         <td>{{ $row['departure'] }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="muted">Tidak ada data.</td>
+                        <td colspan="9" class="muted">Tidak ada data.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 @endsection
-

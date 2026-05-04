@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Administrator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Menu;
-use App\Models\UserAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -157,8 +156,20 @@ class MenuController extends Controller
         $user = $request->user();
         \Log::info('🔍 Getting menus for user:', ['user_id' => $user->id, 'email' => $user->email]);
 
-        // Get user's accessible menu keys (those with 'view' permission)
-        $accessibleMenuKeys = UserAccess::getAccessibleMenus($user->id);
+        // Get all menus (all are parent level with JSON children)
+        $menus = $this->normalizeSidebarMenus(Menu::query()->orderBy('order')->get());
+        \Log::info('📋 Total menus in database:', ['count' => $menus->count()]);
+
+        $leafMenuKeys = $menus
+            ->flatMap(fn (array $menu): array => $this->extractLeafMenuKeys($menu))
+            ->unique()
+            ->values();
+
+        $accessibleMenuKeys = $leafMenuKeys
+            ->filter(fn (string $menuKey): bool => $user->can('menu.'.$menuKey.'.view'))
+            ->values()
+            ->all();
+
         \Log::info('🔑 Accessible menu keys:', ['keys' => $accessibleMenuKeys, 'count' => count($accessibleMenuKeys)]);
 
         if (empty($accessibleMenuKeys)) {
@@ -166,10 +177,6 @@ class MenuController extends Controller
 
             return response()->json([]);
         }
-
-        // Get all menus (all are parent level with JSON children)
-        $menus = $this->normalizeSidebarMenus(Menu::query()->orderBy('order')->get());
-        \Log::info('📋 Total menus in database:', ['count' => $menus->count()]);
 
         // Filter and build accessible menu structure
         $hierarchicalMenus = $menus->map(function ($menu) use ($accessibleMenuKeys) {
@@ -179,6 +186,25 @@ class MenuController extends Controller
         \Log::info('✅ Filtered menus to return:', ['count' => $hierarchicalMenus->count(), 'menus' => $hierarchicalMenus->toArray()]);
 
         return response()->json($hierarchicalMenus);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractLeafMenuKeys(array $menu): array
+    {
+        $children = $menu['children'] ?? null;
+
+        if (is_array($children) && ! empty($children)) {
+            return collect($children)
+                ->flatMap(fn (array $child): array => $this->extractLeafMenuKeys($child))
+                ->values()
+                ->all();
+        }
+
+        $menuKey = $menu['menu_key'] ?? null;
+
+        return is_string($menuKey) && $menuKey !== '' ? [$menuKey] : [];
     }
 
     /**

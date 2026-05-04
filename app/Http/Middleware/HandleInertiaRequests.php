@@ -14,7 +14,7 @@ use App\Models\TeamMember;
 use App\Models\Testimonial;
 use App\Models\TravelPackage;
 use App\Models\TravelService;
-use App\Models\UserAccess;
+use App\Models\User;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -54,15 +54,41 @@ class HandleInertiaRequests extends Middleware
         // Get user permissions if logged in
         $userPermissions = null;
         $user = $request->user();
+        $impersonator = null;
+        $isImpersonating = false;
 
         if ($user) {
-            $rawPermissions = UserAccess::getAllAccessForUser($user->id);
-            $userPermissions = [];
-            foreach ($rawPermissions as $menuKey => $permissions) {
-                $userPermissions[$menuKey] = is_array($permissions) ? array_values($permissions) : [];
-            }
+            $userPermissions = $user
+                ->getAllPermissions()
+                ->pluck('name')
+                ->filter(fn (string $name): bool => str_starts_with($name, 'menu.'))
+                ->reduce(function (array $carry, string $name): array {
+                    $parts = explode('.', $name, 3);
+                    if (count($parts) !== 3) {
+                        return $carry;
+                    }
+
+                    [$prefix, $menuKey, $action] = $parts;
+                    if ($prefix !== 'menu') {
+                        return $carry;
+                    }
+
+                    $carry[$menuKey] ??= [];
+                    if (! in_array($action, $carry[$menuKey], true)) {
+                        $carry[$menuKey][] = $action;
+                    }
+
+                    return $carry;
+                }, []);
 
             $user->load('profile');
+        }
+
+        /** @var int|null $impersonatorId */
+        $impersonatorId = $request->session()->get('impersonator_id');
+        if ($impersonatorId) {
+            $impersonator = User::query()->find($impersonatorId);
+            $isImpersonating = $impersonator !== null;
         }
 
         $brandingDefaults = [
@@ -93,6 +119,16 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user,
                 'permissions' => $userPermissions,
+                'impersonation' => [
+                    'is_impersonating' => $isImpersonating,
+                    'impersonator' => $impersonator
+                        ? [
+                            'id' => $impersonator->id,
+                            'name' => $impersonator->name,
+                            'email' => $impersonator->email,
+                        ]
+                        : null,
+                ],
             ],
             'branding' => $branding,
             'seoSettings' => $seoSettings,
@@ -134,7 +170,9 @@ class HandleInertiaRequests extends Middleware
                         ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
                         'passenger_count',
                     ),
-                    'testimonials:id,package_id,rating',
+                    'testimonials' => fn ($query) => $query
+                        ->where('is_active', true)
+                        ->select(['id', 'package_id', 'rating']),
                 ])
                 ->where('is_active', true)
                 ->orderByDesc('is_featured')
@@ -157,7 +195,9 @@ class HandleInertiaRequests extends Middleware
                     'summary' => $package->summary,
                     'content' => $package->content,
                     'is_featured' => $package->is_featured,
-                    'rating_avg' => $package->testimonials->avg('rating') ? round($package->testimonials->avg('rating'), 1) : null,
+                    'rating_avg' => $package->testimonials->avg('rating')
+                        ? round($package->testimonials->avg('rating'), 1)
+                        : null,
                     'rating_count' => $package->testimonials->count(),
                     'products' => $package->products->map(fn ($product): array => [
                         'name' => $product->name,

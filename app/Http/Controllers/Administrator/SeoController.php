@@ -38,10 +38,33 @@ class SeoController extends Controller
         );
 
         $content = is_array($settings->content) ? $settings->content : [];
+
+        $siteNameId = $request->string('site_name_id')->value() ?: $request->string('site_name')->value();
+        $siteNameEn = $request->string('site_name_en')->value() ?: $siteNameId;
+        $taglineId = $request->string('tagline_id')->value() ?: $request->string('tagline')->value();
+        $taglineEn = $request->string('tagline_en')->value() ?: $taglineId;
+        $defaultDescriptionId = $request->string('default_description_id')->value() ?: $request->string('default_description')->value();
+        $defaultDescriptionEn = $request->string('default_description_en')->value() ?: $defaultDescriptionId;
+        $addressId = $request->string('address_id')->value() ?: $request->string('address')->value();
+        $addressEn = $request->string('address_en')->value() ?: $addressId;
+        $ogTitleId = $request->string('og_title_id')->value() ?: $request->string('og_title')->value();
+        $ogTitleEn = $request->string('og_title_en')->value() ?: $ogTitleId;
+        $ogDescriptionId = $request->string('og_description_id')->value() ?: $request->string('og_description')->value();
+        $ogDescriptionEn = $request->string('og_description_en')->value() ?: $ogDescriptionId;
+
         $content['general'] = [
-            'siteName' => $request->string('site_name')->value(),
-            'tagline' => $request->string('tagline')->value(),
-            'defaultDescription' => $request->string('default_description')->value(),
+            'siteName' => [
+                'id' => $siteNameId,
+                'en' => $siteNameEn,
+            ],
+            'tagline' => [
+                'id' => $taglineId,
+                'en' => $taglineEn,
+            ],
+            'defaultDescription' => [
+                'id' => $defaultDescriptionId,
+                'en' => $defaultDescriptionEn,
+            ],
             'keywords' => $request->string('keywords')->value(),
         ];
         $content['contact'] = [
@@ -50,7 +73,10 @@ class SeoController extends Controller
             'whatsapp' => $request->string('whatsapp')->value(),
             'email' => $request->string('email')->value(),
             'address' => [
-                'full' => $request->string('address')->value(),
+                'full' => [
+                    'id' => $addressId,
+                    'en' => $addressEn,
+                ],
                 'mapLink' => $request->string('map_link')->value(),
             ],
             'operatingHours' => [
@@ -63,8 +89,14 @@ class SeoController extends Controller
             'accounts' => is_array($request->input('social_accounts'))
                 ? $request->input('social_accounts')
                 : json_decode($request->string('social_accounts')->value() ?: '[]', true) ?? [],
-            'ogTitle' => $request->string('og_title')->value(),
-            'ogDescription' => $request->string('og_description')->value(),
+            'ogTitle' => [
+                'id' => $ogTitleId,
+                'en' => $ogTitleEn,
+            ],
+            'ogDescription' => [
+                'id' => $ogDescriptionId,
+                'en' => $ogDescriptionEn,
+            ],
         ];
         $content['advanced'] = [
             'robotsDefault' => $request->string('robots_default')->value(),
@@ -108,6 +140,7 @@ class SeoController extends Controller
         $logoPath = Arr::get($settings, 'contact.logo.path');
         if ($logoPath) {
             Arr::set($settings, 'contact.logo.url', Storage::url($logoPath));
+            Arr::set($settings, 'contact.logo.is_fallback', false);
         }
 
         $ogImagePath = Arr::get($settings, 'social.ogImage.path');
@@ -115,6 +148,30 @@ class SeoController extends Controller
             Arr::set($settings, 'social.ogImage.url', Storage::url($ogImagePath));
         }
 
+        if (! Arr::get($settings, 'contact.logo.url')) {
+            Arr::set($settings, 'contact.logo.url', $this->resolveBrandingLogoUrl());
+            Arr::set($settings, 'contact.logo.is_fallback', true);
+        }
+
         return $settings;
+    }
+
+    private function resolveBrandingLogoUrl(): string
+    {
+        $defaults = [
+            'logo_path' => (string) config('branding.logo_path'),
+        ];
+
+        $overrides = PageContent::query()
+            ->where('slug', 'branding-settings')
+            ->value('content');
+
+        if (! is_array($overrides)) {
+            return $defaults['logo_path'];
+        }
+
+        return isset($overrides['logo_path'])
+            ? '/storage/'.$overrides['logo_path']
+            : $defaults['logo_path'];
     }
 }

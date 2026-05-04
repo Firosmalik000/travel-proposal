@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -14,7 +14,8 @@
         'Noto Color Emoji';
     --font-auth-sans: var(--font-sans);
     --font-auth-display:
-        'Plus Jakarta Sans', 'Inter', 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+        'Plus Jakarta Sans', 'Inter', 'Segoe UI', ui-sans-serif, system-ui,
+        sans-serif;
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -170,12 +171,15 @@
 
     body {
         @apply bg-background text-foreground;
-        font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
 
-    h1, h2, h3, h4 {
+    h1,
+    h2,
+    h3,
+    h4 {
         font-family: var(--font-auth-display);
         letter-spacing: -0.02em;
     }

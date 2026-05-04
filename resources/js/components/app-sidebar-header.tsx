@@ -1,8 +1,6 @@
 import AppearanceSwitch from '@/components/appearance-switch';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import {
-    type BreadcrumbItem as BreadcrumbItemType,
-} from '@/types';
+import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 export function AppSidebarHeader({
     breadcrumbs = [],
@@ -17,14 +15,14 @@ export function AppSidebarHeader({
                 <SidebarTrigger className="-ml-1 rounded-xl border border-border/60 bg-background/50 text-foreground shadow-sm transition-all hover:bg-background hover:shadow-md" />
                 <div className="h-6 w-px bg-border/60" />
                 <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-foreground sm:text-lg tracking-tight">
+                    <p className="truncate text-sm font-bold tracking-tight text-foreground sm:text-lg">
                         {pageTitle}
                     </p>
                 </div>
             </div>
 
             <div className="flex shrink-0 items-center gap-4">
-                <div className="hidden sm:flex flex-col items-end leading-none">
+                <div className="hidden flex-col items-end leading-none sm:flex">
                     <p className="text-[0.65rem] font-bold tracking-[0.2em] text-muted-foreground uppercase opacity-80">
                         Admin Workspace
                     </p>
@@ -32,7 +30,7 @@ export function AppSidebarHeader({
                         Asfar Tour & Travel
                     </p>
                 </div>
-                <div className="h-8 w-px bg-border/60 mx-1 hidden sm:block" />
+                <div className="mx-1 hidden h-8 w-px bg-border/60 sm:block" />
                 <AppearanceSwitch />
             </div>
         </header>

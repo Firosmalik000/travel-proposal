@@ -3,6 +3,11 @@ import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
     user: User;
+    permissions?: Record<string, string[]> | null;
+    impersonation?: {
+        is_impersonating: boolean;
+        impersonator: { id: number; name: string; email: string } | null;
+    };
 }
 
 export interface BreadcrumbItem {

@@ -285,54 +285,57 @@ export default function Paket() {
 
                     <div className="container mx-auto px-4 sm:px-6">
                         <div className="grid gap-5 rounded-3xl border border-border bg-card/90 p-5 shadow-sm sm:grid-cols-2 sm:p-7 md:grid-cols-2 lg:grid-cols-3">
-                    <FilterSelect
-                        label={t.filters.month}
-                        value={selectedMonth}
-                        onChange={setSelectedMonth}
-                        options={months}
-                        allLabel={t.filters.all}
-                    />
-                    <FilterSelect
-                        label={t.filters.city}
-                        value={selectedCity}
-                        onChange={setSelectedCity}
-                        options={cities}
-                        allLabel={t.filters.all}
-                    />
-                    <FilterSelect
-                        label={t.filters.duration}
-                        value={selectedDuration}
-                        onChange={setSelectedDuration}
-                        options={durations}
-                        allLabel={t.filters.all}
-                    />
-                    <label className="text-[0.65rem] font-bold tracking-[0.2em] text-muted-foreground uppercase sm:text-xs">
-                        {t.filters.budget}
-                        <input
-                            className="mt-2.5 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
-                            placeholder={t.filters.budgetPlaceholder}
-                            value={budgetValue}
-                            onChange={(event) =>
-                                setBudgetValue(
-                                    event.target.value.replace(/[^\d]/g, ''),
-                                )
-                            }
-                        />
-                    </label>
-                    <FilterSelect
-                        label={t.filters.hotel}
-                        value={selectedHotel}
-                        onChange={setSelectedHotel}
-                        options={hotels}
-                        allLabel={t.filters.all}
-                    />
-                    <FilterSelect
-                        label={t.filters.airline}
-                        value={selectedAirline}
-                        onChange={setSelectedAirline}
-                        options={airlines}
-                        allLabel={t.filters.all}
-                    />
+                            <FilterSelect
+                                label={t.filters.month}
+                                value={selectedMonth}
+                                onChange={setSelectedMonth}
+                                options={months}
+                                allLabel={t.filters.all}
+                            />
+                            <FilterSelect
+                                label={t.filters.city}
+                                value={selectedCity}
+                                onChange={setSelectedCity}
+                                options={cities}
+                                allLabel={t.filters.all}
+                            />
+                            <FilterSelect
+                                label={t.filters.duration}
+                                value={selectedDuration}
+                                onChange={setSelectedDuration}
+                                options={durations}
+                                allLabel={t.filters.all}
+                            />
+                            <label className="text-[0.65rem] font-bold tracking-[0.2em] text-muted-foreground uppercase sm:text-xs">
+                                {t.filters.budget}
+                                <input
+                                    className="mt-2.5 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/10 focus:outline-none"
+                                    placeholder={t.filters.budgetPlaceholder}
+                                    value={budgetValue}
+                                    onChange={(event) =>
+                                        setBudgetValue(
+                                            event.target.value.replace(
+                                                /[^\d]/g,
+                                                '',
+                                            ),
+                                        )
+                                    }
+                                />
+                            </label>
+                            <FilterSelect
+                                label={t.filters.hotel}
+                                value={selectedHotel}
+                                onChange={setSelectedHotel}
+                                options={hotels}
+                                allLabel={t.filters.all}
+                            />
+                            <FilterSelect
+                                label={t.filters.airline}
+                                value={selectedAirline}
+                                onChange={setSelectedAirline}
+                                options={airlines}
+                                allLabel={t.filters.all}
+                            />
                         </div>
 
                         <div className="mt-5 flex flex-col gap-4 rounded-[20px] border border-border bg-card/80 px-5 py-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
@@ -385,139 +388,143 @@ export default function Paket() {
                                         key={item.title + item.date}
                                         className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
                                     >
-                                {/* Image */}
-                                <div className="relative h-48 overflow-hidden bg-muted/40">
-                                    <img
-                                        src={item.image}
-                                        alt={item.title}
-                                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                                        loading="lazy"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                                        {/* Image */}
+                                        <div className="relative h-48 overflow-hidden bg-muted/40">
+                                            <img
+                                                src={item.image}
+                                                alt={item.title}
+                                                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                                loading="lazy"
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
-                                    {/* Discount badge */}
-                                    {item.discountLabel && (
-                                        <span className="absolute top-3 right-3 rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow">
-                                            {item.discountLabel}
-                                        </span>
-                                    )}
-
-                                    {/* City + duration overlay */}
-                                    <div className="absolute right-3 bottom-3 left-3 flex items-end justify-between">
-                                        <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
-                                            📍 {item.city}
-                                        </span>
-                                        <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
-                                            🕐 {item.durationLabel}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Content */}
-                                <div className="flex flex-1 flex-col p-5">
-                                    {/* Title */}
-                                    <h3 className="public-heading line-clamp-2 text-base leading-snug font-bold text-foreground">
-                                        {item.title}
-                                    </h3>
-
-                                    {/* Rating */}
-                                    {item.ratingAvg && (
-                                        <div className="mt-1.5 flex items-center gap-1">
-                                            {[1, 2, 3, 4, 5].map((s) => (
-                                                <span
-                                                    key={s}
-                                                    className={`text-sm ${s <= Math.round(item.ratingAvg!) ? 'text-amber-400' : 'text-muted-foreground/30'}`}
-                                                >
-                                                    ★
+                                            {/* Discount badge */}
+                                            {item.discountLabel && (
+                                                <span className="absolute top-3 right-3 rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow">
+                                                    {item.discountLabel}
                                                 </span>
-                                            ))}
-                                            <span className="ml-1 text-xs font-medium text-foreground">
-                                                {item.ratingAvg}
-                                            </span>
-                                            <span className="text-xs text-muted-foreground">
-                                                ({item.ratingCount} ulasan)
-                                            </span>
-                                        </div>
-                                    )}
+                                            )}
 
-                                    {/* Meta info */}
-                                    <div className="mt-3 space-y-1.5">
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <span className="w-4 text-center">
-                                                ✈
-                                            </span>
-                                            <span>{item.airline}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <span className="w-4 text-center">
-                                                🏨
-                                            </span>
-                                            <span>{item.hotel}</span>
-                                        </div>
-                                        {item.date && (
-                                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                <span className="w-4 text-center">
-                                                    📅
+                                            {/* City + duration overlay */}
+                                            <div className="absolute right-3 bottom-3 left-3 flex items-end justify-between">
+                                                <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
+                                                    📍 {item.city}
                                                 </span>
-                                                <span>
-                                                    Berangkat {item.date}
+                                                <span className="rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white">
+                                                    🕐 {item.durationLabel}
                                                 </span>
                                             </div>
-                                        )}
-                                    </div>
+                                        </div>
 
-                                    {/* Divider */}
-                                    <div className="my-4 border-t border-border" />
+                                        {/* Content */}
+                                        <div className="flex flex-1 flex-col p-5">
+                                            {/* Title */}
+                                            <h3 className="public-heading line-clamp-2 text-base leading-snug font-bold text-foreground">
+                                                {item.title}
+                                            </h3>
 
-                                    {/* Price */}
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-extrabold text-primary">
-                                            {item.price}
-                                        </span>
-                                        {item.originalPrice && (
-                                            <span className="text-sm text-muted-foreground line-through">
-                                                {item.originalPrice}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="mt-0.5 text-xs text-muted-foreground">
-                                        per jamaah
-                                    </p>
+                                            {/* Rating */}
+                                            {item.ratingAvg && (
+                                                <div className="mt-1.5 flex items-center gap-1">
+                                                    {[1, 2, 3, 4, 5].map(
+                                                        (s) => (
+                                                            <span
+                                                                key={s}
+                                                                className={`text-sm ${s <= Math.round(item.ratingAvg!) ? 'text-amber-400' : 'text-muted-foreground/30'}`}
+                                                            >
+                                                                ★
+                                                            </span>
+                                                        ),
+                                                    )}
+                                                    <span className="ml-1 text-xs font-medium text-foreground">
+                                                        {item.ratingAvg}
+                                                    </span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        ({item.ratingCount}{' '}
+                                                        ulasan)
+                                                    </span>
+                                                </div>
+                                            )}
 
-                                    {/* CTA buttons — pushed to bottom */}
-                                    <div className="mt-4 flex gap-2">
-                                        <Link
-                                            href={
-                                                item.slug
-                                                    ? `/paket-umroh/${item.slug}`
-                                                    : '/paket-umroh'
-                                            }
-                                            className="flex-1 rounded-xl border border-border py-2.5 text-center text-xs font-semibold text-foreground transition hover:bg-muted"
-                                        >
-                                            {detailLabel}
-                                        </Link>
-                                        {whatsappLinkFromSeo(
-                                            seo,
-                                            buildPackageInquiryMessage(
-                                                locale,
-                                                item,
-                                            ),
-                                        ) ? (
-                                            <a
-                                                href={whatsappLinkFromSeo(
+                                            {/* Meta info */}
+                                            <div className="mt-3 space-y-1.5">
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <span className="w-4 text-center">
+                                                        ✈
+                                                    </span>
+                                                    <span>{item.airline}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                    <span className="w-4 text-center">
+                                                        🏨
+                                                    </span>
+                                                    <span>{item.hotel}</span>
+                                                </div>
+                                                {item.date && (
+                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                        <span className="w-4 text-center">
+                                                            📅
+                                                        </span>
+                                                        <span>
+                                                            Berangkat{' '}
+                                                            {item.date}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Divider */}
+                                            <div className="my-4 border-t border-border" />
+
+                                            {/* Price */}
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-2xl font-extrabold text-primary">
+                                                    {item.price}
+                                                </span>
+                                                {item.originalPrice && (
+                                                    <span className="text-sm text-muted-foreground line-through">
+                                                        {item.originalPrice}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                                per jamaah
+                                            </p>
+
+                                            {/* CTA buttons — pushed to bottom */}
+                                            <div className="mt-4 flex gap-2">
+                                                <Link
+                                                    href={
+                                                        item.slug
+                                                            ? `/paket-umroh/${item.slug}`
+                                                            : '/paket-umroh'
+                                                    }
+                                                    className="flex-1 rounded-xl border border-border py-2.5 text-center text-xs font-semibold text-foreground transition hover:bg-muted"
+                                                >
+                                                    {detailLabel}
+                                                </Link>
+                                                {whatsappLinkFromSeo(
                                                     seo,
                                                     buildPackageInquiryMessage(
                                                         locale,
                                                         item,
                                                     ),
-                                                )}
-                                                className="flex-1 rounded-xl bg-primary py-2.5 text-center text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-                                            >
-                                                {askLabel}
-                                            </a>
-                                        ) : null}
-                                    </div>
-                                </div>
+                                                ) ? (
+                                                    <a
+                                                        href={whatsappLinkFromSeo(
+                                                            seo,
+                                                            buildPackageInquiryMessage(
+                                                                locale,
+                                                                item,
+                                                            ),
+                                                        )}
+                                                        className="flex-1 rounded-xl bg-primary py-2.5 text-center text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+                                                    >
+                                                        {askLabel}
+                                                    </a>
+                                                ) : null}
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>

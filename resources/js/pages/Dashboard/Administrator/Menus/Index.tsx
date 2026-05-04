@@ -1,5 +1,12 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -17,13 +24,21 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { useForm } from '@inertiajs/react';
-import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Menu, MenusTable } from './components/MenusTable';
-import { Separator } from '@/components/ui/separator';
 
 interface Props {
     menus: Menu[];
@@ -41,18 +56,33 @@ const iconOptions = [
     'LayoutGrid',
     'Folder',
     'BookOpen',
-    'Share2'
+    'Share2',
+    'Wallet',
 ];
 
-interface SubMenuItem {
+type Level2SubMenuItem = {
     name: string;
     menu_key: string;
     path: string;
     icon: string;
-    children?: SubMenuItem[] | null;
-}
+};
+
+type Level1SubMenuItem = Level2SubMenuItem & {
+    children?: Level2SubMenuItem[] | null;
+};
+
+type MenuFormData = {
+    name: string;
+    menu_key: string;
+    path: string;
+    icon: string;
+    children: Level1SubMenuItem[] | null;
+    order: number;
+    is_active: boolean;
+};
 
 export default function MenusIndex({ menus }: Props) {
+    const { can } = usePermission('menu_management');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -60,17 +90,30 @@ export default function MenusIndex({ menus }: Props) {
     const [showSubmenuSection, setShowSubmenuSection] = useState(false);
     const [forceDelete, setForceDelete] = useState(false);
 
-    const { data, setData, post, put, delete: destroy, processing, reset, errors } = useForm({
+    const {
+        data,
+        setData,
+        post,
+        put,
+        delete: destroy,
+        processing,
+        reset,
+        errors,
+    } = useForm<MenuFormData>({
         name: '',
         menu_key: '',
         path: '',
         icon: 'Folder',
-        children: [] as SubMenuItem[] | null,
+        children: [],
         order: 0,
         is_active: true,
     });
 
     const openCreateDialog = () => {
+        if (!can('create')) {
+            return;
+        }
+
         reset();
         setEditingMenu(null);
         setShowSubmenuSection(false);
@@ -78,14 +121,18 @@ export default function MenusIndex({ menus }: Props) {
     };
 
     const openEditDialog = (menu: Menu) => {
+        if (!can('edit')) {
+            return;
+        }
+
         setEditingMenu(menu);
-        const hasChildren = menu.children && menu.children.length > 0;
+        const hasChildren = (menu.children?.length ?? 0) > 0;
         setData({
             name: menu.name,
             menu_key: menu.menu_key || '',
             path: menu.path,
             icon: menu.icon,
-            children: hasChildren ? menu.children : [],
+            children: hasChildren ? (menu.children as Level1SubMenuItem[]) : [],
             order: menu.order,
             is_active: menu.is_active,
         });
@@ -97,12 +144,16 @@ export default function MenusIndex({ menus }: Props) {
         e.preventDefault();
 
         // Clean up children data before submit
-        const cleanedChildren = data.children && data.children.length > 0
-            ? data.children.map(child => ({
-                ...child,
-                children: child.children && child.children.length > 0 ? child.children : null
-            }))
-            : null;
+        const cleanedChildren =
+            data.children && data.children.length > 0
+                ? data.children.map((child) => ({
+                      ...child,
+                      children:
+                          child.children && child.children.length > 0
+                              ? child.children
+                              : null,
+                  }))
+                : null;
 
         // Update the form data with cleaned children
         setData('children', cleanedChildren);
@@ -137,26 +188,39 @@ export default function MenusIndex({ menus }: Props) {
 
     const handleDelete = () => {
         if (menuToDelete) {
-            console.log('Deleting menu:', menuToDelete, 'Force delete:', forceDelete);
-            destroy(`/admin/administrator/menus/${menuToDelete.id}`, {
-                data: {
-                    force_delete: forceDelete,
+            console.log(
+                'Deleting menu:',
+                menuToDelete,
+                'Force delete:',
+                forceDelete,
+            );
+            destroy(
+                `/admin/administrator/menus/${menuToDelete.id}?force_delete=${
+                    forceDelete ? 1 : 0
+                }`,
+                {
+                    onSuccess: () => {
+                        console.log('Menu deleted successfully');
+                        setIsDeleteDialogOpen(false);
+                        setMenuToDelete(null);
+                        setForceDelete(false);
+                    },
+                    onError: (errors) => {
+                        console.error('Error deleting menu:', errors);
+                        alert(
+                            'Gagal menghapus menu: ' + JSON.stringify(errors),
+                        );
+                    },
                 },
-                onSuccess: () => {
-                    console.log('Menu deleted successfully');
-                    setIsDeleteDialogOpen(false);
-                    setMenuToDelete(null);
-                    setForceDelete(false);
-                },
-                onError: (errors) => {
-                    console.error('Error deleting menu:', errors);
-                    alert('Gagal menghapus menu: ' + JSON.stringify(errors));
-                },
-            });
+            );
         }
     };
 
     const openDeleteDialog = (menu: Menu) => {
+        if (!can('delete')) {
+            return;
+        }
+
         setMenuToDelete(menu);
         setForceDelete(false);
         setIsDeleteDialogOpen(true);
@@ -182,11 +246,15 @@ export default function MenusIndex({ menus }: Props) {
         const currentChildren = data.children || [];
         setData(
             'children',
-            currentChildren.filter((_, i) => i !== index)
+            currentChildren.filter((_, i) => i !== index),
         );
     };
 
-    const updateSubmenu = (index: number, field: keyof SubMenuItem, value: string) => {
+    const updateSubmenu = (
+        index: number,
+        field: keyof Level2SubMenuItem,
+        value: string,
+    ) => {
         const currentChildren = data.children || [];
         const updated = [...currentChildren];
         updated[index] = { ...updated[index], [field]: value };
@@ -227,14 +295,17 @@ export default function MenusIndex({ menus }: Props) {
     const updateLevel2Submenu = (
         parentIndex: number,
         childIndex: number,
-        field: keyof SubMenuItem,
-        value: string
+        field: keyof Level2SubMenuItem,
+        value: string,
     ) => {
         const currentChildren = data.children || [];
         const updated = [...currentChildren];
         const currentLevel2 = updated[parentIndex].children || [];
         const updatedLevel2 = [...currentLevel2];
-        updatedLevel2[childIndex] = { ...updatedLevel2[childIndex], [field]: value };
+        updatedLevel2[childIndex] = {
+            ...updatedLevel2[childIndex],
+            [field]: value,
+        };
         updated[parentIndex] = {
             ...updated[parentIndex],
             children: updatedLevel2,
@@ -247,27 +318,39 @@ export default function MenusIndex({ menus }: Props) {
             breadcrumbs={[
                 { label: 'Dashboard', href: '/admin' },
                 { label: 'Administrator', href: '/admin/administrator' },
-                { label: 'Menu Management', href: '/admin/administrator/menus' },
+                {
+                    label: 'Menu Management',
+                    href: '/admin/administrator/menus',
+                },
             ]}
         >
             <div className="space-y-4 p-4 sm:space-y-6 sm:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Menu Management</h1>
+                        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                            Menu Management
+                        </h1>
                         <p className="text-muted-foreground">
                             Kelola menu sistem dan struktur navigasi
                         </p>
                     </div>
-                    <Button onClick={openCreateDialog} className="w-full sm:w-auto">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah Menu
-                    </Button>
+                    {can('create') && (
+                        <Button
+                            onClick={openCreateDialog}
+                            className="w-full sm:w-auto"
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah Menu
+                        </Button>
+                    )}
                 </div>
 
                 <Card>
                     <CardHeader>
                         <CardTitle>Daftar Menu</CardTitle>
-                        <CardDescription>Semua menu dalam sistem</CardDescription>
+                        <CardDescription>
+                            Semua menu dalam sistem
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <MenusTable
@@ -278,33 +361,40 @@ export default function MenusIndex({ menus }: Props) {
                     </CardContent>
                 </Card>
 
-                {/* Create/Edit Dialog */}
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                    <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
-                        <form onSubmit={handleSubmit}>
-                            <DialogHeader>
-                                <DialogTitle>
-                                    {editingMenu ? 'Edit Menu' : 'Tambah Menu'}
-                                </DialogTitle>
-                                <DialogDescription>
-                                    {editingMenu
-                                        ? 'Ubah informasi menu yang sudah ada'
-                                        : 'Tambahkan menu baru ke sistem'}
-                                </DialogDescription>
-                            </DialogHeader>
+                {/* Create/Edit Drawer */}
+                <Sheet open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+                        <SheetHeader>
+                            <SheetTitle>
+                                {editingMenu ? 'Edit Menu' : 'Tambah Menu'}
+                            </SheetTitle>
+                            <SheetDescription>
+                                {editingMenu
+                                    ? 'Ubah informasi menu yang sudah ada'
+                                    : 'Tambahkan menu baru ke sistem'}
+                            </SheetDescription>
+                        </SheetHeader>
 
-                            <div className="grid gap-4 py-4">
+                        <form
+                            onSubmit={handleSubmit}
+                            className="space-y-6 py-6"
+                        >
+                            <div className="grid gap-4">
                                 <div className="grid gap-2">
                                     <Label htmlFor="name">Nama Menu</Label>
                                     <Input
                                         id="name"
                                         value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('name', e.target.value)
+                                        }
                                         placeholder="Contoh: Administrator"
                                         required
                                     />
                                     {errors.name && (
-                                        <p className="text-sm text-destructive">{errors.name}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.name}
+                                        </p>
                                     )}
                                 </div>
 
@@ -313,12 +403,16 @@ export default function MenusIndex({ menus }: Props) {
                                     <Input
                                         id="menu_key"
                                         value={data.menu_key}
-                                        onChange={(e) => setData('menu_key', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('menu_key', e.target.value)
+                                        }
                                         placeholder="administrator.menus"
                                         required
                                     />
                                     {errors.menu_key && (
-                                        <p className="text-sm text-destructive">{errors.menu_key}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.menu_key}
+                                        </p>
                                     )}
                                 </div>
 
@@ -327,24 +421,36 @@ export default function MenusIndex({ menus }: Props) {
                                     <Input
                                         id="path"
                                         value={data.path}
-                                        onChange={(e) => setData('path', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('path', e.target.value)
+                                        }
                                         placeholder="/admin/administrator"
                                         required
                                     />
                                     {errors.path && (
-                                        <p className="text-sm text-destructive">{errors.path}</p>
+                                        <p className="text-sm text-destructive">
+                                            {errors.path}
+                                        </p>
                                     )}
                                 </div>
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="icon">Icon</Label>
-                                    <Select value={data.icon} onValueChange={(value) => setData('icon', value)}>
+                                    <Select
+                                        value={data.icon}
+                                        onValueChange={(value) =>
+                                            setData('icon', value)
+                                        }
+                                    >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Pilih icon" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {iconOptions.map((icon) => (
-                                                <SelectItem key={icon} value={icon}>
+                                                <SelectItem
+                                                    key={icon}
+                                                    value={icon}
+                                                >
                                                     {icon}
                                                 </SelectItem>
                                             ))}
@@ -358,7 +464,12 @@ export default function MenusIndex({ menus }: Props) {
                                         id="order"
                                         type="number"
                                         value={data.order}
-                                        onChange={(e) => setData('order', parseInt(e.target.value))}
+                                        onChange={(e) =>
+                                            setData(
+                                                'order',
+                                                parseInt(e.target.value),
+                                            )
+                                        }
                                     />
                                 </div>
 
@@ -366,9 +477,17 @@ export default function MenusIndex({ menus }: Props) {
                                     <Checkbox
                                         id="is_active"
                                         checked={data.is_active}
-                                        onCheckedChange={(checked) => setData('is_active', checked as boolean)}
+                                        onCheckedChange={(checked) =>
+                                            setData(
+                                                'is_active',
+                                                checked as boolean,
+                                            )
+                                        }
                                     />
-                                    <Label htmlFor="is_active" className="cursor-pointer">
+                                    <Label
+                                        htmlFor="is_active"
+                                        className="cursor-pointer"
+                                    >
                                         Menu Aktif
                                     </Label>
                                 </div>
@@ -379,9 +498,12 @@ export default function MenusIndex({ menus }: Props) {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <Label className="text-base">Submenu (Level 1)</Label>
+                                            <Label className="text-base">
+                                                Submenu (Level 1)
+                                            </Label>
                                             <p className="text-xs text-muted-foreground">
-                                                Tambahkan submenu untuk menu ini (opsional)
+                                                Tambahkan submenu untuk menu ini
+                                                (opsional)
                                             </p>
                                         </div>
                                         <Button
@@ -396,212 +518,347 @@ export default function MenusIndex({ menus }: Props) {
                                     </div>
 
                                     {/* Level 1 Submenus */}
-                                    {data.children && data.children.length > 0 && (
-                                        <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
-                                            {data.children.map((submenu, index) => (
-                                                <div key={index} className="space-y-3 border rounded-lg p-4 bg-background">
-                                                    <div className="flex items-center justify-between">
-                                                        <Label className="text-sm font-semibold">
-                                                            Submenu {index + 1}
-                                                        </Label>
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() => removeSubmenu(index)}
+                                    {data.children &&
+                                        data.children.length > 0 && (
+                                            <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+                                                {data.children.map(
+                                                    (submenu, index) => (
+                                                        <div
+                                                            key={index}
+                                                            className="space-y-3 rounded-lg border bg-background p-4"
                                                         >
-                                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                                        </Button>
-                                                    </div>
-
-                                                    <div className="grid gap-3 sm:grid-cols-2">
-                                                        <div className="grid gap-2">
-                                                            <Label className="text-xs">Nama</Label>
-                                                            <Input
-                                                                value={submenu.name}
-                                                                onChange={(e) =>
-                                                                    updateSubmenu(index, 'name', e.target.value)
-                                                                }
-                                                                placeholder="Nama submenu"
-                                                                className="h-9"
-                                                            />
-                                                        </div>
-                                                        <div className="grid gap-2">
-                                                            <Label className="text-xs">Menu Key</Label>
-                                                            <Input
-                                                                value={submenu.menu_key}
-                                                                onChange={(e) =>
-                                                                    updateSubmenu(index, 'menu_key', e.target.value)
-                                                                }
-                                                                placeholder="menu.key"
-                                                                className="h-9"
-                                                            />
-                                                        </div>
-                                                        <div className="grid gap-2">
-                                                            <Label className="text-xs">Path</Label>
-                                                            <Input
-                                                                value={submenu.path}
-                                                                onChange={(e) =>
-                                                                    updateSubmenu(index, 'path', e.target.value)
-                                                                }
-                                                                placeholder="/path"
-                                                                className="h-9"
-                                                            />
-                                                        </div>
-                                                        <div className="grid gap-2">
-                                                            <Label className="text-xs">Icon</Label>
-                                                            <Select
-                                                                value={submenu.icon}
-                                                                onValueChange={(value) =>
-                                                                    updateSubmenu(index, 'icon', value)
-                                                                }
-                                                            >
-                                                                <SelectTrigger className="h-9">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {iconOptions.map((icon) => (
-                                                                        <SelectItem key={icon} value={icon}>
-                                                                            {icon}
-                                                                        </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Level 2 Submenus */}
-                                                    <div className="mt-3 space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <Label className="text-xs text-muted-foreground">
-                                                                Submenu Level 2 (Opsional)
-                                                            </Label>
-                                                            <Button
-                                                                type="button"
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => addLevel2Submenu(index)}
-                                                                className="h-7 text-xs"
-                                                            >
-                                                                <Plus className="mr-1 h-3 w-3" />
-                                                                Level 2
-                                                            </Button>
-                                                        </div>
-
-                                                        {submenu.children && submenu.children.length > 0 && (
-                                                            <div className="space-y-2 pl-4 border-l-2">
-                                                                {submenu.children.map((level2, level2Index) => (
-                                                                    <div
-                                                                        key={level2Index}
-                                                                        className="space-y-2 border rounded p-3 bg-muted/50"
-                                                                    >
-                                                                        <div className="flex items-center justify-between">
-                                                                            <Label className="text-xs font-semibold">
-                                                                                Level 2 - {level2Index + 1}
-                                                                            </Label>
-                                                                            <Button
-                                                                                type="button"
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                onClick={() =>
-                                                                                    removeLevel2Submenu(index, level2Index)
-                                                                                }
-                                                                                className="h-6 w-6"
-                                                                            >
-                                                                                <Trash2 className="h-3 w-3 text-destructive" />
-                                                                            </Button>
-                                                                        </div>
-                                                                        <div className="grid gap-2 sm:grid-cols-2">
-                                                                            <div className="grid gap-1">
-                                                                                <Label className="text-xs">Nama</Label>
-                                                                                <Input
-                                                                                    value={level2.name}
-                                                                                    onChange={(e) =>
-                                                                                        updateLevel2Submenu(
-                                                                                            index,
-                                                                                            level2Index,
-                                                                                            'name',
-                                                                                            e.target.value
-                                                                                        )
-                                                                                    }
-                                                                                    placeholder="Nama"
-                                                                                    className="h-8 text-xs"
-                                                                                />
-                                                                            </div>
-                                                                            <div className="grid gap-1">
-                                                                                <Label className="text-xs">Menu Key</Label>
-                                                                                <Input
-                                                                                    value={level2.menu_key}
-                                                                                    onChange={(e) =>
-                                                                                        updateLevel2Submenu(
-                                                                                            index,
-                                                                                            level2Index,
-                                                                                            'menu_key',
-                                                                                            e.target.value
-                                                                                        )
-                                                                                    }
-                                                                                    placeholder="key"
-                                                                                    className="h-8 text-xs"
-                                                                                />
-                                                                            </div>
-                                                                            <div className="grid gap-1">
-                                                                                <Label className="text-xs">Path</Label>
-                                                                                <Input
-                                                                                    value={level2.path}
-                                                                                    onChange={(e) =>
-                                                                                        updateLevel2Submenu(
-                                                                                            index,
-                                                                                            level2Index,
-                                                                                            'path',
-                                                                                            e.target.value
-                                                                                        )
-                                                                                    }
-                                                                                    placeholder="/path"
-                                                                                    className="h-8 text-xs"
-                                                                                />
-                                                                            </div>
-                                                                            <div className="grid gap-1">
-                                                                                <Label className="text-xs">Icon</Label>
-                                                                                <Select
-                                                                                    value={level2.icon}
-                                                                                    onValueChange={(value) =>
-                                                                                        updateLevel2Submenu(
-                                                                                            index,
-                                                                                            level2Index,
-                                                                                            'icon',
-                                                                                            value
-                                                                                        )
-                                                                                    }
-                                                                                >
-                                                                                    <SelectTrigger className="h-8 text-xs">
-                                                                                        <SelectValue />
-                                                                                    </SelectTrigger>
-                                                                                    <SelectContent>
-                                                                                        {iconOptions.map((icon) => (
-                                                                                            <SelectItem
-                                                                                                key={icon}
-                                                                                                value={icon}
-                                                                                            >
-                                                                                                {icon}
-                                                                                            </SelectItem>
-                                                                                        ))}
-                                                                                    </SelectContent>
-                                                                                </Select>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
+                                                            <div className="flex items-center justify-between">
+                                                                <Label className="text-sm font-semibold">
+                                                                    Submenu{' '}
+                                                                    {index + 1}
+                                                                </Label>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() =>
+                                                                        removeSubmenu(
+                                                                            index,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                                </Button>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+
+                                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                                <div className="grid gap-2">
+                                                                    <Label className="text-xs">
+                                                                        Nama
+                                                                    </Label>
+                                                                    <Input
+                                                                        value={
+                                                                            submenu.name
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            updateSubmenu(
+                                                                                index,
+                                                                                'name',
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }
+                                                                        placeholder="Nama submenu"
+                                                                        className="h-9"
+                                                                    />
+                                                                </div>
+                                                                <div className="grid gap-2">
+                                                                    <Label className="text-xs">
+                                                                        Menu Key
+                                                                    </Label>
+                                                                    <Input
+                                                                        value={
+                                                                            submenu.menu_key
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            updateSubmenu(
+                                                                                index,
+                                                                                'menu_key',
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }
+                                                                        placeholder="menu.key"
+                                                                        className="h-9"
+                                                                    />
+                                                                </div>
+                                                                <div className="grid gap-2">
+                                                                    <Label className="text-xs">
+                                                                        Path
+                                                                    </Label>
+                                                                    <Input
+                                                                        value={
+                                                                            submenu.path
+                                                                        }
+                                                                        onChange={(
+                                                                            e,
+                                                                        ) =>
+                                                                            updateSubmenu(
+                                                                                index,
+                                                                                'path',
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            )
+                                                                        }
+                                                                        placeholder="/path"
+                                                                        className="h-9"
+                                                                    />
+                                                                </div>
+                                                                <div className="grid gap-2">
+                                                                    <Label className="text-xs">
+                                                                        Icon
+                                                                    </Label>
+                                                                    <Select
+                                                                        value={
+                                                                            submenu.icon
+                                                                        }
+                                                                        onValueChange={(
+                                                                            value,
+                                                                        ) =>
+                                                                            updateSubmenu(
+                                                                                index,
+                                                                                'icon',
+                                                                                value,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <SelectTrigger className="h-9">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {iconOptions.map(
+                                                                                (
+                                                                                    icon,
+                                                                                ) => (
+                                                                                    <SelectItem
+                                                                                        key={
+                                                                                            icon
+                                                                                        }
+                                                                                        value={
+                                                                                            icon
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            icon
+                                                                                        }
+                                                                                    </SelectItem>
+                                                                                ),
+                                                                            )}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Level 2 Submenus */}
+                                                            <div className="mt-3 space-y-2">
+                                                                <div className="flex items-center justify-between">
+                                                                    <Label className="text-xs text-muted-foreground">
+                                                                        Submenu
+                                                                        Level 2
+                                                                        (Opsional)
+                                                                    </Label>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() =>
+                                                                            addLevel2Submenu(
+                                                                                index,
+                                                                            )
+                                                                        }
+                                                                        className="h-7 text-xs"
+                                                                    >
+                                                                        <Plus className="mr-1 h-3 w-3" />
+                                                                        Level 2
+                                                                    </Button>
+                                                                </div>
+
+                                                                {submenu.children &&
+                                                                    submenu
+                                                                        .children
+                                                                        .length >
+                                                                        0 && (
+                                                                        <div className="space-y-2 border-l-2 pl-4">
+                                                                            {submenu.children.map(
+                                                                                (
+                                                                                    level2,
+                                                                                    level2Index,
+                                                                                ) => (
+                                                                                    <div
+                                                                                        key={
+                                                                                            level2Index
+                                                                                        }
+                                                                                        className="space-y-2 rounded border bg-muted/50 p-3"
+                                                                                    >
+                                                                                        <div className="flex items-center justify-between">
+                                                                                            <Label className="text-xs font-semibold">
+                                                                                                Level
+                                                                                                2
+                                                                                                -{' '}
+                                                                                                {level2Index +
+                                                                                                    1}
+                                                                                            </Label>
+                                                                                            <Button
+                                                                                                type="button"
+                                                                                                variant="ghost"
+                                                                                                size="icon"
+                                                                                                onClick={() =>
+                                                                                                    removeLevel2Submenu(
+                                                                                                        index,
+                                                                                                        level2Index,
+                                                                                                    )
+                                                                                                }
+                                                                                                className="h-6 w-6"
+                                                                                            >
+                                                                                                <Trash2 className="h-3 w-3 text-destructive" />
+                                                                                            </Button>
+                                                                                        </div>
+                                                                                        <div className="grid gap-2 sm:grid-cols-2">
+                                                                                            <div className="grid gap-1">
+                                                                                                <Label className="text-xs">
+                                                                                                    Nama
+                                                                                                </Label>
+                                                                                                <Input
+                                                                                                    value={
+                                                                                                        level2.name
+                                                                                                    }
+                                                                                                    onChange={(
+                                                                                                        e,
+                                                                                                    ) =>
+                                                                                                        updateLevel2Submenu(
+                                                                                                            index,
+                                                                                                            level2Index,
+                                                                                                            'name',
+                                                                                                            e
+                                                                                                                .target
+                                                                                                                .value,
+                                                                                                        )
+                                                                                                    }
+                                                                                                    placeholder="Nama"
+                                                                                                    className="h-8 text-xs"
+                                                                                                />
+                                                                                            </div>
+                                                                                            <div className="grid gap-1">
+                                                                                                <Label className="text-xs">
+                                                                                                    Menu
+                                                                                                    Key
+                                                                                                </Label>
+                                                                                                <Input
+                                                                                                    value={
+                                                                                                        level2.menu_key
+                                                                                                    }
+                                                                                                    onChange={(
+                                                                                                        e,
+                                                                                                    ) =>
+                                                                                                        updateLevel2Submenu(
+                                                                                                            index,
+                                                                                                            level2Index,
+                                                                                                            'menu_key',
+                                                                                                            e
+                                                                                                                .target
+                                                                                                                .value,
+                                                                                                        )
+                                                                                                    }
+                                                                                                    placeholder="key"
+                                                                                                    className="h-8 text-xs"
+                                                                                                />
+                                                                                            </div>
+                                                                                            <div className="grid gap-1">
+                                                                                                <Label className="text-xs">
+                                                                                                    Path
+                                                                                                </Label>
+                                                                                                <Input
+                                                                                                    value={
+                                                                                                        level2.path
+                                                                                                    }
+                                                                                                    onChange={(
+                                                                                                        e,
+                                                                                                    ) =>
+                                                                                                        updateLevel2Submenu(
+                                                                                                            index,
+                                                                                                            level2Index,
+                                                                                                            'path',
+                                                                                                            e
+                                                                                                                .target
+                                                                                                                .value,
+                                                                                                        )
+                                                                                                    }
+                                                                                                    placeholder="/path"
+                                                                                                    className="h-8 text-xs"
+                                                                                                />
+                                                                                            </div>
+                                                                                            <div className="grid gap-1">
+                                                                                                <Label className="text-xs">
+                                                                                                    Icon
+                                                                                                </Label>
+                                                                                                <Select
+                                                                                                    value={
+                                                                                                        level2.icon
+                                                                                                    }
+                                                                                                    onValueChange={(
+                                                                                                        value,
+                                                                                                    ) =>
+                                                                                                        updateLevel2Submenu(
+                                                                                                            index,
+                                                                                                            level2Index,
+                                                                                                            'icon',
+                                                                                                            value,
+                                                                                                        )
+                                                                                                    }
+                                                                                                >
+                                                                                                    <SelectTrigger className="h-8 text-xs">
+                                                                                                        <SelectValue />
+                                                                                                    </SelectTrigger>
+                                                                                                    <SelectContent>
+                                                                                                        {iconOptions.map(
+                                                                                                            (
+                                                                                                                icon,
+                                                                                                            ) => (
+                                                                                                                <SelectItem
+                                                                                                                    key={
+                                                                                                                        icon
+                                                                                                                    }
+                                                                                                                    value={
+                                                                                                                        icon
+                                                                                                                    }
+                                                                                                                >
+                                                                                                                    {
+                                                                                                                        icon
+                                                                                                                    }
+                                                                                                                </SelectItem>
+                                                                                                            ),
+                                                                                                        )}
+                                                                                                    </SelectContent>
+                                                                                                </Select>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ),
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                            </div>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
                                 </div>
                             </div>
 
-                            <DialogFooter>
+                            <SheetFooter>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -610,65 +867,100 @@ export default function MenusIndex({ menus }: Props) {
                                 >
                                     Batal
                                 </Button>
-                                <Button type="submit" disabled={processing} className="w-full sm:w-auto">
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="w-full sm:w-auto"
+                                >
                                     {processing ? 'Menyimpan...' : 'Simpan'}
                                 </Button>
-                            </DialogFooter>
+                            </SheetFooter>
                         </form>
-                    </DialogContent>
-                </Dialog>
+                    </SheetContent>
+                </Sheet>
 
                 {/* Delete Confirmation Dialog */}
-                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <Dialog
+                    open={isDeleteDialogOpen}
+                    onOpenChange={setIsDeleteDialogOpen}
+                >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Konfirmasi Hapus</DialogTitle>
                             <DialogDescription>
-                                Apakah Anda yakin ingin menghapus menu "{menuToDelete?.name}"?
+                                Apakah Anda yakin ingin menghapus menu "
+                                {menuToDelete?.name}"?
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="py-4 space-y-4">
+                        <div className="space-y-4 py-4">
                             {menuToDelete?.has_children && (
-                                <div className="border border-amber-200 bg-amber-50 rounded-lg p-4">
+                                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
                                     <div className="flex items-start gap-3">
-                                        <div className="text-amber-600 mt-0.5">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                        <div className="mt-0.5 text-amber-600">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                className="h-5 w-5"
+                                                viewBox="0 0 20 20"
+                                                fill="currentColor"
+                                            >
+                                                <path
+                                                    fillRule="evenodd"
+                                                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                                    clipRule="evenodd"
+                                                />
                                             </svg>
                                         </div>
                                         <div className="flex-1">
-                                            <h4 className="font-semibold text-amber-800 mb-1">
+                                            <h4 className="mb-1 font-semibold text-amber-800">
                                                 Menu ini memiliki submenu
                                             </h4>
-                                            <p className="text-sm text-amber-700 mb-3">
-                                                Menu ini memiliki submenu di dalamnya. Pilih salah satu opsi di bawah:
+                                            <p className="mb-3 text-sm text-amber-700">
+                                                Menu ini memiliki submenu di
+                                                dalamnya. Pilih salah satu opsi
+                                                di bawah:
                                             </p>
 
                                             <div className="space-y-2">
-                                                <div className="flex items-start space-x-3 p-3 bg-white rounded border border-amber-200">
+                                                <div className="flex items-start space-x-3 rounded border border-amber-200 bg-white p-3">
                                                     <Checkbox
                                                         id="force-delete"
                                                         checked={forceDelete}
-                                                        onCheckedChange={(checked) => setForceDelete(checked as boolean)}
+                                                        onCheckedChange={(
+                                                            checked,
+                                                        ) =>
+                                                            setForceDelete(
+                                                                checked as boolean,
+                                                            )
+                                                        }
                                                         className="mt-0.5"
                                                     />
                                                     <div className="flex-1">
                                                         <Label
                                                             htmlFor="force-delete"
-                                                            className="cursor-pointer font-medium text-sm text-gray-900"
+                                                            className="cursor-pointer text-sm font-medium text-gray-900"
                                                         >
-                                                            Hapus menu beserta semua submenu
+                                                            Hapus menu beserta
+                                                            semua submenu
                                                         </Label>
-                                                        <p className="text-xs text-gray-500 mt-1">
-                                                            Menu dan semua submenu di dalamnya akan dihapus secara permanen
+                                                        <p className="mt-1 text-xs text-gray-500">
+                                                            Menu dan semua
+                                                            submenu di dalamnya
+                                                            akan dihapus secara
+                                                            permanen
                                                         </p>
                                                     </div>
                                                 </div>
 
                                                 {!forceDelete && (
-                                                    <p className="text-xs text-amber-700 pl-3">
-                                                        💡 <strong>Saran:</strong> Edit menu terlebih dahulu dan hapus submenu satu per satu jika Anda hanya ingin menghapus menu utama
+                                                    <p className="pl-3 text-xs text-amber-700">
+                                                        💡{' '}
+                                                        <strong>Saran:</strong>{' '}
+                                                        Edit menu terlebih
+                                                        dahulu dan hapus submenu
+                                                        satu per satu jika Anda
+                                                        hanya ingin menghapus
+                                                        menu utama
                                                     </p>
                                                 )}
                                             </div>
@@ -679,7 +971,8 @@ export default function MenusIndex({ menus }: Props) {
 
                             {!menuToDelete?.has_children && (
                                 <p className="text-sm text-gray-600">
-                                    Menu ini tidak memiliki submenu. Tindakan ini tidak dapat dibatalkan.
+                                    Menu ini tidak memiliki submenu. Tindakan
+                                    ini tidak dapat dibatalkan.
                                 </p>
                             )}
                         </div>
@@ -697,10 +990,17 @@ export default function MenusIndex({ menus }: Props) {
                                 type="button"
                                 variant="destructive"
                                 onClick={handleDelete}
-                                disabled={processing || (menuToDelete?.has_children && !forceDelete)}
+                                disabled={
+                                    processing ||
+                                    (menuToDelete?.has_children && !forceDelete)
+                                }
                                 className="w-full sm:w-auto"
                             >
-                                {processing ? 'Menghapus...' : forceDelete ? 'Hapus Semua' : 'Hapus'}
+                                {processing
+                                    ? 'Menghapus...'
+                                    : forceDelete
+                                      ? 'Hapus Semua'
+                                      : 'Hapus'}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -709,4 +1009,3 @@ export default function MenusIndex({ menus }: Props) {
         </AppSidebarLayout>
     );
 }
-

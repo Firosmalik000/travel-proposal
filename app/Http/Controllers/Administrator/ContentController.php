@@ -35,6 +35,7 @@ class ContentController extends Controller
             heading: 'Content Management',
             description: 'FAQ, layanan, testimoni, galeri, tim, legalitas, dan karier. Artikel kini dikelola di menu Articles & News.',
             breadcrumbHref: '/admin/website-management/content',
+            menuKey: 'content_management',
             pages: [],
             resources: ['services', 'faqs', 'testimonials', 'gallery', 'team', 'legal_documents', 'career_openings'],
         );
@@ -46,6 +47,7 @@ class ContentController extends Controller
             heading: 'Policy & Help',
             description: 'Kelola halaman policy dan bantuan seperti Terms & Conditions, Privacy Policy, Refund Policy, serta resource FAQ dan legalitas.',
             breadcrumbHref: '/admin/website-management/portal-content',
+            menuKey: 'portal_content',
             pages: $this->portalPageSections(),
             resources: ['faqs', 'legal_documents'],
         );
@@ -166,6 +168,7 @@ class ContentController extends Controller
             heading: 'Package Management',
             description: 'Kelola package umroh beserta jadwal keberangkatan dan relasi product.',
             breadcrumbHref: '/admin/product-management/packages',
+            menuKey: 'package',
             pages: [],
             resources: ['packages', 'schedules'],
         );
@@ -177,6 +180,7 @@ class ContentController extends Controller
             heading: 'Schedule Management',
             description: 'Pilih package lalu atur jadwal keberangkatan, seat, dan statusnya.',
             breadcrumbHref: '/admin/website-management/schedules',
+            menuKey: 'package',
             pages: [],
             resources: ['schedules'],
         );
@@ -646,12 +650,13 @@ class ContentController extends Controller
     /**
      * @param  array<int, string>  $resources
      */
-    private function renderContentPage(string $heading, string $description, string $breadcrumbHref, array $pages, array $resources): Response
+    private function renderContentPage(string $heading, string $description, string $breadcrumbHref, string $menuKey, array $pages, array $resources): Response
     {
         return Inertia::render('Dashboard/Administrator/Content/Index', [
             'heading' => $heading,
             'description' => $description,
             'breadcrumbHref' => $breadcrumbHref,
+            'menuKey' => $menuKey,
             'pages' => $pages,
             'resources' => $this->resourceSections($resources),
         ]);

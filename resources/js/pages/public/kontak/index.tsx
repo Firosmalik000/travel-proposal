@@ -166,144 +166,144 @@ export default function Kontak() {
             <MotionSection className="relative isolate overflow-hidden pb-16 sm:pb-20">
                 <div className="pointer-events-none absolute inset-0 -z-10">
                     <IslamicOrnamentRow1Col1 className="absolute top-[10%] left-[-6%] h-[18rem] w-[18rem] rotate-[-10deg] text-primary/10 sm:h-[22rem] sm:w-[22rem]" />
-                    <IslamicOrnamentOttomanAccent className="absolute bottom-[-34%] right-[-8%] h-[22rem] w-[22rem] rotate-[14deg] text-accent/10 sm:h-[28rem] sm:w-[28rem]" />
+                    <IslamicOrnamentOttomanAccent className="absolute right-[-8%] bottom-[-34%] h-[22rem] w-[22rem] rotate-[14deg] text-accent/10 sm:h-[28rem] sm:w-[28rem]" />
                 </div>
                 <div className="container mx-auto px-4 sm:px-6">
                     <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-                    <MotionGroup className="space-y-6">
-                        {hasOfficeInfo ? (
-                            <MotionCard className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm">
-                                <h3 className="public-heading text-lg font-semibold text-foreground">
-                                    {t.office.title}
-                                </h3>
-                                {address ? (
-                                    <p className="mt-2 text-sm text-muted-foreground">
-                                        {address}
-                                    </p>
-                                ) : null}
-                                {weekdayHours ? (
-                                    <p className="text-sm text-muted-foreground">
-                                        {weekdayHours}
-                                    </p>
-                                ) : null}
-                                <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold tracking-[0.2em] text-foreground uppercase">
-                                    {t.office.tags.map((tag) => (
-                                        <span
-                                            key={tag}
-                                            className="rounded-full bg-muted px-3 py-2 text-muted-foreground"
-                                        >
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
-                            </MotionCard>
-                        ) : null}
-
-                        {hasContactInfo ? (
-                            <MotionCard className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm">
-                                <h3 className="public-heading text-lg font-semibold text-foreground">
-                                    {t.contact.title}
-                                </h3>
-                                <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                                    {contactItems.map((item) => (
-                                        <p key={item}>{item}</p>
-                                    ))}
-                                </div>
-                                {whatsappNumber ? (
-                                    <a
-                                        href={whatsappLink}
-                                        className="mt-4 inline-flex items-center rounded-full bg-primary px-5 py-3 text-xs font-semibold text-primary-foreground"
-                                    >
-                                        {t.contact.cta}
-                                    </a>
-                                ) : null}
-                            </MotionCard>
-                        ) : null}
-
-                        {hasSocialInfo ? (
-                            <MotionCard className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm">
-                                <h3 className="public-heading text-lg font-semibold text-foreground">
-                                    {t.social.title}
-                                </h3>
-                                <p className="mt-2 text-sm text-muted-foreground">
-                                    {t.social.desc}
-                                </p>
-                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                                    {socialItems.map(
-                                        (
-                                            item: (typeof socialItems)[number],
-                                        ) => {
-                                            const Icon = item.icon;
-                                            return (
-                                                <a
-                                                    key={item.label}
-                                                    className="group flex items-center gap-3 rounded-xl border border-border bg-card/80 px-3 py-2 text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:bg-muted"
-                                                    href={item.href}
-                                                    rel="noreferrer"
-                                                    target="_blank"
-                                                >
-                                                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground">
-                                                        <Icon className="h-4 w-4" />
-                                                    </span>
-                                                    {item.label}
-                                                </a>
-                                            );
-                                        },
-                                    )}
-                                </div>
-                            </MotionCard>
-                        ) : null}
-                    </MotionGroup>
-
-                    {mapLink ? (
-                        <MotionCard className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm">
-                            <div className="mb-3 flex items-center justify-between">
-                                <h3 className="public-heading text-lg font-semibold text-foreground">
-                                    {t.map.title}
-                                </h3>
-                                <span className="rounded-full bg-accent/60 px-3 py-1 text-xs font-semibold text-foreground">
-                                    {localize(
-                                        pageContent?.content?.map?.badge,
-                                        locale,
-                                        t.map.badge,
-                                    )}
-                                </span>
-                            </div>
-                            {(() => {
-                                let embedSrc = '';
-                                if (mapLink.includes('maps/embed')) {
-                                    embedSrc = mapLink;
-                                } else {
-                                    embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapLink)}&output=embed`;
-                                }
-                                return (
-                                    <div className="h-64 overflow-hidden rounded-2xl border border-border sm:h-80 lg:h-[420px]">
-                                        <iframe
-                                            src={embedSrc}
-                                            width="100%"
-                                            height="100%"
-                                            style={{ border: 0 }}
-                                            allowFullScreen
-                                            loading="lazy"
-                                            referrerPolicy="no-referrer-when-downgrade"
-                                            title={t.map.title}
-                                        />
+                        <MotionGroup className="space-y-6">
+                            {hasOfficeInfo ? (
+                                <MotionCard className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm">
+                                    <h3 className="public-heading text-lg font-semibold text-foreground">
+                                        {t.office.title}
+                                    </h3>
+                                    {address ? (
+                                        <p className="mt-2 text-sm text-muted-foreground">
+                                            {address}
+                                        </p>
+                                    ) : null}
+                                    {weekdayHours ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            {weekdayHours}
+                                        </p>
+                                    ) : null}
+                                    <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold tracking-[0.2em] text-foreground uppercase">
+                                        {t.office.tags.map((tag) => (
+                                            <span
+                                                key={tag}
+                                                className="rounded-full bg-muted px-3 py-2 text-muted-foreground"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
                                     </div>
-                                );
-                            })()}
-                            <a
-                                href={mapLink}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-                            >
-                                {locale === 'id'
-                                    ? 'Buka di Google Maps'
-                                    : 'Open in Google Maps'}{' '}
-                                ↗
-                            </a>
-                        </MotionCard>
-                    ) : null}
+                                </MotionCard>
+                            ) : null}
+
+                            {hasContactInfo ? (
+                                <MotionCard className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm">
+                                    <h3 className="public-heading text-lg font-semibold text-foreground">
+                                        {t.contact.title}
+                                    </h3>
+                                    <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+                                        {contactItems.map((item) => (
+                                            <p key={item}>{item}</p>
+                                        ))}
+                                    </div>
+                                    {whatsappNumber ? (
+                                        <a
+                                            href={whatsappLink}
+                                            className="mt-4 inline-flex items-center rounded-full bg-primary px-5 py-3 text-xs font-semibold text-primary-foreground"
+                                        >
+                                            {t.contact.cta}
+                                        </a>
+                                    ) : null}
+                                </MotionCard>
+                            ) : null}
+
+                            {hasSocialInfo ? (
+                                <MotionCard className="rounded-2xl border border-border bg-card/90 p-6 shadow-sm">
+                                    <h3 className="public-heading text-lg font-semibold text-foreground">
+                                        {t.social.title}
+                                    </h3>
+                                    <p className="mt-2 text-sm text-muted-foreground">
+                                        {t.social.desc}
+                                    </p>
+                                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                        {socialItems.map(
+                                            (
+                                                item: (typeof socialItems)[number],
+                                            ) => {
+                                                const Icon = item.icon;
+                                                return (
+                                                    <a
+                                                        key={item.label}
+                                                        className="group flex items-center gap-3 rounded-xl border border-border bg-card/80 px-3 py-2 text-sm font-semibold text-foreground transition hover:-translate-y-0.5 hover:bg-muted"
+                                                        href={item.href}
+                                                        rel="noreferrer"
+                                                        target="_blank"
+                                                    >
+                                                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground">
+                                                            <Icon className="h-4 w-4" />
+                                                        </span>
+                                                        {item.label}
+                                                    </a>
+                                                );
+                                            },
+                                        )}
+                                    </div>
+                                </MotionCard>
+                            ) : null}
+                        </MotionGroup>
+
+                        {mapLink ? (
+                            <MotionCard className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="public-heading text-lg font-semibold text-foreground">
+                                        {t.map.title}
+                                    </h3>
+                                    <span className="rounded-full bg-accent/60 px-3 py-1 text-xs font-semibold text-foreground">
+                                        {localize(
+                                            pageContent?.content?.map?.badge,
+                                            locale,
+                                            t.map.badge,
+                                        )}
+                                    </span>
+                                </div>
+                                {(() => {
+                                    let embedSrc = '';
+                                    if (mapLink.includes('maps/embed')) {
+                                        embedSrc = mapLink;
+                                    } else {
+                                        embedSrc = `https://maps.google.com/maps?q=${encodeURIComponent(mapLink)}&output=embed`;
+                                    }
+                                    return (
+                                        <div className="h-64 overflow-hidden rounded-2xl border border-border sm:h-80 lg:h-[420px]">
+                                            <iframe
+                                                src={embedSrc}
+                                                width="100%"
+                                                height="100%"
+                                                style={{ border: 0 }}
+                                                allowFullScreen
+                                                loading="lazy"
+                                                referrerPolicy="no-referrer-when-downgrade"
+                                                title={t.map.title}
+                                            />
+                                        </div>
+                                    );
+                                })()}
+                                <a
+                                    href={mapLink}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                                >
+                                    {locale === 'id'
+                                        ? 'Buka di Google Maps'
+                                        : 'Open in Google Maps'}{' '}
+                                    ↗
+                                </a>
+                            </MotionCard>
+                        ) : null}
                     </div>
                 </div>
             </MotionSection>

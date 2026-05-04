@@ -4,6 +4,7 @@ import {
     IslamicOrnamentRow1Col1,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
+import PublicSeoHead from '@/components/public-seo-head';
 import {
     getPublicSocialAccounts,
     whatsappLinkFromSeo,
@@ -73,15 +74,13 @@ const packageNavItems = [
     { label: 'Custom', href: '/custom-umroh' },
 ] as const;
 
-
 function PublicLayoutInner({ children }: PropsWithChildren) {
     const [scrolled, setScrolled] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
     const [headerHeight, setHeaderHeight] = useState(88);
     const headerRef = useRef<HTMLElement | null>(null);
     const page = usePage();
-    const { branding, seoSettings, publicBranding } = usePage<any>().props;
-    const locale = 'id' as const;
+    const { branding, seoSettings, publicBranding } = usePage().props as any;
     const t = content.id;
     const seo = (seoSettings as Record<string, any>) ?? {};
     const resolvedLogoPath = publicBranding?.logo_path ?? branding.logo_path;
@@ -104,7 +103,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
     const resolvedPathname =
         typeof window !== 'undefined'
             ? window.location.pathname
-            : String(page.url ?? '').split('?')[0] ?? '';
+            : (String(page.url ?? '').split('?')[0] ?? '');
     const isHomePage = resolvedPathname === '/';
     const shouldUseSolidHeader = scrolled || mobileOpen || !isHomePage;
 
@@ -200,12 +199,13 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
 
     return (
         <div
-            className="public-shell bg-background font-sans text-foreground antialiased overflow-x-hidden"
+            className="public-shell overflow-x-hidden bg-background font-sans text-foreground antialiased"
             style={{
                 ['--public-header-h' as any]: `${headerHeight}px`,
             }}
         >
             <GlobalFaviconHead />
+            <PublicSeoHead />
             <style>{`
                 :root { 
                     scroll-behavior: smooth; 
@@ -255,11 +255,11 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                             alt={branding.company_name}
                             className="h-12 w-12 object-contain sm:h-20 sm:w-20"
                         />
-                        <div className="min-w-0 max-w-[13.5rem] sm:max-w-[14rem] md:max-w-[10rem]">
+                        <div className="max-w-[13.5rem] min-w-0 sm:max-w-[14rem] md:max-w-[10rem]">
                             <p className="font-heading truncate text-xs font-bold text-white sm:text-base">
                                 {branding.company_name}
                             </p>
-                            <p className="mt-0.5 overflow-hidden text-[0.6rem] leading-snug tracking-[0.08em] text-white/70 uppercase [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] sm:text-[0.68rem] sm:tracking-[0.12em]">
+                            <p className="mt-0.5 [display:-webkit-box] overflow-hidden text-[0.6rem] leading-snug tracking-[0.08em] text-white/70 uppercase [-webkit-box-orient:vertical] [-webkit-line-clamp:2] sm:text-[0.68rem] sm:tracking-[0.12em]">
                                 {branding.company_subtitle}
                             </p>
                         </div>
@@ -450,7 +450,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                 <div className="pointer-events-none absolute bottom-12 left-6 text-white/26 dark:text-white/16">
                     <div className="relative h-28 w-28 sm:h-32 sm:w-32">
                         <div className="absolute inset-0 text-white/10 dark:text-white/8">
-                            <IslamicOrnamentOttomanAccent className="h-full w-full rotate-[6deg] scale-[1.06]" />
+                            <IslamicOrnamentOttomanAccent className="h-full w-full scale-[1.06] rotate-[6deg]" />
                         </div>
                         <div className="absolute inset-0 text-white/30 dark:text-white/18">
                             <IslamicOrnamentRow1Col1 className="h-full w-full -rotate-[8deg]" />

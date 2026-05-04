@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use App\Models\Menu;
-use App\Models\UserAccess;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -75,9 +74,9 @@ class CheckMenuPermission
             return $next($request);
         }
 
-        // Check if user has the required permission using new JSON structure
-        $menuKey = $this->normalizeMenuKey((string) $menu->menu_key);
-        $hasPermission = UserAccess::hasPermission($user->id, $menuKey, $permission);
+        $menuKey = (string) $menu->menu_key;
+        $permissionName = $this->permissionName($menuKey, $permission);
+        $hasPermission = $user->can($permissionName);
 
         if (! $hasPermission) {
             // Return JSON response for API requests, redirect for web requests
@@ -117,40 +116,65 @@ class CheckMenuPermission
     {
         $paths = [$currentPath];
 
-        if ($currentPath === '/dashboard/website-management/landing') {
+        // Map PDF / export endpoints to their base page path so permissions apply.
+        // Examples:
+        // - /admin/booking-management/listing.pdf -> /admin/booking-management/listing
+        // - /admin/financial-management/financial-report/pdf -> /admin/financial-management/financial-report
+        if (str_contains($currentPath, '.pdf')) {
+            $paths[] = str_replace('.pdf', '', $currentPath);
+        }
+
+        if (str_contains($currentPath, '/pdf')) {
+            $paths[] = str_replace('/pdf', '', $currentPath);
+        }
+
+        // Booking listing sub-routes (participants/invoice PDFs) should inherit permissions from listing page.
+        if (str_contains($currentPath, '/booking-management/listing/')) {
+            $paths[] = '/admin/booking-management/listing';
+            $paths[] = '/dashboard/booking-management/listing';
+        }
+
+        if (str_starts_with($currentPath, '/admin')) {
+            $paths[] = '/dashboard'.substr($currentPath, strlen('/admin'));
+        }
+
+        if (str_starts_with($currentPath, '/dashboard')) {
+            $paths[] = '/admin'.substr($currentPath, strlen('/dashboard'));
+        }
+
+        $dashboardPath = str_starts_with($currentPath, '/admin')
+            ? '/dashboard'.substr($currentPath, strlen('/admin'))
+            : $currentPath;
+
+        if ($dashboardPath === '/dashboard/website-management/landing') {
             $paths[] = '/dashboard/website-management/content';
         }
 
-        if ($currentPath === '/dashboard/website-management/content') {
+        if ($dashboardPath === '/dashboard/website-management/content') {
             $paths[] = '/dashboard/website-management/landing';
         }
 
-        if ($currentPath === '/dashboard/website-management/schedules') {
+        if ($dashboardPath === '/dashboard/website-management/schedules') {
             $paths[] = '/dashboard/product-management/packages';
         }
 
-        if ($currentPath === '/dashboard/product-management/products') {
+        if ($dashboardPath === '/dashboard/product-management/products') {
             $paths[] = '/dashboard/website-management/products';
         }
 
-        if ($currentPath === '/dashboard/product-management/categories') {
+        if ($dashboardPath === '/dashboard/product-management/categories') {
             $paths[] = '/dashboard/product-management/products';
         }
 
-        if ($currentPath === '/dashboard/product-management/packages') {
+        if ($dashboardPath === '/dashboard/product-management/packages') {
             $paths[] = '/dashboard/website-management/packages';
         }
 
         return $paths;
     }
 
-    private function normalizeMenuKey(string $menuKey): string
+    private function permissionName(string $menuKey, string $permission): string
     {
-        return match ($menuKey) {
-            'content_management' => 'landing_page',
-            'schedule_management' => 'package',
-            'product_category' => 'product',
-            default => $menuKey,
-        };
+        return 'menu.'.$menuKey.'.'.$permission;
     }
 }

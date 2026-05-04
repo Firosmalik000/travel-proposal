@@ -1,13 +1,12 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, User, Lock, CheckCircle } from 'lucide-react';
-import { useForm } from '@inertiajs/react';
+import { send } from '@/routes/verification';
+import { Link, useForm } from '@inertiajs/react';
+import { CheckCircle, Loader2, Lock, Mail, User } from 'lucide-react';
 import { FormEvent, useState } from 'react';
 import { toast } from 'sonner';
-import { Link } from '@inertiajs/react';
-import { send } from '@/routes/verification';
 
 interface User {
     id: number;
@@ -87,7 +86,7 @@ export default function AccountTab({ user, mustVerifyEmail, status }: Props) {
                 </Alert>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {/* Username */}
                 <div className="space-y-2">
                     <Label htmlFor="name" className="flex items-center gap-2">
@@ -102,7 +101,9 @@ export default function AccountTab({ user, mustVerifyEmail, status }: Props) {
                         required
                     />
                     {errors.name && (
-                        <p className="text-sm text-destructive">{errors.name}</p>
+                        <p className="text-sm text-destructive">
+                            {errors.name}
+                        </p>
                     )}
                 </div>
 
@@ -121,7 +122,9 @@ export default function AccountTab({ user, mustVerifyEmail, status }: Props) {
                         required
                     />
                     {errors.email && (
-                        <p className="text-sm text-destructive">{errors.email}</p>
+                        <p className="text-sm text-destructive">
+                            {errors.email}
+                        </p>
                     )}
                     <p className="text-xs text-muted-foreground">
                         Jika Anda mengubah email, verifikasi akan direset
@@ -130,7 +133,10 @@ export default function AccountTab({ user, mustVerifyEmail, status }: Props) {
 
                 {/* Password */}
                 <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="password" className="flex items-center gap-2">
+                    <Label
+                        htmlFor="password"
+                        className="flex items-center gap-2"
+                    >
                         <Lock className="h-4 w-4" />
                         Password Baru
                     </Label>
@@ -142,7 +148,9 @@ export default function AccountTab({ user, mustVerifyEmail, status }: Props) {
                         placeholder="Minimal 8 karakter"
                     />
                     {errors.password && (
-                        <p className="text-sm text-destructive">{errors.password}</p>
+                        <p className="text-sm text-destructive">
+                            {errors.password}
+                        </p>
                     )}
                     <div className="flex items-center gap-2">
                         <input
@@ -152,7 +160,10 @@ export default function AccountTab({ user, mustVerifyEmail, status }: Props) {
                             onChange={(e) => setShowPassword(e.target.checked)}
                             className="h-4 w-4 rounded border-gray-300"
                         />
-                        <label htmlFor="show-password" className="text-sm text-muted-foreground cursor-pointer">
+                        <label
+                            htmlFor="show-password"
+                            className="cursor-pointer text-sm text-muted-foreground"
+                        >
                             Tampilkan password
                         </label>
                     </div>
@@ -162,7 +173,7 @@ export default function AccountTab({ user, mustVerifyEmail, status }: Props) {
                 </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t">
+            <div className="flex justify-end border-t pt-4">
                 <Button type="submit" disabled={isSubmitting || processing}>
                     {(isSubmitting || processing) && (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />

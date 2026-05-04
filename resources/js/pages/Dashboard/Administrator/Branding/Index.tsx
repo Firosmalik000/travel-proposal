@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, useForm } from '@inertiajs/react';
 import { Loader2 } from 'lucide-react';
@@ -30,6 +31,8 @@ interface BrandingPageProps {
 }
 
 export default function BrandingIndex({ branding }: BrandingPageProps) {
+    const { can } = usePermission('branding');
+    const canEdit = can('edit');
     const { data, setData, post, processing, errors } = useForm({
         company_name: branding.company_name,
         company_subtitle: branding.company_subtitle,
@@ -45,6 +48,10 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
 
     const submit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+
+        if (!canEdit) {
+            return;
+        }
 
         post('/admin/website-management/branding', {
             forceFormData: true,
@@ -84,6 +91,7 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                                     <Input
                                         id="company_name"
                                         value={data.company_name}
+                                        disabled={!canEdit}
                                         onChange={(event) =>
                                             setData(
                                                 'company_name',
@@ -104,6 +112,7 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                                     <Input
                                         id="company_subtitle"
                                         value={data.company_subtitle}
+                                        disabled={!canEdit}
                                         onChange={(event) =>
                                             setData(
                                                 'company_subtitle',
@@ -283,12 +292,14 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                             </div>
 
                             <div className="flex justify-end">
-                                <Button type="submit" disabled={processing}>
-                                    {processing && (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    )}
-                                    Simpan Branding
-                                </Button>
+                                {canEdit ? (
+                                    <Button type="submit" disabled={processing}>
+                                        {processing && (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        )}
+                                        Simpan Branding
+                                    </Button>
+                                ) : null}
                             </div>
                         </form>
                     </CardContent>
@@ -297,4 +308,3 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
         </AppSidebarLayout>
     );
 }
-

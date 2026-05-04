@@ -98,7 +98,7 @@ export default function ArtikelIndex({
                 <meta name="description" content={t.meta} />
             </Head>
 
-            <MotionSection className="relative isolate overflow-hidden mx-auto w-full max-w-6xl px-4 pt-6 pb-8 sm:px-6">
+            <MotionSection className="relative isolate mx-auto w-full max-w-6xl overflow-hidden px-4 pt-6 pb-8 sm:px-6">
                 <div className="pointer-events-none absolute inset-0 -z-10">
                     <IslamicOrnamentZellige className="absolute top-[-30%] right-[-14%] h-[18rem] w-[18rem] rotate-[12deg] text-primary/15 sm:h-[22rem] sm:w-[22rem]" />
                     <IslamicOrnamentOttomanAccent className="absolute bottom-[-38%] left-[-16%] h-[20rem] w-[20rem] -rotate-[10deg] text-accent/15 sm:h-[26rem] sm:w-[26rem]" />
@@ -118,7 +118,7 @@ export default function ArtikelIndex({
                 </div>
             </MotionSection>
 
-            <MotionSection className="relative isolate overflow-hidden mx-auto w-full max-w-6xl px-4 pb-8 sm:px-6">
+            <MotionSection className="relative isolate mx-auto w-full max-w-6xl overflow-hidden px-4 pb-8 sm:px-6">
                 <div className="pointer-events-none absolute inset-0 -z-10">
                     <IslamicOrnamentOttomanAccent className="absolute top-[-42%] left-[12%] h-[18rem] w-[18rem] rotate-[14deg] text-primary/12 sm:h-[22rem] sm:w-[22rem]" />
                 </div>

@@ -90,7 +90,7 @@ class TravelPackage extends Model
 
     public function registrations(): HasMany
     {
-        return $this->hasMany(PackageRegistration::class, 'package_id');
+        return $this->hasMany(Booking::class, 'package_id');
     }
 
     public function itineraries(): HasMany

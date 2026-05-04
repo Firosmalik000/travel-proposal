@@ -430,8 +430,10 @@ class PackageController extends Controller
                 'notes' => $s->notes,
                 'is_active' => $s->is_active,
             ])->values()->all(),
-            'rating_avg' => $pkg->testimonials->avg('rating') ? round($pkg->testimonials->avg('rating'), 1) : null,
-            'rating_count' => $pkg->testimonials->count(),
+            'rating_avg' => $pkg->testimonials->where('is_active', true)->avg('rating')
+                ? round($pkg->testimonials->where('is_active', true)->avg('rating'), 1)
+                : null,
+            'rating_count' => $pkg->testimonials->where('is_active', true)->count(),
             'itineraries' => $pkg->itineraries->map(function (PackageItinerary $it): array {
                 $activities = $this->resolveActivitiesForItinerary($it);
 

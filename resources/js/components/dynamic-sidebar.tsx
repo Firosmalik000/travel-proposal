@@ -7,7 +7,6 @@ import {
     SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
-    SidebarMenuAction,
     SidebarMenuButton,
     SidebarMenuItem,
     SidebarMenuSub,
@@ -68,10 +67,6 @@ interface MenuItem {
     path: string;
     icon: string;
     children?: MenuItem[] | null;
-}
-
-function hasNavigablePath(path: string | null | undefined): boolean {
-    return Boolean(path && path !== '#');
 }
 
 function canonicalAdminPath(path: string | null | undefined): string {
@@ -136,9 +131,11 @@ export function DynamicSidebar() {
     }, []);
 
     const filteredMenus = menus.filter((menu) => {
-        const matchesName = menu.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesChildren = menu.children?.some(child => 
-            child.name.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesName = menu.name
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase());
+        const matchesChildren = menu.children?.some((child) =>
+            child.name.toLowerCase().includes(searchQuery.toLowerCase()),
         );
         return matchesName || matchesChildren;
     });
@@ -163,12 +160,12 @@ export function DynamicSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-                
+
                 <div className="mt-4 group-data-[collapsible=icon]:hidden">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/60" />
-                        <Input 
-                            placeholder="Cari menu..." 
+                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground/60" />
+                        <Input
+                            placeholder="Cari menu..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className="h-10 border-sidebar-border/60 bg-white/40 pl-9 text-xs shadow-none ring-offset-background placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/30 dark:bg-black/20"
@@ -181,7 +178,10 @@ export function DynamicSidebar() {
                 {loading ? (
                     <div className="space-y-2 px-2">
                         {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="h-10 w-full animate-pulse rounded-lg bg-sidebar-accent/50" />
+                            <div
+                                key={i}
+                                className="h-10 w-full animate-pulse rounded-lg bg-sidebar-accent/50"
+                            />
                         ))}
                     </div>
                 ) : (
@@ -197,6 +197,12 @@ export function DynamicSidebar() {
                                         item={menu}
                                     />
                                 ))}
+                                {filteredMenus.length === 0 && !searchQuery && (
+                                    <div className="px-4 py-8 text-center text-xs text-muted-foreground italic">
+                                        Belum ada akses menu. Minta admin assign
+                                        role yang sesuai.
+                                    </div>
+                                )}
                                 {filteredMenus.length === 0 && searchQuery && (
                                     <div className="px-4 py-8 text-center text-xs text-muted-foreground italic">
                                         Tidak ada menu ditemukan
@@ -208,7 +214,7 @@ export function DynamicSidebar() {
                 )}
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-sidebar-border/40 p-3 bg-sidebar/50 backdrop-blur">
+            <SidebarFooter className="border-t border-sidebar-border/40 bg-sidebar/50 p-3 backdrop-blur">
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
@@ -221,7 +227,6 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
     const currentPath = normalizePath(url);
     const itemHref = canonicalAdminPath(item.path);
     const itemPath = normalizePath(itemHref);
-    const canNavigate = hasNavigablePath(itemHref);
 
     const isActive =
         isSameOrChildPath(currentPath, itemPath) ||
@@ -230,9 +235,9 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
 
     const buttonClasses = cn(
         'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-        isActive 
-            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' 
-            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+        isActive
+            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
+            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground',
     );
 
     if (item.children && item.children.length > 0) {
@@ -250,13 +255,20 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
                             isActive={isActive}
                             className={buttonClasses}
                         >
-                            <IconComponent className={cn("size-4 shrink-0", isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-sidebar-foreground")} />
+                            <IconComponent
+                                className={cn(
+                                    'size-4 shrink-0',
+                                    isActive
+                                        ? 'text-primary-foreground'
+                                        : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                                )}
+                            />
                             <span className="flex-1 truncate">{item.name}</span>
                             <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                         </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-0 py-1">
-                        <SidebarMenuSub className="ml-4 mr-0 border-l border-sidebar-border/60 pl-2 pr-0">
+                        <SidebarMenuSub className="mr-0 ml-4 border-l border-sidebar-border/60 pr-0 pl-2">
                             {item.children.map((child) => (
                                 <SubMenuItem
                                     key={child.menu_key}
@@ -280,7 +292,14 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
             >
                 <Link href={itemHref}>
                     <div className="flex size-5 items-center justify-center transition-transform group-hover:scale-110">
-                        <IconComponent className={cn("size-full shrink-0", isActive ? "text-primary" : "text-slate-400 group-hover:text-primary")} />
+                        <IconComponent
+                            className={cn(
+                                'size-full shrink-0',
+                                isActive
+                                    ? 'text-primary'
+                                    : 'text-slate-400 group-hover:text-primary',
+                            )}
+                        />
                     </div>
                     <span className="flex-1 truncate leading-none">
                         {item.name}
@@ -324,7 +343,6 @@ function SubMenuItem({ item }: { item: MenuItem }) {
     const currentPath = normalizePath(url);
     const itemHref = canonicalAdminPath(item.path);
     const itemPath = normalizePath(itemHref);
-    const canNavigate = hasNavigablePath(itemHref);
 
     const isActive =
         isSameOrChildPath(currentPath, itemPath) ||
@@ -333,9 +351,9 @@ function SubMenuItem({ item }: { item: MenuItem }) {
 
     const subButtonClasses = cn(
         'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[0.825rem] font-medium transition-colors',
-        isActive 
-            ? 'bg-primary/10 text-primary' 
-            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+        isActive
+            ? 'bg-primary/10 text-primary'
+            : 'text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground',
     );
 
     if (item.children && item.children.length > 0) {
@@ -352,13 +370,20 @@ function SubMenuItem({ item }: { item: MenuItem }) {
                             isActive={isActive}
                             className={subButtonClasses}
                         >
-                            <IconComponent className={cn("size-3.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-sidebar-foreground")} />
+                            <IconComponent
+                                className={cn(
+                                    'size-3.5 shrink-0',
+                                    isActive
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                                )}
+                            />
                             <span className="flex-1 truncate">{item.name}</span>
                             <ChevronRight className="ml-auto size-3.5 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                         </SidebarMenuSubButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-0 py-1">
-                        <SidebarMenuSub className="ml-2 mr-0 border-l border-sidebar-border/60 pl-2 pr-0">
+                        <SidebarMenuSub className="mr-0 ml-2 border-l border-sidebar-border/60 pr-0 pl-2">
                             {item.children.map((child) => (
                                 <SubMenuItem
                                     key={child.menu_key}
@@ -380,7 +405,14 @@ function SubMenuItem({ item }: { item: MenuItem }) {
                 className={subButtonClasses}
             >
                 <Link href={itemHref}>
-                    <IconComponent className={cn("size-3.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-sidebar-foreground")} />
+                    <IconComponent
+                        className={cn(
+                            'size-3.5 shrink-0',
+                            isActive
+                                ? 'text-primary'
+                                : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                        )}
+                    />
                     <span className="flex-1 truncate">{item.name}</span>
                 </Link>
             </SidebarMenuSubButton>

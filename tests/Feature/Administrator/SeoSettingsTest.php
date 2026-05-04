@@ -21,7 +21,10 @@ class SeoSettingsTest extends TestCase
         $this->actingAs($user)
             ->get(route('seo.index'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('Dashboard/Administrator/Seo/Index'));
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/Administrator/Seo/Index')
+                ->has('settings.contact.logo.url')
+            );
     }
 
     public function test_seo_settings_can_be_updated(): void
@@ -67,23 +70,36 @@ class SeoSettingsTest extends TestCase
 
     public function test_seo_logo_can_be_uploaded_without_requiring_other_fields(): void
     {
-        Storage::fake('public');
+        $originalStoragePath = $this->app->storagePath();
+        $temporaryStoragePath = base_path('.tmp-storage');
 
-        $user = User::factory()->create();
+        if (! is_dir($temporaryStoragePath)) {
+            mkdir($temporaryStoragePath, 0777, true);
+        }
 
-        $this->actingAs($user)
-            ->patch(route('seo.update'), [
-                'logo' => UploadedFile::fake()->image('seo-logo.png'),
-            ])
-            ->assertRedirect();
+        $this->app->useStoragePath($temporaryStoragePath);
 
-        $settings = PageContent::query()->where('slug', 'seo-settings')->first();
+        try {
+            Storage::fake('public');
 
-        $this->assertNotNull($settings);
-        $this->assertArrayHasKey('contact', $settings->content);
-        $this->assertArrayHasKey('logo', $settings->content['contact']);
-        $this->assertArrayHasKey('path', $settings->content['contact']['logo']);
+            $user = User::factory()->create();
 
-        Storage::disk('public')->assertExists($settings->content['contact']['logo']['path']);
+            $this->actingAs($user)
+                ->patch(route('seo.update'), [
+                    'logo' => UploadedFile::fake()->image('seo-logo.png'),
+                ])
+                ->assertRedirect();
+
+            $settings = PageContent::query()->where('slug', 'seo-settings')->first();
+
+            $this->assertNotNull($settings);
+            $this->assertArrayHasKey('contact', $settings->content);
+            $this->assertArrayHasKey('logo', $settings->content['contact']);
+            $this->assertArrayHasKey('path', $settings->content['contact']['logo']);
+
+            Storage::disk('public')->assertExists($settings->content['contact']['logo']['path']);
+        } finally {
+            $this->app->useStoragePath($originalStoragePath);
+        }
     }
 }

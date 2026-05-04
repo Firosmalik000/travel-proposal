@@ -42,7 +42,11 @@ export function IslamicOrnamentKhatam({ className }: OrnamentProps) {
             fill="none"
             aria-hidden="true"
         >
-            <g stroke="currentColor" strokeLinejoin="round" strokeLinecap="round">
+            <g
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            >
                 <polygon points={outerStar} strokeWidth="2" />
 
                 <g opacity="0.92" strokeWidth="1.7">
@@ -56,12 +60,15 @@ export function IslamicOrnamentKhatam({ className }: OrnamentProps) {
                     />
                 </g>
 
-                <polygon points={middleStar} strokeWidth="1.85" opacity="0.96" />
+                <polygon
+                    points={middleStar}
+                    strokeWidth="1.85"
+                    opacity="0.96"
+                />
 
                 <g opacity="0.9" strokeWidth="1.55">
                     {accentDiamonds.map((d, idx) => (
                         <rect
-                             
                             key={idx}
                             x={d.x - 3.6}
                             y={d.y - 3.6}
@@ -101,7 +108,11 @@ export function IslamicOrnamentRosette({ className }: OrnamentProps) {
             fill="none"
             aria-hidden="true"
         >
-            <g stroke="currentColor" strokeLinejoin="round" strokeLinecap="round">
+            <g
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            >
                 <polygon points={outerStar} strokeWidth="2" />
 
                 <g opacity="0.92" strokeWidth="1.65">
@@ -117,13 +128,7 @@ export function IslamicOrnamentRosette({ className }: OrnamentProps) {
 
                 <g opacity="0.9" strokeWidth="1.65">
                     {cornerDots.map((p, idx) => (
-                        <circle
-                             
-                            key={idx}
-                            cx={p.x}
-                            cy={p.y}
-                            r="3.6"
-                        />
+                        <circle key={idx} cx={p.x} cy={p.y} r="3.6" />
                     ))}
                 </g>
 
@@ -158,7 +163,11 @@ export function IslamicOrnamentRow1Col1({ className }: OrnamentProps) {
             fill="none"
             aria-hidden="true"
         >
-            <g stroke="currentColor" strokeLinejoin="round" strokeLinecap="round">
+            <g
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            >
                 <polygon points={outerStar} strokeWidth="2" />
 
                 <g opacity="0.92" strokeWidth="1.75">
@@ -177,7 +186,6 @@ export function IslamicOrnamentRow1Col1({ className }: OrnamentProps) {
                 <g opacity="0.9" strokeWidth="1.6">
                     {accentDiamonds.map((d, idx) => (
                         <rect
-                             
                             key={idx}
                             x={d.x - 3.9}
                             y={d.y - 3.9}
@@ -233,7 +241,11 @@ export function IslamicOrnamentAbbasid({ className }: OrnamentProps) {
             fill="none"
             aria-hidden="true"
         >
-            <g stroke="currentColor" strokeLinejoin="round" strokeLinecap="round">
+            <g
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            >
                 <rect x="14" y="14" width="72" height="72" strokeWidth="2" />
                 <rect
                     x="22"
@@ -252,7 +264,6 @@ export function IslamicOrnamentAbbasid({ className }: OrnamentProps) {
                 <g opacity="0.9" strokeWidth="1.6">
                     {cornerBricks.map((b, idx) => (
                         <rect
-                             
                             key={idx}
                             x={b.x}
                             y={b.y}
@@ -262,7 +273,6 @@ export function IslamicOrnamentAbbasid({ className }: OrnamentProps) {
                     ))}
                     {midBricks.map((b, idx) => (
                         <rect
-                             
                             key={`m_${idx}`}
                             x={b.x}
                             y={b.y}
@@ -308,26 +318,23 @@ export function IslamicOrnamentOttoman({ className }: OrnamentProps) {
             fill="none"
             aria-hidden="true"
         >
-            <g stroke="currentColor" strokeLinejoin="round" strokeLinecap="round">
+            <g
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            >
                 <circle cx="50" cy="50" r="46" strokeWidth="2" opacity="0.95" />
                 <polygon points={outerStar} strokeWidth="1.8" opacity="0.92" />
 
                 <g opacity="0.9" strokeWidth="1.55">
                     {ringDots.map((p, idx) => (
-                        <circle
-                             
-                            key={idx}
-                            cx={p.x}
-                            cy={p.y}
-                            r="2.2"
-                        />
+                        <circle key={idx} cx={p.x} cy={p.y} r="2.2" />
                     ))}
                 </g>
 
                 <g opacity="0.92" strokeWidth="1.65">
                     {petals.map((p, idx) => (
                         <path
-                             
                             key={idx}
                             d="M50 17 C58 29 58 41 50 44 C42 41 42 29 50 17 Z"
                             transform={`rotate(${p.rot} 50 50)`}
@@ -365,7 +372,11 @@ export function IslamicOrnamentOttomanAccent({ className }: OrnamentProps) {
             fill="none"
             aria-hidden="true"
         >
-            <g stroke="currentColor" strokeLinejoin="round" strokeLinecap="round">
+            <g
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            >
                 <circle cx="50" cy="50" r="46" strokeWidth="2" opacity="0.95" />
 
                 <g opacity="0.9" strokeWidth="1.55">
@@ -418,7 +429,11 @@ export function IslamicOrnamentZellige({ className }: OrnamentProps) {
             fill="none"
             aria-hidden="true"
         >
-            <g stroke="currentColor" strokeLinejoin="round" strokeLinecap="round">
+            <g
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            >
                 <rect x="12" y="12" width="76" height="76" strokeWidth="2" />
                 <rect
                     x="18"
@@ -462,7 +477,11 @@ export function IslamicLantern({ className }: OrnamentProps) {
             fill="none"
             aria-hidden="true"
         >
-            <g stroke="currentColor" strokeLinejoin="round" strokeLinecap="round">
+            <g
+                stroke="currentColor"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+            >
                 {/* Ring + chain */}
                 <path
                     d="M50 6 C56 6 60 10 60 15 C60 20 56 24 50 24 C44 24 40 20 40 15 C40 10 44 6 50 6 Z"

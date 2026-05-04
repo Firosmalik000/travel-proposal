@@ -43,6 +43,12 @@ This application is a Laravel application and its main Laravel ecosystems packag
 ## Frontend Bundling
 
 - If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
+- After frontend/backend changes are completed, run this verification checklist (except `dev`) before finalizing:
+    - `npm run lint`
+    - `npm run types`
+    - `npm run format:check`
+- Do not run `npm run build`, `npm run build:ssr`, or `npm run format` unless the user explicitly asks for it.
+- Include the checklist status in the final handoff.
 
 ## Replies
 
@@ -274,6 +280,7 @@ Route::get('/users', function () {
 
 ### Pest Tests
 
+- Follow the existing test style in this repository. If the codebase uses PHPUnit-style test classes, keep that convention even though Pest is installed.
 - All tests must be written using Pest. Use `php artisan make:test --pest {name}`.
 - You must not remove any tests or test files from the tests directory without approval. These are not temporary or helper files - these are core to the application.
 - Tests should test all of the happy paths, failure paths, and weird paths.
@@ -437,4 +444,118 @@ return (
 | overflow-ellipsis | text-ellipsis |
 | decoration-slice | box-decoration-slice |
 | decoration-clone | box-decoration-clone |
+
+=== architecture rules ===
+
+## Architecture Boundaries
+
+- Controllers must stay thin: receive the request, delegate business logic, and return responses.
+- Avoid placing heavy business logic in controllers, middleware, routes, or React page components.
+- Validation must live in Form Request classes.
+- Reusable or complex domain logic should be extracted into Action or Service classes.
+- React page components should focus on page composition and data flow.
+- Shared UI should live in reusable components when reuse improves consistency.
+
+## Naming Conventions
+
+- Models should use singular names.
+- Collections and grouped data should use plural names.
+- Form Requests should clearly describe intent such as `StoreProductRequest` or `UpdateProfileRequest`.
+- Jobs should use action-oriented names such as `SendInvoiceEmail`.
+- React components should use PascalCase file names matching the exported component.
+
+## Service / Action Classes
+
+- Extract complex or reusable business logic into Action or Service classes.
+- Prefer single-responsibility classes with methods such as `handle()` or `execute()`.
+- Avoid introducing unnecessary service layers for simple CRUD logic.
+
+=== security rules ===
+
+## Security Baseline
+
+- Never trust client input; always validate and authorize write operations.
+- Do not rely on frontend visibility for access control.
+- Never hardcode secrets, tokens, API keys, or credentials.
+- Do not expose stack traces or sensitive data to end users.
+- Validate file uploads including type, size, and destination.
+- Avoid logging sensitive data such as passwords, tokens, or cookies.
+
+## Authorization
+
+- Protected routes should include tests for guest, forbidden, and allowed scenarios.
+- Prefer Laravel policies or gates over inline authorization logic.
+
+=== performance rules ===
+
+## Database Performance
+
+- Avoid N+1 queries.
+- Use eager loading for relationships in lists or APIs.
+- Do not execute database queries inside loops.
+- Paginate large datasets.
+
+## Caching
+
+- Use caching for expensive or frequently accessed operations.
+- Ensure there is a clear cache invalidation strategy.
+
+## Queue Usage
+
+- Use queued jobs for slow tasks such as emails, exports, imports, image processing, and external syncs.
+- Avoid blocking HTTP requests with long-running work.
+
+=== testing expansion rules ===
+
+## Test Coverage Expectations
+
+Every feature change should test:
+
+- happy path
+- validation failures
+- authorization behavior
+- edge cases
+- regression tests when fixing bugs
+
+Prefer:
+
+- Feature tests for HTTP flows
+- Unit tests for isolated logic
+
+## Inertia Testing
+
+- Assert correct component names and key props for Inertia responses.
+- Do not rely only on status assertions.
+
+=== quality rules ===
+
+## Definition of Done
+
+A change is complete only when:
+
+- code is implemented
+- tests exist or updated
+- formatting checks pass
+- lint/type checks pass
+
+## Final Verification Checklist
+
+Backend:
+
+- `php artisan test --compact`
+- `vendor/bin/pint --dirty`
+
+Frontend:
+
+- `npm run lint`
+- `npm run types`
+- `npm run format:check`
+
+=== observability rules ===
+
+## Logging and Observability
+
+- Log meaningful failures and important job errors.
+- Do not log secrets or sensitive payloads.
+- Ensure exceptions flow through the application's normal reporting system.
 </laravel-boost-guidelines>

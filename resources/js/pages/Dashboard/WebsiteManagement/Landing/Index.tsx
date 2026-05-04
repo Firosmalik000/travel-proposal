@@ -1,12 +1,12 @@
-import { Button } from '@/components/ui/button'; 
-import { Checkbox } from '@/components/ui/checkbox'; 
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { Input } from '@/components/ui/input'; 
-import { Label } from '@/components/ui/label'; 
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -14,8 +14,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; 
-import { Textarea } from '@/components/ui/textarea'; 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, useForm } from '@inertiajs/react';
 import {
@@ -41,12 +41,12 @@ interface LandingPageItem {
     is_active: boolean;
 }
 
-interface EditableField { 
-    path: string; 
-    label: string; 
-    multiline: boolean; 
-    value: string; 
-} 
+interface EditableField {
+    path: string;
+    label: string;
+    multiline: boolean;
+    value: string;
+}
 
 type BackgroundType = 'default' | 'color' | 'image';
 
@@ -246,10 +246,7 @@ function Section({
                 className="rounded-2xl border border-border bg-card p-5 shadow-sm"
             >
                 <CollapsibleTrigger asChild>
-                    <button
-                        type="button"
-                        className="mb-4 w-full text-left"
-                    >
+                    <button type="button" className="mb-4 w-full text-left">
                         {header}
                     </button>
                 </CollapsibleTrigger>
@@ -285,11 +282,7 @@ function Row({ children }: { children: React.ReactNode }) {
     return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
 }
 
-export default function LandingIndex({
-    pages,
-}: {
-    pages: LandingPageItem[];
-}) {
+export default function LandingIndex({ pages }: { pages: LandingPageItem[] }) {
     const visiblePages = pages
         .filter(
             (page) =>
@@ -376,11 +369,7 @@ export default function LandingIndex({
     );
 }
 
-function LandingPageEditor({
-    page,
-}: {
-    page: LandingPageItem;
-}) {
+function LandingPageEditor({ page }: { page: LandingPageItem }) {
     const { data, setData, post, processing } = useForm({
         title: page.title ?? '',
         excerpt: page.excerpt ?? '',
@@ -456,7 +445,8 @@ function LandingPageEditor({
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                         <span className="font-semibold text-foreground">
-                            {pageLabels[page.slug] ?? humanizeSegment(page.slug)}
+                            {pageLabels[page.slug] ??
+                                humanizeSegment(page.slug)}
                         </span>
                         <span className="hidden sm:inline">•</span>
                         <span className="hidden sm:inline">
@@ -470,11 +460,7 @@ function LandingPageEditor({
                             rel="noopener noreferrer"
                             className="inline-flex"
                         >
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                            >
+                            <Button type="button" variant="outline" size="sm">
                                 <Eye className="mr-2 h-4 w-4" />
                                 Preview
                             </Button>
@@ -566,7 +552,10 @@ function LandingPageEditor({
                             id={`active_${page.slug}`}
                             checked={Boolean(data.is_active)}
                             onCheckedChange={(checked) =>
-                                setData('is_active', checked === true)
+                                setData((current) => ({
+                                    ...current,
+                                    is_active: checked === true,
+                                }))
                             }
                         />
                         <Label
@@ -580,7 +569,7 @@ function LandingPageEditor({
                         </Label>
                     </div>
                     <div className="flex flex-col justify-center gap-0.5 rounded-xl border border-border bg-muted/20 px-4 py-3">
-                        <p className="text-[0.65rem] font-bold uppercase tracking-widest text-muted-foreground">
+                        <p className="text-[0.65rem] font-bold tracking-widest text-muted-foreground uppercase">
                             Slug Halaman
                         </p>
                         <p className="font-mono text-xs font-bold text-primary">
@@ -600,7 +589,12 @@ function LandingPageEditor({
                     <Field label="Judul Halaman">
                         <Input
                             value={data.title}
-                            onChange={(e) => setData('title', e.target.value)}
+                            onChange={(e) =>
+                                setData((current) => ({
+                                    ...current,
+                                    title: e.target.value,
+                                }))
+                            }
                             placeholder="Contoh: Beranda Utama"
                         />
                     </Field>
@@ -608,7 +602,12 @@ function LandingPageEditor({
                         <Textarea
                             rows={2}
                             value={data.excerpt}
-                            onChange={(e) => setData('excerpt', e.target.value)}
+                            onChange={(e) =>
+                                setData((current) => ({
+                                    ...current,
+                                    excerpt: e.target.value,
+                                }))
+                            }
                             placeholder="Deskripsi singkat halaman ini..."
                         />
                     </Field>
@@ -668,473 +667,582 @@ function LandingPageEditor({
 
                 <div className={isHomePage ? 'space-y-5' : ''}>
                     {contentSections.map(([sectionKey, sectionValue]) => {
-                const label =
-                    sectionLabels[sectionKey] ?? humanizeSegment(sectionKey);
-                const desc = `Kelola konten ${label.toLowerCase()} untuk website.`;
-                const sectionId = `landing_${page.slug}_${sectionKey}`;
-                const isSectionOpen = openSections[sectionKey] ?? true;
+                        const label =
+                            sectionLabels[sectionKey] ??
+                            humanizeSegment(sectionKey);
+                        const desc = `Kelola konten ${label.toLowerCase()} untuk website.`;
+                        const sectionId = `landing_${page.slug}_${sectionKey}`;
+                        const isSectionOpen = openSections[sectionKey] ?? true;
 
-                if (page.slug === 'tentang-kami' && sectionKey === 'stats') {
-                    return (
-                        <Section
-                            key={sectionKey}
-                            icon={Layers3}
-                            title={label}
-                            desc={desc}
-                            sectionId={sectionId}
-                        >
-                            <StatsSectionEditor
-                                content={data.content}
-                                setContent={(content) =>
-                                    setData('content', content)
-                                }
-                            />
-                        </Section>
-                    );
-                }
-
-                if (page.slug === 'tentang-kami' && sectionKey === 'values') {
-                    return (
-                        <Section
-                            key={sectionKey}
-                            icon={Layers3}
-                            title={label}
-                            desc={desc}
-                            sectionId={sectionId}
-                        >
-                            <ValuesSectionEditor
-                                content={data.content}
-                                setContent={(content) =>
-                                    setData('content', content)
-                                }
-                            />
-                        </Section>
-                    );
-                }
-
-                if (page.slug === 'home' && sectionKey === 'services') {
-                    return (
-                        <Section
-                            key={sectionKey}
-                            icon={Layers3}
-                            title={label}
-                            desc={desc}
-                            sectionId={sectionId}
-                            collapsible
-                            open={isSectionOpen}
-                            onOpenChange={(nextOpen) =>
-                                setOpenSections((current) => ({
-                                    ...current,
-                                    [sectionKey]: nextOpen,
-                                }))
-                            }
-                        >
-                            <div className="space-y-5">
-                                <Row>
-                                    {collectEditableFields(
-                                        {
-                                            label:
-                                                data.content?.services?.label ??
-                                                '',
-                                            title:
-                                                data.content?.services?.title ??
-                                                '',
-                                            description:
-                                                data.content?.services
-                                                    ?.description ?? '',
-                                        },
-                                        'services',
-                                    ).map((field) => (
-                                        <Field
-                                            key={field.path}
-                                            label={field.label}
-                                        >
-                                            {field.multiline ? (
-                                                <Textarea
-                                                    value={field.value}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'content',
-                                                            updateNestedValue(
-                                                                data.content,
-                                                                field.path,
-                                                                e.target.value,
-                                                            ),
-                                                        )
-                                                    }
-                                                />
-                                            ) : (
-                                                <Input
-                                                    value={field.value}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'content',
-                                                            updateNestedValue(
-                                                                data.content,
-                                                                field.path,
-                                                                e.target.value,
-                                                            ),
-                                                        )
-                                                    }
-                                                />
-                                            )}
-                                        </Field>
-                                    ))}
-                                </Row>
-                                <ServiceItemsEditor
-                                    content={data.content}
-                                    setContent={(content) =>
-                                        setData('content', content)
-                                    }
-                                />
-                            </div>
-                        </Section>
-                    );
-                }
-
-                if (page.slug === 'home' && sectionKey === 'gallery') {
-                    return (
-                        <Section
-                            key={sectionKey}
-                            icon={ImageIcon}
-                            title={label}
-                            desc={desc}
-                            sectionId={sectionId}
-                            collapsible
-                            open={isSectionOpen}
-                            onOpenChange={(nextOpen) =>
-                                setOpenSections((current) => ({
-                                    ...current,
-                                    [sectionKey]: nextOpen,
-                                }))
-                            }
-                        >
-                            <GallerySectionEditor
-                                content={data.content}
-                                setContent={(content) =>
-                                    setData('content', content)
-                                }
-                            />
-                        </Section>
-                    );
-                }
-
-                if (page.slug === 'home' && sectionKey === 'timeline') {
-                    return (
-                        <Section
-                            key={sectionKey}
-                            icon={Layers3}
-                            title={label}
-                            desc={desc}
-                            sectionId={sectionId}
-                            collapsible
-                            open={isSectionOpen}
-                            onOpenChange={(nextOpen) =>
-                                setOpenSections((current) => ({
-                                    ...current,
-                                    [sectionKey]: nextOpen,
-                                }))
-                            }
-                        >
-                            <SectionBackgroundEditor
-                                sectionKey={sectionKey}
-                                content={data.content}
-                                media={data.media}
-                                setContent={(content) =>
-                                    setData('content', content)
-                                }
-                                setMedia={(media) => setData('media', media)}
-                            />
-                            <TimelineSectionEditor
-                                content={data.content}
-                                setContent={(content) =>
-                                    setData('content', content)
-                                }
-                            />
-                        </Section>
-                    );
-                }
-
-                if (page.slug === 'home' && sectionKey === 'problem') {
-                    return (
-                        <Section
-                            key={sectionKey}
-                            icon={Layers3}
-                            title={label}
-                            desc={desc}
-                            sectionId={sectionId}
-                            collapsible
-                            open={isSectionOpen}
-                            onOpenChange={(nextOpen) =>
-                                setOpenSections((current) => ({
-                                    ...current,
-                                    [sectionKey]: nextOpen,
-                                }))
-                            }
-                        >
-                            <SectionBackgroundEditor
-                                sectionKey={sectionKey}
-                                content={data.content}
-                                media={data.media}
-                                setContent={(content) =>
-                                    setData('content', content)
-                                }
-                                setMedia={(media) => setData('media', media)}
-                            />
-                            <ProblemSectionEditor
-                                content={data.content}
-                                setContent={(content) =>
-                                    setData('content', content)
-                                }
-                            />
-                        </Section>
-                    );
-                }
-
-                const fields = collectEditableFields(
-                    sectionValue,
-                    sectionKey,
-                );
-
-                const visibleFields = 
-                    page.slug === 'home' && sectionKey === 'contact' 
-                        ? fields.filter( 
-                              (field) => 
-                                  field.path !== 'contact.office_hours_label' && 
-                                  field.path !== 
-                                      'contact.office_hours_lines', 
-                          ) 
-                        : fields; 
-                if (visibleFields.length === 0) { 
-                    return null; 
-                } 
-
-                const showOfficeHoursNotice =
-                    page.slug === 'home' && sectionKey === 'contact';
- 
-                return ( 
-                    <Section 
-                        key={sectionKey} 
-                        icon={FileText} 
-                        title={label} 
-                        desc={desc} 
-                        sectionId={sectionId}
-                        collapsible={isHomePage}
-                        open={isHomePage ? isSectionOpen : undefined}
-                        onOpenChange={
-                            isHomePage
-                                ? (nextOpen) =>
-                                      setOpenSections((current) => ({
-                                          ...current,
-                                          [sectionKey]: nextOpen,
-                                      }))
-                                : undefined
+                        if (
+                            page.slug === 'tentang-kami' &&
+                            sectionKey === 'stats'
+                        ) {
+                            return (
+                                <Section
+                                    key={sectionKey}
+                                    icon={Layers3}
+                                    title={label}
+                                    desc={desc}
+                                    sectionId={sectionId}
+                                >
+                                    <StatsSectionEditor
+                                        content={data.content}
+                                        setContent={(content) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                content,
+                                            }))
+                                        }
+                                    />
+                                </Section>
+                            );
                         }
-                    > 
-                        {showOfficeHoursNotice ? (
-                            <div className="rounded-2xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
-                                Jam operasional (office hours) sekarang diatur di{' '}
-                                <span className="font-medium text-foreground">
-                                    Website Management -&gt; SEO
-                                </span>
-                                .
-                            </div>
-                        ) : null}
-                        <Row> 
-                            {[ 
-                                ...visibleFields, 
-                                ...buildExtraSectionFields( 
-                                    page.slug, 
-                                    sectionKey,
-                                    data.content,
-                                ),
-                            ].map((field) => {
-                                if (isBackgroundTypeField(field.path)) {
-                                    return (
-                                        <div
-                                            key={field.path}
-                                            className="sm:col-span-2"
-                                        >
-                                            <Field label={field.label}>
-                                                <Select
-                                                    value={
-                                                        (field.value as BackgroundType) ??
-                                                        'default'
-                                                    }
-                                                    onValueChange={(value) =>
-                                                        setData(
-                                                            'content',
-                                                            updateNestedValue(
-                                                                data.content,
-                                                                field.path,
-                                                                value,
-                                                            ),
-                                                        )
-                                                    }
-                                                >
-                                                    <SelectTrigger className="w-full">
-                                                        <SelectValue placeholder="Default" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="default">
-                                                            Default (pakai desain sekarang)
-                                                        </SelectItem>
-                                                        <SelectItem value="color">
-                                                            Warna
-                                                        </SelectItem>
-                                                        <SelectItem value="image">
-                                                            Foto
-                                                        </SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </Field>
-                                        </div>
-                                    );
-                                }
 
-                                if (isBackgroundColorField(field.path)) {
-                                    const section = field.path.split('.')[0];
-                                    const backgroundType = String(
-                                        getNestedValue(
-                                            data.content,
-                                            `${section}.background.type`,
-                                        ) ?? 'default',
-                                    );
+                        if (
+                            page.slug === 'tentang-kami' &&
+                            sectionKey === 'values'
+                        ) {
+                            return (
+                                <Section
+                                    key={sectionKey}
+                                    icon={Layers3}
+                                    title={label}
+                                    desc={desc}
+                                    sectionId={sectionId}
+                                >
+                                    <ValuesSectionEditor
+                                        content={data.content}
+                                        setContent={(content) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                content,
+                                            }))
+                                        }
+                                    />
+                                </Section>
+                            );
+                        }
 
-                                    if (backgroundType !== 'color') {
-                                        return null;
+                        if (page.slug === 'home' && sectionKey === 'services') {
+                            return (
+                                <Section
+                                    key={sectionKey}
+                                    icon={Layers3}
+                                    title={label}
+                                    desc={desc}
+                                    sectionId={sectionId}
+                                    collapsible
+                                    open={isSectionOpen}
+                                    onOpenChange={(nextOpen) =>
+                                        setOpenSections((current) => ({
+                                            ...current,
+                                            [sectionKey]: nextOpen,
+                                        }))
                                     }
+                                >
+                                    <div className="space-y-5">
+                                        <Row>
+                                            {collectEditableFields(
+                                                {
+                                                    label:
+                                                        data.content?.services
+                                                            ?.label ?? '',
+                                                    title:
+                                                        data.content?.services
+                                                            ?.title ?? '',
+                                                    description:
+                                                        data.content?.services
+                                                            ?.description ?? '',
+                                                },
+                                                'services',
+                                            ).map((field) => (
+                                                <Field
+                                                    key={field.path}
+                                                    label={field.label}
+                                                >
+                                                    {field.multiline ? (
+                                                        <Textarea
+                                                            value={field.value}
+                                                            onChange={(e) =>
+                                                                setData(
+                                                                    (
+                                                                        current,
+                                                                    ) => ({
+                                                                        ...current,
+                                                                        content:
+                                                                            updateNestedValue(
+                                                                                current.content,
+                                                                                field.path,
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            ),
+                                                                    }),
+                                                                )
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        <Input
+                                                            value={field.value}
+                                                            onChange={(e) =>
+                                                                setData(
+                                                                    (
+                                                                        current,
+                                                                    ) => ({
+                                                                        ...current,
+                                                                        content:
+                                                                            updateNestedValue(
+                                                                                current.content,
+                                                                                field.path,
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                            ),
+                                                                    }),
+                                                                )
+                                                            }
+                                                        />
+                                                    )}
+                                                </Field>
+                                            ))}
+                                        </Row>
+                                        <ServiceItemsEditor
+                                            content={data.content}
+                                            setContent={(content) =>
+                                                setData((current) => ({
+                                                    ...current,
+                                                    content,
+                                                }))
+                                            }
+                                        />
+                                    </div>
+                                </Section>
+                            );
+                        }
 
-                                    return (
-                                        <div
-                                            key={field.path}
-                                            className="sm:col-span-2"
-                                        >
-                                            <Field label={field.label}>
-                                                <div className="flex items-center gap-3">
-                                                    <Input
-                                                        type="color"
-                                                        value={
-                                                            field.value ||
-                                                            '#ffffff'
-                                                        }
+                        if (page.slug === 'home' && sectionKey === 'gallery') {
+                            return (
+                                <Section
+                                    key={sectionKey}
+                                    icon={ImageIcon}
+                                    title={label}
+                                    desc={desc}
+                                    sectionId={sectionId}
+                                    collapsible
+                                    open={isSectionOpen}
+                                    onOpenChange={(nextOpen) =>
+                                        setOpenSections((current) => ({
+                                            ...current,
+                                            [sectionKey]: nextOpen,
+                                        }))
+                                    }
+                                >
+                                    <GallerySectionEditor
+                                        content={data.content}
+                                        setContent={(content) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                content,
+                                            }))
+                                        }
+                                    />
+                                </Section>
+                            );
+                        }
+
+                        if (page.slug === 'home' && sectionKey === 'timeline') {
+                            return (
+                                <Section
+                                    key={sectionKey}
+                                    icon={Layers3}
+                                    title={label}
+                                    desc={desc}
+                                    sectionId={sectionId}
+                                    collapsible
+                                    open={isSectionOpen}
+                                    onOpenChange={(nextOpen) =>
+                                        setOpenSections((current) => ({
+                                            ...current,
+                                            [sectionKey]: nextOpen,
+                                        }))
+                                    }
+                                >
+                                    <SectionBackgroundEditor
+                                        sectionKey={sectionKey}
+                                        content={data.content}
+                                        media={data.media}
+                                        setContent={(content) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                content,
+                                            }))
+                                        }
+                                        setMedia={(media) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                media,
+                                            }))
+                                        }
+                                    />
+                                    <TimelineSectionEditor
+                                        content={data.content}
+                                        setContent={(content) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                content,
+                                            }))
+                                        }
+                                    />
+                                </Section>
+                            );
+                        }
+
+                        if (page.slug === 'home' && sectionKey === 'problem') {
+                            return (
+                                <Section
+                                    key={sectionKey}
+                                    icon={Layers3}
+                                    title={label}
+                                    desc={desc}
+                                    sectionId={sectionId}
+                                    collapsible
+                                    open={isSectionOpen}
+                                    onOpenChange={(nextOpen) =>
+                                        setOpenSections((current) => ({
+                                            ...current,
+                                            [sectionKey]: nextOpen,
+                                        }))
+                                    }
+                                >
+                                    <SectionBackgroundEditor
+                                        sectionKey={sectionKey}
+                                        content={data.content}
+                                        media={data.media}
+                                        setContent={(content) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                content,
+                                            }))
+                                        }
+                                        setMedia={(media) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                media,
+                                            }))
+                                        }
+                                    />
+                                    <ProblemSectionEditor
+                                        content={data.content}
+                                        setContent={(content) =>
+                                            setData((current) => ({
+                                                ...current,
+                                                content,
+                                            }))
+                                        }
+                                    />
+                                </Section>
+                            );
+                        }
+
+                        const fields = collectEditableFields(
+                            sectionValue,
+                            sectionKey,
+                        );
+
+                        const visibleFields =
+                            page.slug === 'home' && sectionKey === 'contact'
+                                ? fields.filter(
+                                      (field) =>
+                                          field.path !==
+                                              'contact.office_hours_label' &&
+                                          field.path !==
+                                              'contact.office_hours_lines',
+                                  )
+                                : fields;
+                        if (visibleFields.length === 0) {
+                            return null;
+                        }
+
+                        const showOfficeHoursNotice =
+                            page.slug === 'home' && sectionKey === 'contact';
+
+                        return (
+                            <Section
+                                key={sectionKey}
+                                icon={FileText}
+                                title={label}
+                                desc={desc}
+                                sectionId={sectionId}
+                                collapsible={isHomePage}
+                                open={isHomePage ? isSectionOpen : undefined}
+                                onOpenChange={
+                                    isHomePage
+                                        ? (nextOpen) =>
+                                              setOpenSections((current) => ({
+                                                  ...current,
+                                                  [sectionKey]: nextOpen,
+                                              }))
+                                        : undefined
+                                }
+                            >
+                                {showOfficeHoursNotice ? (
+                                    <div className="rounded-2xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+                                        Jam operasional (office hours) sekarang
+                                        diatur di{' '}
+                                        <span className="font-medium text-foreground">
+                                            Website Management -&gt; SEO
+                                        </span>
+                                        .
+                                    </div>
+                                ) : null}
+                                <Row>
+                                    {[
+                                        ...visibleFields,
+                                        ...buildExtraSectionFields(
+                                            page.slug,
+                                            sectionKey,
+                                            data.content,
+                                        ),
+                                    ].map((field) => {
+                                        if (isBackgroundTypeField(field.path)) {
+                                            return (
+                                                <div
+                                                    key={field.path}
+                                                    className="sm:col-span-2"
+                                                >
+                                                    <Field label={field.label}>
+                                                        <Select
+                                                            value={
+                                                                (field.value as BackgroundType) ??
+                                                                'default'
+                                                            }
+                                                            onValueChange={(
+                                                                value,
+                                                            ) =>
+                                                                setData(
+                                                                    (
+                                                                        current,
+                                                                    ) => ({
+                                                                        ...current,
+                                                                        content:
+                                                                            updateNestedValue(
+                                                                                current.content,
+                                                                                field.path,
+                                                                                value,
+                                                                            ),
+                                                                    }),
+                                                                )
+                                                            }
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Default" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="default">
+                                                                    Default
+                                                                    (pakai
+                                                                    desain
+                                                                    sekarang)
+                                                                </SelectItem>
+                                                                <SelectItem value="color">
+                                                                    Warna
+                                                                </SelectItem>
+                                                                <SelectItem value="image">
+                                                                    Foto
+                                                                </SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </Field>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (
+                                            isBackgroundColorField(field.path)
+                                        ) {
+                                            const section =
+                                                field.path.split('.')[0];
+                                            const backgroundType = String(
+                                                getNestedValue(
+                                                    data.content,
+                                                    `${section}.background.type`,
+                                                ) ?? 'default',
+                                            );
+
+                                            if (backgroundType !== 'color') {
+                                                return null;
+                                            }
+
+                                            return (
+                                                <div
+                                                    key={field.path}
+                                                    className="sm:col-span-2"
+                                                >
+                                                    <Field label={field.label}>
+                                                        <div className="flex items-center gap-3">
+                                                            <Input
+                                                                type="color"
+                                                                value={
+                                                                    field.value ||
+                                                                    '#ffffff'
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData(
+                                                                        (
+                                                                            current,
+                                                                        ) => ({
+                                                                            ...current,
+                                                                            content:
+                                                                                updateNestedValue(
+                                                                                    current.content,
+                                                                                    field.path,
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }),
+                                                                    )
+                                                                }
+                                                                className="h-10 w-14 p-1"
+                                                            />
+                                                            <Input
+                                                                value={
+                                                                    field.value
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData(
+                                                                        (
+                                                                            current,
+                                                                        ) => ({
+                                                                            ...current,
+                                                                            content:
+                                                                                updateNestedValue(
+                                                                                    current.content,
+                                                                                    field.path,
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                        }),
+                                                                    )
+                                                                }
+                                                                placeholder="#fff7ef"
+                                                            />
+                                                        </div>
+                                                    </Field>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (isImageField(field.path)) {
+                                            const section =
+                                                field.path.split('.')[0];
+                                            const backgroundType = String(
+                                                getNestedValue(
+                                                    data.content,
+                                                    `${section}.background.type`,
+                                                ) ?? 'default',
+                                            );
+
+                                            if (
+                                                field.path.endsWith(
+                                                    '.background.image',
+                                                ) &&
+                                                backgroundType !== 'image'
+                                            ) {
+                                                return null;
+                                            }
+
+                                            return (
+                                                <div
+                                                    key={field.path}
+                                                    className="sm:col-span-2"
+                                                >
+                                                    <Field label={field.label}>
+                                                        <ImageField
+                                                            label={field.label}
+                                                            value={field.value}
+                                                            file={
+                                                                data.media[
+                                                                    field.path
+                                                                ] ?? null
+                                                            }
+                                                            onChange={(file) =>
+                                                                setData(
+                                                                    (
+                                                                        current,
+                                                                    ) => ({
+                                                                        ...current,
+                                                                        media: {
+                                                                            ...current.media,
+                                                                            [field.path]:
+                                                                                file,
+                                                                        },
+                                                                    }),
+                                                                )
+                                                            }
+                                                        />
+                                                    </Field>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <Field
+                                                key={field.path}
+                                                label={field.label}
+                                            >
+                                                {field.multiline ? (
+                                                    <Textarea
+                                                        value={field.value}
                                                         onChange={(e) =>
                                                             setData(
-                                                                'content',
-                                                                updateNestedValue(
-                                                                    data.content,
-                                                                    field.path,
-                                                                    e.target
-                                                                        .value,
-                                                                ),
+                                                                (current) => ({
+                                                                    ...current,
+                                                                    content:
+                                                                        updateNestedValue(
+                                                                            current.content,
+                                                                            field.path,
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        ),
+                                                                }),
                                                             )
                                                         }
-                                                        className="h-10 w-14 p-1"
                                                     />
+                                                ) : (
                                                     <Input
                                                         value={field.value}
                                                         onChange={(e) =>
                                                             setData(
-                                                                'content',
-                                                                updateNestedValue(
-                                                                    data.content,
-                                                                    field.path,
-                                                                    e.target
-                                                                        .value,
-                                                                ),
+                                                                (current) => ({
+                                                                    ...current,
+                                                                    content:
+                                                                        updateNestedValue(
+                                                                            current.content,
+                                                                            field.path,
+                                                                            e
+                                                                                .target
+                                                                                .value,
+                                                                        ),
+                                                                }),
                                                             )
                                                         }
-                                                        placeholder="#fff7ef"
                                                     />
-                                                </div>
+                                                )}
                                             </Field>
-                                        </div>
-                                    );
-                                }
-
-                                if (isImageField(field.path)) {
-                                    const section = field.path.split('.')[0];
-                                    const backgroundType = String(
-                                        getNestedValue(
-                                            data.content,
-                                            `${section}.background.type`,
-                                        ) ?? 'default',
-                                    );
-
-                                    if (
-                                        field.path.endsWith('.background.image') &&
-                                        backgroundType !== 'image'
-                                    ) {
-                                        return null;
-                                    }
-
-                                    return (
-                                    <div
-                                        key={field.path}
-                                        className="sm:col-span-2"
-                                    >
-                                        <Field label={field.label}>
-                                            <ImageField
-                                                label={field.label}
-                                                value={field.value}
-                                                file={
-                                                    data.media[field.path] ??
-                                                    null
-                                                }
-                                                onChange={(file) =>
-                                                    setData('media', {
-                                                        ...data.media,
-                                                        [field.path]: file,
-                                                    })
-                                                }
-                                            />
-                                        </Field>
-                                    </div>
-                                    );
-                                }
-
-                                return (
-                                    <Field key={field.path} label={field.label}>
-                                        {field.multiline ? (
-                                            <Textarea
-                                                value={field.value}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'content',
-                                                        updateNestedValue(
-                                                            data.content,
-                                                            field.path,
-                                                            e.target.value,
-                                                        ),
-                                                    )
-                                                }
-                                            />
-                                        ) : (
-                                            <Input
-                                                value={field.value}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'content',
-                                                        updateNestedValue(
-                                                            data.content,
-                                                            field.path,
-                                                            e.target.value,
-                                                        ),
-                                                    )
-                                                }
-                                            />
-                                        )}
-                                    </Field>
-                                );
-                            })}
-                        </Row> 
-                    </Section> 
-                ); 
-            })}
+                                        );
+                                    })}
+                                </Row>
+                            </Section>
+                        );
+                    })}
                 </div>
             </div>
 
-            <div className="flex justify-end pb-8 pt-4">
+            <div className="flex justify-end pt-4 pb-8">
                 <Button type="submit" disabled={processing} size="lg">
                     {processing ? 'Menyimpan...' : 'Simpan Semua Perubahan'}
                 </Button>
@@ -1158,10 +1266,7 @@ function ServiceItemsEditor({
         const next = structuredClone(content ?? {});
         next.services = {
             ...(next.services ?? {}),
-            items: [
-                ...items,
-                { icon: '', title: '', description: '' },
-            ],
+            items: [...items, { icon: '', title: '', description: '' }],
         };
         setContent(next);
     };
@@ -1201,7 +1306,7 @@ function ServiceItemsEditor({
                         className="rounded-xl border border-border bg-muted/10 p-4"
                     >
                         <div className="mb-3 flex items-center justify-between">
-                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                                 Layanan {index + 1}
                             </p>
                             <Button
@@ -1298,10 +1403,7 @@ function ValuesSectionEditor({
 
     const addValue = () => {
         const nextContent = structuredClone(content ?? {});
-        nextContent.values = [
-            ...values,
-            { title: '', description: '' },
-        ];
+        nextContent.values = [...values, { title: '', description: '' }];
         setContent(nextContent);
     };
 
@@ -1339,7 +1441,7 @@ function ValuesSectionEditor({
                         className="rounded-xl border border-border bg-muted/10 p-4"
                     >
                         <div className="mb-3 flex items-center justify-between">
-                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            <p className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                                 Nilai {index + 1}
                             </p>
                             <Button
@@ -1525,7 +1627,7 @@ function getOrderedContentSections(
     return allowedSections.map((key) => [key, content?.[key] ?? {}]);
 }
 
-function ImageField({ 
+function ImageField({
     label,
     value,
     file,
@@ -1579,7 +1681,9 @@ function ImageField({
                         ) : (
                             <>
                                 Path:{' '}
-                                <span className="font-mono">{value || '-'}</span>
+                                <span className="font-mono">
+                                    {value || '-'}
+                                </span>
                             </>
                         )}
                     </div>
@@ -1649,10 +1753,7 @@ function GallerySectionEditor({
     );
 }
 
-function collectEditableFields(
-    value: unknown,
-    path: string,
-): EditableField[] {
+function collectEditableFields(value: unknown, path: string): EditableField[] {
     if (value === null || value === undefined) {
         return [];
     }
@@ -1699,11 +1800,11 @@ function collectEditableFields(
     return [];
 }
 
-function buildExtraSectionFields( 
-    pageSlug: string, 
-    sectionKey: string, 
-    content: Record<string, any>, 
-): EditableField[] { 
+function buildExtraSectionFields(
+    pageSlug: string,
+    sectionKey: string,
+    content: Record<string, any>,
+): EditableField[] {
     if (pageSlug === 'home') {
         const typeValue = String(
             getNestedValue(content, `${sectionKey}.background.type`) ??
@@ -1738,11 +1839,11 @@ function buildExtraSectionFields(
         ];
     }
 
-    if (pageSlug === 'tentang-kami' && sectionKey === 'profile') { 
-        return [ 
-            { 
-                path: 'profile.image_primary', 
-                label: 'Foto Utama', 
+    if (pageSlug === 'tentang-kami' && sectionKey === 'profile') {
+        return [
+            {
+                path: 'profile.image_primary',
+                label: 'Foto Utama',
                 multiline: false,
                 value: String(
                     getNestedValue(content, 'profile.image_primary') ?? '',
@@ -1759,12 +1860,12 @@ function buildExtraSectionFields(
         ];
     }
 
-    if (pageSlug !== 'home' || sectionKey !== 'gallery') { 
-        return []; 
-    } 
- 
-    return []; 
-} 
+    if (pageSlug !== 'home' || sectionKey !== 'gallery') {
+        return [];
+    }
+
+    return [];
+}
 
 function SectionBackgroundEditor({
     sectionKey,
@@ -1782,7 +1883,9 @@ function SectionBackgroundEditor({
     const typePath = `${sectionKey}.background.type`;
     const colorPath = `${sectionKey}.background.color`;
     const imagePath = `${sectionKey}.background.image`;
-    const backgroundType = String(getNestedValue(content, typePath) ?? 'default');
+    const backgroundType = String(
+        getNestedValue(content, typePath) ?? 'default',
+    );
 
     return (
         <div className="rounded-2xl border border-border bg-muted/20 p-4">
@@ -1794,7 +1897,9 @@ function SectionBackgroundEditor({
                     <Select
                         value={(backgroundType as BackgroundType) ?? 'default'}
                         onValueChange={(value) =>
-                            setContent(updateNestedValue(content, typePath, value))
+                            setContent(
+                                updateNestedValue(content, typePath, value),
+                            )
                         }
                     >
                         <SelectTrigger className="w-full">
@@ -1831,7 +1936,9 @@ function SectionBackgroundEditor({
                                 className="h-10 w-14 p-1"
                             />
                             <Input
-                                value={String(getNestedValue(content, colorPath) ?? '')}
+                                value={String(
+                                    getNestedValue(content, colorPath) ?? '',
+                                )}
                                 onChange={(e) =>
                                     setContent(
                                         updateNestedValue(
@@ -1852,7 +1959,9 @@ function SectionBackgroundEditor({
                         <Field label="Foto Background">
                             <ImageField
                                 label="Background Image"
-                                value={String(getNestedValue(content, imagePath) ?? '')}
+                                value={String(
+                                    getNestedValue(content, imagePath) ?? '',
+                                )}
                                 file={media[imagePath] ?? null}
                                 onChange={(file) =>
                                     setMedia({
@@ -2392,15 +2501,15 @@ function shouldUseTextarea(path: string, value: string): boolean {
     );
 }
 
-function isImageField(path: string): boolean { 
-    return ( 
-        path.endsWith('.image') || 
-        path.endsWith('.image_primary') || 
-        path.endsWith('.image_secondary') || 
+function isImageField(path: string): boolean {
+    return (
+        path.endsWith('.image') ||
+        path.endsWith('.image_primary') ||
+        path.endsWith('.image_secondary') ||
         path.endsWith('.background.image') ||
-        path.endsWith('.src') 
-    ); 
-} 
+        path.endsWith('.src')
+    );
+}
 
 function isBackgroundTypeField(path: string): boolean {
     return path.endsWith('.background.type');

@@ -10,12 +10,12 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
 import {
     ClipboardList,
     Eye,
-    Languages,
     Plus,
     Search,
     SquarePen,
@@ -81,11 +81,17 @@ function ActivityTableRow({
     activity,
     onEdit,
     onDelete,
+    canEdit,
+    canDelete,
 }: {
     activity: ActivityItem;
     onEdit: (activity: ActivityItem) => void;
     onDelete: (activity: ActivityItem) => void;
+    canEdit: boolean;
+    canDelete: boolean;
 }) {
+    const showActions = canEdit || canDelete;
+
     return (
         <tr key={activity.id}>
             <td className="px-4 py-4">
@@ -118,30 +124,41 @@ function ActivityTableRow({
                 </span>
             </td>
             <td className="px-4 py-4">
-                <div className="flex justify-end gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEdit(activity)}
-                    >
-                        <SquarePen className="mr-1 h-4 w-4" />
-                        Edit
-                    </Button>
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => onDelete(activity)}
-                    >
-                        <Trash2 className="mr-1 h-4 w-4" />
-                        Hapus
-                    </Button>
-                </div>
+                {showActions ? (
+                    <div className="flex justify-end gap-2">
+                        {canEdit ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => onEdit(activity)}
+                            >
+                                <SquarePen className="mr-1 h-4 w-4" />
+                                Edit
+                            </Button>
+                        ) : null}
+                        {canDelete ? (
+                            <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => onDelete(activity)}
+                            >
+                                <Trash2 className="mr-1 h-4 w-4" />
+                                Hapus
+                            </Button>
+                        ) : null}
+                    </div>
+                ) : null}
             </td>
         </tr>
     );
 }
 
 export default function ActivitiesIndex({ activities, filters, stats }: Props) {
+    const { can } = usePermission('activity');
+    const canCreate = can('create');
+    const canEdit = can('edit');
+    const canDelete = can('delete');
+    const showActions = canEdit || canDelete;
     const [search, setSearch] = useState(filters.search);
     const [editingActivity, setEditingActivity] = useState<
         ActivityItem | null | 'new'
@@ -189,12 +206,20 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
     }
 
     function openCreateSheet() {
+        if (!canCreate) {
+            return;
+        }
+
         form.setData(buildFormData(null));
         form.clearErrors();
         setEditingActivity('new');
     }
 
     function openEditSheet(activity: ActivityItem) {
+        if (!canEdit) {
+            return;
+        }
+
         form.setData(buildFormData(activity));
         form.clearErrors();
         setEditingActivity(activity);
@@ -244,6 +269,10 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
     }
 
     function destroyActivity(activity: ActivityItem) {
+        if (!canDelete) {
+            return;
+        }
+
         if (
             !window.confirm(
                 `Hapus activity "${activity.name || activity.code}"?`,
@@ -252,13 +281,10 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
             return;
         }
 
-        router.delete(
-            `/admin/product-management/activities/${activity.id}`,
-            {
-                preserveScroll: true,
-                onSuccess: () => toast.success('Activity berhasil dihapus.'),
-            },
-        );
+        router.delete(`/admin/product-management/activities/${activity.id}`, {
+            preserveScroll: true,
+            onSuccess: () => toast.success('Activity berhasil dihapus.'),
+        });
     }
 
     return (
@@ -288,10 +314,12 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                             itinerary package.
                         </p>
                     </div>
-                    <Button onClick={openCreateSheet} className="shrink-0">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah Activity
-                    </Button>
+                    {canCreate ? (
+                        <Button onClick={openCreateSheet} className="shrink-0">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah Activity
+                        </Button>
+                    ) : null}
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
@@ -413,7 +441,8 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                         <div className="min-w-0 space-y-1">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <p className="font-semibold text-foreground">
-                                                    {activity.name || activity.code}
+                                                    {activity.name ||
+                                                        activity.code}
                                                 </p>
                                                 <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
                                                     {activity.code}
@@ -441,9 +470,7 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                             </span>
                                         </div>
                                         <div className="space-y-1 text-sm text-muted-foreground">
-                                            <p>
-                                                {activity.description || '-'}
-                                            </p>
+                                            <p>{activity.description || '-'}</p>
                                         </div>
                                     </div>
 
@@ -495,9 +522,11 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                     <th className="px-4 py-3">Deskripsi</th>
                                     <th className="px-4 py-3">Order</th>
                                     <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3 text-right">
-                                        Action
-                                    </th>
+                                    {showActions ? (
+                                        <th className="px-4 py-3 text-right">
+                                            Action
+                                        </th>
+                                    ) : null}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
@@ -508,12 +537,14 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                             activity={activity}
                                             onEdit={openEditSheet}
                                             onDelete={destroyActivity}
+                                            canEdit={canEdit}
+                                            canDelete={canDelete}
                                         />
                                     ))
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={5}
+                                            colSpan={showActions ? 5 : 4}
                                             className="px-4 py-16 text-center text-muted-foreground"
                                         >
                                             <div className="flex flex-col items-center gap-3">
@@ -620,7 +651,12 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                     </Label>
                                     <Input
                                         value={form.data.name}
-                                        onChange={(event) => updateFormField('name', event.target.value)}
+                                        onChange={(event) =>
+                                            updateFormField(
+                                                'name',
+                                                event.target.value,
+                                            )
+                                        }
                                         placeholder="Contoh: Briefing Keberangkatan"
                                     />
                                     {form.errors.name ? (
@@ -637,7 +673,12 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
                                     <Textarea
                                         rows={5}
                                         value={form.data.description}
-                                        onChange={(event) => updateFormField('description', event.target.value)}
+                                        onChange={(event) =>
+                                            updateFormField(
+                                                'description',
+                                                event.target.value,
+                                            )
+                                        }
                                         placeholder="Deskripsi activity untuk itinerary package"
                                     />
                                     {form.errors.description ? (
@@ -720,4 +761,3 @@ export default function ActivitiesIndex({ activities, filters, stats }: Props) {
         </AppSidebarLayout>
     );
 }
-

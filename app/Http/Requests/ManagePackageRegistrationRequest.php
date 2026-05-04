@@ -18,6 +18,9 @@ class ManagePackageRegistrationRequest extends FormRequest
         return [
             'travel_package_id' => ['required', 'integer', 'exists:packages,id'],
             'departure_schedule_id' => ['nullable', 'integer', 'exists:departure_schedules,id'],
+            'custom_departure_date' => ['nullable', 'date'],
+            'custom_return_date' => ['nullable', 'date', 'after_or_equal:custom_departure_date'],
+            'custom_unit_price' => ['nullable', 'integer', 'min:0'],
             'full_name' => ['required', 'string', 'max:150'],
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:150'],

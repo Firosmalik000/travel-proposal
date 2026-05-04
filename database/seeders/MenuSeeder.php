@@ -171,8 +171,38 @@ class MenuSeeder extends Seeder
                         'is_active' => true,
                         'children' => null,
                     ],
+                    [
+                        'name' => 'Custom Requests',
+                        'menu_key' => 'booking_custom_requests',
+                        'path' => '/dashboard/booking-management/custom-requests',
+                        'icon' => 'MessageSquare',
+                        'order' => 3,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
                 ],
                 'order' => 4,
+                'is_active' => true,
+            ],
+
+            // Financial Management - Has children (level 1)
+            [
+                'name' => 'Financial Management',
+                'menu_key' => 'financial_management',
+                'path' => '/dashboard/financial-management',
+                'icon' => 'Wallet',
+                'children' => [
+                    [
+                        'name' => 'Financial Report',
+                        'menu_key' => 'financial_report',
+                        'path' => '/dashboard/financial-management/financial-report',
+                        'icon' => 'FileText',
+                        'order' => 1,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                ],
+                'order' => 6,
                 'is_active' => true,
             ],
 
@@ -193,13 +223,22 @@ class MenuSeeder extends Seeder
                         'children' => null, // No level 2, navigable
                     ],
                     [
-                        'name' => 'User Access',
-                        'menu_key' => 'user_access',
-                        'path' => '/dashboard/administrator/user-access',
-                        'icon' => 'Shield',
+                        'name' => 'User Management',
+                        'menu_key' => 'user_management',
+                        'path' => '/dashboard/administrator/users',
+                        'icon' => 'Users',
                         'order' => 2,
                         'is_active' => true,
-                        'children' => null, // No level 2, navigable
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Role Management',
+                        'menu_key' => 'role_management',
+                        'path' => '/dashboard/administrator/roles',
+                        'icon' => 'Shield',
+                        'order' => 3,
+                        'is_active' => true,
+                        'children' => null,
                     ],
                 ],
                 'order' => 5,
@@ -215,7 +254,8 @@ class MenuSeeder extends Seeder
         $this->command->info('  - Dashboard: Direct navigation');
         $this->command->info('  - Website Management: landing, schedules, SEO, branding');
         $this->command->info('  - Product Management: 4 submenus (product category, product, package, activity)');
-        $this->command->info('  - Booking: 2 submenus (register, listing)');
-        $this->command->info('  - Administrator: 2 submenus (menu management, user access)');
+        $this->command->info('  - Booking: 3 submenus (register, listing, custom requests)');
+        $this->command->info('  - Financial Management: financial report');
+        $this->command->info('  - Administrator: 3 submenus (menu management, user management, role management)');
     }
 }
