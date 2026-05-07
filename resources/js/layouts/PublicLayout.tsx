@@ -1,9 +1,4 @@
 ﻿import GlobalFaviconHead from '@/components/global-favicon-head';
-import {
-    IslamicOrnamentOttomanAccent,
-    IslamicOrnamentRow1Col1,
-    IslamicOrnamentZellige,
-} from '@/components/public-ornaments';
 import PublicSeoHead from '@/components/public-seo-head';
 import {
     getPublicSocialAccounts,
@@ -438,30 +433,15 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                 {children}
             </main>
 
-            <footer className="relative mt-16 overflow-hidden bg-[linear-gradient(90deg,rgba(93,8,18,0.98)_0%,rgba(142,16,27,0.96)_34%,rgba(189,49,34,0.93)_64%,rgba(230,156,50,0.92)_100%)] text-white dark:bg-[linear-gradient(90deg,rgba(71,9,16,0.98)_0%,rgba(111,14,24,0.97)_34%,rgba(158,32,28,0.94)_64%,rgba(207,135,44,0.9)_100%)]">
+            <footer className="relative mt-16 overflow-hidden bg-[linear-gradient(90deg,rgba(93,8,18,0.98)_0%,rgba(142,16,27,0.96)_38%,rgba(189,49,34,0.93)_70%,rgba(230,156,50,0.9)_100%)] text-white">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#a35b2e]/40 to-transparent dark:via-[#d7a760]/30" />
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.08)_0%,transparent_18%,rgba(255,220,157,0.12)_42%,transparent_64%,rgba(92,10,20,0.16)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.04)_0%,transparent_22%,rgba(234,186,98,0.08)_46%,transparent_70%,rgba(76,10,18,0.14)_100%)]" />
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_32%,rgba(255,255,255,0.10)_0%,transparent_56%),radial-gradient(circle_at_82%_68%,rgba(255,220,157,0.16)_0%,transparent_62%)] opacity-80 dark:opacity-55" />
-                <div className="pointer-events-none absolute inset-0 bg-black/28 dark:hidden" />
-                <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-white/24 to-transparent dark:via-white/14" />
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_32%,rgba(255,255,255,0.08)_0%,transparent_56%),radial-gradient(circle_at_82%_68%,rgba(255,220,157,0.12)_0%,transparent_62%)] opacity-70" />
+                <div className="pointer-events-none absolute inset-0 bg-black/24" />
+                <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-white/22 to-transparent" />
 
-                {/* Background ornaments: intentional (max 2) */}
-                <div className="pointer-events-none absolute top-[-8%] right-[-6%] text-white/16 mix-blend-overlay sm:text-white/18 dark:text-white/10">
-                    <IslamicOrnamentZellige className="h-[16rem] w-[16rem] rotate-[12deg] sm:h-[19rem] sm:w-[19rem]" />
-                </div>
-                <div className="pointer-events-none absolute bottom-12 left-6 text-white/26 dark:text-white/16">
-                    <div className="relative h-28 w-28 sm:h-32 sm:w-32">
-                        <div className="absolute inset-0 text-white/10 dark:text-white/8">
-                            <IslamicOrnamentOttomanAccent className="h-full w-full scale-[1.06] rotate-[6deg]" />
-                        </div>
-                        <div className="absolute inset-0 text-white/30 dark:text-white/18">
-                            <IslamicOrnamentRow1Col1 className="h-full w-full -rotate-[8deg]" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="container mx-auto grid gap-10 px-6 py-12 lg:grid-cols-4 lg:py-16">
-                    <div className="lg:col-span-1">
+                <div className="container mx-auto grid gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,2fr)] lg:py-12">
+                    <div className="max-w-xl">
                         <Link href="/" className="flex items-center gap-3">
                             <img
                                 src={resolvedLogoPath}
@@ -492,26 +472,26 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                                             target="_blank"
                                             rel="noreferrer"
                                             aria-label={social.label}
-                                            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/22 bg-white/10 text-white shadow-[0_16px_30px_-16px_rgba(55,6,13,0.55)] transition hover:-translate-y-0.5 hover:border-white/42 hover:bg-white/16 hover:text-white"
+                                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-white/20 text-white shadow-[0_16px_30px_-16px_rgba(55,6,13,0.55)] transition hover:-translate-y-0.5 hover:border-white/65 hover:bg-white/28 hover:text-white"
                                         >
-                                            <Icon className="h-4 w-4" />
+                                            <Icon className="h-5 w-5" />
                                         </a>
                                     );
                                 })}
                             </div>
                         ) : null}
                     </div>
-                    <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3 lg:col-span-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                         {t.footer.map((section) => (
                             <div key={section.heading}>
                                 <h3 className="font-heading text-sm font-semibold tracking-wider text-white uppercase sm:text-base">
                                     {section.heading}
                                 </h3>
-                                <ul className="mt-4 space-y-2.5 sm:mt-5">
+                                <ul className="mt-2 space-y-0.5 sm:mt-2.5">
                                     {section.links.map((item) => (
                                         <li key={item.label}>
                                             <Link
-                                                className="text-sm text-white/76 transition hover:text-white"
+                                                className="text-[13px] text-white/78 transition hover:text-white"
                                                 href={item.href}
                                             >
                                                 {item.label}

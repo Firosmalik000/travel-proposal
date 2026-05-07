@@ -304,6 +304,11 @@ export default function ArticleForm({
     const previewMetaDescription = form.data.meta_description || previewExcerpt;
     const previewReadingTime = estimateReadingTime(previewBody);
     const previewParagraphs = paragraphBlocks(previewBody);
+    const previewPublishedAt = form.data.published_at
+        ? new Intl.DateTimeFormat('id-ID', {
+              dateStyle: 'medium',
+          }).format(new Date(form.data.published_at))
+        : 'Tanggal publish';
     const titleStatus = resolveFieldStatus(form.data.title, '');
     const excerptStatus = resolveFieldStatus(form.data.excerpt, '');
     const bodyStatus = resolveFieldStatus(form.data.body, '');
@@ -735,40 +740,40 @@ export default function ArticleForm({
                                         berubah.
                                     </p>
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="overflow-hidden rounded-[1.5rem] border border-border bg-card/90">
-                                        <div className="space-y-4 p-5">
+                                <div className="overflow-auto rounded-xl border border-border bg-background/40 p-2">
+                                    <div className="w-[135.14%] origin-top-left scale-[0.74]">
+                                        <div className="mx-auto w-full max-w-4xl px-4 pt-6 pb-12 sm:px-6">
+                                    <span className="inline-flex rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground">
+                                        Kembali ke Artikel
+                                    </span>
+
+                                    <div className="mt-6 overflow-hidden rounded-[2rem] border border-border bg-card/90 shadow-lg">
+                                        <div className="space-y-5 p-6 md:p-8">
                                             <div className="flex flex-wrap gap-2 text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
-                                                <span>
-                                                    {contentTypeLabels[
-                                                        form.data.content_type
-                                                    ] ?? form.data.content_type}
-                                                </span>
+                                                <span>{form.data.content_type}</span>
+                                                <span>Indonesia</span>
                                                 {form.data.is_featured ? (
                                                     <span>Featured</span>
                                                 ) : null}
                                             </div>
-                                            <h3 className="text-3xl font-semibold text-foreground">
+                                            <h1 className="public-heading text-3xl font-semibold text-foreground md:text-5xl">
                                                 {previewTitle ||
                                                     'Judul artikel'}
-                                            </h3>
+                                            </h1>
                                             <p className="text-base leading-8 text-muted-foreground">
                                                 {previewExcerpt ||
                                                     'Excerpt artikel akan muncul di sini.'}
                                             </p>
                                             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                                                <span>{form.data.author_name}</span>
                                                 <span>
-                                                    {form.data.author_name ||
-                                                        'Nama penulis'}
-                                                </span>
-                                                <span>
-                                                    {form.data.published_at ||
-                                                        'Tanggal publish'}
+                                                    {previewPublishedAt}
                                                 </span>
                                                 <span>
                                                     {previewReadingTime} menit
                                                     baca
                                                 </span>
+                                                <span>{0} views</span>
                                             </div>
                                         </div>
                                         {coverPreviewUrl || coverImagePath ? (
@@ -785,11 +790,11 @@ export default function ArticleForm({
                                         ) : null}
                                     </div>
 
-                                    <div className="rounded-[1.5rem] border border-border bg-card/90 p-5">
-                                        <div className="space-y-4 text-base leading-8 text-foreground/90">
+                                    <div className="mt-6 rounded-[2rem] border border-border bg-card/90 p-6 shadow-sm md:p-8">
+                                        <div className="space-y-6 text-base leading-8 text-foreground/90">
                                             {containsHtml(previewBody) ? (
                                                 <div
-                                                    className="prose prose-sm prose-headings:font-semibold prose-a:text-primary prose-strong:text-foreground prose-ul:list-disc prose-ol:list-decimal max-w-none"
+                                                    className="prose prose-lg prose-headings:font-semibold prose-a:text-primary prose-strong:text-foreground prose-ul:list-disc prose-ol:list-decimal max-w-none"
                                                     dangerouslySetInnerHTML={{
                                                         __html: previewBody,
                                                     }}
@@ -812,7 +817,7 @@ export default function ArticleForm({
                                         </div>
 
                                         {form.data.tags.trim() ? (
-                                            <div className="mt-6 flex flex-wrap gap-2">
+                                            <div className="mt-8 flex flex-wrap gap-2">
                                                 {form.data.tags
                                                     .split(',')
                                                     .map((tag) => tag.trim())
@@ -827,6 +832,8 @@ export default function ArticleForm({
                                                     ))}
                                             </div>
                                         ) : null}
+                                    </div>
+                                    </div>
                                     </div>
                                 </div>
                             </section>
