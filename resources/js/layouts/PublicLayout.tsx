@@ -6,10 +6,16 @@ import {
 } from '@/lib/public-content';
 import { Link, usePage } from '@inertiajs/react';
 import {
+    AtSign,
     ChevronDown,
     Facebook,
     Instagram,
+    Linkedin,
+    MessageCircle,
     Music2,
+    Pin,
+    Send,
+    Share2,
     Twitter,
     Youtube,
 } from 'lucide-react';
@@ -89,13 +95,61 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
         tiktok: Music2,
         twitter: Twitter,
         x: Twitter,
+        whatsapp: MessageCircle,
+        telegram: Send,
+        linkedin: Linkedin,
+        threads: AtSign,
+        pinterest: Pin,
+        custom: Share2,
     } as const;
+    const resolveSocialIcon = (platform: string, url: string) => {
+        const normalizedPlatform = platform.toLowerCase().trim();
+        const mapped =
+            socialIconMap[
+                normalizedPlatform as keyof typeof socialIconMap
+            ];
+
+        if (mapped) {
+            return mapped;
+        }
+
+        const normalizedUrl = url.toLowerCase();
+        if (normalizedUrl.includes('instagram.com')) {
+            return Instagram;
+        }
+        if (normalizedUrl.includes('facebook.com')) {
+            return Facebook;
+        }
+        if (normalizedUrl.includes('youtube.com') || normalizedUrl.includes('youtu.be')) {
+            return Youtube;
+        }
+        if (normalizedUrl.includes('tiktok.com')) {
+            return Music2;
+        }
+        if (normalizedUrl.includes('twitter.com') || normalizedUrl.includes('x.com')) {
+            return Twitter;
+        }
+        if (normalizedUrl.includes('wa.me') || normalizedUrl.includes('whatsapp.com')) {
+            return MessageCircle;
+        }
+        if (normalizedUrl.includes('t.me') || normalizedUrl.includes('telegram.me')) {
+            return Send;
+        }
+        if (normalizedUrl.includes('linkedin.com')) {
+            return Linkedin;
+        }
+        if (normalizedUrl.includes('threads.net')) {
+            return AtSign;
+        }
+        if (normalizedUrl.includes('pinterest.com')) {
+            return Pin;
+        }
+
+        return Share2;
+    };
     const footerSocials = getPublicSocialAccounts(seo).map((social) => ({
         ...social,
-        icon:
-            socialIconMap[
-                social.platform.toLowerCase() as keyof typeof socialIconMap
-            ] ?? Instagram,
+        icon: resolveSocialIcon(social.platform, social.url),
     }));
     const resolvedPathname =
         typeof window !== 'undefined'
