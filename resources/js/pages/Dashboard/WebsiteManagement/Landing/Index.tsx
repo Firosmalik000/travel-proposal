@@ -30,7 +30,6 @@ import {
     Trash2,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 
 interface LandingPageItem {
     id: number;
@@ -157,6 +156,21 @@ const iconOptions = [
     { value: 'shield-check', label: 'Shield Check' },
     { value: 'heart-handshake', label: 'Handshake' },
     { value: 'map-pin', label: 'Map Pin' },
+    { value: 'briefcase', label: 'Briefcase' },
+    { value: 'building-2', label: 'Building' },
+    { value: 'circle-dollar-sign', label: 'Dollar' },
+    { value: 'clipboard-list', label: 'Checklist' },
+    { value: 'file-check-2', label: 'File Check' },
+    { value: 'globe', label: 'Globe' },
+    { value: 'headset', label: 'Headset' },
+    { value: 'hotel', label: 'Hotel' },
+    { value: 'id-card', label: 'ID Card' },
+    { value: 'images', label: 'Images' },
+    { value: 'luggage', label: 'Luggage' },
+    { value: 'message-circle', label: 'Message' },
+    { value: 'notebook-pen', label: 'Notebook' },
+    { value: 'star', label: 'Star' },
+    { value: 'ticket', label: 'Ticket' },
 ] as const;
 
 function IconSelect({
@@ -442,14 +456,13 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
 
     const submit = (event: React.FormEvent) => {
         event.preventDefault();
+        const hasMediaUpload = Object.values(data.media ?? {}).some(
+            (file) => file instanceof File,
+        );
 
         post(`/admin/website-management/content/${page.id}`, {
-            forceFormData: true,
+            forceFormData: hasMediaUpload,
             preserveScroll: true,
-            onSuccess: () =>
-                toast.success(
-                    `Konten ${pageLabels[page.slug] ?? page.slug} berhasil diperbarui`,
-                ),
         });
     };
 

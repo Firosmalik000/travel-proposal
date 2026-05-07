@@ -5,13 +5,85 @@ import BrandThemeStyle from '@/components/brand-theme-style';
 import { DynamicSidebar } from '@/components/dynamic-sidebar';
 import GlobalFaviconHead from '@/components/global-favicon-head';
 import { type BreadcrumbItem } from '@/types';
-import { type PropsWithChildren } from 'react';
+import { router } from '@inertiajs/react';
+import { type PropsWithChildren, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 
 export default function AppSidebarLayout({
     children,
     breadcrumbs = [],
     embedded = false,
 }: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[]; embedded?: boolean }>) {
+    const activeSubmitToastIdRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        const startCleanup = router.on('start', (event) => {
+            const method = String(event.detail.visit.method ?? 'get').toLowerCase();
+            if (method === 'get') {
+                return;
+            }
+
+            const toastId = `admin-submit-${Date.now()}`;
+            activeSubmitToastIdRef.current = toastId;
+            toast.loading('Menyimpan perubahan...', { id: toastId });
+        });
+
+        const successCleanup = router.on('success', (event) => {
+            const method = String(event.detail.visit.method ?? 'get').toLowerCase();
+            if (method === 'get') {
+                return;
+            }
+
+            const toastId = activeSubmitToastIdRef.current;
+            if (!toastId) {
+                return;
+            }
+
+            toast.success('Perubahan berhasil disimpan.', { id: toastId });
+            activeSubmitToastIdRef.current = null;
+        });
+
+        const errorCleanup = router.on('error', (event) => {
+            const method = String(event.detail.visit.method ?? 'get').toLowerCase();
+            if (method === 'get') {
+                return;
+            }
+
+            const toastId = activeSubmitToastIdRef.current ?? `admin-submit-${Date.now()}`;
+            const firstError = Object.values(event.detail.errors ?? {})[0];
+            toast.error(
+                typeof firstError === 'string'
+                    ? firstError
+                    : 'Gagal menyimpan perubahan.',
+                { id: toastId },
+            );
+            activeSubmitToastIdRef.current = null;
+        });
+
+        const invalidCleanup = router.on('invalid', (event) => {
+            const method = String(event.detail.visit.method ?? 'get').toLowerCase();
+            if (method === 'get') {
+                return;
+            }
+
+            const toastId = activeSubmitToastIdRef.current ?? `admin-submit-${Date.now()}`;
+            toast.error('Validasi gagal. Periksa input Anda.', { id: toastId });
+            activeSubmitToastIdRef.current = null;
+        });
+
+        const finishCleanup = router.on('finish', () => {
+            // Keep toast state controlled by success/error/invalid handlers.
+        });
+
+        return () => {
+            startCleanup();
+            successCleanup();
+            errorCleanup();
+            invalidCleanup();
+            finishCleanup();
+        };
+    }, []);
+
     if (embedded) {
         return (
             <AppShell variant="header">

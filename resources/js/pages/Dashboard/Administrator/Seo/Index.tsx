@@ -13,13 +13,21 @@ import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, useForm } from '@inertiajs/react';
 import {
+    AtSign,
+    Facebook,
     Globe,
     Image,
+    Instagram,
+    Linkedin,
+    MessageCircle,
+    Music2,
     Phone,
     Plus,
+    Send,
     Settings,
     Share2,
     Trash2,
+    Youtube,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -70,18 +78,18 @@ type SeoFormData = {
 };
 
 const PLATFORMS = [
-    { value: 'instagram', label: 'Instagram', emoji: '📸' },
-    { value: 'facebook', label: 'Facebook', emoji: '📘' },
-    { value: 'youtube', label: 'YouTube', emoji: '▶️' },
-    { value: 'tiktok', label: 'TikTok', emoji: '🎵' },
-    { value: 'twitter', label: 'X / Twitter', emoji: '🐦' },
-    { value: 'whatsapp', label: 'WhatsApp', emoji: '💬' },
-    { value: 'telegram', label: 'Telegram', emoji: '✈️' },
-    { value: 'linkedin', label: 'LinkedIn', emoji: '💼' },
-    { value: 'threads', label: 'Threads', emoji: '🧵' },
-    { value: 'pinterest', label: 'Pinterest', emoji: '📌' },
-    { value: 'custom', label: 'Custom', emoji: '🔗' },
-];
+    { value: 'instagram', label: 'Instagram', icon: Instagram },
+    { value: 'facebook', label: 'Facebook', icon: Facebook },
+    { value: 'youtube', label: 'YouTube', icon: Youtube },
+    { value: 'tiktok', label: 'TikTok', icon: Music2 },
+    { value: 'twitter', label: 'X / Twitter', icon: AtSign },
+    { value: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+    { value: 'telegram', label: 'Telegram', icon: Send },
+    { value: 'linkedin', label: 'LinkedIn', icon: Linkedin },
+    { value: 'threads', label: 'Threads', icon: AtSign },
+    { value: 'pinterest', label: 'Pinterest', icon: AtSign },
+    { value: 'custom', label: 'Custom', icon: Globe },
+] as const;
 
 function Section({
     icon: Icon,
@@ -832,8 +840,12 @@ export default function SeoIndex({ settings }: Props) {
                                         >
                                             <SelectTrigger className="w-44 shrink-0">
                                                 <SelectValue>
-                                                    <span>
-                                                        {platform?.emoji}{' '}
+                                                    <span className="inline-flex items-center gap-2">
+                                                        {platform?.icon ? (
+                                                            <platform.icon className="h-4 w-4" />
+                                                        ) : (
+                                                            <Globe className="h-4 w-4" />
+                                                        )}
                                                         {platform?.label ??
                                                             acc.platform}
                                                     </span>
@@ -845,7 +857,10 @@ export default function SeoIndex({ settings }: Props) {
                                                         key={p.value}
                                                         value={p.value}
                                                     >
-                                                        {p.emoji} {p.label}
+                                                        <span className="inline-flex items-center gap-2">
+                                                            <p.icon className="h-4 w-4" />
+                                                            {p.label}
+                                                        </span>
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

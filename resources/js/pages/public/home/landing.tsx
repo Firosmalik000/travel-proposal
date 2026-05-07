@@ -12,20 +12,32 @@ import {
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
+    Briefcase,
     Building2,
     CalendarDays,
     CheckCircle2,
     ChevronLeft,
     ChevronRight,
+    CircleDollarSign,
+    ClipboardList,
     CreditCard,
+    FileCheck2,
+    Globe,
     HeartHandshake,
+    Headset,
+    Hotel,
+    IdCard,
     Images,
     Landmark,
+    Luggage,
     MapPin,
+    MessageCircle,
+    NotebookPen,
     Plane,
     ShieldCheck,
     Star,
     Stars,
+    Ticket,
     Users,
     Zap,
 } from 'lucide-react';
@@ -92,8 +104,21 @@ const iconMap = {
     'shield-check': ShieldCheck,
     'heart-handshake': HeartHandshake,
     'map-pin': MapPin,
+    briefcase: Briefcase,
+    'building-2': Building2,
+    'circle-dollar-sign': CircleDollarSign,
+    'clipboard-list': ClipboardList,
+    'file-check-2': FileCheck2,
+    globe: Globe,
+    headset: Headset,
+    hotel: Hotel,
+    'id-card': IdCard,
     images: Images,
+    luggage: Luggage,
+    'message-circle': MessageCircle,
+    'notebook-pen': NotebookPen,
     star: Stars,
+    ticket: Ticket,
 } as const;
 
 const heroBackground = '/images/dummy.jpg';
@@ -609,7 +634,7 @@ export default function PublicHomeLanding() {
                             <div className="relative">
                                 <div className="pointer-events-none absolute top-6 right-6 left-6 hidden h-0.5 rounded-full bg-white/22 sm:block" />
                                 <motion.div
-                                    className="flex gap-4 overflow-x-auto pb-2 sm:grid sm:grid-cols-6 sm:gap-5 sm:overflow-visible sm:pb-0"
+                                    className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-5 sm:pb-0"
                                     {...getInViewProps(stagger)}
                                 >
                                     {timelineSteps.map((item, index) => {
@@ -626,7 +651,7 @@ export default function PublicHomeLanding() {
                                         return (
                                             <motion.div
                                                 key={item.title}
-                                                className="min-w-[12rem] shrink-0 text-center sm:min-w-0 sm:shrink"
+                                                className="min-w-[12rem] shrink-0 text-center sm:min-w-[11.5rem]"
                                                 variants={stepVariants}
                                             >
                                                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7a0d17] text-white shadow-sm ring-1 ring-[#7a0d17]/25">
@@ -870,7 +895,7 @@ export default function PublicHomeLanding() {
                             className="mt-12 grid gap-10 sm:grid-cols-2"
                             {...getInViewProps(stagger)}
                         >
-                            {services.slice(0, 4).map((item, index) => {
+                            {services.map((item, index) => {
                                 const title = String(
                                     item?.title ?? item?.name ?? '',
                                 );
@@ -1349,11 +1374,12 @@ export default function PublicHomeLanding() {
                                     return (
                                         <motion.div
                                             key={slug || index}
+                                            className="h-full"
                                             variants={cardVariants}
                                         >
                                             <Link
                                                 href={href}
-                                                className="group block overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
+                                                className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
                                             >
                                                 <div className="relative h-40">
                                                     <img
@@ -1363,16 +1389,16 @@ export default function PublicHomeLanding() {
                                                     />
                                                     <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent opacity-85" />
                                                 </div>
-                                                <div className="p-6">
+                                                <div className="flex flex-1 flex-col p-6">
                                                     <p className="font-heading line-clamp-2 text-base font-extrabold text-[#2a120c]">
                                                         {title}
                                                     </p>
                                                     {excerpt ? (
-                                                        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-[#2a120c]/70">
+                                                        <p className="mt-3 min-h-[64px] line-clamp-3 text-sm leading-relaxed text-[#2a120c]/70">
                                                             {excerpt}
                                                         </p>
                                                     ) : null}
-                                                    <p className="mt-5 text-xs font-bold tracking-[0.24em] text-[#7a0d17]/70 uppercase">
+                                                    <p className="mt-auto pt-5 text-xs font-bold tracking-[0.24em] text-[#7a0d17]/70 uppercase">
                                                         {articlesReadMoreLabel}
                                                     </p>
                                                 </div>
