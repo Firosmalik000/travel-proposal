@@ -25,6 +25,8 @@ class StoreCustomUmrohRequestRequest extends FormRequest
 
             'group_type' => ['required', 'string', 'max:255'],
             'departure_month' => ['required', 'string', 'max:20'],
+            'departure_date' => ['nullable', 'date'],
+            'return_date' => ['nullable', 'date', 'after_or_equal:departure_date'],
             'budget' => ['nullable', 'integer', 'min:0'],
             'focus' => ['required', 'string', 'max:255'],
             'room_preference' => ['required', 'string', 'max:255'],

@@ -860,28 +860,27 @@ export default function PublicHomeLanding() {
                 >
                     <div className="container mx-auto px-6">
                         <motion.h2
-                            className="font-heading text-center text-3xl font-extrabold text-[#2a120c]"
+                            className="font-heading text-center text-4xl font-extrabold text-[#2a120c] sm:text-5xl"
                             {...getInViewProps(fadeDown)}
                         >
                             {servicesTitle}
                         </motion.h2>
 
                         <motion.div
-                            className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
+                            className="mt-12 grid gap-10 sm:grid-cols-2"
                             {...getInViewProps(stagger)}
                         >
                             {services.slice(0, 4).map((item, index) => {
-                                const Icon =
-                                    iconMap[
-                                        String(
-                                            item?.icon ?? '',
-                                        ) as keyof typeof iconMap
-                                    ] ?? iconMap.plane;
                                 const title = String(
                                     item?.title ?? item?.name ?? '',
                                 );
                                 const description = String(
                                     item?.description ?? '',
+                                );
+                                const image = String(
+                                    item?.image_path ??
+                                        item?.image ??
+                                        '/images/dummy.jpg',
                                 );
                                 const cardVariants =
                                     index % 4 === 0
@@ -895,24 +894,26 @@ export default function PublicHomeLanding() {
                                 return (
                                     <motion.div
                                         key={`${title}_${index}`}
-                                        className="rounded-2xl bg-[#f6f1eb] p-6 ring-1 ring-black/5"
+                                        className="flex items-start gap-5"
                                         variants={cardVariants}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#7a0d17] shadow-sm ring-1 ring-black/5">
-                                                <Icon className="h-5 w-5" />
-                                            </span>
-                                            <p className="font-heading text-base font-extrabold text-[#2a120c]">
+                                        <div className="h-32 w-32 shrink-0 overflow-hidden rounded-[6px] bg-[#efe5d8] sm:h-36 sm:w-36">
+                                            <img
+                                                src={image}
+                                                alt={title || `service-${index + 1}`}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="font-heading text-3xl font-bold text-[#2a120c]">
                                                 {title ||
-                                                    `${servicesFallbackTitlePrefix} ${
-                                                        index + 1
-                                                    }`}
+                                                    `${servicesFallbackTitlePrefix} ${index + 1}`}
+                                            </p>
+                                            <p className="mt-2 text-base leading-relaxed text-[#2a120c]/70">
+                                                {description ||
+                                                    servicesFallbackDescription}
                                             </p>
                                         </div>
-                                        <p className="mt-4 text-sm leading-relaxed text-[#2a120c]/70">
-                                            {description ||
-                                                servicesFallbackDescription}
-                                        </p>
                                     </motion.div>
                                 );
                             })}

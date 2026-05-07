@@ -30,7 +30,16 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
-import { CalendarDays, Check, Mail, MapPin, Search, Users } from 'lucide-react';
+import {
+    CalendarDays,
+    Check,
+    Copy,
+    Mail,
+    MapPin,
+    MessageCircle,
+    Search,
+    Users,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type PaginationLink = {
@@ -49,6 +58,8 @@ type CustomRequestRow = {
     passenger_count: number;
     group_type: string;
     departure_month: string;
+    departure_date: string | null;
+    return_date: string | null;
     budget: number | null;
     focus: string;
     room_preference: string;
@@ -110,6 +121,16 @@ function formatCurrencyIDR(value: number | null): string {
         currency: 'IDR',
         maximumFractionDigits: 0,
     }).format(value);
+}
+
+function normalizePhone(phone: string): string {
+    const cleanedPhone = phone.replace(/[^\d]/g, '');
+
+    if (cleanedPhone.startsWith('0')) {
+        return `62${cleanedPhone.slice(1)}`;
+    }
+
+    return cleanedPhone;
 }
 
 /* function scheduleLabel(schedule: any): string {
@@ -175,11 +196,11 @@ export default function CustomRequestsIndex({
             passenger_count: String(request.passenger_count || 1),
             origin_city: request.origin_city || '',
             notes: request.notes ?? '',
+            custom_departure_date: request.departure_date ?? '',
+            custom_return_date: request.return_date ?? '',
             custom_unit_price:
-                request.budget && request.passenger_count
-                    ? String(
-                          Math.floor(request.budget / request.passenger_count),
-                      )
+                request.budget && request.budget > 0
+                    ? String(request.budget)
                     : '',
         });
     }
@@ -202,6 +223,33 @@ export default function CustomRequestsIndex({
                 onSuccess: () => closeApproveDrawer(),
             },
         );
+    }
+
+    function openWhatsApp(request: CustomRequestRow) {
+        const message = [
+            `Assalamu'alaikum ${request.full_name},`,
+            '',
+            `terima kasih untuk request ${request.request_code}.`,
+            `Kami siap bantu konsultasi custom umroh (${request.passenger_count} pax).`,
+        ].join('\n');
+
+        window.open(
+            `https://wa.me/${normalizePhone(request.phone)}?text=${encodeURIComponent(message)}`,
+            '_blank',
+            'noopener,noreferrer',
+        );
+    }
+
+    function copyContact(request: CustomRequestRow) {
+        const details = [
+            `Request: ${request.request_code}`,
+            `Nama: ${request.full_name}`,
+            `WhatsApp: ${request.phone}`,
+            `Email: ${request.email ?? '-'}`,
+            `Kota Asal: ${request.origin_city}`,
+        ].join('\n');
+
+        navigator.clipboard.writeText(details);
     }
 
     return (
@@ -296,6 +344,50 @@ export default function CustomRequestsIndex({
                                                     <> • {request.email}</>
                                                 ) : null}
                                             </p>
+                                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-7 px-2 text-xs"
+                                                    onClick={() =>
+                                                        openWhatsApp(request)
+                                                    }
+                                                >
+                                                    <MessageCircle className="mr-1 h-3.5 w-3.5" />
+                                                    WhatsApp
+                                                </Button>
+                                                {request.email ? (
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="h-7 px-2 text-xs"
+                                                        onClick={() =>
+                                                            window.open(
+                                                                `mailto:${request.email}`,
+                                                                '_blank',
+                                                                'noopener,noreferrer',
+                                                            )
+                                                        }
+                                                    >
+                                                        <Mail className="mr-1 h-3.5 w-3.5" />
+                                                        Email
+                                                    </Button>
+                                                ) : null}
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-7 px-2 text-xs"
+                                                    onClick={() =>
+                                                        copyContact(request)
+                                                    }
+                                                >
+                                                    <Copy className="mr-1 h-3.5 w-3.5" />
+                                                    Copy
+                                                </Button>
+                                            </div>
                                         </div>
                                     </TableCell>
                                     <TableCell>
@@ -316,10 +408,23 @@ export default function CustomRequestsIndex({
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <CalendarDays className="h-4 w-4" />
                                                 <span>
-                                                    {request.departure_month} •{' '}
+                                                    {request.departure_month} •
+                                                    Budget/jamaah:{' '}
                                                     {formatCurrencyIDR(
                                                         request.budget,
                                                     )}
+                                                    {request.budget &&
+                                                    request.passenger_count >
+                                                        0 ? (
+                                                        <>
+                                                            {' '}
+                                                            • Estimasi total:{' '}
+                                                            {formatCurrencyIDR(
+                                                                request.budget *
+                                                                    request.passenger_count,
+                                                            )}
+                                                        </>
+                                                    ) : null}
                                                 </span>
                                             </div>
                                         </div>
@@ -570,6 +675,17 @@ export default function CustomRequestsIndex({
                                                 {activeRequest.departure_month}{' '}
                                                 •{' '}
                                                 {activeRequest.room_preference}
+                                            </p>
+                                            <p>
+                                                <strong className="text-foreground">
+                                                    Tanggal:
+                                                </strong>{' '}
+                                                Berangkat{' '}
+                                                {activeRequest.departure_date ??
+                                                    '-'}{' '}
+                                                | Pulang{' '}
+                                                {activeRequest.return_date ??
+                                                    '-'}
                                             </p>
                                             <p>
                                                 <strong className="text-foreground">

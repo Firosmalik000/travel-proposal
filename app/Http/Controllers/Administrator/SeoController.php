@@ -86,9 +86,11 @@ class SeoController extends Controller
         ];
         $content['social'] = [
             ...($content['social'] ?? []),
-            'accounts' => is_array($request->input('social_accounts'))
-                ? $request->input('social_accounts')
-                : json_decode($request->string('social_accounts')->value() ?: '[]', true) ?? [],
+            'accounts' => $this->normalizeSocialAccounts(
+                is_array($request->input('social_accounts'))
+                    ? $request->input('social_accounts')
+                    : json_decode($request->string('social_accounts')->value() ?: '[]', true) ?? [],
+            ),
             'ogTitle' => [
                 'id' => $ogTitleId,
                 'en' => $ogTitleEn,
@@ -173,5 +175,47 @@ class SeoController extends Controller
         return isset($overrides['logo_path'])
             ? '/storage/'.$overrides['logo_path']
             : $defaults['logo_path'];
+    }
+
+    /**
+     * @param  array<int, mixed>  $accounts
+     * @return array<int, array{platform:string,label:string,url:string}>
+     */
+    private function normalizeSocialAccounts(array $accounts): array
+    {
+        return collect($accounts)
+            ->filter(fn ($item): bool => is_array($item))
+            ->map(function (array $item): array {
+                $platform = trim((string) ($item['platform'] ?? ''));
+                $label = trim((string) ($item['label'] ?? $platform));
+                $url = $this->normalizeExternalUrl((string) ($item['url'] ?? ''));
+
+                return [
+                    'platform' => $platform,
+                    'label' => $label !== '' ? $label : $platform,
+                    'url' => $url,
+                ];
+            })
+            ->filter(fn (array $item): bool => $item['url'] !== '')
+            ->values()
+            ->all();
+    }
+
+    private function normalizeExternalUrl(string $url): string
+    {
+        $normalized = trim($url);
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (preg_match('/^https?:\/\//i', $normalized)) {
+            return $normalized;
+        }
+
+        if (str_starts_with($normalized, '//')) {
+            return 'https:'.$normalized;
+        }
+
+        return 'https://'.$normalized;
     }
 }

@@ -86,6 +86,24 @@ class ArticleController extends Controller
         ]);
     }
 
+    public function preview(Article $article): Response
+    {
+        $relatedArticles = Article::query()
+            ->visible()
+            ->whereKeyNot($article->id)
+            ->where('content_type', $article->content_type)
+            ->latest('published_at')
+            ->limit(3)
+            ->get()
+            ->map(fn (Article $relatedArticle): array => $this->serializeForPublicList($relatedArticle))
+            ->all();
+
+        return Inertia::render('public/artikel/show', [
+            'article' => $this->serializeForPublicDetail($article),
+            'relatedArticles' => $relatedArticles,
+        ]);
+    }
+
     public function update(StoreArticleRequest $request, Article $article): RedirectResponse
     {
         $article->update($this->payload($request, $article));
@@ -171,6 +189,35 @@ class ArticleController extends Controller
             'published_at' => $article->published_at?->toDateTimeString(),
             'is_featured' => $article->is_featured,
             'is_active' => $article->is_active,
+        ];
+    }
+
+    private function serializeForPublicList(Article $article): array
+    {
+        return [
+            'id' => $article->id,
+            'title' => $article->title,
+            'slug' => $article->slug,
+            'excerpt' => $article->excerpt,
+            'image_path' => $article->image_path,
+            'content_type' => $article->content_type,
+            'author_name' => $article->author_name,
+            'tags' => $article->tags ?? [],
+            'published_at' => $article->published_at?->toDateTimeString(),
+            'reading_time_minutes' => $article->reading_time_minutes,
+            'is_featured' => $article->is_featured,
+        ];
+    }
+
+    private function serializeForPublicDetail(Article $article): array
+    {
+        return [
+            ...$this->serializeForPublicList($article),
+            'body' => $article->body,
+            'meta_title' => $article->meta_title,
+            'meta_description' => $article->meta_description,
+            'og_image_path' => $article->og_image_path,
+            'views_count' => $article->views_count,
         ];
     }
 

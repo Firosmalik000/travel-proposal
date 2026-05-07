@@ -5,7 +5,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Textarea } from '@/components/ui/textarea';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Option = {
     value: string;
@@ -103,6 +103,20 @@ function containsHtml(value: unknown): boolean {
     return /<\/?[a-z][\s\S]*>/i.test(asString(value));
 }
 
+function notifyParentArticleSaved(): void {
+    if (typeof window === 'undefined' || window.parent === window) {
+        return;
+    }
+
+    window.parent.postMessage(
+        {
+            type: 'articles:drawer:close',
+            reason: 'saved',
+        },
+        window.location.origin,
+    );
+}
+
 function resolveFieldStatus(
     activeValue: string,
     alternateValue: string,
@@ -145,6 +159,9 @@ export default function ArticleForm({
     statusOptions: Option[];
     mode: 'create' | 'edit';
 }) {
+    const [isEmbeddedDrawer] = useState(
+        typeof window !== 'undefined' && window.parent !== window,
+    );
     const payload = article as Record<string, unknown>;
     const [slugTouched, setSlugTouched] = useState(
         asString(payload.slug) !== '',
@@ -168,6 +185,21 @@ export default function ArticleForm({
     });
     const coverImagePath = asString(payload.image_path);
     const ogImagePath = asString(payload.og_image_path);
+    const coverPreviewUrl = useMemo(() => {
+        if (!form.data.cover_image) {
+            return null;
+        }
+
+        return URL.createObjectURL(form.data.cover_image);
+    }, [form.data.cover_image]);
+
+    useEffect(() => {
+        return () => {
+            if (coverPreviewUrl) {
+                URL.revokeObjectURL(coverPreviewUrl);
+            }
+        };
+    }, [coverPreviewUrl]);
 
     useEffect(() => {
         const defaultContentType =
@@ -227,6 +259,7 @@ export default function ArticleForm({
                 },
                 onSuccess: () => {
                     console.debug('[ArticleForm] submit success');
+                    notifyParentArticleSaved();
                 },
             });
 
@@ -249,6 +282,7 @@ export default function ArticleForm({
             },
             onSuccess: () => {
                 console.debug('[ArticleForm] submit success');
+                notifyParentArticleSaved();
             },
         });
     };
@@ -281,6 +315,7 @@ export default function ArticleForm({
 
     return (
         <AppSidebarLayout
+            embedded={isEmbeddedDrawer}
             breadcrumbs={[
                 {
                     title: 'Articles & News',
@@ -332,7 +367,13 @@ export default function ArticleForm({
                     </div>
                 ) : null}
 
-                <div className="grid gap-6 xl:grid-cols-[1.8fr_1fr]">
+                <div
+                    className={`grid gap-6 ${
+                        isEmbeddedDrawer
+                            ? 'sm:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]'
+                            : 'xl:grid-cols-[1.8fr_1fr]'
+                    }`}
+                >
                     <div className="space-y-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
                         <section className="space-y-4">
                             <div className="space-y-1">
@@ -523,9 +564,275 @@ export default function ArticleForm({
                                 </p>
                             </div>
                         </section>
+                        {isEmbeddedDrawer ? (
+                            <>
+                                <section className="space-y-4 border-t border-border pt-6">
+                                    <h2 className="text-base font-semibold">
+                                        Publikasi
+                                    </h2>
+                                    <div className="space-y-2">
+                                        <Label>Tipe Konten</Label>
+                                        <select
+                                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                            value={form.data.content_type}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'content_type',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        >
+                                            {contentTypeOptions.map((option) => (
+                                                <option
+                                                    key={option.value}
+                                                    value={option.value}
+                                                >
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Status</Label>
+                                        <select
+                                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                            value={form.data.status}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'status',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        >
+                                            {statusOptions.map((option) => (
+                                                <option
+                                                    key={option.value}
+                                                    value={option.value}
+                                                >
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Author</Label>
+                                        <Input
+                                            value={form.data.author_name}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'author_name',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Published At</Label>
+                                        <Input
+                                            type="datetime-local"
+                                            value={form.data.published_at}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'published_at',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Tags</Label>
+                                        <Input
+                                            value={form.data.tags}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'tags',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <label className="flex items-center gap-3 rounded-xl border border-border px-3 py-2 text-sm">
+                                        <input
+                                            type="checkbox"
+                                            checked={form.data.is_featured}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'is_featured',
+                                                    event.target.checked,
+                                                )
+                                            }
+                                        />
+                                        Tampilkan sebagai featured article
+                                    </label>
+                                </section>
+                                <section className="space-y-4 border-t border-border pt-6">
+                                    <h2 className="text-base font-semibold">
+                                        Media
+                                    </h2>
+                                    <div className="space-y-2">
+                                        <Label>Cover Image</Label>
+                                        {coverPreviewUrl || coverImagePath ? (
+                                            <img
+                                                src={
+                                                    coverPreviewUrl ||
+                                                    coverImagePath
+                                                }
+                                                alt="cover"
+                                                className="h-40 w-full rounded-xl object-cover"
+                                            />
+                                        ) : null}
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'cover_image',
+                                                    event.target.files?.[0] ??
+                                                        null,
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>OG Image</Label>
+                                        {ogImagePath ? (
+                                            <img
+                                                src={ogImagePath}
+                                                alt="og"
+                                                className="h-32 w-full rounded-xl object-cover"
+                                            />
+                                        ) : null}
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'og_image',
+                                                    event.target.files?.[0] ??
+                                                        null,
+                                                )
+                                            }
+                                        />
+                                    </div>
+                                </section>
+                            </>
+                        ) : null}
                     </div>
 
-                    <div className="space-y-6 rounded-2xl border border-border bg-card p-5 shadow-sm">
+                    <div
+                        className={`space-y-6 rounded-2xl border border-border bg-card p-5 shadow-sm ${
+                            isEmbeddedDrawer ? 'sm:sticky sm:top-4 sm:h-fit' : ''
+                        }`}
+                    >
+                        {isEmbeddedDrawer ? (
+                            <section className="space-y-4">
+                                <div className="space-y-1">
+                                    <h2 className="text-base font-semibold">
+                                        Live Preview
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        Preview artikel real-time saat input
+                                        berubah.
+                                    </p>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="overflow-hidden rounded-[1.5rem] border border-border bg-card/90">
+                                        <div className="space-y-4 p-5">
+                                            <div className="flex flex-wrap gap-2 text-[11px] font-semibold tracking-[0.18em] text-primary uppercase">
+                                                <span>
+                                                    {contentTypeLabels[
+                                                        form.data.content_type
+                                                    ] ?? form.data.content_type}
+                                                </span>
+                                                {form.data.is_featured ? (
+                                                    <span>Featured</span>
+                                                ) : null}
+                                            </div>
+                                            <h3 className="text-3xl font-semibold text-foreground">
+                                                {previewTitle ||
+                                                    'Judul artikel'}
+                                            </h3>
+                                            <p className="text-base leading-8 text-muted-foreground">
+                                                {previewExcerpt ||
+                                                    'Excerpt artikel akan muncul di sini.'}
+                                            </p>
+                                            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                                                <span>
+                                                    {form.data.author_name ||
+                                                        'Nama penulis'}
+                                                </span>
+                                                <span>
+                                                    {form.data.published_at ||
+                                                        'Tanggal publish'}
+                                                </span>
+                                                <span>
+                                                    {previewReadingTime} menit
+                                                    baca
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {coverPreviewUrl || coverImagePath ? (
+                                            <div className="aspect-[16/9] bg-muted">
+                                                <img
+                                                    src={
+                                                        coverPreviewUrl ||
+                                                        coverImagePath
+                                                    }
+                                                    alt="cover preview"
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            </div>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="rounded-[1.5rem] border border-border bg-card/90 p-5">
+                                        <div className="space-y-4 text-base leading-8 text-foreground/90">
+                                            {containsHtml(previewBody) ? (
+                                                <div
+                                                    className="prose prose-sm prose-headings:font-semibold prose-a:text-primary prose-strong:text-foreground prose-ul:list-disc prose-ol:list-decimal max-w-none"
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: previewBody,
+                                                    }}
+                                                />
+                                            ) : previewParagraphs.length > 0 ? (
+                                                previewParagraphs.map(
+                                                    (paragraph, index) => (
+                                                        <p key={index}>
+                                                            {paragraph}
+                                                        </p>
+                                                    ),
+                                                )
+                                            ) : (
+                                                <p className="text-muted-foreground">
+                                                    Body artikel akan tampil di
+                                                    sini. Pisahkan paragraf
+                                                    dengan satu baris kosong.
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {form.data.tags.trim() ? (
+                                            <div className="mt-6 flex flex-wrap gap-2">
+                                                {form.data.tags
+                                                    .split(',')
+                                                    .map((tag) => tag.trim())
+                                                    .filter(Boolean)
+                                                    .map((tag) => (
+                                                        <span
+                                                            key={tag}
+                                                            className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground"
+                                                        >
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            </section>
+                        ) : null}
+                        {!isEmbeddedDrawer ? (
+                            <>
                         <section className="space-y-4">
                             <h2 className="text-base font-semibold">
                                 Publikasi
@@ -686,9 +993,9 @@ export default function ArticleForm({
                             <h2 className="text-base font-semibold">Media</h2>
                             <div className="space-y-2">
                                 <Label>Cover Image</Label>
-                                {coverImagePath ? (
+                                {coverPreviewUrl || coverImagePath ? (
                                     <img
-                                        src={coverImagePath}
+                                        src={coverPreviewUrl || coverImagePath}
                                         alt="cover"
                                         className="h-40 w-full rounded-xl object-cover"
                                     />
@@ -800,6 +1107,8 @@ export default function ArticleForm({
                                 </div>
                             </div>
                         </section>
+                            </>
+                        ) : null}
                     </div>
                 </div>
             </form>

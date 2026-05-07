@@ -32,6 +32,8 @@ class CustomUmrohRequestController extends Controller
             'passenger_count' => (int) $payload['passenger_count'],
             'group_type' => $payload['group_type'],
             'departure_month' => $payload['departure_month'],
+            'departure_date' => $payload['departure_date'] ?? null,
+            'return_date' => $payload['return_date'] ?? null,
             'budget' => isset($payload['budget']) ? (int) $payload['budget'] : null,
             'focus' => $payload['focus'],
             'room_preference' => $payload['room_preference'],

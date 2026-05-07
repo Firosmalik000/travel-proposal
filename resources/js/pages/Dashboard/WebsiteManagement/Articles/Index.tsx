@@ -18,7 +18,7 @@ import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router } from '@inertiajs/react';
 import { MoreHorizontal, Plus, Search } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type Option = {
     value: string;
@@ -123,6 +123,31 @@ export default function ArticleIndex({
         );
     };
 
+    useEffect(() => {
+        const onMessage = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) {
+                return;
+            }
+
+            if (event.data?.type !== 'articles:drawer:close') {
+                return;
+            }
+
+            setDrawerOpen(false);
+            setDrawerUrl(null);
+            router.reload({
+                preserveScroll: true,
+                preserveState: true,
+            } as unknown as Parameters<typeof router.reload>[0]);
+        };
+
+        window.addEventListener('message', onMessage);
+
+        return () => {
+            window.removeEventListener('message', onMessage);
+        };
+    }, []);
+
     const destroyArticle = (articleId: number) => {
         if (!canDelete) {
             return;
@@ -152,7 +177,11 @@ export default function ArticleIndex({
         }
 
         if (action === 'preview') {
-            window.open(`/artikel/${article.slug}`, '_blank', 'noopener');
+            window.open(
+                `/admin/website-management/articles/${article.id}/preview`,
+                '_blank',
+                'noopener',
+            );
 
             return;
         }
@@ -322,7 +351,7 @@ export default function ArticleIndex({
                 >
                     <SheetContent
                         side="right"
-                        className="w-full p-0 sm:max-w-[42rem]"
+                        className="w-full p-0 sm:max-w-[75vw]"
                     >
                         <SheetHeader className="border-b border-border p-4">
                             <SheetTitle>{drawerTitle}</SheetTitle>

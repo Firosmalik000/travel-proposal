@@ -370,10 +370,15 @@ export default function LandingIndex({ pages }: { pages: LandingPageItem[] }) {
 }
 
 function LandingPageEditor({ page }: { page: LandingPageItem }) {
+    const initialContent = normalizeLandingContentForEditor(
+        page.slug,
+        stripLocaleData(page.content ?? {}),
+    );
+
     const { data, setData, post, processing } = useForm({
         title: page.title ?? '',
         excerpt: page.excerpt ?? '',
-        content: stripLocaleData(page.content ?? {}),
+        content: initialContent,
         media: {} as Record<string, File | null>,
         is_active: page.is_active,
         _method: 'PATCH',
@@ -399,6 +404,10 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
     );
 
     useEffect(() => {
+        const nextContent = normalizeLandingContentForEditor(
+            page.slug,
+            stripLocaleData(page.content ?? {}),
+        );
         setOpenSections(
             Object.fromEntries(
                 contentSections.map(([sectionKey]) => [
@@ -408,6 +417,11 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
             ),
         );
         setActiveSection(contentSections[0]?.[0] ?? 'hero');
+        setData((current) => ({
+            ...current,
+            content: nextContent,
+            media: {},
+        }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page.id]);
 
@@ -809,10 +823,17 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                                         </Row>
                                         <ServiceItemsEditor
                                             content={data.content}
+                                            media={data.media}
                                             setContent={(content) =>
                                                 setData((current) => ({
                                                     ...current,
                                                     content,
+                                                }))
+                                            }
+                                            setMedia={(media) =>
+                                                setData((current) => ({
+                                                    ...current,
+                                                    media,
                                                 }))
                                             }
                                         />
@@ -1253,10 +1274,14 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
 
 function ServiceItemsEditor({
     content,
+    media,
     setContent,
+    setMedia,
 }: {
     content: Record<string, any>;
+    media: Record<string, File | null>;
     setContent: (content: Record<string, any>) => void;
+    setMedia: (media: Record<string, File | null>) => void;
 }) {
     const items = Array.isArray(content?.services?.items)
         ? content.services.items
@@ -1266,7 +1291,14 @@ function ServiceItemsEditor({
         const next = structuredClone(content ?? {});
         next.services = {
             ...(next.services ?? {}),
-            items: [...items, { icon: '', title: '', description: '' }],
+            items: [
+                ...items,
+                {
+                    image_path: '/images/dummy.jpg',
+                    title: '',
+                    description: '',
+                },
+            ],
         };
         setContent(next);
     };
@@ -1321,22 +1353,26 @@ function ServiceItemsEditor({
                             </Button>
                         </div>
                         <Row>
-                            <Field label="Ikon">
-                                <IconSelect
+                            <Field label="Gambar">
+                                <ImageField
+                                    label={`Gambar layanan ${index + 1}`}
                                     value={String(
                                         getNestedValue(
                                             content,
-                                            `services.items.${index}.icon`,
+                                            `services.items.${index}.image_path`,
                                         ) ?? '',
                                     )}
-                                    onChange={(value) =>
-                                        setContent(
-                                            updateNestedValue(
-                                                content,
-                                                `services.items.${index}.icon`,
-                                                value,
-                                            ),
-                                        )
+                                    file={
+                                        media[
+                                            `services.items.${index}.image_path`
+                                        ] ?? null
+                                    }
+                                    onChange={(file) =>
+                                        setMedia({
+                                            ...media,
+                                            [`services.items.${index}.image_path`]:
+                                                file,
+                                        })
                                     }
                                 />
                             </Field>
@@ -1625,6 +1661,61 @@ function getOrderedContentSections(
     }
 
     return allowedSections.map((key) => [key, content?.[key] ?? {}]);
+}
+
+function normalizeLandingContentForEditor(
+    pageSlug: string,
+    content: Record<string, any>,
+): Record<string, any> {
+    if (pageSlug !== 'home') {
+        return content;
+    }
+
+    const next = structuredClone(content ?? {});
+    const items = Array.isArray(next?.services?.items) ? next.services.items : [];
+    const minimumItems = 4;
+
+    if (!next.services) {
+        next.services = {};
+    }
+
+    const defaultServiceItems = [
+        {
+            title: 'Legalitas Terjamin',
+            description:
+                'Travel berizin resmi dengan informasi keberangkatan yang jelas.',
+        },
+        {
+            title: 'Pembimbing Profesional',
+            description:
+                'Ustadz berpengalaman mendampingi jamaah sejak manasik hingga pulang.',
+        },
+        {
+            title: 'Akomodasi Terbaik',
+            description:
+                'Pilihan hotel nyaman yang menyesuaikan kelas paket.',
+        },
+        {
+            title: 'Layanan Menyeluruh',
+            description:
+                'Visa, tiket, manasik, perlengkapan, dan dokumen ditangani satu tim.',
+        },
+    ];
+
+    next.services.items = Array.from({ length: minimumItems }, (_, index) => {
+        const currentItem = items[index] ?? {};
+        const defaults = defaultServiceItems[index];
+
+        return {
+            image_path: String(currentItem.image_path ?? '/images/dummy.jpg'),
+            title: String(currentItem.title ?? defaults.title),
+            description: String(
+                currentItem.description ?? defaults.description,
+            ),
+        };
+    });
+
+    return next;
 }
 
 function ImageField({

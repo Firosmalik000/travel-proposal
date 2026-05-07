@@ -2,7 +2,6 @@ import {
     IslamicLantern,
     IslamicOrnamentAbbasid,
     IslamicOrnamentKhatam,
-    IslamicOrnamentOttomanAccent,
     IslamicOrnamentRow1Col1,
     IslamicOrnamentZellige,
 } from '@/components/public-ornaments';
@@ -320,8 +319,6 @@ export default function Home() {
         homePage?.content?.packages?.price_prefix,
         locale,
     );
-    const servicesLabel = localize(homePage?.content?.services?.label, locale);
-    const servicesTitle = localize(homePage?.content?.services?.title, locale);
     const servicesDescription = localize(
         homePage?.content?.services?.description,
         locale,
@@ -823,72 +820,66 @@ export default function Home() {
 
                 <section className="services-section relative isolate overflow-hidden py-20 sm:py-24">
                     <div className="pointer-events-none absolute inset-0 -z-10">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_8%_34%,rgba(93,8,18,0.16)_0%,transparent_58%),radial-gradient(circle_at_92%_38%,rgba(230,156,50,0.22)_0%,transparent_60%),radial-gradient(circle_at_70%_92%,rgba(189,49,34,0.16)_0%,transparent_62%),radial-gradient(circle_at_20%_86%,rgba(255,214,146,0.20)_0%,transparent_64%),conic-gradient(from_210deg_at_18%_70%,rgba(93,8,18,0.08)_0deg,transparent_160deg,rgba(230,156,50,0.10)_260deg,transparent_360deg),linear-gradient(135deg,rgba(255,255,255,0.34)_0%,transparent_28%,transparent_58%,rgba(230,156,50,0.12)_100%)] opacity-92 dark:opacity-34" />
-                        <IslamicOrnamentOttomanAccent className="absolute top-[14%] right-[-6%] h-[22rem] w-[22rem] rotate-[16deg] text-accent/15 sm:h-[28rem] sm:w-[28rem]" />
-                        <IslamicLantern className="absolute bottom-[-28%] left-[6%] h-[18rem] w-[12rem] rotate-[8deg] text-primary/12 sm:h-[24rem] sm:w-[16rem]" />
+                        <div className="absolute inset-0 bg-neutral-100" />
                     </div>
-
-                    <div className="container mx-auto grid items-start gap-12 px-4 sm:px-6 md:gap-16 lg:grid-cols-2">
+                    <div className="container mx-auto px-4 sm:px-6">
                         <motion.div
-                            className="services-header lg:sticky lg:top-24"
+                            className="mx-auto max-w-3xl text-center"
                             initial="hidden"
                             whileInView="show"
                             viewport={viewport}
                             variants={sectionStagger}
                         >
-                            <motion.span
-                                className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-xs font-bold tracking-widest text-primary uppercase"
-                                variants={slideUpStrong}
-                            >
-                                {servicesLabel}
-                            </motion.span>
                             <motion.h2
-                                className="font-heading mt-5 text-3xl leading-tight font-extrabold text-foreground sm:text-4xl md:text-5xl"
+                                className="font-heading text-3xl leading-tight font-extrabold text-foreground sm:text-4xl"
                                 variants={slideUpStrong}
                             >
-                                {servicesTitle}
+                                {locale === 'id'
+                                    ? 'Apa saja yang kami tawarkan?'
+                                    : 'What Do We Offer?'}
                             </motion.h2>
                             <motion.p
-                                className="mt-5 text-base leading-relaxed text-muted-foreground"
+                                className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base"
                                 variants={slideUpStrong}
                             >
                                 {servicesDescription}
                             </motion.p>
-                            <motion.div variants={slideUpStrong}>
-                                <Link
-                                    href="/layanan"
-                                    className="mt-8 inline-flex items-center gap-2 rounded-full border-2 border-primary px-6 py-3 text-sm font-bold text-primary transition-all hover:scale-105 hover:bg-primary hover:text-white"
-                                >
-                                    {locale === 'id'
-                                        ? 'Semua Layanan'
-                                        : 'All Services'}
-                                    <ArrowRightIcon className="h-4 w-4" />
-                                </Link>
-                            </motion.div>
                         </motion.div>
                         <motion.div
-                            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                            className="mx-auto mt-10 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2"
                             initial="hidden"
                             whileInView="show"
                             viewport={viewport}
                             variants={sectionStagger}
                         >
-                            {serviceItems.map((item) => (
+                            {serviceItems.slice(0, 4).map((item, index) => (
                                 <motion.div
                                     key={item.number}
-                                    className="service-card group relative overflow-hidden rounded-3xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl"
+                                    className="group flex items-start gap-4"
                                     variants={cardBurst}
                                 >
-                                    <div className="absolute top-[-1.5rem] right-[-1.5rem] h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-150 group-hover:bg-primary/10" />
-                                    <p className="font-heading text-4xl font-black text-primary/15 transition-colors group-hover:text-primary/25">
-                                        {item.number}
-                                    </p>
-                                    <h3 className="font-heading mt-3 text-lg font-bold text-foreground">
-                                        {item.title}
-                                    </h3>
-                                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                                        {item.description}
-                                    </p>
+                                    <div className="h-24 w-24 shrink-0 overflow-hidden rounded-[4px] bg-white">
+                                        <img
+                                            src={
+                                                [
+                                                    '/images/dummy.jpg',
+                                                    '/images/dummy.jpg',
+                                                    '/images/dummy.jpg',
+                                                    '/images/dummy.jpg',
+                                                ][index] ?? '/images/dummy.jpg'
+                                            }
+                                            alt={item.title}
+                                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h3 className="font-heading text-xl font-bold text-foreground">
+                                            {item.title}
+                                        </h3>
+                                        <p className="mt-1 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
+                                            {item.description}
+                                        </p>
+                                    </div>
                                 </motion.div>
                             ))}
                         </motion.div>

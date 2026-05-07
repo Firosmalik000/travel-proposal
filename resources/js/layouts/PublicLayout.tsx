@@ -26,6 +26,8 @@ const content = {
             { label: 'Paket Umroh', href: '/paket-umroh' },
             { label: 'Jadwal', href: '/jadwal-keberangkatan' },
             { label: 'Tentang Kami', href: '/tentang-kami' },
+            { label: 'Artikel', href: '/artikel' },
+            { label: 'Galeri', href: '/galeri' },
             { label: 'Kontak', href: '/kontak' },
         ],
         signIn: 'Masuk',

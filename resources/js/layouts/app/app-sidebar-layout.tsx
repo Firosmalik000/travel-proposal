@@ -10,7 +10,23 @@ import { type PropsWithChildren } from 'react';
 export default function AppSidebarLayout({
     children,
     breadcrumbs = [],
-}: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[] }>) {
+    embedded = false,
+}: PropsWithChildren<{ breadcrumbs?: BreadcrumbItem[]; embedded?: boolean }>) {
+    if (embedded) {
+        return (
+            <AppShell variant="header">
+                <GlobalFaviconHead />
+                <BrandThemeStyle />
+                <AppContent
+                    variant="header"
+                    className="max-w-none overflow-x-hidden bg-background dark:bg-background"
+                >
+                    {children}
+                </AppContent>
+            </AppShell>
+        );
+    }
+
     return (
         <AppShell variant="sidebar">
             <GlobalFaviconHead />

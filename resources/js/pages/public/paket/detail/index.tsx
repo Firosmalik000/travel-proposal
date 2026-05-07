@@ -30,12 +30,12 @@ const typeConfig: Record<string, { label: string; color: string }> = {
     private: { label: 'Private', color: 'bg-purple-100 text-purple-700' },
 };
 
-const productTypeEmoji: Record<string, string> = {
-    dokumen: 'ðŸ“„',
-    transportasi: 'âœˆï¸',
-    akomodasi: 'ðŸ¨',
-    layanan: 'ðŸ›Žï¸',
-    perlengkapan: 'ðŸŽ’',
+const productTypeIconMap: Record<string, string> = {
+    dokumen: 'BadgeCheck',
+    transportasi: 'Plane',
+    akomodasi: 'Hotel',
+    layanan: 'ShieldCheck',
+    perlengkapan: 'Sparkles',
 };
 
 function toStringArray(val: unknown): string[] {
@@ -137,6 +137,12 @@ export default function PaketDetail() {
     );
     const policy = localize(content.policy, locale);
     const packageHighlights = normalizePackageHighlights(content);
+    const CalendarDaysIcon = packageHighlightIconMap.CalendarDays;
+    const MapPinIcon = packageHighlightIconMap.MapPin;
+    const PackageIcon = packageHighlightIconMap.BadgeCheck;
+    const PolicyIcon = packageHighlightIconMap.ShieldCheck;
+    const TestimonialIcon = packageHighlightIconMap.Users;
+    const StarIcon = packageHighlightIconMap.Star;
     const itineraries = useMemo(() => {
         const rawItems = Array.isArray(pkg.itineraries) ? pkg.itineraries : [];
 
@@ -232,7 +238,7 @@ export default function PaketDetail() {
                 />
             </Head>
 
-            {/* â”€â”€ Hero â”€â”€ */}
+            {/* Hero */}
             <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-6 sm:px-6">
                 <MotionCard className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
                     <div className="grid lg:grid-cols-2">
@@ -296,8 +302,12 @@ export default function PaketDetail() {
                                         {type.label}
                                     </span>
                                     {pkg.is_featured && (
-                                        <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                                            â˜… Featured
+                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                                            <StarIcon
+                                                className="h-3.5 w-3.5"
+                                                fill="currentColor"
+                                            />
+                                            Featured
                                         </span>
                                     )}
                                     <span className="rounded-full bg-muted px-3 py-1 font-mono text-xs text-muted-foreground">
@@ -313,12 +323,11 @@ export default function PaketDetail() {
                                 {pkg.rating_avg && (
                                     <div className="mt-2 flex items-center gap-1.5">
                                         {[1, 2, 3, 4, 5].map((s) => (
-                                            <span
+                                            <StarIcon
                                                 key={s}
-                                                className={`text-lg ${s <= Math.round(pkg.rating_avg) ? 'text-amber-400' : 'text-muted-foreground/20'}`}
-                                            >
-                                                â˜…
-                                            </span>
+                                                className={`h-4 w-4 ${s <= Math.round(pkg.rating_avg) ? 'text-amber-400' : 'text-muted-foreground/20'}`}
+                                                fill="currentColor"
+                                            />
                                         ))}
                                         <span className="text-sm font-semibold">
                                             {pkg.rating_avg}
@@ -472,14 +481,17 @@ export default function PaketDetail() {
                                 </p>
 
                                 {nextSchedule && (
-                                    <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">
-                                        ðŸ“… Berangkat{' '}
-                                        {formatDate(
-                                            nextSchedule.departure_date,
-                                            locale,
-                                        )}{' '}
-                                        Â· {nextSchedule.seats_available} seat
-                                        tersisa
+                                    <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                                        <CalendarDaysIcon className="h-4 w-4" />
+                                        <span>
+                                            Berangkat{' '}
+                                            {formatDate(
+                                                nextSchedule.departure_date,
+                                                locale,
+                                            )}{' '}
+                                            - {nextSchedule.seats_available}{' '}
+                                            seat tersisa
+                                        </span>
                                     </p>
                                 )}
 
@@ -505,11 +517,12 @@ export default function PaketDetail() {
                 </MotionCard>
             </MotionSection>
 
-            {/* â”€â”€ Jadwal â”€â”€ */}
+            {/* Jadwal */}
             {pkg.schedules?.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-                    <h2 className="public-heading mb-3 text-xl font-bold text-foreground">
-                        ðŸ“… Jadwal Keberangkatan
+                    <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
+                        <CalendarDaysIcon className="h-5 w-5 text-primary" />
+                        Jadwal Keberangkatan
                     </h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {pkg.schedules.map((s: any, i: number) => {
@@ -550,8 +563,9 @@ export default function PaketDetail() {
                                             Pulang: {s.return_date}
                                         </p>
                                     )}
-                                    <p className="mt-0.5 text-xs text-muted-foreground">
-                                        ðŸ“ {s.departure_city}
+                                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                        <MapPinIcon className="h-3.5 w-3.5" />
+                                        {s.departure_city}
                                     </p>
                                     <div className="mt-2 flex items-center gap-2">
                                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
@@ -577,7 +591,7 @@ export default function PaketDetail() {
                 </section>
             )}
 
-            {/* â”€â”€ Included / Excluded â”€â”€ */}
+            {/* Included / Excluded */}
             {itineraries.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
                     <div className="mb-3">
@@ -775,7 +789,10 @@ export default function PaketDetail() {
                         {included.length > 0 && (
                             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/20">
                                 <h2 className="mb-3 font-bold text-emerald-700 dark:text-emerald-300">
-                                    âœ… Sudah Termasuk
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className="h-2.5 w-2.5 rounded-full bg-current" />
+                                        Sudah Termasuk
+                                    </span>
                                 </h2>
                                 <ul className="space-y-2">
                                     {included.map((item: string, i: number) => (
@@ -783,9 +800,7 @@ export default function PaketDetail() {
                                             key={i}
                                             className="flex items-start gap-2 text-sm text-foreground"
                                         >
-                                            <span className="mt-0.5 text-emerald-500">
-                                                âœ“
-                                            </span>{' '}
+                                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
                                             {item}
                                         </li>
                                     ))}
@@ -795,7 +810,10 @@ export default function PaketDetail() {
                         {excluded.length > 0 && (
                             <div className="rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-800 dark:bg-red-950/20">
                                 <h2 className="mb-3 font-bold text-red-700 dark:text-red-300">
-                                    âŒ Tidak Termasuk
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className="h-2.5 w-2.5 rounded-full bg-current" />
+                                        Tidak Termasuk
+                                    </span>
                                 </h2>
                                 <ul className="space-y-2">
                                     {excluded.map((item: string, i: number) => (
@@ -803,9 +821,7 @@ export default function PaketDetail() {
                                             key={i}
                                             className="flex items-start gap-2 text-sm text-foreground"
                                         >
-                                            <span className="mt-0.5 text-red-400">
-                                                âœ—
-                                            </span>{' '}
+                                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-400" />
                                             {item}
                                         </li>
                                     ))}
@@ -816,35 +832,43 @@ export default function PaketDetail() {
                 </section>
             )}
 
-            {/* â”€â”€ Produk dalam Paket â”€â”€ */}
+            {/* Produk dalam Paket */}
             {pkg.products?.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-                    <h2 className="public-heading mb-3 text-xl font-bold text-foreground">
-                        ðŸ“¦ Komponen Paket
+                    <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
+                        <PackageIcon className="h-5 w-5 text-primary" />
+                        Komponen Paket
                     </h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {pkg.products.map((p: any, i: number) => (
-                            <div
-                                key={i}
-                                className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
-                            >
-                                <span className="text-2xl">
-                                    {productTypeEmoji[p.product_type] ?? 'ðŸ“¦'}
-                                </span>
-                                <span className="text-sm font-medium text-foreground">
-                                    {localize(p.name, locale)}
-                                </span>
-                            </div>
-                        ))}
+                        {pkg.products.map((p: any, i: number) => {
+                            const ProductIcon =
+                                packageHighlightIconMap[
+                                    productTypeIconMap[p.product_type] ??
+                                        'Sparkles'
+                                ] ?? packageHighlightIconMap.Sparkles;
+
+                            return (
+                                <div
+                                    key={i}
+                                    className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
+                                >
+                                    <ProductIcon className="h-5 w-5 shrink-0 text-primary" />
+                                    <span className="text-sm font-medium text-foreground">
+                                        {localize(p.name, locale)}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </div>
                 </section>
             )}
 
-            {/* â”€â”€ Kebijakan â”€â”€ */}
+            {/* Kebijakan */}
             {policy && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-                    <h2 className="public-heading mb-3 text-xl font-bold text-foreground">
-                        ðŸ“‹ Kebijakan
+                    <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
+                        <PolicyIcon className="h-5 w-5 text-primary" />
+                        Kebijakan
                     </h2>
                     <div className="rounded-2xl border border-border bg-muted/30 p-5 text-sm leading-relaxed text-foreground">
                         {policy}
@@ -872,11 +896,12 @@ export default function PaketDetail() {
                 </section>
             )}
 
-            {/* â”€â”€ Testimoni â”€â”€ */}
+            {/* Testimoni */}
             {pkg.testimonials?.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-                    <h2 className="public-heading mb-3 text-xl font-bold text-foreground">
-                        ðŸ’¬ Testimoni Jamaah
+                    <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
+                        <TestimonialIcon className="h-5 w-5 text-primary" />
+                        Testimoni Jamaah
                     </h2>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {pkg.testimonials.map((t: any, i: number) => (
@@ -886,16 +911,15 @@ export default function PaketDetail() {
                             >
                                 <div className="flex items-center gap-1 text-amber-400">
                                     {[1, 2, 3, 4, 5].map((s) => (
-                                        <span
+                                        <StarIcon
                                             key={s}
                                             className={
                                                 s <= t.rating
-                                                    ? 'text-amber-400'
-                                                    : 'text-muted-foreground/20'
+                                                    ? 'h-4 w-4 text-amber-400'
+                                                    : 'h-4 w-4 text-muted-foreground/20'
                                             }
-                                        >
-                                            â˜…
-                                        </span>
+                                            fill="currentColor"
+                                        />
                                     ))}
                                 </div>
                                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground italic">
@@ -916,13 +940,13 @@ export default function PaketDetail() {
                                                   )}${
                                                       t.departure_schedule
                                                           ?.departure_city
-                                                          ? ` â€¢ ${t.departure_schedule.departure_city}`
+                                                          ? ` - ${t.departure_schedule.departure_city}`
                                                           : ''
                                                   }`
                                                 : null,
                                         ]
                                             .filter(Boolean)
-                                            .join(' â€¢ ')}
+                                            .join(' - ')}
                                     </p>
                                 </div>
 
@@ -957,7 +981,7 @@ export default function PaketDetail() {
                 </section>
             )}
 
-            {/* â”€â”€ CTA Bottom â”€â”€ */}
+            {/* CTA Bottom */}
             <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
                 <MotionCard className="flex flex-col items-center justify-between gap-4 rounded-2xl bg-primary px-6 py-8 text-center text-primary-foreground sm:flex-row sm:text-left">
                     <div>

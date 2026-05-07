@@ -14,6 +14,33 @@ function hasContent(value: string): boolean {
     return value.replace(/<[^>]+>/g, '').trim() !== '';
 }
 
+function normalizeParagraphBlocks(html: string): string {
+    const container = document.createElement('div');
+    container.innerHTML = html;
+
+    container.querySelectorAll('p, div').forEach((element) => {
+        const inlineStyle = element.getAttribute('style');
+        if (!inlineStyle) {
+            return;
+        }
+
+        const normalizedStyle = inlineStyle
+            .replace(/(^|;)\s*text-indent\s*:[^;]+;?/gi, '$1')
+            .replace(/(^|;)\s*margin-left\s*:[^;]+;?/gi, '$1')
+            .replace(/(^|;)\s*padding-left\s*:[^;]+;?/gi, '$1')
+            .replace(/^;+|;+$/g, '')
+            .trim();
+
+        if (normalizedStyle) {
+            element.setAttribute('style', normalizedStyle);
+        } else {
+            element.removeAttribute('style');
+        }
+    });
+
+    return container.innerHTML;
+}
+
 export function RichTextEditor({
     value,
     onChange,
@@ -49,7 +76,14 @@ export function RichTextEditor({
         }
 
         document.execCommand(command, false, commandValue);
-        onChange(editorRef.current?.innerHTML ?? '');
+
+        const nextHtml = normalizeParagraphBlocks(
+            editorRef.current?.innerHTML ?? '',
+        );
+        if (editorRef.current) {
+            editorRef.current.innerHTML = nextHtml;
+        }
+        onChange(nextHtml);
     };
 
     return (
@@ -95,11 +129,18 @@ export function RichTextEditor({
                     ref={editorRef}
                     contentEditable
                     suppressContentEditableWarning
-                    className="min-h-72 px-4 py-4 text-sm leading-7 text-foreground outline-none [&_p]:my-3 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-1"
-                    onInput={(event) => onChange(event.currentTarget.innerHTML)}
+                    className="min-h-72 px-4 py-4 text-sm leading-7 text-foreground outline-none [text-indent:0] [&_p]:my-3 [&_p]:indent-0 [&_p]:ml-0 [&_p]:pl-0 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-6 [&_ol]:pl-6 [&_li]:my-1"
+                    onInput={(event) => {
+                        const nextHtml = normalizeParagraphBlocks(
+                            event.currentTarget.innerHTML,
+                        );
+                        if (event.currentTarget.innerHTML !== nextHtml) {
+                            event.currentTarget.innerHTML = nextHtml;
+                        }
+                        onChange(nextHtml);
+                    }}
                 />
             </div>
         </div>
     );
 }
-

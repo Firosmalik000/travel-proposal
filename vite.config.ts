@@ -94,7 +94,7 @@ export default defineConfig({
         tailwindcss(),
         wayfinder({
             formVariants: true,
-            command: `${phpBinary} artisan wayfinder:generate`,
+            command: `"${phpBinary}" artisan wayfinder:generate`,
         }),
     ],
     esbuild: {

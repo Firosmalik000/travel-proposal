@@ -16,6 +16,8 @@ class CustomUmrohRequest extends Model
         'passenger_count',
         'group_type',
         'departure_month',
+        'departure_date',
+        'return_date',
         'budget',
         'focus',
         'room_preference',
@@ -33,6 +35,8 @@ class CustomUmrohRequest extends Model
         return [
             'passenger_count' => 'integer',
             'budget' => 'integer',
+            'departure_date' => 'date',
+            'return_date' => 'date',
             'approved_at' => 'datetime',
             'rejected_at' => 'datetime',
         ];

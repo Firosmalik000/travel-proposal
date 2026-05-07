@@ -369,9 +369,19 @@ export default function GalleryManagement({ items, stats }: Props) {
                 </div>
             </div>
 
-            <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-                <SheetContent className="w-full max-w-xl sm:max-w-xl">
-                    <SheetHeader>
+            <Sheet
+                open={drawerOpen}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        closeDrawer();
+                        return;
+                    }
+
+                    setDrawerOpen(open);
+                }}
+            >
+                <SheetContent className="flex h-screen w-full max-w-xl flex-col overflow-hidden p-0 sm:max-w-xl">
+                    <SheetHeader className="shrink-0 border-b border-border px-6 py-5">
                         <SheetTitle>
                             {editing
                                 ? 'Edit Foto Galeri'
@@ -385,166 +395,177 @@ export default function GalleryManagement({ items, stats }: Props) {
                             .
                         </SheetDescription>
                     </SheetHeader>
-
                     <form
-                        className="mt-6 space-y-5"
+                        className="flex min-h-0 flex-1 flex-col"
                         onSubmit={(e) => {
                             e.preventDefault();
                             submit();
                         }}
                     >
-                        <div className="space-y-2">
-                            <Label>Judul</Label>
-                            <Input
-                                value={form.data.title}
-                                onChange={(e) =>
-                                    form.setData('title', e.target.value)
-                                }
-                                placeholder="Contoh: Jamaah di Madinah"
-                            />
-                            {form.errors.title ? (
-                                <p className="text-xs text-destructive">
-                                    {form.errors.title}
-                                </p>
-                            ) : null}
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label>Kategori (opsional)</Label>
-                            <Input
-                                value={form.data.category}
-                                onChange={(e) =>
-                                    form.setData('category', e.target.value)
-                                }
-                                placeholder="Contoh: galeri"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label>Deskripsi (opsional)</Label>
-                            <Textarea
-                                value={form.data.description}
-                                onChange={(e) =>
-                                    form.setData('description', e.target.value)
-                                }
-                                rows={4}
-                                placeholder="Catatan singkat untuk admin."
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-6">
                             <div className="space-y-2">
-                                <Label>Urutan</Label>
+                                <Label>Judul</Label>
                                 <Input
-                                    type="number"
-                                    value={form.data.sort_order}
+                                    value={form.data.title}
                                     onChange={(e) =>
-                                        form.setData(
-                                            'sort_order',
-                                            Number(e.target.value || 0),
-                                        )
+                                        form.setData('title', e.target.value)
                                     }
-                                    min={0}
+                                    placeholder="Contoh: Jamaah di Madinah"
+                                />
+                                {form.errors.title ? (
+                                    <p className="text-xs text-destructive">
+                                        {form.errors.title}
+                                    </p>
+                                ) : null}
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>Kategori (opsional)</Label>
+                                <Input
+                                    value={form.data.category}
+                                    onChange={(e) =>
+                                        form.setData('category', e.target.value)
+                                    }
+                                    placeholder="Contoh: galeri"
                                 />
                             </div>
+
                             <div className="space-y-2">
-                                <Label>Aktif</Label>
-                                <div className="flex h-10 items-center gap-2 rounded-lg border border-border px-3">
-                                    <Checkbox
-                                        checked={form.data.is_active}
-                                        onCheckedChange={(v) =>
+                                <Label>Deskripsi (opsional)</Label>
+                                <Textarea
+                                    value={form.data.description}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'description',
+                                            e.target.value,
+                                        )
+                                    }
+                                    rows={4}
+                                    placeholder="Catatan singkat untuk admin."
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Urutan</Label>
+                                    <Input
+                                        type="number"
+                                        value={form.data.sort_order}
+                                        onChange={(e) =>
                                             form.setData(
-                                                'is_active',
-                                                Boolean(v),
+                                                'sort_order',
+                                                Number(e.target.value || 0),
+                                            )
+                                        }
+                                        min={0}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Aktif</Label>
+                                    <div className="flex h-10 items-center gap-2 rounded-lg border border-border px-3">
+                                        <Checkbox
+                                            checked={form.data.is_active}
+                                            onCheckedChange={(v) =>
+                                                form.setData(
+                                                    'is_active',
+                                                    Boolean(v),
+                                                )
+                                            }
+                                        />
+                                        <span className="text-sm text-muted-foreground">
+                                            Tampilkan di publik
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <Label>
+                                    {editing ? 'Ganti Foto (opsional)' : 'Foto'}
+                                </Label>
+                                {!editing && !imagePreviewUrl ? (
+                                    <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
+                                        Belum ada foto dipilih.
+                                    </div>
+                                ) : null}
+                                {editing && !imagePreviewUrl ? (
+                                    <div className="overflow-hidden rounded-2xl border border-border bg-muted">
+                                        <img
+                                            src={
+                                                editing.image_path ||
+                                                '/images/dummy.jpg'
+                                            }
+                                            alt={editing.title}
+                                            className="h-56 w-full object-cover"
+                                            loading="lazy"
+                                        />
+                                    </div>
+                                ) : null}
+                                {imagePreviewUrl ? (
+                                    <div className="overflow-hidden rounded-2xl border border-border bg-muted">
+                                        <img
+                                            src={imagePreviewUrl}
+                                            alt="Preview foto galeri"
+                                            className="h-56 w-full object-cover"
+                                        />
+                                    </div>
+                                ) : null}
+                                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-4 transition hover:bg-muted/30">
+                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                        <ImagePlus className="h-5 w-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-foreground">
+                                            Pilih file gambar
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            PNG / JPG / WEBP, max 5MB
+                                        </p>
+                                    </div>
+                                    <Input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        className="hidden"
+                                        onChange={(e) =>
+                                            form.setData(
+                                                'image',
+                                                e.target.files?.[0] ?? null,
                                             )
                                         }
                                     />
-                                    <span className="text-sm text-muted-foreground">
-                                        Tampilkan di publik
-                                    </span>
-                                </div>
+                                </label>
+                                {form.data.image ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        Dipilih: {form.data.image.name}
+                                    </p>
+                                ) : null}
+                                {form.errors.image ? (
+                                    <p className="text-xs text-destructive">
+                                        {form.errors.image}
+                                    </p>
+                                ) : null}
                             </div>
                         </div>
 
-                        <div className="space-y-3">
-                            <Label>
-                                {editing ? 'Ganti Foto (opsional)' : 'Foto'}
-                            </Label>
-                            {!editing && !imagePreviewUrl ? (
-                                <div className="flex h-56 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
-                                    Belum ada foto dipilih.
-                                </div>
-                            ) : null}
-                            {editing && !imagePreviewUrl ? (
-                                <div className="overflow-hidden rounded-2xl border border-border bg-muted">
-                                    <img
-                                        src={
-                                            editing.image_path ||
-                                            '/images/dummy.jpg'
-                                        }
-                                        alt={editing.title}
-                                        className="h-56 w-full object-cover"
-                                        loading="lazy"
-                                    />
-                                </div>
-                            ) : null}
-                            {imagePreviewUrl ? (
-                                <div className="overflow-hidden rounded-2xl border border-border bg-muted">
-                                    <img
-                                        src={imagePreviewUrl}
-                                        alt="Preview foto galeri"
-                                        className="h-56 w-full object-cover"
-                                    />
-                                </div>
-                            ) : null}
-                            <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/20 p-4 transition hover:bg-muted/30">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                    <ImagePlus className="h-5 w-5" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-foreground">
-                                        Pilih file gambar
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        PNG / JPG / WEBP, max 5MB
-                                    </p>
-                                </div>
-                                <Input
-                                    type="file"
-                                    accept="image/png,image/jpeg,image/webp"
-                                    className="hidden"
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'image',
-                                            e.target.files?.[0] ?? null,
-                                        )
-                                    }
-                                />
-                            </label>
-                            {form.data.image ? (
-                                <p className="text-xs text-muted-foreground">
-                                    Dipilih: {form.data.image.name}
-                                </p>
-                            ) : null}
-                            {form.errors.image ? (
-                                <p className="text-xs text-destructive">
-                                    {form.errors.image}
-                                </p>
-                            ) : null}
-                        </div>
-
-                        <div className="flex items-center justify-end gap-3 border-t pt-4">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={closeDrawer}
-                                disabled={form.processing}
-                            >
-                                Batal
-                            </Button>
-                            <Button type="submit" disabled={form.processing}>
-                                {form.processing ? 'Menyimpan...' : 'Simpan'}
-                            </Button>
+                        <div className="shrink-0 border-t border-border bg-background/95 px-6 py-4">
+                            <div className="flex items-center justify-end gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={closeDrawer}
+                                    disabled={form.processing}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={form.processing}
+                                >
+                                    {form.processing
+                                        ? 'Menyimpan...'
+                                        : 'Simpan'}
+                                </Button>
+                            </div>
                         </div>
                     </form>
                 </SheetContent>

@@ -61,6 +61,8 @@ const content = {
             pilgrims: 'Jumlah Jamaah',
             city: 'Kota Keberangkatan',
             month: 'Perkiraan Bulan Berangkat',
+            departureDate: 'Tanggal Berangkat (opsional)',
+            returnDate: 'Tanggal Pulang (opsional)',
             budget: 'Budget per Jamaah',
             focus: 'Prioritas Utama',
             focusOptions: [
@@ -127,6 +129,8 @@ const content = {
             pilgrims: 'Number of Pilgrims',
             city: 'Departure City',
             month: 'Estimated Departure Month',
+            departureDate: 'Departure Date (optional)',
+            returnDate: 'Return Date (optional)',
             budget: 'Budget per Pilgrim',
             focus: 'Main Priority',
             focusOptions: [
@@ -186,6 +190,8 @@ export default function Custom() {
     const [pilgrims, setPilgrims] = useState<number | ''>('');
     const [city, setCity] = useState('');
     const [month, setMonth] = useState('');
+    const [departureDate, setDepartureDate] = useState('');
+    const [returnDate, setReturnDate] = useState('');
     const [budget, setBudget] = useState<number | ''>('');
     const [focus, setFocus] = useState(t.planner.focusOptions[0]);
     const [room, setRoom] = useState(t.planner.roomOptions[0]);
@@ -337,6 +343,14 @@ export default function Custom() {
                                         passenger_count: pilgrims,
                                         group_type: groupType,
                                         departure_month: month.trim(),
+                                        departure_date:
+                                            departureDate.trim() === ''
+                                                ? null
+                                                : departureDate.trim(),
+                                        return_date:
+                                            returnDate.trim() === ''
+                                                ? null
+                                                : returnDate.trim(),
                                         budget:
                                             typeof budget === 'number'
                                                 ? budget
@@ -358,6 +372,8 @@ export default function Custom() {
                                             setPilgrims('');
                                             setCity('');
                                             setMonth('');
+                                            setDepartureDate('');
+                                            setReturnDate('');
                                             setBudget('');
                                             setNotes('');
                                             setHasAttemptedSubmit(false);
@@ -519,6 +535,29 @@ export default function Custom() {
                                 />
                             </FormField>
 
+                            <FormField label={t.planner.departureDate}>
+                                <input
+                                    className={fieldClassName}
+                                    type="date"
+                                    value={departureDate}
+                                    onChange={(event) =>
+                                        setDepartureDate(event.target.value)
+                                    }
+                                />
+                            </FormField>
+
+                            <FormField label={t.planner.returnDate}>
+                                <input
+                                    className={fieldClassName}
+                                    type="date"
+                                    value={returnDate}
+                                    min={departureDate || undefined}
+                                    onChange={(event) =>
+                                        setReturnDate(event.target.value)
+                                    }
+                                />
+                            </FormField>
+
                             <FormField label={t.planner.budget}>
                                 <input
                                     className={fieldClassName}
@@ -606,6 +645,8 @@ export default function Custom() {
                                             pilgrims,
                                             city,
                                             month,
+                                            departureDate,
+                                            returnDate,
                                             budget,
                                             focus,
                                             room,
@@ -655,6 +696,8 @@ export default function Custom() {
                                                 pilgrims,
                                                 city,
                                                 month,
+                                                departureDate,
+                                                returnDate,
                                                 budget,
                                                 focus,
                                                 room,
@@ -720,6 +763,8 @@ function buildCustomInquiryMessage(
         pilgrims: number | '';
         city: string;
         month: string;
+        departureDate: string;
+        returnDate: string;
         budget: number | '';
         focus: string;
         room: string;
@@ -744,6 +789,8 @@ function buildCustomInquiryMessage(
             `Pilgrims: ${payload.pilgrims || '-'}`,
             `Departure city: ${payload.city || '-'}`,
             `Estimated month: ${payload.month || '-'}`,
+            `Departure date: ${payload.departureDate || '-'}`,
+            `Return date: ${payload.returnDate || '-'}`,
             `Budget per pilgrim: ${formattedBudget}`,
             `Main priority: ${payload.focus || '-'}`,
             `Room preference: ${payload.room || '-'}`,
@@ -761,6 +808,8 @@ function buildCustomInquiryMessage(
         `Jumlah jamaah: ${payload.pilgrims || '-'}`,
         `Kota keberangkatan: ${payload.city || '-'}`,
         `Perkiraan bulan berangkat: ${payload.month || '-'}`,
+        `Tanggal berangkat: ${payload.departureDate || '-'}`,
+        `Tanggal pulang: ${payload.returnDate || '-'}`,
         `Budget per jamaah: ${formattedBudget}`,
         `Prioritas utama: ${payload.focus || '-'}`,
         `Preferensi kamar: ${payload.room || '-'}`,

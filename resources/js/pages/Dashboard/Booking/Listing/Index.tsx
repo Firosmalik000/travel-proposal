@@ -738,95 +738,101 @@ export default function BookingListingIndex({
                                 admin, termasuk kontak, jadwal, dan status.
                             </CardDescription>
                         </div>
-                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,460px)]">
-                            <div className="relative">
+                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                            <div className="relative min-w-0">
                                 <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                                 <Input
                                     value={search}
                                     onChange={(event) =>
                                         setSearch(event.target.value)
                                     }
-                                    placeholder="Cari kode booking, nama, paket, kota, atau kontak..."
+                                    placeholder="Cari kode, nama, paket, kota..."
                                     className="pl-9"
                                 />
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_200px]">
-                                <Select
-                                    value={bookingTypeFilter}
-                                    onValueChange={(value) => {
-                                        setBookingTypeFilter(value);
+                            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-[140px_180px_140px]">
+                                <div className="min-w-0">
+                                    <Select
+                                        value={bookingTypeFilter}
+                                        onValueChange={(value) => {
+                                            setBookingTypeFilter(value);
 
-                                        if (value === 'custom') {
-                                            setPackageFilter('all');
-                                        }
-                                    }}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Tipe booking" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="regular">
-                                            Booking paket
-                                        </SelectItem>
-                                        <SelectItem value="custom">
-                                            Custom booking
-                                        </SelectItem>
-                                        <SelectItem value="all">
-                                            Semua
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Select
-                                    value={packageFilter}
-                                    disabled={bookingTypeFilter === 'custom'}
-                                    onValueChange={(value) => {
-                                        setPackageFilter(value);
-                                    }}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Semua paket" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">
-                                            Semua paket
-                                        </SelectItem>
-                                        {packageOptions.map((travelPackage) => (
-                                            <SelectItem
-                                                key={travelPackage.id}
-                                                value={String(travelPackage.id)}
-                                            >
-                                                {packageDisplayName(
-                                                    travelPackage,
-                                                    locale,
-                                                )}
+                                            if (value === 'custom') {
+                                                setPackageFilter('all');
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Tipe" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="regular">
+                                                Paket
                                             </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <Select
-                                    value={statusFilter}
-                                    onValueChange={(value) => {
-                                        setStatusFilter(value);
-                                    }}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Status registered" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">
-                                            Semua status
-                                        </SelectItem>
-                                        <SelectItem value="pending">
-                                            Pending
-                                        </SelectItem>
-                                        <SelectItem value="registered">
-                                            Registered
-                                        </SelectItem>
-                                        <SelectItem value="cancelled">
-                                            Cancelled
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                            <SelectItem value="custom">
+                                                Custom
+                                            </SelectItem>
+                                            <SelectItem value="all">
+                                                Semua
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="min-w-0">
+                                    <Select
+                                        value={packageFilter}
+                                        disabled={bookingTypeFilter === 'custom'}
+                                        onValueChange={(value) => {
+                                            setPackageFilter(value);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Paket" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                Semua paket
+                                            </SelectItem>
+                                            {packageOptions.map((travelPackage) => (
+                                                <SelectItem
+                                                    key={travelPackage.id}
+                                                    value={String(travelPackage.id)}
+                                                >
+                                                    {packageDisplayName(
+                                                        travelPackage,
+                                                        locale,
+                                                    )}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="min-w-0">
+                                    <Select
+                                        value={statusFilter}
+                                        onValueChange={(value) => {
+                                            setStatusFilter(value);
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                Semua status
+                                            </SelectItem>
+                                            <SelectItem value="pending">
+                                                Pending
+                                            </SelectItem>
+                                            <SelectItem value="registered">
+                                                Registered
+                                            </SelectItem>
+                                            <SelectItem value="cancelled">
+                                                Cancelled
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
                     </CardHeader>

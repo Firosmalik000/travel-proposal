@@ -12,6 +12,24 @@ export type PublicSocialAccount = {
     url: string;
 };
 
+function normalizeExternalUrl(value: unknown): string {
+    const raw = String(value ?? '').trim();
+
+    if (raw === '') {
+        return '';
+    }
+
+    if (/^https?:\/\//i.test(raw)) {
+        return raw;
+    }
+
+    if (/^\/\//.test(raw)) {
+        return `https:${raw}`;
+    }
+
+    return `https://${raw}`;
+}
+
 export function localize(
     value: unknown,
     locale: 'id' = 'id',
@@ -107,7 +125,7 @@ export function getPublicSocialAccounts(
         .map((item: Record<string, unknown>, index: number) => ({
             platform: String(item.platform ?? `social-${index + 1}`),
             label: String(item.label ?? item.platform ?? `Social ${index + 1}`),
-            url: String(item.url ?? '#'),
+            url: normalizeExternalUrl(item.url),
         }));
 }
 

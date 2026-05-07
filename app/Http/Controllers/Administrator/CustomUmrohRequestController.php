@@ -51,6 +51,8 @@ class CustomUmrohRequestController extends Controller
                 'passenger_count' => (int) $item->passenger_count,
                 'group_type' => $item->group_type,
                 'departure_month' => $item->departure_month,
+                'departure_date' => $item->departure_date?->toDateString(),
+                'return_date' => $item->return_date?->toDateString(),
                 'budget' => $item->budget !== null ? (int) $item->budget : null,
                 'focus' => $item->focus,
                 'room_preference' => $item->room_preference,
