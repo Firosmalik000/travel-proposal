@@ -348,6 +348,9 @@ export default function Dashboard() {
         );
     }
 
+    const chartContainerClassName =
+        'w-full overflow-x-auto [&_.recharts-wrapper]:min-w-[620px]';
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
@@ -478,7 +481,7 @@ export default function Dashboard() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid gap-3 sm:grid-cols-4">
+                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                                     <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 shadow-sm">
                                         <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                                             Aktivitas
@@ -616,7 +619,7 @@ export default function Dashboard() {
                                             (departure, index) => (
                                                 <div
                                                     key={index}
-                                                    className="flex items-center"
+                                                    className="flex items-start gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3 sm:items-center"
                                                 >
                                                     <Avatar className="h-10 w-10">
                                                         <AvatarFallback>
@@ -630,7 +633,7 @@ export default function Dashboard() {
                                                                 .join('')}
                                                         </AvatarFallback>
                                                     </Avatar>
-                                                    <div className="ml-4 space-y-1">
+                                                    <div className="min-w-0 space-y-1">
                                                         <p className="text-sm leading-none font-medium">
                                                             {departure.title}
                                                         </p>
@@ -684,9 +687,9 @@ export default function Dashboard() {
                                         systemStatus.map((item) => (
                                             <div
                                                 key={item.label}
-                                                className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/30 px-4 py-3"
+                                                className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/30 px-4 py-3"
                                             >
-                                                <p className="text-sm font-medium text-foreground">
+                                                <p className="min-w-0 text-sm font-medium text-foreground">
                                                     {item.label}
                                                 </p>
                                                 <Badge
@@ -724,7 +727,7 @@ export default function Dashboard() {
                                         pendingTasks.map((task) => (
                                             <div
                                                 key={task.label}
-                                                className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/30 px-4 py-3"
+                                                className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/30 px-4 py-3"
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <span
@@ -734,7 +737,7 @@ export default function Dashboard() {
                                                                 task.color,
                                                         }}
                                                     />
-                                                    <p className="text-sm font-medium text-foreground">
+                                                    <p className="min-w-0 text-sm font-medium text-foreground">
                                                         {task.label}
                                                     </p>
                                                 </div>
@@ -796,7 +799,7 @@ export default function Dashboard() {
                         {/* Line Chart - User Growth */}
                         <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-shadow duration-200 hover:shadow-lg">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground">
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground sm:text-xl">
                                     <div
                                         className="h-2 w-2 rounded-full"
                                         style={{ backgroundColor: '#3b82f6' }}
@@ -808,100 +811,107 @@ export default function Dashboard() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <LineChart data={monthlyGrowth}>
-                                        <defs>
-                                            <linearGradient
-                                                id="colorUsers"
-                                                x1="0"
-                                                y1="0"
-                                                x2="0"
-                                                y2="1"
-                                            >
-                                                <stop
-                                                    offset="5%"
-                                                    stopColor="#3b82f6"
-                                                    stopOpacity={0.8}
-                                                />
-                                                <stop
-                                                    offset="95%"
-                                                    stopColor="#3b82f6"
-                                                    stopOpacity={0}
-                                                />
-                                            </linearGradient>
-                                            <linearGradient
-                                                id="colorDepartures"
-                                                x1="0"
-                                                y1="0"
-                                                x2="0"
-                                                y2="1"
-                                            >
-                                                <stop
-                                                    offset="5%"
-                                                    stopColor="#f97316"
-                                                    stopOpacity={0.8}
-                                                />
-                                                <stop
-                                                    offset="95%"
-                                                    stopColor="#f97316"
-                                                    stopOpacity={0}
-                                                />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid
-                                            strokeDasharray="3 3"
-                                            stroke="hsl(var(--border))"
-                                        />
-                                        <XAxis
-                                            dataKey="month"
-                                            tick={{
-                                                fill: 'hsl(var(--muted-foreground))',
-                                            }}
-                                            axisLine={{
-                                                stroke: 'hsl(var(--border))',
-                                            }}
-                                        />
-                                        <YAxis
-                                            tick={{
-                                                fill: 'hsl(var(--muted-foreground))',
-                                            }}
-                                            axisLine={{
-                                                stroke: 'hsl(var(--border))',
-                                            }}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="users"
-                                            stroke="#3b82f6"
-                                            strokeWidth={3}
-                                            name="Total Users"
-                                            dot={false}
-                                            activeDot={{ r: 6 }}
-                                            fillOpacity={1}
-                                            fill="url(#colorUsers)"
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="departures"
-                                            stroke="#f97316"
-                                            strokeWidth={3}
-                                            name="Keberangkatan"
-                                            dot={false}
-                                            activeDot={{ r: 6 }}
-                                            fillOpacity={1}
-                                            fill="url(#colorDepartures)"
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                                <div className={chartContainerClassName}>
+                                    <ResponsiveContainer
+                                        width="100%"
+                                        height={300}
+                                    >
+                                        <LineChart data={monthlyGrowth}>
+                                            <defs>
+                                                <linearGradient
+                                                    id="colorUsers"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="5%"
+                                                        stopColor="#3b82f6"
+                                                        stopOpacity={0.8}
+                                                    />
+                                                    <stop
+                                                        offset="95%"
+                                                        stopColor="#3b82f6"
+                                                        stopOpacity={0}
+                                                    />
+                                                </linearGradient>
+                                                <linearGradient
+                                                    id="colorDepartures"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="5%"
+                                                        stopColor="#f97316"
+                                                        stopOpacity={0.8}
+                                                    />
+                                                    <stop
+                                                        offset="95%"
+                                                        stopColor="#f97316"
+                                                        stopOpacity={0}
+                                                    />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid
+                                                strokeDasharray="3 3"
+                                                stroke="hsl(var(--border))"
+                                            />
+                                            <XAxis
+                                                dataKey="month"
+                                                tick={{
+                                                    fill: 'hsl(var(--muted-foreground))',
+                                                }}
+                                                axisLine={{
+                                                    stroke: 'hsl(var(--border))',
+                                                }}
+                                            />
+                                            <YAxis
+                                                tick={{
+                                                    fill: 'hsl(var(--muted-foreground))',
+                                                }}
+                                                axisLine={{
+                                                    stroke: 'hsl(var(--border))',
+                                                }}
+                                            />
+                                            <Tooltip
+                                                content={<CustomTooltip />}
+                                            />
+                                            <Legend />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="users"
+                                                stroke="#3b82f6"
+                                                strokeWidth={3}
+                                                name="Total Users"
+                                                dot={false}
+                                                activeDot={{ r: 6 }}
+                                                fillOpacity={1}
+                                                fill="url(#colorUsers)"
+                                            />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="departures"
+                                                stroke="#f97316"
+                                                strokeWidth={3}
+                                                name="Keberangkatan"
+                                                dot={false}
+                                                activeDot={{ r: 6 }}
+                                                fillOpacity={1}
+                                                fill="url(#colorDepartures)"
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </CardContent>
                         </Card>
 
                         {/* Pie Chart - Department Distribution */}
                         <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-shadow duration-200 hover:shadow-lg">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground">
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground sm:text-xl">
                                     <div
                                         className="h-2 w-2 rounded-full"
                                         style={{ backgroundColor: '#3b82f6' }}
@@ -913,34 +923,41 @@ export default function Dashboard() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <PieChart>
-                                        <Pie
-                                            data={departmentData as any}
-                                            cx="50%"
-                                            cy="50%"
-                                            labelLine={false}
-                                            label={({ name, percent }) =>
-                                                `${String(name)}: ${(Number(percent) * 100).toFixed(0)}%`
-                                            }
-                                            outerRadius={100}
-                                            fill="#8884d8"
-                                            dataKey="value"
-                                            animationBegin={0}
-                                            animationDuration={800}
-                                        >
-                                            {departmentData.map(
-                                                (entry, index) => (
-                                                    <Cell
-                                                        key={`cell-${index}`}
-                                                        fill={entry.color}
-                                                    />
-                                                ),
-                                            )}
-                                        </Pie>
-                                        <Tooltip content={<CustomTooltip />} />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                <div className={chartContainerClassName}>
+                                    <ResponsiveContainer
+                                        width="100%"
+                                        height={300}
+                                    >
+                                        <PieChart>
+                                            <Pie
+                                                data={departmentData as any}
+                                                cx="50%"
+                                                cy="50%"
+                                                labelLine={false}
+                                                label={({ name, percent }) =>
+                                                    `${String(name)}: ${(Number(percent) * 100).toFixed(0)}%`
+                                                }
+                                                outerRadius={100}
+                                                fill="#8884d8"
+                                                dataKey="value"
+                                                animationBegin={0}
+                                                animationDuration={800}
+                                            >
+                                                {departmentData.map(
+                                                    (entry, index) => (
+                                                        <Cell
+                                                            key={`cell-${index}`}
+                                                            fill={entry.color}
+                                                        />
+                                                    ),
+                                                )}
+                                            </Pie>
+                                            <Tooltip
+                                                content={<CustomTooltip />}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
@@ -950,7 +967,7 @@ export default function Dashboard() {
                         {/* Bar Chart - Weekly Activity */}
                         <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-shadow duration-200 hover:shadow-lg">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground">
+                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground sm:text-xl">
                                     <div
                                         className="h-2 w-2 rounded-full"
                                         style={{ backgroundColor: '#3b82f6' }}
@@ -962,83 +979,90 @@ export default function Dashboard() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={weeklyActivity}>
-                                        <defs>
-                                            <linearGradient
-                                                id="colorDeparturesWeekly"
-                                                x1="0"
-                                                y1="0"
-                                                x2="0"
-                                                y2="1"
-                                            >
-                                                <stop
-                                                    offset="5%"
-                                                    stopColor="#3b82f6"
-                                                    stopOpacity={0.8}
-                                                />
-                                                <stop
-                                                    offset="95%"
-                                                    stopColor="#3b82f6"
-                                                    stopOpacity={0}
-                                                />
-                                            </linearGradient>
-                                            <linearGradient
-                                                id="colorContents"
-                                                x1="0"
-                                                y1="0"
-                                                x2="0"
-                                                y2="1"
-                                            >
-                                                <stop
-                                                    offset="5%"
-                                                    stopColor="#f97316"
-                                                    stopOpacity={0.8}
-                                                />
-                                                <stop
-                                                    offset="95%"
-                                                    stopColor="#f97316"
-                                                    stopOpacity={0}
-                                                />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid
-                                            strokeDasharray="3 3"
-                                            stroke="hsl(var(--border))"
-                                        />
-                                        <XAxis
-                                            dataKey="day"
-                                            tick={{
-                                                fill: 'hsl(var(--muted-foreground))',
-                                            }}
-                                            axisLine={{
-                                                stroke: 'hsl(var(--border))',
-                                            }}
-                                        />
-                                        <YAxis
-                                            tick={{
-                                                fill: 'hsl(var(--muted-foreground))',
-                                            }}
-                                            axisLine={{
-                                                stroke: 'hsl(var(--border))',
-                                            }}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend />
-                                        <Bar
-                                            dataKey="departures"
-                                            fill="url(#colorDeparturesWeekly)"
-                                            name="Jadwal"
-                                            radius={[8, 8, 0, 0]}
-                                        />
-                                        <Bar
-                                            dataKey="contents"
-                                            fill="url(#colorContents)"
-                                            name="Konten"
-                                            radius={[8, 8, 0, 0]}
-                                        />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                <div className={chartContainerClassName}>
+                                    <ResponsiveContainer
+                                        width="100%"
+                                        height={300}
+                                    >
+                                        <BarChart data={weeklyActivity}>
+                                            <defs>
+                                                <linearGradient
+                                                    id="colorDeparturesWeekly"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="5%"
+                                                        stopColor="#3b82f6"
+                                                        stopOpacity={0.8}
+                                                    />
+                                                    <stop
+                                                        offset="95%"
+                                                        stopColor="#3b82f6"
+                                                        stopOpacity={0}
+                                                    />
+                                                </linearGradient>
+                                                <linearGradient
+                                                    id="colorContents"
+                                                    x1="0"
+                                                    y1="0"
+                                                    x2="0"
+                                                    y2="1"
+                                                >
+                                                    <stop
+                                                        offset="5%"
+                                                        stopColor="#f97316"
+                                                        stopOpacity={0.8}
+                                                    />
+                                                    <stop
+                                                        offset="95%"
+                                                        stopColor="#f97316"
+                                                        stopOpacity={0}
+                                                    />
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid
+                                                strokeDasharray="3 3"
+                                                stroke="hsl(var(--border))"
+                                            />
+                                            <XAxis
+                                                dataKey="day"
+                                                tick={{
+                                                    fill: 'hsl(var(--muted-foreground))',
+                                                }}
+                                                axisLine={{
+                                                    stroke: 'hsl(var(--border))',
+                                                }}
+                                            />
+                                            <YAxis
+                                                tick={{
+                                                    fill: 'hsl(var(--muted-foreground))',
+                                                }}
+                                                axisLine={{
+                                                    stroke: 'hsl(var(--border))',
+                                                }}
+                                            />
+                                            <Tooltip
+                                                content={<CustomTooltip />}
+                                            />
+                                            <Legend />
+                                            <Bar
+                                                dataKey="departures"
+                                                fill="url(#colorDeparturesWeekly)"
+                                                name="Jadwal"
+                                                radius={[8, 8, 0, 0]}
+                                            />
+                                            <Bar
+                                                dataKey="contents"
+                                                fill="url(#colorContents)"
+                                                name="Konten"
+                                                radius={[8, 8, 0, 0]}
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </CardContent>
                         </Card>
                     </div>

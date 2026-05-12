@@ -105,9 +105,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
     const resolveSocialIcon = (platform: string, url: string) => {
         const normalizedPlatform = platform.toLowerCase().trim();
         const mapped =
-            socialIconMap[
-                normalizedPlatform as keyof typeof socialIconMap
-            ];
+            socialIconMap[normalizedPlatform as keyof typeof socialIconMap];
 
         if (mapped) {
             return mapped;
@@ -120,19 +118,31 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
         if (normalizedUrl.includes('facebook.com')) {
             return Facebook;
         }
-        if (normalizedUrl.includes('youtube.com') || normalizedUrl.includes('youtu.be')) {
+        if (
+            normalizedUrl.includes('youtube.com') ||
+            normalizedUrl.includes('youtu.be')
+        ) {
             return Youtube;
         }
         if (normalizedUrl.includes('tiktok.com')) {
             return Music2;
         }
-        if (normalizedUrl.includes('twitter.com') || normalizedUrl.includes('x.com')) {
+        if (
+            normalizedUrl.includes('twitter.com') ||
+            normalizedUrl.includes('x.com')
+        ) {
             return Twitter;
         }
-        if (normalizedUrl.includes('wa.me') || normalizedUrl.includes('whatsapp.com')) {
+        if (
+            normalizedUrl.includes('wa.me') ||
+            normalizedUrl.includes('whatsapp.com')
+        ) {
             return MessageCircle;
         }
-        if (normalizedUrl.includes('t.me') || normalizedUrl.includes('telegram.me')) {
+        if (
+            normalizedUrl.includes('t.me') ||
+            normalizedUrl.includes('telegram.me')
+        ) {
             return Send;
         }
         if (normalizedUrl.includes('linkedin.com')) {
@@ -156,6 +166,12 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
             ? window.location.pathname
             : (String(page.url ?? '').split('?')[0] ?? '');
     const isHomePage = resolvedPathname === '/';
+    const publicTheme = branding.public_theme;
+    const publicGradientFrom =
+        publicTheme.gradient_from ?? (publicTheme as any).navbar_gradient_from;
+    const publicGradientTo =
+        publicTheme.gradient_to ?? (publicTheme as any).navbar_gradient_to;
+    const publicText = publicTheme.text ?? (publicTheme as any).navbar_text;
     const shouldUseSolidHeader = scrolled || mobileOpen || !isHomePage;
 
     useEffect(() => {
@@ -253,6 +269,12 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
             className="public-shell overflow-x-hidden bg-background font-sans text-foreground antialiased"
             style={{
                 ['--public-header-h' as any]: `${headerHeight}px`,
+                ['--public-navbar-gradient-from' as any]: publicGradientFrom,
+                ['--public-navbar-gradient-to' as any]: publicGradientTo,
+                ['--public-footer-gradient-from' as any]: publicGradientFrom,
+                ['--public-footer-gradient-to' as any]: publicGradientTo,
+                ['--public-navbar-text' as any]: publicText,
+                ['--public-footer-text' as any]: publicText,
             }}
         >
             <GlobalFaviconHead />
@@ -275,28 +297,51 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
 
             <header
                 ref={headerRef}
-                className={`fixed top-0 right-0 left-0 z-50 transition-all duration-300 ${shouldUseSolidHeader ? 'shadow-md' : ''}`}
+                className={`fixed top-0 right-0 left-0 z-50 transition-all duration-500 ease-out ${
+                    shouldUseSolidHeader ? 'shadow-md' : ''
+                }`}
             >
                 <div className="absolute inset-0 overflow-hidden">
                     <div
-                        className={`absolute inset-0 transition-all duration-300 ${
-                            shouldUseSolidHeader
-                                ? 'bg-[linear-gradient(90deg,rgba(93,8,18,0.98)_0%,rgba(142,16,27,0.96)_34%,rgba(189,49,34,0.93)_64%,rgba(230,156,50,0.92)_100%)]'
-                                : 'bg-transparent'
+                        className={`absolute inset-0 transition-opacity duration-500 ease-out ${
+                            shouldUseSolidHeader ? 'opacity-100' : 'opacity-0'
+                        }`}
+                        style={{
+                            background:
+                                'linear-gradient(90deg, var(--public-navbar-gradient-from) 0%, var(--public-navbar-gradient-to) 100%)',
+                        }}
+                    />
+                    <div
+                        className={`pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.28)_0%,rgba(0,0,0,0.14)_58%,transparent_100%)] transition-opacity duration-500 ease-out dark:hidden ${
+                            shouldUseSolidHeader ? 'opacity-100' : 'opacity-0'
                         }`}
                     />
-                    {shouldUseSolidHeader ? (
-                        <>
-                            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.28)_0%,rgba(0,0,0,0.14)_58%,transparent_100%)] dark:hidden" />
-                            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_30%,rgba(255,214,146,0.18)_0%,transparent_52%),radial-gradient(circle_at_82%_26%,rgba(189,49,34,0.14)_0%,transparent_56%)] opacity-70" />
-                            <div className="pointer-events-none absolute inset-y-0 left-[12%] w-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.2)_18%,transparent_62%)] opacity-60 blur-xl" />
-                            <div className="pointer-events-none absolute top-0 right-8 h-full w-36 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.12)_48%,transparent_100%)] opacity-80" />
-                            <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-white/42 to-transparent" />
-                        </>
-                    ) : null}
+                    <div
+                        className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_30%,rgba(255,214,146,0.18)_0%,transparent_52%),radial-gradient(circle_at_82%_26%,rgba(189,49,34,0.14)_0%,transparent_56%)] transition-opacity duration-500 ease-out ${
+                            shouldUseSolidHeader ? 'opacity-70' : 'opacity-0'
+                        }`}
+                    />
+                    <div
+                        className={`pointer-events-none absolute inset-y-0 left-[12%] w-24 bg-[linear-gradient(180deg,transparent_0%,rgba(255,255,255,0.2)_18%,transparent_62%)] blur-xl transition-opacity duration-500 ease-out ${
+                            shouldUseSolidHeader ? 'opacity-60' : 'opacity-0'
+                        }`}
+                    />
+                    <div
+                        className={`pointer-events-none absolute top-0 right-8 h-full w-36 bg-[linear-gradient(120deg,transparent_0%,rgba(255,255,255,0.12)_48%,transparent_100%)] transition-opacity duration-500 ease-out ${
+                            shouldUseSolidHeader ? 'opacity-80' : 'opacity-0'
+                        }`}
+                    />
+                    <div
+                        className={`pointer-events-none absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-white/42 to-transparent transition-opacity duration-500 ease-out ${
+                            shouldUseSolidHeader ? 'opacity-100' : 'opacity-0'
+                        }`}
+                    />
                 </div>
 
-                <div className="relative container mx-auto flex items-center justify-between gap-4 p-4">
+                <div
+                    className="relative container mx-auto flex items-center justify-between gap-4 p-4"
+                    style={{ color: 'var(--public-navbar-text)' }}
+                >
                     <Link
                         href="/"
                         className="flex min-w-0 items-center gap-2 sm:gap-3"
@@ -307,21 +352,21 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                             className="h-12 w-12 object-contain sm:h-20 sm:w-20"
                         />
                         <div className="max-w-[13.5rem] min-w-0 sm:max-w-[14rem] md:max-w-[10rem]">
-                            <p className="font-heading truncate text-xs font-bold text-white sm:text-base">
+                            <p className="font-heading truncate text-xs font-bold text-current sm:text-base">
                                 {branding.company_name}
                             </p>
-                            <p className="mt-0.5 [display:-webkit-box] overflow-hidden text-[0.6rem] leading-snug tracking-[0.08em] text-white/70 uppercase [-webkit-box-orient:vertical] [-webkit-line-clamp:2] sm:text-[0.68rem] sm:tracking-[0.12em]">
+                            <p className="mt-0.5 [display:-webkit-box] overflow-hidden text-[0.6rem] leading-snug tracking-[0.08em] text-current/75 uppercase [-webkit-box-orient:vertical] [-webkit-line-clamp:2] sm:text-[0.68rem] sm:tracking-[0.12em]">
                                 {branding.company_subtitle}
                             </p>
                         </div>
                     </Link>
-                    <nav className="hidden items-center gap-6 text-sm font-medium text-white/78 lg:flex">
+                    <nav className="hidden items-center gap-6 text-sm font-medium text-current/80 lg:flex">
                         {t.nav.map((item) =>
                             item.href === '/paket-umroh' ? (
                                 <div key={item.href} className="group relative">
                                     <button
                                         type="button"
-                                        className="inline-flex items-center gap-1 transition hover:text-white"
+                                        className="inline-flex items-center gap-1 transition hover:text-current"
                                     >
                                         {item.label}
                                         <ChevronDown className="h-4 w-4 transition group-hover:rotate-180" />
@@ -333,7 +378,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                                                     <Link
                                                         key={packageItem.href}
                                                         href={packageItem.href}
-                                                        className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-white/85 transition hover:bg-white/10 hover:text-white"
+                                                        className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-current/85 transition hover:bg-white/10 hover:text-current"
                                                     >
                                                         {packageItem.label}
                                                     </Link>
@@ -346,7 +391,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                                 <Link
                                     key={item.href}
                                     href={item.href}
-                                    className="transition hover:text-white"
+                                    className="transition hover:text-current"
                                 >
                                     {item.label}
                                 </Link>
@@ -367,7 +412,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                     </div>
                     <div className="lg:hidden">
                         <button
-                            className="inline-flex items-center justify-center rounded-xl border border-white/16 bg-white/10 p-2 text-white shadow-sm transition hover:bg-white/16"
+                            className="inline-flex items-center justify-center rounded-xl border border-white/16 bg-white/10 p-2 text-current shadow-sm transition hover:bg-white/16"
                             onClick={() => setMobileOpen((prev) => !prev)}
                             type="button"
                             aria-expanded={mobileOpen}
@@ -412,6 +457,11 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                 <div
                     id="mobile-menu"
                     className={`absolute top-full right-0 left-0 border-t border-white/12 bg-[linear-gradient(180deg,rgba(98,12,20,0.98)_0%,rgba(70,10,18,0.98)_100%)] shadow-lg transition-all duration-200 lg:hidden ${mobileOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-2 opacity-0'}`}
+                    style={{
+                        background:
+                            'linear-gradient(180deg, var(--public-navbar-gradient-from) 0%, var(--public-navbar-gradient-to) 100%)',
+                        color: 'var(--public-navbar-text)',
+                    }}
                 >
                     <div className="relative container mx-auto flex flex-col gap-2 overflow-hidden px-4 py-4">
                         {t.nav.map((item) =>
@@ -420,7 +470,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                                     key={item.href}
                                     className="rounded-xl border border-white/10 bg-white/6 p-2"
                                 >
-                                    <p className="px-2 py-1 text-sm font-semibold text-white">
+                                    <p className="px-2 py-1 text-sm font-semibold text-current">
                                         {item.label}
                                     </p>
                                     <div className="mt-1 flex flex-col gap-1">
@@ -431,7 +481,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                                                 onClick={() =>
                                                     setMobileOpen(false)
                                                 }
-                                                className="rounded-xl px-3 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+                                                className="rounded-xl px-3 py-2 text-sm font-medium text-current/85 transition hover:bg-white/10 hover:text-current"
                                             >
                                                 {packageItem.label}
                                             </Link>
@@ -443,7 +493,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                                     key={item.href}
                                     href={item.href}
                                     onClick={() => setMobileOpen(false)}
-                                    className="rounded-xl px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+                                    className="rounded-xl px-3 py-2 text-sm font-semibold text-current transition hover:bg-white/10"
                                 >
                                     {item.label}
                                 </Link>
@@ -487,7 +537,13 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                 {children}
             </main>
 
-            <footer className="relative mt-16 overflow-hidden bg-[linear-gradient(90deg,rgba(93,8,18,0.98)_0%,rgba(142,16,27,0.96)_38%,rgba(189,49,34,0.93)_70%,rgba(230,156,50,0.9)_100%)] text-white">
+            <footer
+                className="relative mt-16 overflow-hidden text-[color:var(--public-footer-text)]"
+                style={{
+                    background:
+                        'linear-gradient(90deg, var(--public-footer-gradient-from) 0%, var(--public-footer-gradient-to) 100%)',
+                }}
+            >
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#a35b2e]/40 to-transparent dark:via-[#d7a760]/30" />
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.08)_0%,transparent_18%,rgba(255,220,157,0.12)_42%,transparent_64%,rgba(92,10,20,0.16)_100%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.04)_0%,transparent_22%,rgba(234,186,98,0.08)_46%,transparent_70%,rgba(76,10,18,0.14)_100%)]" />
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_32%,rgba(255,255,255,0.08)_0%,transparent_56%),radial-gradient(circle_at_82%_68%,rgba(255,220,157,0.12)_0%,transparent_62%)] opacity-70" />
@@ -503,15 +559,15 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                                 className="h-14 w-14 object-contain sm:h-20 sm:w-20"
                             />
                             <div>
-                                <p className="font-heading text-sm font-bold text-white sm:text-base">
+                                <p className="font-heading text-sm font-bold text-current sm:text-base">
                                     {branding.company_name}
                                 </p>
-                                <p className="text-[0.62rem] tracking-[0.18em] text-white/72 uppercase sm:text-[0.68rem] sm:tracking-[0.2em]">
+                                <p className="text-[0.62rem] tracking-[0.18em] text-current/75 uppercase sm:text-[0.68rem] sm:tracking-[0.2em]">
                                     {branding.company_subtitle}
                                 </p>
                             </div>
                         </Link>
-                        <p className="mt-4 text-sm leading-relaxed text-white/78">
+                        <p className="mt-4 text-sm leading-relaxed text-current/80">
                             {t.footerIntro}
                         </p>
                         {footerSocials.length > 0 ? (
@@ -526,7 +582,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                                             target="_blank"
                                             rel="noreferrer"
                                             aria-label={social.label}
-                                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-white/20 text-white shadow-[0_16px_30px_-16px_rgba(55,6,13,0.55)] transition hover:-translate-y-0.5 hover:border-white/65 hover:bg-white/28 hover:text-white"
+                                            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-white/20 text-current shadow-[0_16px_30px_-16px_rgba(55,6,13,0.55)] transition hover:-translate-y-0.5 hover:border-white/65 hover:bg-white/28 hover:text-current"
                                         >
                                             <Icon className="h-5 w-5" />
                                         </a>
@@ -538,14 +594,14 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                         {t.footer.map((section) => (
                             <div key={section.heading}>
-                                <h3 className="font-heading text-sm font-semibold tracking-wider text-white uppercase sm:text-base">
+                                <h3 className="font-heading text-sm font-semibold tracking-wider text-current uppercase sm:text-base">
                                     {section.heading}
                                 </h3>
                                 <ul className="mt-2 space-y-0.5 sm:mt-2.5">
                                     {section.links.map((item) => (
                                         <li key={item.label}>
                                             <Link
-                                                className="text-[13px] text-white/78 transition hover:text-white"
+                                                className="text-[13px] text-current/80 transition hover:text-current"
                                                 href={item.href}
                                             >
                                                 {item.label}
@@ -558,7 +614,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                     </div>
                 </div>
                 <div className="border-t border-border py-6">
-                    <div className="container mx-auto text-center text-sm text-white/72">
+                    <div className="container mx-auto text-center text-sm text-current/75">
                         {t
                             .copyright(new Date().getFullYear())
                             .replace(

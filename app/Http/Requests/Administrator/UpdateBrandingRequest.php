@@ -21,6 +21,9 @@ class UpdateBrandingRequest extends FormRequest
             'accent' => ['required', 'regex:/^#[A-Fa-f0-9]{6}$/'],
             'accent_soft' => ['required', 'regex:/^#[A-Fa-f0-9]{6}$/'],
             'surface' => ['required', 'regex:/^#[A-Fa-f0-9]{6}$/'],
+            'public_gradient_from' => ['required', 'regex:/^#[A-Fa-f0-9]{6}$/'],
+            'public_gradient_to' => ['required', 'regex:/^#[A-Fa-f0-9]{6}$/'],
+            'public_text' => ['required', 'regex:/^#[A-Fa-f0-9]{6}$/'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
             'logo_white' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
         ];
@@ -34,6 +37,9 @@ class UpdateBrandingRequest extends FormRequest
             'accent.regex' => 'Warna accent harus memakai format hex, misalnya #ff9200.',
             'accent_soft.regex' => 'Warna accent soft harus memakai format hex, misalnya #ffc578.',
             'surface.regex' => 'Warna surface harus memakai format hex, misalnya #f6e7c6.',
+            'public_gradient_from.regex' => 'Warna gradient public (from) harus format hex.',
+            'public_gradient_to.regex' => 'Warna gradient public (to) harus format hex.',
+            'public_text.regex' => 'Warna teks public harus format hex.',
         ];
     }
 }

@@ -55,6 +55,7 @@ class TravelContentSeeder extends Seeder
                     'company_name' => 'Asfar Tour',
                     'company_subtitle' => 'Jelas Rencananya, Terjamin Amanahnya.',
                     'palette' => config('branding.palette'),
+                    'public_theme' => config('branding.public_theme'),
                 ],
                 'is_active' => true,
             ],

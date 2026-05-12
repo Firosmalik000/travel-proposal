@@ -97,6 +97,7 @@ class HandleInertiaRequests extends Middleware
             'logo_path' => config('branding.logo_path'),
             'logo_white_path' => config('branding.logo_white_path'),
             'palette' => config('branding.palette'),
+            'public_theme' => config('branding.public_theme'),
         ];
         $brandingOverrides = PageContent::query()->where('slug', 'branding-settings')->value('content');
         $branding = [
@@ -107,6 +108,10 @@ class HandleInertiaRequests extends Middleware
             'palette' => array_merge(
                 $brandingDefaults['palette'],
                 is_array($brandingOverrides['palette'] ?? null) ? $brandingOverrides['palette'] : [],
+            ),
+            'public_theme' => array_merge(
+                $brandingDefaults['public_theme'],
+                is_array($brandingOverrides['public_theme'] ?? null) ? $brandingOverrides['public_theme'] : [],
             ),
         ];
         $seoSettings = SeoController::getPublicSettings();

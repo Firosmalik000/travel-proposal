@@ -14,7 +14,7 @@ export default function BrandThemeStyle() {
                 --brand-surface: ${branding.palette.surface};
                 
                 /* Main Layout */
-                --background: ${branding.palette.surface}25; /* Even lighter surface for background */
+                --background: ${branding.palette.primary}0f;
                 --foreground: #2d1810;
                 
                 --card: #ffffff;
@@ -30,36 +30,36 @@ export default function BrandThemeStyle() {
                 --secondary: ${branding.palette.secondary};
                 --secondary-foreground: #ffffff;
                 
-                --muted: ${branding.palette.surface}80;
-                --muted-foreground: ${branding.palette.secondary}cc;
+                --muted: ${branding.palette.primary}12;
+                --muted-foreground: ${branding.palette.secondary}d9;
                 
                 /* Mapping Accents */
                 --accent: ${branding.palette.accent};
                 --accent-foreground: #ffffff;
                 
-                --border: ${branding.palette.surface}99;
-                --input: ${branding.palette.surface}99;
+                --border: ${branding.palette.secondary}33;
+                --input: ${branding.palette.secondary}40;
                 --ring: ${branding.palette.primary};
                 
                 --radius: 1rem;
 
                 /* Sidebar - Using Secondary & Accents */
-                --sidebar: #ffffff;
-                --sidebar-foreground: ${branding.palette.secondary};
+                --sidebar: ${branding.palette.primary}1f;
+                --sidebar-foreground: #2a0b10;
                 --sidebar-primary: ${branding.palette.primary};
                 --sidebar-primary-foreground: #ffffff;
-                --sidebar-accent: ${branding.palette.accent_soft}30;
-                --sidebar-accent-foreground: ${branding.palette.secondary};
-                --sidebar-border: ${branding.palette.accent_soft}40;
+                --sidebar-accent: ${branding.palette.secondary}26;
+                --sidebar-accent-foreground: #2a0b10;
+                --sidebar-border: ${branding.palette.secondary}45;
                 --sidebar-ring: ${branding.palette.primary};
 
                 /* Admin Specific Elements */
-                --admin-header-bg: rgba(255, 255, 255, 0.95);
+                --admin-header-bg: ${branding.palette.primary}22;
                 --admin-card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
                 
                 /* Interactive Colors */
-                --active-item-bg: ${branding.palette.primary}15;
-                --hover-item-bg: ${branding.palette.accent_soft}20;
+                --active-item-bg: ${branding.palette.primary}2e;
+                --hover-item-bg: ${branding.palette.secondary}20;
             }
 
             .dark {
@@ -92,8 +92,8 @@ export default function BrandThemeStyle() {
                 --sidebar-foreground: ${branding.palette.surface};
                 --sidebar-primary: ${branding.palette.accent};
                 --sidebar-primary-foreground: #1a0f0e;
-                --sidebar-accent: ${branding.palette.accent}20;
-                --sidebar-accent-foreground: ${branding.palette.accent};
+                --sidebar-accent: ${branding.palette.accent_soft}26;
+                --sidebar-accent-foreground: ${branding.palette.surface};
                 --sidebar-border: #2d1816;
                 --sidebar-ring: ${branding.palette.accent};
                 

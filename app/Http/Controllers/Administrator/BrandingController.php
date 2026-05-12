@@ -41,6 +41,11 @@ class BrandingController extends Controller
             'accent_soft' => $request->string('accent_soft')->value(),
             'surface' => $request->string('surface')->value(),
         ];
+        $content['public_theme'] = [
+            'gradient_from' => $request->string('public_gradient_from')->value(),
+            'gradient_to' => $request->string('public_gradient_to')->value(),
+            'text' => $request->string('public_text')->value(),
+        ];
 
         if ($request->hasFile('logo')) {
             $currentLogoPath = $content['logo_path'] ?? null;
@@ -73,6 +78,7 @@ class BrandingController extends Controller
             'logo_path' => config('branding.logo_path'),
             'logo_white_path' => config('branding.logo_white_path'),
             'palette' => config('branding.palette'),
+            'public_theme' => config('branding.public_theme'),
         ];
 
         $overrides = PageContent::query()
@@ -89,6 +95,7 @@ class BrandingController extends Controller
             'logo_path' => isset($overrides['logo_path']) ? '/storage/'.$overrides['logo_path'] : $defaults['logo_path'],
             'logo_white_path' => isset($overrides['logo_white_path']) ? '/storage/'.$overrides['logo_white_path'] : $defaults['logo_white_path'],
             'palette' => array_merge($defaults['palette'], is_array($overrides['palette'] ?? null) ? $overrides['palette'] : []),
+            'public_theme' => array_merge($defaults['public_theme'], is_array($overrides['public_theme'] ?? null) ? $overrides['public_theme'] : []),
         ];
     }
 }

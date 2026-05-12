@@ -9,6 +9,11 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -28,8 +33,8 @@ import {
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Plus, Save, Shield } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { ChevronDown, Plus, Save, Shield } from 'lucide-react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 
 type MenuItem = {
     menu_key: string;
@@ -56,6 +61,13 @@ export default function RoleManagementIndex({ roles, menus, actions }: Props) {
         roles[0]?.id ?? 0,
     );
     const [isCreateOpen, setIsCreateOpen] = useState(false);
+    const [menuSelectSearch, setMenuSelectSearch] = useState('');
+    const [selectedMenuKey, setSelectedMenuKey] = useState<string>('all');
+    const [isMenuFilterOpen, setIsMenuFilterOpen] = useState(false);
+    const [menuOpenStates, setMenuOpenStates] = useState<
+        Record<string, boolean>
+    >({});
+    const menuSearchInputRef = useRef<HTMLInputElement | null>(null);
 
     const selectedRole = useMemo(
         () => roles.find((r) => r.id === selectedRoleId) ?? null,
@@ -75,6 +87,7 @@ export default function RoleManagementIndex({ roles, menus, actions }: Props) {
         const nextRole = roles.find((r) => r.id === roleId);
         permissionsForm.setData('access', nextRole?.access ?? {});
         permissionsForm.clearErrors();
+        setMenuOpenStates({});
     };
 
     const togglePermission = (
@@ -109,6 +122,25 @@ export default function RoleManagementIndex({ roles, menus, actions }: Props) {
             return actions.every((action) => current.includes(action));
         });
     }, [actions, menus, permissionsForm.data.access]);
+
+    const filteredMenus = useMemo(() => {
+        return selectedMenuKey === 'all'
+            ? menus
+            : menus.filter((menu) => menu.menu_key === selectedMenuKey);
+    }, [menus, selectedMenuKey]);
+
+    const selectableMenus = useMemo(() => {
+        const keyword = menuSelectSearch.trim().toLowerCase();
+        if (keyword === '') {
+            return menus;
+        }
+
+        return menus.filter((menu) => {
+            const haystack =
+                `${menu.name} ${menu.menu_key} ${menu.path}`.toLowerCase();
+            return haystack.includes(keyword);
+        });
+    }, [menuSelectSearch, menus]);
 
     const toggleAllAccess = (checked: boolean) => {
         if (!can('edit')) {
@@ -170,9 +202,9 @@ export default function RoleManagementIndex({ roles, menus, actions }: Props) {
         >
             <Head title="Role Management" />
 
-            <div className="space-y-6 p-6">
+            <div className="space-y-6 p-4 md:p-6">
                 <Card>
-                    <CardHeader className="flex flex-row items-start justify-between gap-4">
+                    <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div className="space-y-1">
                             <CardTitle className="flex items-center gap-2">
                                 <Shield className="h-5 w-5" />
@@ -196,7 +228,7 @@ export default function RoleManagementIndex({ roles, menus, actions }: Props) {
                     </CardHeader>
 
                     <CardContent className="space-y-6">
-                        <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
+                        <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
                             Tips: minimal centang{' '}
                             <span className="font-medium">view</span> untuk menu
                             yang ingin muncul di sidebar. Aksi lain seperti{' '}
@@ -205,38 +237,102 @@ export default function RoleManagementIndex({ roles, menus, actions }: Props) {
                             </span>{' '}
                             dipakai untuk izin operasi di halaman tersebut.
                         </div>
-                        <div className="grid gap-4 md:grid-cols-[320px_1fr]">
-                            <div className="space-y-3">
-                                <Label>Pilih role</Label>
-                                <Select
-                                    value={String(selectedRoleId)}
-                                    onValueChange={selectRole}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Pilih role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {roles.map((role) => (
-                                            <SelectItem
-                                                key={role.id}
-                                                value={String(role.id)}
+                        <div className="space-y-4">
+                            <div className="space-y-3 rounded-xl border bg-card p-4">
+                                <div className="grid gap-3 lg:grid-cols-[320px_320px] lg:items-end">
+                                    <div className="space-y-2">
+                                        <Label>Pilih role</Label>
+                                        <Select
+                                            value={String(selectedRoleId)}
+                                            onValueChange={selectRole}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Pilih role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {roles.map((role) => (
+                                                    <SelectItem
+                                                        key={role.id}
+                                                        value={String(role.id)}
+                                                    >
+                                                        {role.name} (
+                                                        {role.users_count})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Filter menu</Label>
+                                        <Select
+                                            open={isMenuFilterOpen}
+                                            onOpenChange={(open) => {
+                                                setIsMenuFilterOpen(open);
+                                                if (open) {
+                                                    setTimeout(() => {
+                                                        menuSearchInputRef.current?.focus();
+                                                    }, 0);
+                                                }
+                                            }}
+                                            value={selectedMenuKey}
+                                            onValueChange={(value) => {
+                                                setSelectedMenuKey(value);
+                                                setIsMenuFilterOpen(false);
+                                            }}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Semua menu" />
+                                            </SelectTrigger>
+                                            <SelectContent
+                                                onCloseAutoFocus={(event) =>
+                                                    event.preventDefault()
+                                                }
                                             >
-                                                {role.name} ({role.users_count})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                <div className="rounded-lg border p-3 text-sm text-muted-foreground">
-                                    Permission yang dicentang menghasilkan akses
-                                    di sidebar dan endpoint.
+                                                <div
+                                                    className="p-2"
+                                                    onPointerDown={(event) =>
+                                                        event.stopPropagation()
+                                                    }
+                                                >
+                                                    <Input
+                                                        ref={menuSearchInputRef}
+                                                        value={menuSelectSearch}
+                                                        onChange={(event) =>
+                                                            setMenuSelectSearch(
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        onKeyDownCapture={(
+                                                            event,
+                                                        ) => {
+                                                            event.stopPropagation();
+                                                        }}
+                                                        placeholder="Cari menu..."
+                                                        className="h-8"
+                                                    />
+                                                </div>
+                                                <SelectItem value="all">
+                                                    Semua menu
+                                                </SelectItem>
+                                                {selectableMenus.map((menu) => (
+                                                    <SelectItem
+                                                        key={menu.menu_key}
+                                                        value={menu.menu_key}
+                                                    >
+                                                        {menu.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between gap-3">
-                                    <Label>Menu Permissions</Label>
-                                    <div className="flex items-center gap-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <p className="text-xs text-muted-foreground">
+                                        {filteredMenus.length} dari{' '}
+                                        {menus.length} menu tampil
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-3">
                                         <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
                                             <Checkbox
                                                 checked={isAllAccessSelected}
@@ -268,41 +364,80 @@ export default function RoleManagementIndex({ roles, menus, actions }: Props) {
                                         )}
                                     </div>
                                 </div>
-                                {!can('edit') && (
-                                    <div className="text-xs text-muted-foreground">
-                                        Kamu hanya punya akses view. Minta admin
-                                        berikan permission edit untuk mengubah
-                                        akses role.
+                            </div>
+
+                            {!can('edit') && (
+                                <div className="text-xs text-muted-foreground">
+                                    Kamu hanya punya akses view. Minta admin
+                                    berikan permission edit untuk mengubah akses
+                                    role.
+                                </div>
+                            )}
+
+                            <div className="space-y-3 rounded-xl border bg-card p-4">
+                                {filteredMenus.length === 0 ? (
+                                    <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                                        Tidak ada menu yang cocok dengan
+                                        pencarian.
                                     </div>
-                                )}
+                                ) : null}
 
-                                <div className="space-y-3 rounded-lg border p-4">
-                                    {menus.map((menu) => {
-                                        const current =
-                                            permissionsForm.data.access[
-                                                menu.menu_key
-                                            ] ?? [];
+                                {filteredMenus.map((menu) => {
+                                    const current =
+                                        permissionsForm.data.access[
+                                            menu.menu_key
+                                        ] ?? [];
+                                    const selectedCount = current.length;
+                                    const isOpen =
+                                        menuOpenStates[menu.menu_key] ?? false;
 
-                                        return (
-                                            <div
-                                                key={menu.menu_key}
-                                                className="rounded-lg border bg-muted/20 p-3"
-                                            >
-                                                <div className="mb-3 flex flex-col gap-1">
-                                                    <div className="font-medium">
-                                                        {menu.name}
+                                    return (
+                                        <Collapsible
+                                            key={menu.menu_key}
+                                            open={isOpen}
+                                            onOpenChange={(open) =>
+                                                setMenuOpenStates((prev) => ({
+                                                    ...prev,
+                                                    [menu.menu_key]: open,
+                                                }))
+                                            }
+                                            className="rounded-xl border bg-muted/20"
+                                        >
+                                            <CollapsibleTrigger className="w-full p-4 text-left">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="space-y-1">
+                                                        <div className="leading-none font-medium">
+                                                            {menu.name}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            <span className="font-mono">
+                                                                {menu.menu_key}
+                                                            </span>{' '}
+                                                            - {menu.path}
+                                                        </div>
                                                     </div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        {menu.menu_key} -{' '}
-                                                        {menu.path}
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="rounded-full border bg-background px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                                                            {selectedCount}/
+                                                            {actions.length}{' '}
+                                                            access
+                                                        </span>
+                                                        <ChevronDown
+                                                            className={`h-4 w-4 text-muted-foreground transition-transform ${
+                                                                isOpen
+                                                                    ? 'rotate-180'
+                                                                    : ''
+                                                            }`}
+                                                        />
                                                     </div>
                                                 </div>
-
-                                                <div className="grid gap-3 md:grid-cols-4">
+                                            </CollapsibleTrigger>
+                                            <CollapsibleContent className="px-4 pb-4">
+                                                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                                                     {actions.map((action) => (
                                                         <label
                                                             key={`${menu.menu_key}:${action}`}
-                                                            className="flex cursor-pointer items-center gap-2 text-sm"
+                                                            className="flex cursor-pointer items-center gap-2 rounded-lg border bg-background/70 px-3 py-2 text-sm"
                                                         >
                                                             <Checkbox
                                                                 checked={current.includes(
@@ -327,10 +462,10 @@ export default function RoleManagementIndex({ roles, menus, actions }: Props) {
                                                         </label>
                                                     ))}
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                            </CollapsibleContent>
+                                        </Collapsible>
+                                    );
+                                })}
                             </div>
                         </div>
                     </CardContent>

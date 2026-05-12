@@ -12,4 +12,9 @@ return [
         'accent_soft' => '#ffc578',
         'surface' => '#f6e7c6',
     ],
+    'public_theme' => [
+        'gradient_from' => '#5d0812',
+        'gradient_to' => '#e69c32',
+        'text' => '#ffffff',
+    ],
 ];

@@ -44,6 +44,11 @@ export interface SharedData {
             accent_soft: string;
             surface: string;
         };
+        public_theme: {
+            gradient_from: string;
+            gradient_to: string;
+            text: string;
+        };
     };
     seoSettings?: Record<string, unknown>;
     publicBranding?: {

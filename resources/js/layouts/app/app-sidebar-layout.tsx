@@ -18,7 +18,9 @@ export default function AppSidebarLayout({
 
     useEffect(() => {
         const startCleanup = router.on('start', (event) => {
-            const method = String(event.detail.visit.method ?? 'get').toLowerCase();
+            const method = String(
+                event.detail.visit.method ?? 'get',
+            ).toLowerCase();
             if (method === 'get') {
                 return;
             }
@@ -29,7 +31,9 @@ export default function AppSidebarLayout({
         });
 
         const successCleanup = router.on('success', (event) => {
-            const method = String(event.detail.visit.method ?? 'get').toLowerCase();
+            const method = String(
+                event.detail.visit.method ?? 'get',
+            ).toLowerCase();
             if (method === 'get') {
                 return;
             }
@@ -44,12 +48,15 @@ export default function AppSidebarLayout({
         });
 
         const errorCleanup = router.on('error', (event) => {
-            const method = String(event.detail.visit.method ?? 'get').toLowerCase();
+            const method = String(
+                event.detail.visit.method ?? 'get',
+            ).toLowerCase();
             if (method === 'get') {
                 return;
             }
 
-            const toastId = activeSubmitToastIdRef.current ?? `admin-submit-${Date.now()}`;
+            const toastId =
+                activeSubmitToastIdRef.current ?? `admin-submit-${Date.now()}`;
             const firstError = Object.values(event.detail.errors ?? {})[0];
             toast.error(
                 typeof firstError === 'string'
@@ -61,18 +68,27 @@ export default function AppSidebarLayout({
         });
 
         const invalidCleanup = router.on('invalid', (event) => {
-            const method = String(event.detail.visit.method ?? 'get').toLowerCase();
+            const method = String(
+                event.detail.visit.method ?? 'get',
+            ).toLowerCase();
             if (method === 'get') {
                 return;
             }
 
-            const toastId = activeSubmitToastIdRef.current ?? `admin-submit-${Date.now()}`;
+            const toastId =
+                activeSubmitToastIdRef.current ?? `admin-submit-${Date.now()}`;
             toast.error('Validasi gagal. Periksa input Anda.', { id: toastId });
             activeSubmitToastIdRef.current = null;
         });
 
         const finishCleanup = router.on('finish', () => {
-            // Keep toast state controlled by success/error/invalid handlers.
+            const toastId = activeSubmitToastIdRef.current;
+            if (!toastId) {
+                return;
+            }
+
+            toast.dismiss(toastId);
+            activeSubmitToastIdRef.current = null;
         });
 
         return () => {
@@ -106,7 +122,7 @@ export default function AppSidebarLayout({
             <DynamicSidebar />
             <AppContent
                 variant="sidebar"
-                className="overflow-x-hidden bg-background dark:bg-background"
+                className="bg-background dark:bg-background"
             >
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 {children}

@@ -650,8 +650,8 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                 }
             >
                 {isHomePage ? (
-                    <div className="hidden lg:block">
-                        <div className="sticky top-28 rounded-2xl border border-border bg-card p-4 shadow-sm">
+                    <div className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
+                        <div className="max-h-[calc(100vh-7rem)] overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-sm">
                             <p className="text-xs font-bold tracking-[0.24em] text-muted-foreground uppercase">
                                 Navigasi Section
                             </p>
@@ -1685,7 +1685,9 @@ function normalizeLandingContentForEditor(
     }
 
     const next = structuredClone(content ?? {});
-    const items = Array.isArray(next?.services?.items) ? next.services.items : [];
+    const items = Array.isArray(next?.services?.items)
+        ? next.services.items
+        : [];
     const minimumItems = 4;
 
     if (!next.services) {
@@ -1705,8 +1707,7 @@ function normalizeLandingContentForEditor(
         },
         {
             title: 'Akomodasi Terbaik',
-            description:
-                'Pilihan hotel nyaman yang menyesuaikan kelas paket.',
+            description: 'Pilihan hotel nyaman yang menyesuaikan kelas paket.',
         },
         {
             title: 'Layanan Menyeluruh',
