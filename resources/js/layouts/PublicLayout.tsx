@@ -266,7 +266,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
 
     return (
         <div
-            className="public-shell overflow-x-hidden bg-background font-sans text-foreground antialiased"
+            className="public-shell flex min-h-screen flex-col overflow-x-hidden bg-background font-sans text-foreground antialiased"
             style={{
                 ['--public-header-h' as any]: `${headerHeight}px`,
                 ['--public-navbar-gradient-from' as any]: publicGradientFrom,
@@ -526,7 +526,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
             )}
 
             <main
-                className={`relative z-10 ${isHomePage ? 'pt-0' : 'pt-[var(--public-header-h)]'}`}
+                className={`relative z-10 flex-1 ${isHomePage ? 'pt-0' : 'pt-[var(--public-header-h)]'}`}
             >
                 {!isHomePage ? (
                     <>
@@ -538,7 +538,7 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
             </main>
 
             <footer
-                className="relative mt-16 overflow-hidden text-[color:var(--public-footer-text)]"
+                className="relative mt-auto overflow-hidden text-[color:var(--public-footer-text)]"
                 style={{
                     background:
                         'linear-gradient(90deg, var(--public-footer-gradient-from) 0%, var(--public-footer-gradient-to) 100%)',
