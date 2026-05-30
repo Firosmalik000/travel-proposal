@@ -1,5 +1,12 @@
-import { Badge } from '@/components/ui/badge';
+﻿import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -30,16 +37,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
-import {
-    CalendarDays,
-    Check,
-    Copy,
-    Mail,
-    MapPin,
-    MessageCircle,
-    Search,
-    Users,
-} from 'lucide-react';
+import { Check, Mail, MoreHorizontal, Search, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type PaginationLink = {
@@ -100,17 +98,6 @@ function statusBadgeTone(status: string): string {
     return 'bg-amber-100 text-amber-700';
 }
 
-function formatDateTime(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
-}
-
 function formatCurrencyIDR(value: number | null): string {
     if (value === null) {
         return '-';
@@ -123,22 +110,12 @@ function formatCurrencyIDR(value: number | null): string {
     }).format(value);
 }
 
-function normalizePhone(phone: string): string {
-    const cleanedPhone = phone.replace(/[^\d]/g, '');
-
-    if (cleanedPhone.startsWith('0')) {
-        return `62${cleanedPhone.slice(1)}`;
-    }
-
-    return cleanedPhone;
-}
-
 /* function scheduleLabel(schedule: any): string {
     const departure = schedule.departure_date ?? '-';
     const city = schedule.departure_city ?? '-';
     const seats = schedule.seats_available ?? '-';
 
-    return `${departure} • ${city} • seat ${seats}`;
+    return `${departure} - ${city} - seat ${seats}`;
 } */
 
 const defaultApproveData: ApproveFormData = {
@@ -225,32 +202,15 @@ export default function CustomRequestsIndex({
         );
     }
 
-    function openWhatsApp(request: CustomRequestRow) {
-        const message = [
-            `Assalamu'alaikum ${request.full_name},`,
-            '',
-            `terima kasih untuk request ${request.request_code}.`,
-            `Kami siap bantu konsultasi custom umroh (${request.passenger_count} pax).`,
-        ].join('\n');
-
-        window.open(
-            `https://wa.me/${normalizePhone(request.phone)}?text=${encodeURIComponent(message)}`,
-            '_blank',
-            'noopener,noreferrer',
-        );
-    }
-
-    function copyContact(request: CustomRequestRow) {
-        const details = [
-            `Request: ${request.request_code}`,
-            `Nama: ${request.full_name}`,
-            `WhatsApp: ${request.phone}`,
-            `Email: ${request.email ?? '-'}`,
-            `Kota Asal: ${request.origin_city}`,
-        ].join('\n');
-
-        navigator.clipboard.writeText(details);
-    }
+    const statusCounts = {
+        new: requests.data.filter((request) => request.status === 'new').length,
+        approved: requests.data.filter(
+            (request) => request.status === 'approved',
+        ).length,
+        rejected: requests.data.filter(
+            (request) => request.status === 'rejected',
+        ).length,
+    };
 
     return (
         <AppSidebarLayout
@@ -267,27 +227,68 @@ export default function CustomRequestsIndex({
         >
             <Head title="Custom Requests" />
 
-            <div className="space-y-6 p-4 sm:p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold text-foreground">
-                            Custom Umroh Requests
-                        </h1>
-                        <p className="max-w-2xl text-sm text-muted-foreground">
-                            Request dari publik yang sudah tersimpan. Approve
-                            request untuk dibuat sebagai custom booking (list
-                            dan revenue terpisah dari booking reguler).
-                        </p>
-                    </div>
+            <div className="space-y-4 p-4 sm:p-5">
+                <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+                    <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
+                        Custom Umroh Requests
+                    </h1>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-[1fr_220px]">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <Card className="border-border/60 shadow-sm">
+                        <CardContent className="flex items-center justify-between p-3.5">
+                            <div>
+                                <p className="text-xs text-muted-foreground md:text-sm">
+                                    Total Request
+                                </p>
+                                <p className="mt-1 text-xl font-semibold md:text-2xl">
+                                    {requests.total}
+                                </p>
+                            </div>
+                            <div className="rounded-full bg-muted p-2.5">
+                                <Users className="h-4 w-4 text-muted-foreground md:h-5 md:w-5" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-border/60 shadow-sm">
+                        <CardContent className="p-3.5">
+                            <p className="text-xs text-muted-foreground md:text-sm">
+                                New
+                            </p>
+                            <p className="mt-1 text-xl font-semibold md:text-2xl">
+                                {statusCounts.new}
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-border/60 shadow-sm">
+                        <CardContent className="p-3.5">
+                            <p className="text-xs text-muted-foreground md:text-sm">
+                                Approved
+                            </p>
+                            <p className="mt-1 text-xl font-semibold md:text-2xl">
+                                {statusCounts.approved}
+                            </p>
+                        </CardContent>
+                    </Card>
+                    <Card className="border-border/60 shadow-sm">
+                        <CardContent className="p-3.5">
+                            <p className="text-xs text-muted-foreground md:text-sm">
+                                Rejected
+                            </p>
+                            <p className="mt-1 text-xl font-semibold md:text-2xl">
+                                {statusCounts.rejected}
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div className="grid gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm md:grid-cols-[1fr_240px] md:items-end">
                     <div className="relative">
                         <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Cari kode, nama, phone, kota…"
+                            placeholder="Cari kode, nama, phone, kota..."
                             className="pl-9"
                         />
                     </div>
@@ -304,130 +305,130 @@ export default function CustomRequestsIndex({
                     </Select>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-border bg-card">
-                    <Table>
+                <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+                    <Table className="min-w-[1200px]">
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Request</TableHead>
-                                <TableHead>PIC</TableHead>
-                                <TableHead>Detail</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">
+                                <TableHead className="w-14 text-center">
+                                    No
+                                </TableHead>
+                                <TableHead className="w-20 text-right">
                                     Aksi
                                 </TableHead>
+                                <TableHead>Request</TableHead>
+                                <TableHead>Nama</TableHead>
+                                <TableHead>Kontak</TableHead>
+                                <TableHead>Pax</TableHead>
+                                <TableHead>Tipe</TableHead>
+                                <TableHead>Asal</TableHead>
+                                <TableHead>Keberangkatan</TableHead>
+                                <TableHead>Budget</TableHead>
+                                <TableHead>Status</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {requests.data.map((request) => (
-                                <TableRow key={request.id}>
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <p className="font-medium text-foreground">
-                                                {request.request_code}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                Dibuat{' '}
-                                                {formatDateTime(
-                                                    request.created_at,
-                                                )}
-                                            </p>
-                                        </div>
+                            {requests.data.map((request, index) => (
+                                <TableRow
+                                    key={request.id}
+                                    className="align-top"
+                                >
+                                    <TableCell className="text-center text-sm text-muted-foreground">
+                                        {index + 1}
                                     </TableCell>
-                                    <TableCell>
-                                        <div className="space-y-1">
-                                            <p className="font-medium text-foreground">
-                                                {request.full_name}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {request.phone}
-                                                {request.email ? (
-                                                    <> • {request.email}</>
-                                                ) : null}
-                                            </p>
-                                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-7 px-2 text-xs"
-                                                    onClick={() =>
-                                                        openWhatsApp(request)
-                                                    }
-                                                >
-                                                    <MessageCircle className="mr-1 h-3.5 w-3.5" />
-                                                    WhatsApp
-                                                </Button>
-                                                {request.email ? (
+                                    <TableCell className="min-w-20 text-right">
+                                        {request.status === 'new' ? (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
                                                     <Button
                                                         type="button"
-                                                        size="sm"
                                                         variant="outline"
-                                                        className="h-7 px-2 text-xs"
-                                                        onClick={() =>
-                                                            window.open(
-                                                                `mailto:${request.email}`,
-                                                                '_blank',
-                                                                'noopener,noreferrer',
-                                                            )
-                                                        }
+                                                        size="icon"
+                                                        className="ml-auto"
+                                                        aria-label={`Aksi ${request.request_code}`}
                                                     >
-                                                        <Mail className="mr-1 h-3.5 w-3.5" />
-                                                        Email
+                                                        <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
-                                                ) : null}
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="ghost"
-                                                    className="h-7 px-2 text-xs"
-                                                    onClick={() =>
-                                                        copyContact(request)
-                                                    }
-                                                >
-                                                    <Copy className="mr-1 h-3.5 w-3.5" />
-                                                    Copy
-                                                </Button>
-                                            </div>
-                                        </div>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    {canApprove ? (
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                openApproveDrawer(
+                                                                    request,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Check className="h-4 w-4" />
+                                                            Approve
+                                                        </DropdownMenuItem>
+                                                    ) : null}
+                                                    {canReject ? (
+                                                        <DropdownMenuItem
+                                                            variant="destructive"
+                                                            onClick={() => {
+                                                                if (
+                                                                    window.confirm(
+                                                                        'Reject request ini?',
+                                                                    )
+                                                                ) {
+                                                                    router.post(
+                                                                        `/admin/booking-management/custom-requests/${request.id}/reject`,
+                                                                        {},
+                                                                        {
+                                                                            preserveScroll: true,
+                                                                        },
+                                                                    );
+                                                                }
+                                                            }}
+                                                        >
+                                                            Reject
+                                                        </DropdownMenuItem>
+                                                    ) : null}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        ) : (
+                                            <span className="text-sm text-muted-foreground">
+                                                -
+                                            </span>
+                                        )}
                                     </TableCell>
                                     <TableCell>
-                                        <div className="space-y-1 text-sm text-muted-foreground">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <Users className="h-4 w-4" />
-                                                <span>
-                                                    {request.passenger_count}{' '}
-                                                    pax • {request.group_type}
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <MapPin className="h-4 w-4" />
-                                                <span>
-                                                    {request.origin_city}
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <CalendarDays className="h-4 w-4" />
-                                                <span>
-                                                    {request.departure_month} •
-                                                    Budget/jamaah:{' '}
-                                                    {formatCurrencyIDR(
-                                                        request.budget,
-                                                    )}
-                                                    {request.budget &&
-                                                    request.passenger_count >
-                                                        0 ? (
-                                                        <>
-                                                            {' '}
-                                                            • Estimasi total:{' '}
-                                                            {formatCurrencyIDR(
-                                                                request.budget *
-                                                                    request.passenger_count,
-                                                            )}
-                                                        </>
-                                                    ) : null}
-                                                </span>
-                                            </div>
-                                        </div>
+                                        <p className="font-medium text-foreground">
+                                            {request.request_code}
+                                        </p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="font-medium text-foreground">
+                                            {request.full_name}
+                                        </p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="text-sm text-muted-foreground">
+                                            {request.phone}
+                                        </p>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="text-sm text-muted-foreground">
+                                            {request.passenger_count} pax
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="text-sm text-muted-foreground capitalize">
+                                            {request.group_type}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="text-sm text-muted-foreground">
+                                            {request.origin_city}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="text-sm text-muted-foreground">
+                                            {request.departure_month}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-sm text-muted-foreground">
+                                        {formatCurrencyIDR(request.budget)}
                                     </TableCell>
                                     <TableCell>
                                         <Badge
@@ -438,66 +439,6 @@ export default function CustomRequestsIndex({
                                         >
                                             {request.status}
                                         </Badge>
-                                        {request.approved_at ? (
-                                            <p className="mt-2 text-xs text-muted-foreground">
-                                                Approved{' '}
-                                                {formatDateTime(
-                                                    request.approved_at,
-                                                )}
-                                            </p>
-                                        ) : null}
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        {request.status === 'new' ? (
-                                            <div className="flex justify-end gap-2">
-                                                {canReject ? (
-                                                    <Button
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        onClick={() => {
-                                                            if (
-                                                                window.confirm(
-                                                                    'Reject request ini?',
-                                                                )
-                                                            ) {
-                                                                router.post(
-                                                                    `/admin/booking-management/custom-requests/${request.id}/reject`,
-                                                                    {},
-                                                                    {
-                                                                        preserveScroll: true,
-                                                                    },
-                                                                );
-                                                            }
-                                                        }}
-                                                    >
-                                                        Reject
-                                                    </Button>
-                                                ) : null}
-                                                {canApprove ? (
-                                                    <Button
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            openApproveDrawer(
-                                                                request,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Check className="mr-1 h-4 w-4" />
-                                                        Approve
-                                                    </Button>
-                                                ) : null}
-                                            </div>
-                                        ) : (
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                disabled
-                                            >
-                                                {request.status === 'approved'
-                                                    ? 'Approved'
-                                                    : 'Closed'}
-                                            </Button>
-                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -505,7 +446,7 @@ export default function CustomRequestsIndex({
                             {requests.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={5}
+                                        colSpan={10}
                                         className="py-12 text-center text-muted-foreground"
                                     >
                                         Belum ada request yang cocok dengan
@@ -615,7 +556,7 @@ export default function CustomRequestsIndex({
                                             )}
                                         </p>
                                         <p className="mt-1 text-xs text-muted-foreground">
-                                            Otomatis (pax × harga satuan)
+                                            Otomatis (pax x harga satuan)
                                         </p>
                                     </div>
                                 </div>
@@ -650,12 +591,12 @@ export default function CustomRequestsIndex({
                                                 <strong className="text-foreground">
                                                     PIC:
                                                 </strong>{' '}
-                                                {activeRequest.full_name} •{' '}
+                                                {activeRequest.full_name} -{' '}
                                                 {activeRequest.phone}
                                                 {activeRequest.email ? (
                                                     <>
                                                         {' '}
-                                                        •{' '}
+                                                        -{' '}
                                                         <span className="inline-flex items-center gap-1">
                                                             <Mail className="h-4 w-4" />
                                                             {
@@ -670,10 +611,10 @@ export default function CustomRequestsIndex({
                                                     Detail:
                                                 </strong>{' '}
                                                 {activeRequest.passenger_count}{' '}
-                                                pax • {activeRequest.group_type}{' '}
-                                                •{' '}
+                                                pax - {activeRequest.group_type}{' '}
+                                                -{' '}
                                                 {activeRequest.departure_month}{' '}
-                                                •{' '}
+                                                -{' '}
                                                 {activeRequest.room_preference}
                                             </p>
                                             <p>

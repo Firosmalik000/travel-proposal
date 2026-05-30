@@ -1,5 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -16,6 +22,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import {
     Eye,
     FolderKanban,
+    MoreHorizontal,
     Plus,
     Search,
     SquarePen,
@@ -68,12 +75,14 @@ function buildFormData(category: CategoryItem | null): CategoryFormData {
 }
 
 function CategoryTableRow({
+    index,
     category,
     onEdit,
     onDelete,
     canEdit,
     canDelete,
 }: {
+    index: number;
     category: CategoryItem;
     onEdit: (category: CategoryItem) => void;
     onDelete: (category: CategoryItem) => void;
@@ -85,8 +94,48 @@ function CategoryTableRow({
     return (
         <tr
             key={category.id}
-            className="border-b border-border last:border-b-0"
+            className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/20"
         >
+            <td className="px-4 py-4 text-center text-sm text-muted-foreground">
+                {index}
+            </td>
+            <td className="px-4 py-4 text-right">
+                {showActions ? (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="ml-auto"
+                                aria-label={`Aksi ${category.name || category.key}`}
+                            >
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit ? (
+                                <DropdownMenuItem
+                                    onClick={() => onEdit(category)}
+                                >
+                                    <SquarePen className="h-4 w-4" />
+                                    Edit
+                                </DropdownMenuItem>
+                            ) : null}
+                            {canDelete ? (
+                                <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => onDelete(category)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    Hapus
+                                </DropdownMenuItem>
+                            ) : null}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ) : (
+                    <span className="text-muted-foreground">-</span>
+                )}
+            </td>
             <td className="px-4 py-4">
                 <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -117,32 +166,6 @@ function CategoryTableRow({
                 >
                     {category.is_active ? 'Aktif' : 'Nonaktif'}
                 </span>
-            </td>
-            <td className="px-4 py-4">
-                {showActions ? (
-                    <div className="flex justify-end gap-2">
-                        {canEdit ? (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onEdit(category)}
-                            >
-                                <SquarePen className="mr-1 h-4 w-4" />
-                                Edit
-                            </Button>
-                        ) : null}
-                        {canDelete ? (
-                            <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => onDelete(category)}
-                            >
-                                <Trash2 className="mr-1 h-4 w-4" />
-                                Hapus
-                            </Button>
-                        ) : null}
-                    </div>
-                ) : null}
             </td>
         </tr>
     );
@@ -285,81 +308,76 @@ export default function ProductCategoriesIndex({
         >
             <Head title="Product Categories" />
 
-            <div className="space-y-6 p-4 md:p-6">
-                <div className="flex flex-col gap-4 rounded-3xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 p-5 shadow-sm lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-2">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
-                            <FolderKanban className="h-3.5 w-3.5" />
-                            Product Management
-                        </div>
-                        <h1 className="text-2xl font-bold tracking-tight">
+            <div className="space-y-4 p-4 md:p-5">
+                <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-1">
+                        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                             Product Categories
                         </h1>
-                        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                            Kelola kategori master untuk mengelompokkan produk
-                            travel. Kategori ini dipakai sebagai tipe produk.
-                        </p>
                     </div>
                     {canCreate ? (
-                        <Button onClick={openCreateSheet} className="shrink-0">
+                        <Button
+                            onClick={openCreateSheet}
+                            className="h-10 shrink-0 rounded-xl px-4"
+                        >
                             <Plus className="mr-2 h-4 w-4" />
                             Tambah Kategori
                         </Button>
                     ) : null}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
+                        <div className="flex items-center justify-between gap-3">
                             <div>
-                                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
                                     Total Kategori
                                 </p>
-                                <p className="mt-2 text-3xl font-bold">
+                                <p className="mt-1 text-2xl font-semibold">
                                     {stats.total}
                                 </p>
                             </div>
-                            <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-                                <FolderKanban className="h-5 w-5" />
+                            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+                                <FolderKanban className="h-4.5 w-4.5" />
                             </div>
                         </div>
                     </div>
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
+                    <div className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
+                        <div className="flex items-center justify-between gap-3">
                             <div>
-                                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
                                     Active
                                 </p>
-                                <p className="mt-2 text-3xl font-bold">
+                                <p className="mt-1 text-2xl font-semibold">
                                     {stats.active}
                                 </p>
                             </div>
-                            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
-                                <Eye className="h-5 w-5" />
+                            <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-700">
+                                <Eye className="h-4.5 w-4.5" />
                             </div>
                         </div>
                     </div>
-                    <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
+                    <div className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
+                        <div className="flex items-center justify-between gap-3">
                             <div>
-                                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
                                     Inactive
                                 </p>
-                                <p className="mt-2 text-3xl font-bold">
+                                <p className="mt-1 text-2xl font-semibold">
                                     {stats.inactive}
                                 </p>
                             </div>
-                            <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
-                                <Eye className="h-5 w-5" />
+                            <div className="rounded-xl bg-slate-100 p-2.5 text-slate-700">
+                                <Eye className="h-4.5 w-4.5" />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-                    <div className="space-y-3">
+                <div className="grid gap-3 rounded-xl border border-border/60 bg-card p-3.5 shadow-sm lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                    <div className="space-y-2">
                         <div>
-                            <Label className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                            <Label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
                                 Cari Kategori
                             </Label>
                             <div className="relative">
@@ -373,15 +391,20 @@ export default function ProductCategoriesIndex({
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={resetFilters}
+                            className="h-9 rounded-lg"
                         >
                             Reset
                         </Button>
-                        <Button type="button" onClick={submitFilters}>
+                        <Button
+                            type="button"
+                            onClick={submitFilters}
+                            className="h-9 rounded-lg"
+                        >
                             Terapkan
                         </Button>
                     </div>
@@ -392,24 +415,26 @@ export default function ProductCategoriesIndex({
                         <span>Total data: {categories.total}</span>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="min-w-full text-left text-sm">
-                            <thead className="bg-muted/30 text-xs text-muted-foreground uppercase">
+                        <table className="min-w-full divide-y divide-border text-left text-sm">
+                            <thead className="bg-muted/35 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                                 <tr>
+                                    <th className="w-16 px-4 py-3 text-center">
+                                        No
+                                    </th>
+                                    <th className="w-20 px-4 py-3 text-right">
+                                        Aksi
+                                    </th>
                                     <th className="px-4 py-3">Kategori</th>
                                     <th className="px-4 py-3">Deskripsi</th>
                                     <th className="px-4 py-3">Status</th>
-                                    {showActions ? (
-                                        <th className="px-4 py-3 text-right">
-                                            Aksi
-                                        </th>
-                                    ) : null}
                                 </tr>
                             </thead>
                             <tbody>
                                 {categories.data.length > 0 ? (
-                                    categories.data.map((category) => (
+                                    categories.data.map((category, index) => (
                                         <CategoryTableRow
                                             key={category.id}
+                                            index={index + 1}
                                             category={category}
                                             onEdit={openEditSheet}
                                             onDelete={destroyCategory}
@@ -420,7 +445,7 @@ export default function ProductCategoriesIndex({
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={showActions ? 4 : 3}
+                                            colSpan={5}
                                             className="px-4 py-10 text-center text-sm text-muted-foreground"
                                         >
                                             {filters.search

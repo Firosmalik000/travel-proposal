@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasAuditTrail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DepartureSchedule extends Model
 {
-    use HasFactory;
+    use HasAuditTrail, HasFactory;
 
     protected $fillable = [
         'package_id',
@@ -40,6 +41,11 @@ class DepartureSchedule extends Model
     public function registrations(): HasMany
     {
         return $this->hasMany(Booking::class);
+    }
+
+    public function hotelAssignments(): HasMany
+    {
+        return $this->hasMany(HotelAssignment::class, 'departure_schedule_id');
     }
 
     public function bookedPassengerCount(?int $excludingRegistrationId = null): int

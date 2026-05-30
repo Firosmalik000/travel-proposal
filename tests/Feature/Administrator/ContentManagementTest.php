@@ -23,7 +23,7 @@ class ContentManagementTest extends TestCase
             'is_active' => true,
         ]);
         PageContent::query()->create([
-            'slug' => 'home',
+            'slug' => 'home_landing_mockup',
             'category' => 'page',
             'title' => 'Beranda',
             'excerpt' => 'Excerpt',
@@ -36,7 +36,8 @@ class ContentManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/WebsiteManagement/Landing/Index')
-                ->has('pages')
+                ->has('pages', 1)
+                ->where('pages.0.slug', 'home_landing_mockup')
             );
     }
 
@@ -58,6 +59,28 @@ class ContentManagementTest extends TestCase
                 ->has('resources', 2)
                 ->where('resources.0.key', 'faqs')
                 ->where('resources.1.key', 'legal_documents'),
+            );
+    }
+
+    public function test_authenticated_users_can_view_website_content_management(): void
+    {
+        $user = User::factory()->create();
+        PageContent::query()->create([
+            'slug' => 'home_landing',
+            'category' => 'page',
+            'title' => 'Beranda Website',
+            'excerpt' => 'Excerpt',
+            'content' => ['hero' => ['title' => 'Hero Website']],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('website.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/WebsiteManagement/Landing/Index')
+                ->has('pages', 1)
+                ->where('pages.0.slug', 'home_landing')
             );
     }
 

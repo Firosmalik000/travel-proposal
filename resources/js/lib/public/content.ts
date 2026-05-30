@@ -6,6 +6,8 @@ export interface LocalizedField {
     en?: string;
 }
 
+type PublicSeoData = Record<string, unknown>;
+
 export type PublicSocialAccount = {
     platform: string;
     label: string;
@@ -58,7 +60,6 @@ export function usePublicData(): Record<string, any> {
 
 export function usePublicPageContent(slug: string): Record<string, any> | null {
     const publicData = usePublicData();
-
     return publicData.pages?.[slug] ?? null;
 }
 
@@ -84,38 +85,70 @@ export function whatsappLinkFromPhone(
     return `${baseUrl}?text=${encodeURIComponent(message)}`;
 }
 
-export function getPublicWhatsappNumber(seo: Record<string, any> = {}): string {
-    return String(seo.contact?.whatsapp ?? seo.contact?.phone ?? '');
+export function getPublicWhatsappNumber(seo: PublicSeoData = {}): string {
+    const contact =
+        seo.contact && typeof seo.contact === 'object'
+            ? (seo.contact as Record<string, unknown>)
+            : {};
+
+    return String(contact.whatsapp ?? contact.phone ?? '');
 }
 
-export function getPublicPhoneNumber(seo: Record<string, any> = {}): string {
-    return String(seo.contact?.phone ?? seo.contact?.whatsapp ?? '');
+export function getPublicPhoneNumber(seo: PublicSeoData = {}): string {
+    const contact =
+        seo.contact && typeof seo.contact === 'object'
+            ? (seo.contact as Record<string, unknown>)
+            : {};
+
+    return String(contact.phone ?? contact.whatsapp ?? '');
 }
 
-export function getPublicEmail(seo: Record<string, any> = {}): string {
-    return String(seo.contact?.email ?? '');
+export function getPublicEmail(seo: PublicSeoData = {}): string {
+    const contact =
+        seo.contact && typeof seo.contact === 'object'
+            ? (seo.contact as Record<string, unknown>)
+            : {};
+
+    return String(contact.email ?? '');
 }
 
 export function getPublicAddress(
-    seo: Record<string, any> = {},
+    seo: PublicSeoData = {},
 ): LocalizedField | string {
-    return seo.contact?.address?.full ?? '';
+    const contact =
+        seo.contact && typeof seo.contact === 'object'
+            ? (seo.contact as Record<string, unknown>)
+            : {};
+    const address =
+        contact.address && typeof contact.address === 'object'
+            ? (contact.address as Record<string, unknown>)
+            : {};
+
+    return (address.full as LocalizedField | string | undefined) ?? '';
 }
 
-export function getPublicMapLink(seo: Record<string, any> = {}): string {
-    return String(
-        seo.contact?.address?.mapLink ??
-            seo.contact?.mapLink ??
-            seo.contact?.map_link ??
-            '',
-    );
+export function getPublicMapLink(seo: PublicSeoData = {}): string {
+    const contact =
+        seo.contact && typeof seo.contact === 'object'
+            ? (seo.contact as Record<string, unknown>)
+            : {};
+    const address =
+        contact.address && typeof contact.address === 'object'
+            ? (contact.address as Record<string, unknown>)
+            : {};
+
+    return String(address.mapLink ?? contact.mapLink ?? contact.map_link ?? '');
 }
 
 export function getPublicSocialAccounts(
-    seo: Record<string, any> = {},
+    seo: PublicSeoData = {},
 ): PublicSocialAccount[] {
-    const accounts = Array.isArray(seo.social?.accounts)
-        ? seo.social.accounts
+    const social =
+        seo.social && typeof seo.social === 'object'
+            ? (seo.social as Record<string, unknown>)
+            : {};
+    const accounts = Array.isArray(social.accounts)
+        ? (social.accounts as Array<Record<string, unknown>>)
         : [];
 
     return accounts
@@ -130,7 +163,7 @@ export function getPublicSocialAccounts(
 }
 
 export function whatsappLinkFromSeo(
-    seo: Record<string, any> = {},
+    seo: PublicSeoData = {},
     message?: string,
 ): string {
     const whatsappNumber = getPublicWhatsappNumber(seo);

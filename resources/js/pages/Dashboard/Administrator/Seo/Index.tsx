@@ -94,23 +94,20 @@ const PLATFORMS = [
 function Section({
     icon: Icon,
     title,
-    desc,
     children,
 }: {
     icon: React.ElementType;
     title: string;
-    desc: string;
     children: React.ReactNode;
 }) {
     return (
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-card p-5 shadow-sm">
             <div className="mb-4 flex items-start gap-3 border-b border-border pb-4">
-                <div className="rounded-lg bg-primary/10 p-2">
-                    <Icon className="h-4 w-4 text-primary" />
+                <div className="rounded-lg bg-muted p-2">
+                    <Icon className="h-4 w-4 text-foreground" />
                 </div>
                 <div>
                     <p className="font-semibold text-foreground">{title}</p>
-                    <p className="text-xs text-muted-foreground">{desc}</p>
                 </div>
             </div>
             <div className="space-y-4">{children}</div>
@@ -120,20 +117,15 @@ function Section({
 
 function Field({
     label,
-    hint,
     children,
 }: {
     label: string;
-    hint?: string;
     children: React.ReactNode;
 }) {
     return (
         <div>
             <Label className="mb-1.5 block text-xs font-medium">{label}</Label>
             {children}
-            {hint && (
-                <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-            )}
         </div>
     );
 }
@@ -186,7 +178,7 @@ function parseHours(value: string): {
     }
 
     const match = normalized.match(
-        /(\d{1,2})[.:](\d{2})\s*[–-]\s*(\d{1,2})[.:](\d{2})/,
+        /(\d{1,2})[.:](\d{2})\s*[--]\s*(\d{1,2})[.:](\d{2})/,
     );
 
     if (!match) {
@@ -220,7 +212,7 @@ function buildHoursLabel(
         return `${dayLabel}, `;
     }
 
-    return `${dayLabel}, ${startLabel}–${endLabel}`;
+    return `${dayLabel}, ${startLabel}-${endLabel}`;
 }
 
 export default function SeoIndex({ settings }: Props) {
@@ -309,7 +301,7 @@ export default function SeoIndex({ settings }: Props) {
     const weekendParsed = parseHours(data.weekend_hours);
     const initialWeekendDays: WeekendDays = String(
         data.weekend_hours ?? '',
-    ).includes('Sabtu–Minggu')
+    ).includes('Sabtu-Minggu')
         ? 'sat_sun'
         : 'sat';
 
@@ -335,7 +327,7 @@ export default function SeoIndex({ settings }: Props) {
         setData(
             'weekday_hours',
             buildHoursLabel(
-                'Senin–Jumat',
+                'Senin-Jumat',
                 weekdayMode,
                 weekdayStart,
                 weekdayEnd,
@@ -345,7 +337,7 @@ export default function SeoIndex({ settings }: Props) {
     }, [weekdayMode, weekdayStart, weekdayEnd]);
 
     useEffect(() => {
-        const dayLabel = weekendDays === 'sat_sun' ? 'Sabtu–Minggu' : 'Sabtu';
+        const dayLabel = weekendDays === 'sat_sun' ? 'Sabtu-Minggu' : 'Sabtu';
 
         setData(
             'weekend_hours',
@@ -399,28 +391,26 @@ export default function SeoIndex({ settings }: Props) {
         >
             <Head title="SEO & Site Settings" />
 
-            <form onSubmit={submit} className="space-y-5 p-4 md:p-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold">
+            <form onSubmit={submit} className="space-y-4 p-4 md:p-5">
+                <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                             Pengaturan SEO & Website
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Metadata, kontak, sosial media, dan pengaturan
-                            teknis website.
-                        </p>
+                        {canEdit ? (
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="shrink-0"
+                                >
+                                    {processing
+                                        ? 'Menyimpan...'
+                                        : 'Simpan Semua'}
+                                </Button>
+                            </div>
+                        ) : null}
                     </div>
-                    {canEdit ? (
-                        <div className="flex items-center gap-3">
-                            <Button
-                                type="submit"
-                                disabled={processing}
-                                className="shrink-0"
-                            >
-                                {processing ? 'Menyimpan...' : 'Simpan Semua'}
-                            </Button>
-                        </div>
-                    ) : null}
                 </div>
 
                 {Object.keys(errors).length > 0 ? (
@@ -431,11 +421,7 @@ export default function SeoIndex({ settings }: Props) {
 
                 <fieldset disabled={!canEdit} className="space-y-5">
                     {/* 1. Informasi Umum */}
-                    <Section
-                        icon={Globe}
-                        title="Informasi Umum"
-                        desc="Nama website, tagline, dan deskripsi default untuk mesin pencari."
-                    >
+                    <Section icon={Globe} title="Informasi Umum">
                         <Row>
                             <Field label="Nama Website">
                                 <Input
@@ -456,10 +442,7 @@ export default function SeoIndex({ settings }: Props) {
                                 />
                             </Field>
                         </Row>
-                        <Field
-                            label="Deskripsi Default"
-                            hint="Tampil di Google jika halaman tidak punya meta description."
-                        >
+                        <Field label="Deskripsi Default">
                             <Textarea
                                 rows={3}
                                 value={data.default_description}
@@ -471,10 +454,7 @@ export default function SeoIndex({ settings }: Props) {
                                 }
                             />
                         </Field>
-                        <Field
-                            label="Keywords"
-                            hint="Pisahkan dengan koma. Contoh: umroh, travel umroh, paket umroh 2026"
-                        >
+                        <Field label="Keywords">
                             <Textarea
                                 rows={2}
                                 value={data.keywords}
@@ -486,16 +466,9 @@ export default function SeoIndex({ settings }: Props) {
                     </Section>
 
                     {/* 2. Kontak & Lokasi */}
-                    <Section
-                        icon={Phone}
-                        title="Kontak & Lokasi"
-                        desc="Nomor telepon, WhatsApp, email, alamat, dan jam operasional."
-                    >
+                    <Section icon={Phone} title="Kontak & Lokasi">
                         <Row>
-                            <Field
-                                label="Nomor Telepon"
-                                hint="Format: +62 812-xxxx-xxxx"
-                            >
+                            <Field label="Nomor Telepon">
                                 <Input
                                     value={data.phone}
                                     onChange={(e) =>
@@ -504,10 +477,7 @@ export default function SeoIndex({ settings }: Props) {
                                     placeholder="+62 812-3456-7890"
                                 />
                             </Field>
-                            <Field
-                                label="WhatsApp"
-                                hint="Nomor yang dipakai untuk tombol WA di website."
-                            >
+                            <Field label="WhatsApp">
                                 <Input
                                     value={data.whatsapp}
                                     onChange={(e) =>
@@ -537,10 +507,7 @@ export default function SeoIndex({ settings }: Props) {
                                 placeholder="Jl. Contoh No. 1, Jakarta"
                             />
                         </Field>
-                        <Field
-                            label="Link Google Maps"
-                            hint="Paste URL embed atau link Google Maps."
-                        >
+                        <Field label="Link Google Maps">
                             <Input
                                 value={data.map_link}
                                 onChange={(e) =>
@@ -550,10 +517,7 @@ export default function SeoIndex({ settings }: Props) {
                             />
                         </Field>
                         <Row>
-                            <Field
-                                label="Jam Operasional (Weekday)"
-                                hint="Pilih mode + jam mulai/selesai. Kamu juga bisa edit hasil akhirnya manual."
-                            >
+                            <Field label="Jam Operasional (Weekday)">
                                 <div className="space-y-3">
                                     <div className="grid gap-2 sm:grid-cols-3">
                                         <div className="sm:col-span-1">
@@ -612,7 +576,7 @@ export default function SeoIndex({ settings }: Props) {
                                                 setWeekdayEnd('17:00');
                                             }}
                                         >
-                                            08:00–17:00
+                                            08:00-17:00
                                         </Button>
                                         <Button
                                             type="button"
@@ -624,7 +588,7 @@ export default function SeoIndex({ settings }: Props) {
                                                 setWeekdayEnd('18:00');
                                             }}
                                         >
-                                            10:00–18:00
+                                            10:00-18:00
                                         </Button>
                                         <Button
                                             type="button"
@@ -656,14 +620,11 @@ export default function SeoIndex({ settings }: Props) {
                                                 e.target.value,
                                             )
                                         }
-                                        placeholder="Senin–Jumat, 08.00–17.00"
+                                        placeholder="Senin-Jumat, 08.00-17.00"
                                     />
                                 </div>
                             </Field>
-                            <Field
-                                label="Jam Operasional (Weekend)"
-                                hint="Pilih hari (Sabtu / Sabtu–Minggu) + mode + jam mulai/selesai."
-                            >
+                            <Field label="Jam Operasional (Weekend)">
                                 <div className="space-y-3">
                                     <div className="grid gap-2 sm:grid-cols-4">
                                         <div className="sm:col-span-2">
@@ -683,7 +644,7 @@ export default function SeoIndex({ settings }: Props) {
                                                         Sabtu
                                                     </SelectItem>
                                                     <SelectItem value="sat_sun">
-                                                        Sabtu–Minggu
+                                                        Sabtu-Minggu
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -747,7 +708,7 @@ export default function SeoIndex({ settings }: Props) {
                                                 setWeekendEnd('13:00');
                                             }}
                                         >
-                                            08:00–13:00
+                                            08:00-13:00
                                         </Button>
                                         <Button
                                             type="button"
@@ -791,7 +752,7 @@ export default function SeoIndex({ settings }: Props) {
                                                 e.target.value,
                                             )
                                         }
-                                        placeholder="Sabtu–Minggu, 08.00–13.00"
+                                        placeholder="Sabtu-Minggu, 08.00-13.00"
                                     />
                                 </div>
                             </Field>
@@ -799,11 +760,7 @@ export default function SeoIndex({ settings }: Props) {
                     </Section>
 
                     {/* 3. Sosial Media */}
-                    <Section
-                        icon={Share2}
-                        title="Sosial Media"
-                        desc="Kelola akun sosial media — bisa tambah, hapus, dan pilih platform."
-                    >
+                    <Section icon={Share2} title="Sosial Media">
                         <div className="space-y-2">
                             {accounts.map((acc, i) => {
                                 const platform = PLATFORMS.find(
@@ -967,8 +924,8 @@ export default function SeoIndex({ settings }: Props) {
                                         }
                                         placeholder={
                                             isId
-                                                ? 'Asfar Tour — Travel Umroh Terpercaya'
-                                                : 'Asfar Tour — Trusted Umrah Travel'
+                                                ? 'Asfar Tour - Travel Umroh Terpercaya'
+                                                : 'Asfar Tour - Trusted Umrah Travel'
                                         }
                                     />
                                 </Field>
@@ -991,10 +948,7 @@ export default function SeoIndex({ settings }: Props) {
                                     />
                                 </Field>
                             </Row>
-                            <Field
-                                label="OG Image"
-                                hint="Gambar preview saat link dibagikan di WhatsApp, Facebook, dll. Ukuran ideal: 1200×630px."
-                            >
+                            <Field label="OG Image">
                                 <div className="flex items-center gap-3">
                                     {settings.social?.ogImage?.url && (
                                         <img
@@ -1018,15 +972,8 @@ export default function SeoIndex({ settings }: Props) {
                     </Section>
 
                     {/* 4. Gambar & Logo */}
-                    <Section
-                        icon={Image}
-                        title="Logo & Gambar"
-                        desc="Pusat logo untuk public website, favicon browser, dan kebutuhan SEO."
-                    >
-                        <Field
-                            label="Logo Public & SEO"
-                            hint="Dipakai untuk navbar, footer, tab browser, dan structured data. Kalau kosong, sistem pakai logo default branding."
-                        >
+                    <Section icon={Image} title="Logo & Gambar">
+                        <Field label="Logo Public & SEO">
                             <div className="flex items-center gap-3">
                                 <img
                                     src={settings.contact?.logo?.url}
@@ -1052,16 +999,9 @@ export default function SeoIndex({ settings }: Props) {
                     </Section>
 
                     {/* 5. Teknis */}
-                    <Section
-                        icon={Settings}
-                        title="Pengaturan Teknis"
-                        desc="Robots, canonical, verifikasi mesin pencari, dan analytics."
-                    >
+                    <Section icon={Settings} title="Pengaturan Teknis">
                         <Row>
-                            <Field
-                                label="Robots Default"
-                                hint="Contoh: index, follow"
-                            >
+                            <Field label="Robots Default">
                                 <Input
                                     value={data.robots_default}
                                     onChange={(e) =>
@@ -1072,10 +1012,7 @@ export default function SeoIndex({ settings }: Props) {
                                     }
                                 />
                             </Field>
-                            <Field
-                                label="Canonical Base URL"
-                                hint="Contoh: https://asfartour.co.id"
-                            >
+                            <Field label="Canonical Base URL">
                                 <Input
                                     value={data.canonical_base}
                                     onChange={(e) =>
@@ -1113,10 +1050,7 @@ export default function SeoIndex({ settings }: Props) {
                                 />
                             </Field>
                         </Row>
-                        <Field
-                            label="Google Analytics ID"
-                            hint="Contoh: G-XXXXXXXXXX atau UA-XXXXXXXX-X"
-                        >
+                        <Field label="Google Analytics ID">
                             <Input
                                 value={data.google_analytics_id}
                                 onChange={(e) =>

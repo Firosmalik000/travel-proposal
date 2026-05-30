@@ -1,0 +1,1770 @@
+<!doctype html>
+<html lang="id">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Asfar Tour – Hajj & Umrah</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            html {
+                scroll-behavior: smooth;
+            }
+            body {
+                font-family: 'Inter', sans-serif;
+                color: #1a0a08;
+                background: #fff;
+                line-height: 1.7;
+                overflow-x: hidden;
+            }
+
+            :root {
+                --red: #c80012;
+                --red-dark: #8c0a16;
+                --gold: #ff9200;
+                --gold-light: #ffc578;
+                --cream: #f6e7c6;
+                --cream2: #fdf6ec;
+                --dark: #0f0505;
+            }
+
+            /* SECTION TRANSITIONS */
+            .sec {
+                position: relative;
+            }
+            .sec::before {
+                content: '';
+                position: absolute;
+                top: -80px;
+                left: 0;
+                right: 0;
+                height: 80px;
+                z-index: 2;
+                pointer-events: none;
+            }
+            .sec::after {
+                content: '';
+                position: absolute;
+                bottom: -80px;
+                left: 0;
+                right: 0;
+                height: 80px;
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            /* Hero → Why (dark) */
+            .hero::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 120px;
+                background: linear-gradient(to bottom, transparent, #0f0505);
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            /* Why → Paket */
+            .why-bg::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 100px;
+                background: linear-gradient(to bottom, #0f0505, var(--cream2));
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            /* Paket → Testimoni */
+            .pkg-bg::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 100px;
+                background: linear-gradient(to bottom, var(--cream2), #0f0505);
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            /* Testimoni → FAQ */
+            .testi-bg::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 100px;
+                background: linear-gradient(to bottom, #0f0505, #fff);
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            /* FAQ → CTA */
+            .faq-bg::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 100px;
+                background: linear-gradient(to bottom, #fff, #0f0505);
+                z-index: 2;
+                pointer-events: none;
+            }
+
+            /* SCROLL REVEAL */
+            .reveal {
+                opacity: 0;
+                transform: translateY(40px);
+                transition:
+                    opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                    transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .reveal.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            .reveal-delay-1 {
+                transition-delay: 0.1s;
+            }
+            .reveal-delay-2 {
+                transition-delay: 0.2s;
+            }
+            .reveal-delay-3 {
+                transition-delay: 0.3s;
+            }
+            .reveal-delay-4 {
+                transition-delay: 0.4s;
+            }
+
+            /* SCROLLBAR */
+            ::-webkit-scrollbar {
+                width: 4px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #fff;
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--red);
+                border-radius: 2px;
+            }
+
+            /* NAV */
+            nav {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 100;
+                padding: 0 48px;
+                height: 72px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                transition: all 0.4s;
+            }
+            nav.scrolled {
+                background: rgba(255, 255, 255, 0.97);
+                backdrop-filter: blur(20px);
+                box-shadow: 0 1px 40px rgba(0, 0, 0, 0.08);
+            }
+            .logo-text .name {
+                font-family: 'Playfair Display', serif;
+                font-size: 20px;
+                font-weight: 700;
+                color: #fff;
+                letter-spacing: 1px;
+                line-height: 1;
+                transition: color 0.4s;
+            }
+            .logo-text .tag {
+                font-size: 9px;
+                color: var(--gold-light);
+                font-weight: 600;
+                letter-spacing: 3px;
+                text-transform: uppercase;
+                transition: color 0.4s;
+            }
+            nav.scrolled .logo-text .name {
+                color: var(--red-dark);
+            }
+            nav.scrolled .logo-text .tag {
+                color: var(--gold);
+            }
+            .nav-links {
+                display: flex;
+                align-items: center;
+                gap: 32px;
+            }
+            .nav-links a {
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.8);
+                text-decoration: none;
+                font-weight: 500;
+                letter-spacing: 0.5px;
+                transition: all 0.3s;
+            }
+            nav.scrolled .nav-links a {
+                color: #555;
+            }
+            .nav-links a:hover {
+                color: var(--gold-light);
+            }
+            nav.scrolled .nav-links a:hover {
+                color: var(--red);
+            }
+            .nav-cta {
+                background: var(--gold) !important;
+                color: #fff !important;
+                padding: 11px 26px !important;
+                border-radius: 30px !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+                letter-spacing: 0.3px;
+                box-shadow: 0 4px 20px rgba(255, 146, 0, 0.35);
+                transition: all 0.3s !important;
+            }
+            .nav-cta:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 8px 28px rgba(255, 146, 0, 0.45) !important;
+            }
+            @media (max-width: 640px) {
+                nav {
+                    padding: 0 20px;
+                }
+                .nav-links a:not(.nav-cta) {
+                    display: none;
+                }
+            }
+
+            /* HERO */
+            .hero {
+                min-height: 100vh;
+                position: relative;
+                display: flex;
+                align-items: center;
+                overflow: hidden;
+                background: var(--dark);
+            }
+            .hero-bg {
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(
+                    125deg,
+                    #0f0505 0%,
+                    #2a0608 40%,
+                    #8c0a16 100%
+                );
+                z-index: 0;
+            }
+            .hero-pattern {
+                position: absolute;
+                inset: 0;
+                z-index: 1;
+                opacity: 0.06;
+                background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 5 L95 27.5 L95 72.5 L50 95 L5 72.5 L5 27.5 Z' fill='none' stroke='%23ffd700' stroke-width='0.8'/%3E%3Cpath d='M50 20 L80 35 L80 65 L50 80 L20 65 L20 35 Z' fill='none' stroke='%23ffd700' stroke-width='0.5'/%3E%3C/svg%3E")
+                    repeat;
+                background-size: 80px;
+            }
+            .hero-glow {
+                position: absolute;
+                right: -100px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 700px;
+                height: 700px;
+                background: radial-gradient(
+                    circle,
+                    rgba(200, 0, 18, 0.25) 0%,
+                    transparent 65%
+                );
+                z-index: 1;
+            }
+            .hero-glow2 {
+                position: absolute;
+                left: -50px;
+                bottom: -100px;
+                width: 500px;
+                height: 500px;
+                background: radial-gradient(
+                    circle,
+                    rgba(255, 146, 0, 0.12) 0%,
+                    transparent 65%
+                );
+                z-index: 1;
+            }
+            .hero-inner {
+                max-width: 1140px;
+                margin: 0 auto;
+                width: 100%;
+                padding: 120px 48px 80px;
+                position: relative;
+                z-index: 2;
+                display: grid;
+                grid-template-columns: 1fr 420px;
+                gap: 60px;
+                align-items: center;
+            }
+            .hero-eyebrow {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 28px;
+            }
+            .eyebrow-line {
+                width: 32px;
+                height: 1px;
+                background: var(--gold);
+            }
+            .eyebrow-text {
+                font-size: 11px;
+                font-weight: 700;
+                color: var(--gold);
+                letter-spacing: 3px;
+                text-transform: uppercase;
+            }
+            .hero h1 {
+                font-family: 'Playfair Display', serif;
+                font-size: clamp(36px, 5vw, 64px);
+                font-weight: 800;
+                color: #fff;
+                line-height: 1.1;
+                margin-bottom: 24px;
+            }
+            .hero h1 .gold {
+                color: var(--gold);
+            }
+            .hero h1 .stroke {
+                -webkit-text-stroke: 1px rgba(255, 255, 255, 0.4);
+                color: transparent;
+            }
+            .hero-desc {
+                font-size: 16px;
+                color: rgba(255, 255, 255, 0.6);
+                max-width: 480px;
+                margin-bottom: 44px;
+                line-height: 1.85;
+                font-weight: 300;
+            }
+            .hero-btns {
+                display: flex;
+                gap: 14px;
+                flex-wrap: wrap;
+                margin-bottom: 60px;
+            }
+            .btn-gold-solid {
+                background: linear-gradient(135deg, var(--gold), #e07f00);
+                color: #fff;
+                font-size: 15px;
+                font-weight: 700;
+                padding: 15px 34px;
+                border-radius: 50px;
+                border: none;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                transition: all 0.3s;
+                box-shadow: 0 8px 32px rgba(255, 146, 0, 0.4);
+                letter-spacing: 0.3px;
+            }
+            .btn-gold-solid:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 14px 40px rgba(255, 146, 0, 0.5);
+            }
+            .btn-ghost {
+                background: transparent;
+                color: rgba(255, 255, 255, 0.85);
+                font-size: 15px;
+                font-weight: 500;
+                padding: 15px 30px;
+                border-radius: 50px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                cursor: pointer;
+                text-decoration: none;
+                transition: all 0.3s;
+                letter-spacing: 0.3px;
+            }
+            .btn-ghost:hover {
+                background: rgba(255, 255, 255, 0.07);
+                border-color: rgba(255, 255, 255, 0.4);
+            }
+            .hero-stats {
+                display: flex;
+                gap: 0;
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                padding-top: 32px;
+            }
+            .hstat {
+                flex: 1;
+                padding-right: 32px;
+                border-right: 1px solid rgba(255, 255, 255, 0.1);
+                margin-right: 32px;
+            }
+            .hstat:last-child {
+                border: none;
+                margin: 0;
+                padding: 0;
+            }
+            .hstat-num {
+                font-family: 'Playfair Display', serif;
+                font-size: 32px;
+                font-weight: 700;
+                color: #fff;
+                line-height: 1;
+            }
+            .hstat-num span {
+                color: var(--gold);
+                font-size: 20px;
+            }
+            .hstat-label {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.45);
+                margin-top: 6px;
+                font-weight: 400;
+                letter-spacing: 0.5px;
+            }
+
+            /* HERO RIGHT CARDS */
+            .hero-right {
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+            }
+            .hero-card {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 20px;
+                padding: 22px;
+                backdrop-filter: blur(10px);
+                transition: all 0.3s;
+            }
+            .hero-card:hover {
+                background: rgba(255, 255, 255, 0.07);
+                border-color: rgba(255, 197, 120, 0.2);
+                transform: translateX(-4px);
+            }
+            .hc-row {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+            .hc-icon {
+                width: 44px;
+                height: 44px;
+                border-radius: 12px;
+                background: linear-gradient(
+                    135deg,
+                    var(--red-dark),
+                    var(--red)
+                );
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                flex-shrink: 0;
+            }
+            .hc-icon.gold-ic {
+                background: linear-gradient(135deg, #b36200, var(--gold));
+            }
+            .hc-title {
+                font-size: 14px;
+                font-weight: 600;
+                color: #fff;
+                margin-bottom: 3px;
+            }
+            .hc-sub {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.45);
+            }
+            .hc-tags {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+                margin-top: 12px;
+            }
+            .hc-tag {
+                background: rgba(255, 197, 120, 0.1);
+                border: 1px solid rgba(255, 197, 120, 0.15);
+                color: var(--gold-light);
+                font-size: 11px;
+                padding: 3px 10px;
+                border-radius: 8px;
+                font-weight: 500;
+            }
+            @media (max-width: 900px) {
+                .hero-inner {
+                    grid-template-columns: 1fr;
+                    padding: 100px 24px 60px;
+                }
+                .hero-right {
+                    display: none;
+                }
+            }
+
+            /* DIVIDER */
+            .gold-divider {
+                height: 2px;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    var(--gold),
+                    transparent
+                );
+                opacity: 0.3;
+            }
+
+            /* SECTION */
+            .sec {
+                padding: 100px 48px;
+            }
+            @media (max-width: 640px) {
+                .sec {
+                    padding: 72px 20px;
+                }
+            }
+            .sec-inner {
+                max-width: 1100px;
+                margin: 0 auto;
+            }
+            .sec-head {
+                margin-bottom: 64px;
+            }
+            .sec-eyebrow {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 16px;
+            }
+            .sec-eyebrow-line {
+                width: 24px;
+                height: 1px;
+                background: var(--gold);
+            }
+            .sec-eyebrow-text {
+                font-size: 11px;
+                font-weight: 700;
+                color: var(--gold);
+                letter-spacing: 3px;
+                text-transform: uppercase;
+            }
+            .sec-head h2 {
+                font-family: 'Playfair Display', serif;
+                font-size: clamp(28px, 4vw, 46px);
+                font-weight: 700;
+                color: var(--dark);
+                line-height: 1.2;
+                margin-bottom: 16px;
+            }
+            .sec-head h2 em {
+                font-style: normal;
+                color: var(--red);
+            }
+            .sec-head p {
+                font-size: 16px;
+                color: #888;
+                max-width: 520px;
+                font-weight: 300;
+                line-height: 1.8;
+            }
+            .sec-head.center {
+                text-align: center;
+            }
+            .sec-head.center p {
+                margin: 0 auto;
+            }
+
+            /* WHY */
+            .why-bg {
+                background: var(--dark);
+            }
+            .why-bg .sec-head h2 {
+                color: #fff;
+            }
+            .why-bg .sec-head p {
+                color: rgba(255, 255, 255, 0.45);
+            }
+            .why-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 1px;
+                background: rgba(255, 255, 255, 0.06);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 24px;
+                overflow: hidden;
+            }
+            .why-card {
+                background: var(--dark);
+                padding: 40px 32px;
+                transition: all 0.3s;
+                position: relative;
+                overflow: hidden;
+            }
+            .why-card::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: linear-gradient(90deg, var(--red), var(--gold));
+                transform: scaleX(0);
+                transform-origin: left;
+                transition: transform 0.4s;
+            }
+            .why-card:hover {
+                background: #1a0808;
+            }
+            .why-card:hover::after {
+                transform: scaleX(1);
+            }
+            .why-num {
+                font-family: 'Playfair Display', serif;
+                font-size: 48px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.04);
+                position: absolute;
+                top: 20px;
+                right: 24px;
+                line-height: 1;
+            }
+            .why-icon {
+                font-size: 32px;
+                margin-bottom: 20px;
+                display: block;
+            }
+            .why-card h3 {
+                font-size: 16px;
+                font-weight: 600;
+                color: #fff;
+                margin-bottom: 10px;
+                letter-spacing: 0.3px;
+            }
+            .why-card p {
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.4);
+                line-height: 1.75;
+                font-weight: 300;
+            }
+
+            /* PAKET */
+            .pkg-bg {
+                background: var(--cream2);
+            }
+            .pkg-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 24px;
+                max-width: 780px;
+                margin: 0 auto;
+            }
+            .pkg-card {
+                border-radius: 24px;
+                overflow: hidden;
+                background: #fff;
+                border: 1px solid #ede0d0;
+                transition: all 0.35s;
+                position: relative;
+            }
+            .pkg-card:hover {
+                transform: translateY(-6px);
+                box-shadow: 0 30px 60px rgba(140, 10, 22, 0.12);
+            }
+            .pkg-card.featured {
+                border: 1.5px solid var(--gold);
+                box-shadow: 0 12px 40px rgba(255, 146, 0, 0.12);
+            }
+            .pkg-ribbon {
+                position: absolute;
+                top: 20px;
+                right: -30px;
+                background: linear-gradient(135deg, var(--gold), #e07f00);
+                color: #fff;
+                font-size: 10px;
+                font-weight: 800;
+                padding: 5px 40px;
+                letter-spacing: 1px;
+                transform: rotate(45deg);
+                transform-origin: center;
+            }
+            .pkg-top {
+                padding: 36px 32px 28px;
+                border-bottom: 1px solid #f5ece0;
+                position: relative;
+            }
+            .pkg-icon-wrap {
+                width: 56px;
+                height: 56px;
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 26px;
+                margin-bottom: 20px;
+            }
+            .pkg-icon-wrap.ico-eco {
+                background: linear-gradient(135deg, #fff5e6, var(--cream));
+            }
+            .pkg-icon-wrap.ico-feat {
+                background: linear-gradient(
+                    135deg,
+                    var(--red-dark),
+                    var(--red)
+                );
+            }
+            .pkg-top h3 {
+                font-family: 'Playfair Display', serif;
+                font-size: 22px;
+                font-weight: 700;
+                color: var(--dark);
+                margin-bottom: 6px;
+            }
+            .pkg-tag {
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--gold);
+                letter-spacing: 2px;
+                text-transform: uppercase;
+                margin-bottom: 20px;
+                display: block;
+            }
+            .pkg-price-row {
+                display: flex;
+                align-items: baseline;
+                gap: 6px;
+            }
+            .pkg-amount {
+                font-family: 'Playfair Display', serif;
+                font-size: 34px;
+                font-weight: 700;
+                color: var(--red-dark);
+            }
+            .pkg-per {
+                font-size: 13px;
+                color: #aaa;
+                font-weight: 400;
+            }
+            .pkg-body {
+                padding: 28px 32px;
+            }
+            .pkg-features {
+                list-style: none;
+                margin-bottom: 28px;
+            }
+            .pkg-features li {
+                font-size: 14px;
+                color: #555;
+                padding: 10px 0;
+                border-bottom: 1px solid #f8f0e8;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-weight: 400;
+            }
+            .pkg-features li:last-child {
+                border: none;
+            }
+            .pkg-check {
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: linear-gradient(
+                    135deg,
+                    var(--red-dark),
+                    var(--red)
+                );
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            .pkg-check svg {
+                width: 10px;
+                height: 10px;
+            }
+            .pkg-btn {
+                width: 100%;
+                border: none;
+                border-radius: 14px;
+                padding: 15px;
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.3s;
+                letter-spacing: 0.3px;
+            }
+            .pkg-btn.eco {
+                background: var(--cream);
+                color: var(--red-dark);
+            }
+            .pkg-btn.eco:hover {
+                background: var(--red);
+                color: #fff;
+            }
+            .pkg-btn.feat {
+                background: linear-gradient(
+                    135deg,
+                    var(--red-dark),
+                    var(--red)
+                );
+                color: #fff;
+                box-shadow: 0 6px 20px rgba(200, 0, 18, 0.25);
+            }
+            .pkg-btn.feat:hover {
+                box-shadow: 0 10px 30px rgba(200, 0, 18, 0.35);
+                transform: translateY(-1px);
+            }
+
+            /* TESTI */
+            .testi-bg {
+                background: var(--dark);
+            }
+            .testi-bg .sec-head h2 {
+                color: #fff;
+            }
+            .testi-bg .sec-head p {
+                color: rgba(255, 255, 255, 0.4);
+            }
+            .testi-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+            }
+            .testi-card {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.07);
+                border-radius: 20px;
+                padding: 32px;
+                transition: all 0.3s;
+            }
+            .testi-card:hover {
+                background: rgba(255, 255, 255, 0.06);
+                border-color: rgba(255, 197, 120, 0.15);
+                transform: translateY(-3px);
+            }
+            .testi-quote {
+                font-family: 'Playfair Display', serif;
+                font-size: 56px;
+                color: var(--red);
+                line-height: 0.8;
+                margin-bottom: 16px;
+                opacity: 0.6;
+            }
+            .testi-text {
+                font-size: 14px;
+                color: rgba(255, 255, 255, 0.6);
+                line-height: 1.85;
+                margin-bottom: 24px;
+                font-weight: 300;
+                font-style: italic;
+            }
+            .testi-divider {
+                height: 1px;
+                background: rgba(255, 255, 255, 0.07);
+                margin-bottom: 20px;
+            }
+            .testi-author {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+            }
+            .testi-avatar {
+                width: 42px;
+                height: 42px;
+                border-radius: 50%;
+                background: linear-gradient(
+                    135deg,
+                    var(--red-dark),
+                    var(--red)
+                );
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #fff;
+                font-weight: 700;
+                font-size: 13px;
+                flex-shrink: 0;
+                font-family: 'Playfair Display', serif;
+            }
+            .testi-name {
+                font-size: 14px;
+                font-weight: 600;
+                color: #fff;
+                margin-bottom: 2px;
+            }
+            .testi-loc {
+                font-size: 11px;
+                color: rgba(255, 255, 255, 0.35);
+                letter-spacing: 0.5px;
+            }
+            .stars {
+                color: var(--gold);
+                font-size: 13px;
+                letter-spacing: 2px;
+                margin-bottom: 16px;
+            }
+
+            /* FAQ */
+            .faq-bg {
+                background: #fff;
+            }
+            .faq-wrap {
+                max-width: 720px;
+                margin: 0 auto;
+            }
+            .faq-item {
+                border-bottom: 1px solid #f0e4d8;
+                overflow: hidden;
+            }
+            .faq-q {
+                width: 100%;
+                background: transparent;
+                border: none;
+                padding: 24px 0;
+                font-size: 15px;
+                font-weight: 500;
+                color: var(--dark);
+                text-align: left;
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 20px;
+                font-family: 'Inter', sans-serif;
+                transition: color 0.2s;
+            }
+            .faq-q:hover {
+                color: var(--red);
+            }
+            .faq-toggle {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                border: 1.5px solid #e0d0c8;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                transition: all 0.3s;
+                color: var(--red);
+                font-size: 18px;
+                font-weight: 300;
+            }
+            .faq-item.open-item .faq-toggle {
+                background: var(--red);
+                color: #fff;
+                border-color: var(--red);
+                transform: rotate(45deg);
+            }
+            .faq-a {
+                font-size: 14px;
+                color: #888;
+                padding: 0 0 24px;
+                line-height: 1.85;
+                display: none;
+                font-weight: 300;
+            }
+            .faq-a.open {
+                display: block;
+            }
+
+            /* CTA */
+            .cta-sec {
+                background: linear-gradient(
+                    135deg,
+                    #0f0505 0%,
+                    var(--red-dark) 50%,
+                    #6b0010 100%
+                );
+                padding: 120px 48px;
+                text-align: center;
+                position: relative;
+                overflow: hidden;
+            }
+            .cta-pattern {
+                position: absolute;
+                inset: 0;
+                opacity: 0.05;
+                background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 5 L95 27.5 L95 72.5 L50 95 L5 72.5 L5 27.5 Z' fill='none' stroke='%23ffd700' stroke-width='1'/%3E%3C/svg%3E")
+                    repeat;
+                background-size: 80px;
+            }
+            .cta-inner {
+                position: relative;
+                z-index: 1;
+                max-width: 600px;
+                margin: 0 auto;
+            }
+            .cta-eyebrow {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 24px;
+            }
+            .cta-eyebrow-line {
+                width: 24px;
+                height: 1px;
+                background: var(--gold);
+            }
+            .cta-eyebrow-text {
+                font-size: 11px;
+                font-weight: 700;
+                color: var(--gold);
+                letter-spacing: 3px;
+                text-transform: uppercase;
+            }
+            .cta-sec h2 {
+                font-family: 'Playfair Display', serif;
+                font-size: clamp(28px, 5vw, 48px);
+                font-weight: 700;
+                color: #fff;
+                margin-bottom: 16px;
+                line-height: 1.2;
+            }
+            .cta-sec p {
+                font-size: 16px;
+                color: rgba(255, 255, 255, 0.6);
+                margin-bottom: 44px;
+                font-weight: 300;
+                line-height: 1.8;
+            }
+            .btn-cta-gold {
+                background: linear-gradient(135deg, var(--gold), #d97700);
+                color: #fff;
+                font-size: 16px;
+                font-weight: 700;
+                padding: 18px 48px;
+                border-radius: 50px;
+                border: none;
+                cursor: pointer;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+                gap: 12px;
+                transition: all 0.3s;
+                box-shadow: 0 8px 32px rgba(255, 146, 0, 0.4);
+                letter-spacing: 0.3px;
+            }
+            .btn-cta-gold:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 16px 48px rgba(255, 146, 0, 0.55);
+            }
+
+            /* WA FLOAT */
+            .wa-float {
+                position: fixed;
+                bottom: 28px;
+                right: 28px;
+                z-index: 999;
+                background: linear-gradient(135deg, #25d366, #1da851);
+                width: 62px;
+                height: 62px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-decoration: none;
+                box-shadow: 0 8px 28px rgba(37, 211, 102, 0.45);
+                animation: wpulse 2.5s infinite;
+            }
+            @keyframes wpulse {
+                0%,
+                100% {
+                    box-shadow: 0 8px 28px rgba(37, 211, 102, 0.45);
+                }
+                50% {
+                    box-shadow:
+                        0 8px 36px rgba(37, 211, 102, 0.65),
+                        0 0 0 12px rgba(37, 211, 102, 0.1);
+                }
+            }
+
+            /* FOOTER */
+            footer {
+                background: #080202;
+                padding: 36px 48px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                flex-wrap: gap;
+            }
+            .footer-logo .name {
+                font-family: 'Playfair Display', serif;
+                font-size: 18px;
+                font-weight: 700;
+                color: #fff;
+            }
+            .footer-logo .tag {
+                font-size: 9px;
+                color: var(--gold);
+                letter-spacing: 3px;
+                text-transform: uppercase;
+            }
+            footer p {
+                font-size: 12px;
+                color: rgba(255, 197, 120, 0.3);
+                letter-spacing: 0.5px;
+            }
+            @media (max-width: 640px) {
+                footer {
+                    flex-direction: column;
+                    gap: 12px;
+                    text-align: center;
+                    padding: 28px 20px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- NAV -->
+        <nav id="navbar">
+            <div class="logo-text">
+                <div class="name">ASFAR TOUR</div>
+                <div class="tag">Hajj &amp; Umrah</div>
+            </div>
+            <div class="nav-links">
+                <a href="#keunggulan">Keunggulan</a>
+                <a href="#paket">Paket</a>
+                <a href="#testimoni">Testimoni</a>
+                <a href="#faq">FAQ</a>
+                <a
+                    href="https://wa.me/628137892647?text=Halo%20Admin%20Asfar%20Tour%2C%20saya%20ingin%20info%20paket%20Umrah"
+                    target="_blank"
+                    class="nav-cta"
+                    >💬 Chat Admin</a
+                >
+            </div>
+        </nav>
+
+        <!-- HERO -->
+        <section class="hero">
+            <div class="hero-bg"></div>
+            <div class="hero-pattern"></div>
+            <div class="hero-glow"></div>
+            <div class="hero-glow2"></div>
+            <div class="hero-inner">
+                <div class="hero-left">
+                    <div class="hero-eyebrow">
+                        <div class="eyebrow-line"></div>
+                        <div class="eyebrow-text">
+                            Hajj &amp; Umrah Terpercaya
+                        </div>
+                    </div>
+                    <h1>
+                        Perjalanan Menuju<br /><span class="gold"
+                            >Tanah Suci</span
+                        ><br /><span class="stroke">Impian Anda</span>
+                    </h1>
+                    <p class="hero-desc">
+                        Bersama Asfar Tour, setiap langkah ibadah Anda kami jaga
+                        dengan sepenuh hati. Didampingi mutawif berpengalaman,
+                        fasilitas premium, dan layanan tulus.
+                    </p>
+                    <div class="hero-btns">
+                        <a
+                            href="https://wa.me/628137892647?text=Halo%20Admin%20Asfar%20Tour%2C%20saya%20ingin%20info%20paket%20Umrah"
+                            target="_blank"
+                            class="btn-gold-solid"
+                            >💬 Konsultasi Gratis</a
+                        >
+                        <a href="#paket" class="btn-ghost">Lihat Paket →</a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="hstat">
+                            <div class="hstat-num">500<span>+</span></div>
+                            <div class="hstat-label">Jamaah Diberangkatkan</div>
+                        </div>
+                        <div class="hstat">
+                            <div class="hstat-num">10<span>+</span></div>
+                            <div class="hstat-label">Tahun Pengalaman</div>
+                        </div>
+                        <div class="hstat">
+                            <div class="hstat-num">4.9<span>★</span></div>
+                            <div class="hstat-label">Rating Jamaah</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-right">
+                    <div class="hero-card">
+                        <div class="hc-row">
+                            <div class="hc-icon">🏨</div>
+                            <div>
+                                <div class="hc-title">
+                                    Hotel Premium Pilihan
+                                </div>
+                                <div class="hc-sub">
+                                    Dekat Masjidil Haram &amp; Nabawi
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hc-tags">
+                            <span class="hc-tag">Bintang 4–5</span
+                            ><span class="hc-tag">Walking distance</span>
+                        </div>
+                    </div>
+                    <div class="hero-card">
+                        <div class="hc-row">
+                            <div class="hc-icon gold-ic">✈️</div>
+                            <div>
+                                <div class="hc-title">Penerbangan Direct</div>
+                                <div class="hc-sub">
+                                    Jakarta → Madinah Non-stop
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hc-tags">
+                            <span class="hc-tag">Tanpa transit</span
+                            ><span class="hc-tag">Maskapai terpilih</span>
+                        </div>
+                    </div>
+                    <div class="hero-card">
+                        <div class="hc-row">
+                            <div class="hc-icon">📸</div>
+                            <div>
+                                <div class="hc-title">Free Dokumentasi</div>
+                                <div class="hc-sub">
+                                    Kenangan ibadah Anda abadi
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hc-tags">
+                            <span class="hc-tag">Foto &amp; Video</span
+                            ><span class="hc-tag">Profesional</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- KEUNGGULAN -->
+        <section class="sec why-bg" id="keunggulan">
+            <div class="sec-inner">
+                <div class="sec-head">
+                    <div class="sec-eyebrow">
+                        <div class="sec-eyebrow-line"></div>
+                        <div class="sec-eyebrow-text">Mengapa Asfar Tour</div>
+                    </div>
+                    <h2>Ibadah Lebih <em>Bermakna</em><br />Bersama Kami</h2>
+                    <p>
+                        Kami tidak sekadar memberangkatkan — kami memastikan
+                        setiap momen ibadah Anda berjalan sempurna.
+                    </p>
+                </div>
+                <div class="why-grid">
+                    <div class="why-card reveal reveal-delay-1">
+                        <div class="why-num">01</div>
+                        <span class="why-icon">🤝</span>
+                        <h3>Mutawif Berpengalaman</h3>
+                        <p>
+                            Didampingi pembimbing ibadah profesional yang hafal
+                            rute, doa, dan ritual di Tanah Suci.
+                        </p>
+                    </div>
+                    <div class="why-card reveal reveal-delay-2">
+                        <div class="why-num">02</div>
+                        <span class="why-icon">✈️</span>
+                        <h3>Penerbangan Direct</h3>
+                        <p>
+                            Penerbangan langsung tanpa transit untuk kenyamanan
+                            dan efisiensi waktu jamaah.
+                        </p>
+                    </div>
+                    <div class="why-card reveal reveal-delay-3">
+                        <div class="why-num">03</div>
+                        <span class="why-icon">📸</span>
+                        <h3>Free Dokumentasi</h3>
+                        <p>
+                            Setiap momen berharga ibadah Anda diabadikan secara
+                            profesional sebagai kenangan seumur hidup.
+                        </p>
+                    </div>
+                    <div class="why-card reveal reveal-delay-4">
+                        <div class="why-num">04</div>
+                        <span class="why-icon">📋</span>
+                        <h3>Legal &amp; Amanah</h3>
+                        <p>
+                            Terdaftar resmi di Kemenag RI. Kepercayaan jamaah
+                            adalah prioritas utama kami.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAKET -->
+        <section class="sec pkg-bg" id="paket">
+            <div class="sec-inner">
+                <div class="sec-head center">
+                    <div class="sec-eyebrow" style="justify-content: center">
+                        <div class="sec-eyebrow-line"></div>
+                        <div class="sec-eyebrow-text">Pilihan Paket</div>
+                        <div class="sec-eyebrow-line"></div>
+                    </div>
+                    <h2>Paket <em>Umrah</em> Kami</h2>
+                    <p>
+                        Pilih paket yang sesuai dengan kebutuhan dan budget
+                        perjalanan ibadah Anda.
+                    </p>
+                </div>
+                <div class="pkg-grid">
+                    <!-- PAKET HEMAT -->
+                    <div class="pkg-card">
+                        <div class="pkg-top">
+                            <div class="pkg-icon-wrap ico-eco">🌙</div>
+                            <span class="pkg-tag">Paket Hemat</span>
+                            <h3>Ekonomi</h3>
+                            <div class="pkg-price-row">
+                                <span class="pkg-amount">Rp 31 Jt</span
+                                ><span class="pkg-per">/orang</span>
+                            </div>
+                        </div>
+                        <div class="pkg-body">
+                            <ul class="pkg-features">
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    9 Hari
+                                </li>
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    Penerbangan Transit
+                                </li>
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    Visa Umrah
+                                </li>
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    Pembimbing Ibadah
+                                </li>
+                            </ul>
+                            <button
+                                class="pkg-btn eco"
+                                onclick="waChat('Paket Hemat')"
+                            >
+                                Tanya Paket Ini →
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- PAKET SANTUY -->
+                    <div class="pkg-card featured reveal reveal-delay-2">
+                        <div class="pkg-ribbon">UNGGULAN</div>
+                        <div class="pkg-top">
+                            <div class="pkg-icon-wrap ico-feat">🕌</div>
+                            <span class="pkg-tag" style="color: var(--gold)"
+                                >Paket Santuy</span
+                            >
+                            <h3>Reguler</h3>
+                            <div class="pkg-price-row">
+                                <span class="pkg-amount">Rp 36,5 Jt</span
+                                ><span class="pkg-per">/orang</span>
+                            </div>
+                        </div>
+                        <div class="pkg-body">
+                            <ul class="pkg-features">
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    12 Hari (6 Makkah + 4 Madinah)
+                                </li>
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    Pesawat Direct (Non-stop)
+                                </li>
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    Hotel Bintang 4
+                                </li>
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    Free Dokumentasi
+                                </li>
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    Visa Umrah
+                                </li>
+                                <li>
+                                    <div class="pkg-check">
+                                        <svg viewBox="0 0 10 10">
+                                            <polyline
+                                                points="1,5 4,8 9,2"
+                                                stroke="#fff"
+                                                stroke-width="1.5"
+                                                fill="none"
+                                                stroke-linecap="round"
+                                            />
+                                        </svg>
+                                    </div>
+                                    Pembimbing Ibadah
+                                </li>
+                            </ul>
+                            <button
+                                class="pkg-btn feat"
+                                onclick="waChat('Paket Santuy')"
+                            >
+                                Tanya Paket Ini →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TESTIMONI -->
+        <section class="sec testi-bg" id="testimoni">
+            <div class="sec-inner">
+                <div class="sec-head center">
+                    <div class="sec-eyebrow" style="justify-content: center">
+                        <div class="sec-eyebrow-line"></div>
+                        <div class="sec-eyebrow-text">Testimoni Jamaah</div>
+                        <div class="sec-eyebrow-line"></div>
+                    </div>
+                    <h2 style="color: #fff">Mereka Sudah <em>Merasakan</em></h2>
+                    <p>
+                        Kepercayaan jamaah adalah kebanggaan terbesar Asfar
+                        Tour.
+                    </p>
+                </div>
+                <div class="testi-grid">
+                    <div class="testi-card">
+                        <div class="testi-quote">"</div>
+                        <div class="stars">★★★★★</div>
+                        <p class="testi-text">
+                            Alhamdulillah, perjalanan umrah bersama Asfar Tour
+                            sangat berkesan. Mutawifnya sabar dan profesional,
+                            hotel dekat Masjidil Haram. Dokumentasinya pun bagus
+                            sekali!
+                        </p>
+                        <div class="testi-divider"></div>
+                        <div class="testi-author">
+                            <div class="testi-avatar">UH</div>
+                            <div>
+                                <div class="testi-name">Ustazah Hana R.</div>
+                                <div class="testi-loc">Jakarta Selatan</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testi-card">
+                        <div class="testi-quote">"</div>
+                        <div class="stars">★★★★★</div>
+                        <p class="testi-text">
+                            Pelayanan luar biasa! Dari proses pendaftaran hingga
+                            pulang semua diurus dengan baik. Sangat
+                            direkomendasikan untuk keluarga yang ingin beribadah
+                            dengan nyaman.
+                        </p>
+                        <div class="testi-divider"></div>
+                        <div class="testi-author">
+                            <div class="testi-avatar">BF</div>
+                            <div>
+                                <div class="testi-name">Bapak Fahmi</div>
+                                <div class="testi-loc">Bekasi</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testi-card">
+                        <div class="testi-quote">"</div>
+                        <div class="stars">★★★★★</div>
+                        <p class="testi-text">
+                            Ini umrah kedua saya bersama Asfar Tour. Tidak
+                            pindah ke lain hati karena pelayanannya selalu
+                            memuaskan, amanah, dan pembimbingnya luar biasa
+                            sabar.
+                        </p>
+                        <div class="testi-divider"></div>
+                        <div class="testi-author">
+                            <div class="testi-avatar">IS</div>
+                            <div>
+                                <div class="testi-name">Ibu Siti M.</div>
+                                <div class="testi-loc">Bandung</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="sec faq-bg" id="faq">
+            <div class="sec-inner">
+                <div class="sec-head">
+                    <div class="sec-eyebrow">
+                        <div class="sec-eyebrow-line"></div>
+                        <div class="sec-eyebrow-text">FAQ</div>
+                    </div>
+                    <h2>Pertanyaan yang <em>Sering Ditanyakan</em></h2>
+                    <p>Temukan jawaban atas pertanyaan jamaah kami.</p>
+                </div>
+                <div class="faq-wrap">
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            Apakah Asfar Tour sudah terdaftar resmi di
+                            Kemenag?<span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-a">
+                            Ya, Asfar Tour telah terdaftar dan mendapat izin
+                            resmi dari Kementerian Agama RI sebagai
+                            penyelenggara perjalanan ibadah umrah yang sah dan
+                            terpercaya.
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            Berapa lama proses pendaftaran hingga
+                            keberangkatan?<span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-a">
+                            Proses pendaftaran membutuhkan waktu minimal 1–3
+                            bulan sebelum keberangkatan, tergantung ketersediaan
+                            kursi dan pengurusan visa.
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            Apakah bisa daftar untuk pasangan suami istri?<span
+                                class="faq-toggle"
+                                >+</span
+                            >
+                        </button>
+                        <div class="faq-a">
+                            Tentu bisa! Kami menyediakan paket khusus untuk
+                            pasangan dengan kamar double. Hubungi admin kami
+                            untuk informasi lebih lanjut.
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            Apakah ada cicilan atau DP?<span class="faq-toggle"
+                                >+</span
+                            >
+                        </button>
+                        <div class="faq-a">
+                            Ya, kami menyediakan kemudahan pembayaran dengan DP
+                            mulai 5 juta rupiah dan sisanya dapat dicicil hingga
+                            sebelum keberangkatan.
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-q" onclick="toggleFaq(this)">
+                            Apa yang dimaksud free dokumentasi di Paket
+                            Santuy?<span class="faq-toggle">+</span>
+                        </button>
+                        <div class="faq-a">
+                            Kami menyediakan fotografer/videografer profesional
+                            yang akan mengabadikan momen ibadah Anda selama di
+                            Tanah Suci, tanpa biaya tambahan.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="cta-sec">
+            <div class="cta-pattern"></div>
+            <div class="cta-inner">
+                <div class="cta-eyebrow" style="justify-content: center">
+                    <div class="cta-eyebrow-line"></div>
+                    <div class="cta-eyebrow-text">Mulai Perjalanan Anda</div>
+                    <div class="cta-eyebrow-line"></div>
+                </div>
+                <h2>Siap Melangkah ke<br />Tanah Suci?</h2>
+                <p>
+                    Konsultasikan kebutuhan ibadah Anda bersama tim kami.
+                    Gratis, tanpa syarat, tanpa tekanan.
+                </p>
+                <a
+                    href="https://wa.me/628137892647?text=Halo%20Admin%20Asfar%20Tour%2C%20saya%20ingin%20konsultasi%20paket%20Umrah"
+                    target="_blank"
+                    class="btn-cta-gold"
+                    >💬 Chat Admin WhatsApp Sekarang</a
+                >
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer>
+            <div class="footer-logo">
+                <div class="name">ASFAR TOUR</div>
+                <div class="tag">Hajj &amp; Umrah</div>
+            </div>
+            <p>© 2025 Asfar Tour · Terdaftar Kemenag RI</p>
+        </footer>
+
+        <!-- WA FLOAT -->
+        <a
+            class="wa-float"
+            href="https://wa.me/628137892647?text=Halo%20Admin%20Asfar%20Tour%2C%20saya%20ingin%20info%20paket%20Umrah"
+            target="_blank"
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="white"
+            >
+                <path
+                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"
+                />
+            </svg>
+        </a>
+
+        <script>
+            function waChat(pkg) {
+                var msg =
+                    'Halo Admin Asfar Tour, saya ingin bertanya tentang ' +
+                    pkg +
+                    '. Mohon informasinya ya 🙏';
+                window.open(
+                    'https://wa.me/628137892647?text=' +
+                        encodeURIComponent(msg),
+                    '_blank',
+                );
+            }
+            function toggleFaq(btn) {
+                var item = btn.parentElement;
+                var a = btn.nextElementSibling;
+                var isOpen = item.classList.contains('open-item');
+                document.querySelectorAll('.faq-item').forEach(function (el) {
+                    el.classList.remove('open-item');
+                });
+                document.querySelectorAll('.faq-a').forEach(function (el) {
+                    el.classList.remove('open');
+                });
+                if (!isOpen) {
+                    item.classList.add('open-item');
+                    a.classList.add('open');
+                }
+            }
+            // SCROLL REVEAL
+            var revealEls = document.querySelectorAll('.reveal');
+            var observer = new IntersectionObserver(
+                function (entries) {
+                    entries.forEach(function (e) {
+                        if (e.isIntersecting) {
+                            e.target.classList.add('visible');
+                            observer.unobserve(e.target);
+                        }
+                    });
+                },
+                { threshold: 0.12 },
+            );
+            revealEls.forEach(function (el) {
+                observer.observe(el);
+            });
+
+            window.addEventListener('scroll', function () {
+                var nav = document.getElementById('navbar');
+                if (window.scrollY > 60) {
+                    nav.classList.add('scrolled');
+                } else {
+                    nav.classList.remove('scrolled');
+                }
+            });
+        </script>
+    </body>
+</html>

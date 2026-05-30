@@ -17,6 +17,7 @@ use App\Models\TravelService;
 use App\Models\User;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -144,6 +145,12 @@ class HandleInertiaRequests extends Middleware
             'publicData' => $this->getPublicData(),
             'url' => $request->url(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'error' => $request->session()->get('error'),
+                'bulk_created_count' => $request->session()->get('bulk_created_count'),
+                'bulk_skipped_hotels' => $request->session()->get('bulk_skipped_hotels'),
+            ],
         ];
     }
 
@@ -152,7 +159,7 @@ class HandleInertiaRequests extends Middleware
      */
     private function getPublicData(): array
     {
-        $this->ensureLandingHomeExists();
+        $this->ensureLandingPagesExist();
 
         return [
             'pages' => PageContent::query()
@@ -171,15 +178,22 @@ class HandleInertiaRequests extends Middleware
             'packages' => TravelPackage::query()
                 ->with([
                     'products:id,name,slug',
-                    'schedules' => fn ($query) => $query->withSum(
-                        ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
-                        'passenger_count',
-                    ),
+                    'schedules' => fn ($query) => $query
+                        ->where('is_active', true)
+                        ->whereDate('departure_date', '>=', Carbon::today())
+                        ->orderBy('departure_date')
+                        ->withSum(
+                            ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
+                            'passenger_count',
+                        ),
                     'testimonials' => fn ($query) => $query
                         ->where('is_active', true)
                         ->select(['id', 'package_id', 'rating']),
                 ])
                 ->where('is_active', true)
+                ->whereHas('schedules', fn ($query) => $query
+                    ->where('is_active', true)
+                    ->whereDate('departure_date', '>=', Carbon::today()))
                 ->orderByDesc('is_featured')
                 ->orderBy('price')
                 ->get()
@@ -276,40 +290,42 @@ class HandleInertiaRequests extends Middleware
         ];
     }
 
-    private function ensureLandingHomeExists(): void
+    private function ensureLandingPagesExist(): void
     {
-        $homePage = PageContent::query()
-            ->where('category', 'page')
-            ->where('slug', 'home')
-            ->first();
-
         $defaults = $this->landingHomeDefaultContent();
 
-        if (! $homePage) {
-            PageContent::query()->create([
-                'slug' => 'home',
-                'category' => 'page',
-                'title' => 'Home',
-                'excerpt' => 'Konten landing page utama.',
-                'content' => $defaults,
-                'is_active' => true,
-            ]);
+        foreach (['home', 'home_landing', 'home_landing_mockup'] as $slug) {
+            $homePage = PageContent::query()
+                ->where('category', 'page')
+                ->where('slug', $slug)
+                ->first();
 
-            return;
-        }
+            if (! $homePage) {
+                PageContent::query()->create([
+                    'slug' => $slug,
+                    'category' => 'page',
+                    'title' => 'Home',
+                    'excerpt' => 'Konten landing page utama.',
+                    'content' => $defaults,
+                    'is_active' => true,
+                ]);
 
-        if (! is_array($homePage->content)) {
-            $homePage->content = $defaults;
-            $homePage->save();
+                continue;
+            }
 
-            return;
-        }
+            if (! is_array($homePage->content)) {
+                $homePage->content = $defaults;
+                $homePage->save();
 
-        $merged = $this->mergeMissingRecursive($defaults, $homePage->content);
+                continue;
+            }
 
-        if ($merged !== $homePage->content) {
-            $homePage->content = $merged;
-            $homePage->save();
+            $merged = $this->mergeMissingRecursive($defaults, $homePage->content);
+
+            if ($merged !== $homePage->content) {
+                $homePage->content = $merged;
+                $homePage->save();
+            }
         }
     }
 

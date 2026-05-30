@@ -1,10 +1,7 @@
 import { useSidebar } from '@/components/ui/sidebar';
-import { type SharedData } from '@/types';
-import { usePage } from '@inertiajs/react';
 import AppLogoIcon from './app-logo-icon';
 
 export default function AppLogo() {
-    const { branding } = usePage<SharedData>().props;
     const { state } = useSidebar();
 
     return (
@@ -14,11 +11,11 @@ export default function AppLogo() {
             </div>
             {state !== 'collapsed' ? (
                 <div className="ml-2 grid flex-1 text-left text-sm">
-                    <span className="mb-0.5 truncate leading-tight font-semibold">
-                        {branding.company_name}
+                    <span className="mb-0.5 truncate leading-tight font-semibold text-white">
+                        Asfar Tour
                     </span>
-                    <span className="text-[0.68rem] tracking-[0.2em] text-muted-foreground uppercase">
-                        {branding.company_subtitle}
+                    <span className="text-[0.68rem] leading-snug text-white/75">
+                        Jelas Rencananya, Terjamin Amanahnya.
                     </span>
                 </div>
             ) : null}

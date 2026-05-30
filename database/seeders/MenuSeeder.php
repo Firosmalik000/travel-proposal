@@ -35,9 +35,9 @@ class MenuSeeder extends Seeder
                 'icon' => 'Globe',
                 'children' => [
                     [
-                        'name' => 'Landing Page',
+                        'name' => 'Website',
                         'menu_key' => 'landing_page',
-                        'path' => '/dashboard/website-management/landing',
+                        'path' => '/dashboard/website-management/website',
                         'icon' => 'FileText',
                         'order' => 1,
                         'is_active' => true,
@@ -53,20 +53,11 @@ class MenuSeeder extends Seeder
                         'children' => null,
                     ],
                     [
-                        'name' => 'Policy & Help',
+                        'name' => 'Landing HTML',
                         'menu_key' => 'portal_content',
-                        'path' => '/dashboard/website-management/portal-content',
+                        'path' => '/dashboard/website-management/landing',
                         'icon' => 'Folder',
                         'order' => 3,
-                        'is_active' => true,
-                        'children' => null,
-                    ],
-                    [
-                        'name' => 'Content',
-                        'menu_key' => 'content_management',
-                        'path' => '/dashboard/website-management/content',
-                        'icon' => 'ClipboardList',
-                        'order' => 4,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -75,7 +66,7 @@ class MenuSeeder extends Seeder
                         'menu_key' => 'gallery_management',
                         'path' => '/dashboard/website-management/gallery',
                         'icon' => 'Images',
-                        'order' => 5,
+                        'order' => 4,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -84,7 +75,7 @@ class MenuSeeder extends Seeder
                         'menu_key' => 'seo_settings',
                         'path' => '/dashboard/website-management/seo',
                         'icon' => 'Search',
-                        'order' => 6,
+                        'order' => 5,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -93,7 +84,7 @@ class MenuSeeder extends Seeder
                         'menu_key' => 'branding',
                         'path' => '/dashboard/website-management/branding',
                         'icon' => 'Palette',
-                        'order' => 7,
+                        'order' => 6,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -180,12 +171,86 @@ class MenuSeeder extends Seeder
                         'is_active' => true,
                         'children' => null,
                     ],
+                    [
+                        'name' => 'Hotel Assignment',
+                        'menu_key' => 'booking_hotel_assignment',
+                        'path' => '/dashboard/booking-management/hotel-assignment',
+                        'icon' => 'Building2',
+                        'order' => 4,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
                 ],
                 'order' => 4,
                 'is_active' => true,
             ],
 
             // Financial Management - Has children (level 1)
+            [
+                'name' => 'Master Data',
+                'menu_key' => 'master_data',
+                'path' => '/dashboard/master-data',
+                'icon' => 'Database',
+                'children' => [
+                    [
+                        'name' => 'Inventory',
+                        'menu_key' => 'inventory',
+                        'path' => '/dashboard/master-data/inventory',
+                        'icon' => 'Archive',
+                        'order' => 1,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Hotel',
+                        'menu_key' => 'hotel',
+                        'path' => '/dashboard/master-data/hotels',
+                        'icon' => 'Building2',
+                        'order' => 2,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Master Negara',
+                        'menu_key' => 'hotel_country',
+                        'path' => '/dashboard/master-data/hotel-countries',
+                        'icon' => 'Flag',
+                        'order' => 3,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Master Kota',
+                        'menu_key' => 'hotel_city',
+                        'path' => '/dashboard/master-data/hotel-cities',
+                        'icon' => 'MapPinned',
+                        'order' => 4,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Master Room Type',
+                        'menu_key' => 'hotel_room_type',
+                        'path' => '/dashboard/master-data/hotel-room-types',
+                        'icon' => 'BedDouble',
+                        'order' => 5,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Master Currency',
+                        'menu_key' => 'master_currency',
+                        'path' => '/dashboard/master-data/currencies',
+                        'icon' => 'Coins',
+                        'order' => 6,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                ],
+                'order' => 5,
+                'is_active' => true,
+            ],
+
             [
                 'name' => 'Financial Management',
                 'menu_key' => 'financial_management',
@@ -201,8 +266,46 @@ class MenuSeeder extends Seeder
                         'is_active' => true,
                         'children' => null,
                     ],
+                    [
+                        'name' => 'Cashflow',
+                        'menu_key' => 'cashflow',
+                        'path' => '/dashboard/financial-management/cashflow',
+                        'icon' => 'Wallet',
+                        'order' => 2,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'HPP Package',
+                        'menu_key' => 'hpp_package',
+                        'path' => '/dashboard/financial-management/hpp-package',
+                        'icon' => 'Calculator',
+                        'order' => 3,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
                 ],
-                'order' => 6,
+                'order' => 7,
+                'is_active' => true,
+            ],
+
+            [
+                'name' => 'Activity',
+                'menu_key' => 'activity_management',
+                'path' => '/dashboard/activity',
+                'icon' => 'ClipboardList',
+                'children' => [
+                    [
+                        'name' => 'Activity Log',
+                        'menu_key' => 'activity_log',
+                        'path' => '/dashboard/activity/logs',
+                        'icon' => 'History',
+                        'order' => 1,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                ],
+                'order' => 8,
                 'is_active' => true,
             ],
 
@@ -241,7 +344,7 @@ class MenuSeeder extends Seeder
                         'children' => null,
                     ],
                 ],
-                'order' => 5,
+                'order' => 9,
                 'is_active' => true,
             ],
         ];
@@ -254,8 +357,10 @@ class MenuSeeder extends Seeder
         $this->command->info('  - Dashboard: Direct navigation');
         $this->command->info('  - Website Management: landing, schedules, SEO, branding');
         $this->command->info('  - Product Management: 4 submenus (product category, product, package, activity)');
-        $this->command->info('  - Booking: 3 submenus (register, listing, custom requests)');
-        $this->command->info('  - Financial Management: financial report');
+        $this->command->info('  - Booking: 4 submenus (register, listing, custom requests, hotel assignment)');
+        $this->command->info('  - Master Data: inventory');
+        $this->command->info('  - Financial Management: financial report, cashflow, hpp package');
+        $this->command->info('  - Activity: activity log');
         $this->command->info('  - Administrator: 3 submenus (menu management, user management, role management)');
     }
 }

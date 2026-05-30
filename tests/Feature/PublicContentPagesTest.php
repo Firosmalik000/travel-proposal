@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\DepartureSchedule;
 use App\Models\PageContent;
 use App\Models\TravelPackage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,7 +15,7 @@ class PublicContentPagesTest extends TestCase
 
     public function test_package_page_receives_active_public_packages(): void
     {
-        TravelPackage::query()->create([
+        $package = TravelPackage::query()->create([
             'code' => 'ASF-REG-10',
             'slug' => 'umroh-reguler-10-hari',
             'name' => ['id' => 'Umroh Reguler 10 Hari', 'en' => 'Regular Umrah 10 Days'],
@@ -28,6 +29,17 @@ class PublicContentPagesTest extends TestCase
                 'airline' => ['id' => 'Saudia', 'en' => 'Saudia'],
                 'hotel' => ['id' => 'Setara bintang 4', 'en' => 'Equivalent to 4-star hotel'],
             ],
+            'is_active' => true,
+        ]);
+
+        DepartureSchedule::query()->create([
+            'package_id' => $package->id,
+            'departure_date' => now()->addDays(10)->toDateString(),
+            'return_date' => now()->addDays(19)->toDateString(),
+            'departure_city' => 'Jakarta',
+            'seats_total' => 40,
+            'seats_available' => 25,
+            'status' => 'open',
             'is_active' => true,
         ]);
 
@@ -64,7 +76,7 @@ class PublicContentPagesTest extends TestCase
 
     public function test_policy_pages_receive_portal_content_from_database(): void
     {
-        PageContent::query()->create([
+        PageContent::query()->updateOrCreate(['slug' => 'terms-conditions'], [
             'slug' => 'terms-conditions',
             'category' => 'page',
             'title' => ['id' => 'Syarat & Ketentuan', 'en' => 'Terms & Conditions'],
@@ -78,7 +90,7 @@ class PublicContentPagesTest extends TestCase
             'is_active' => true,
         ]);
 
-        PageContent::query()->create([
+        PageContent::query()->updateOrCreate(['slug' => 'privacy-policy'], [
             'slug' => 'privacy-policy',
             'category' => 'page',
             'title' => ['id' => 'Kebijakan Privasi', 'en' => 'Privacy Policy'],

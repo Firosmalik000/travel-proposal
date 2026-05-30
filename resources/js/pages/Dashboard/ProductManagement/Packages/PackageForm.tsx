@@ -208,6 +208,14 @@ function buildPackageCodePreview(value: string, durationDays: number): string {
     return `ASF-${normalized || 'PACKAGE'}${durationDays > 0 ? `-${durationDays}` : ''}`;
 }
 
+function generatePackageSlug(value: string): string {
+    return value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
 function contentField(content: Record<string, unknown>, path: string): string {
     const parts = path.split('.');
     let currentValue: unknown = content;
@@ -273,11 +281,9 @@ function toLines(value: unknown): string {
 function SectionHeader({
     icon: Icon,
     title,
-    desc,
 }: {
     icon: React.ElementType;
     title: string;
-    desc?: string;
 }) {
     return (
         <div className="mb-4 flex items-start gap-3 rounded-xl bg-muted/40 px-4 py-3">
@@ -286,9 +292,6 @@ function SectionHeader({
             </div>
             <div>
                 <p className="text-sm font-semibold">{title}</p>
-                {desc ? (
-                    <p className="text-xs text-muted-foreground">{desc}</p>
-                ) : null}
             </div>
         </div>
     );
@@ -300,12 +303,10 @@ function FieldGroup({ children }: { children: React.ReactNode }) {
 
 function Field({
     label,
-    hint,
     error,
     children,
 }: {
     label: string;
-    hint?: string;
     error?: string;
     children: React.ReactNode;
 }) {
@@ -315,9 +316,6 @@ function Field({
                 {label}
             </Label>
             {children}
-            {hint && !error ? (
-                <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-            ) : null}
             {error ? (
                 <p className="mt-1 text-xs font-medium text-destructive">
                     {error}
@@ -526,7 +524,10 @@ export function PackageForm({
 
         const formData = new FormData();
         formData.append('_method', 'POST');
-        formData.append('slug', form.data.slug);
+        const resolvedSlug = isEdit
+            ? form.data.slug
+            : generatePackageSlug(form.data['name.id'] || form.data['name.en']);
+        formData.append('slug', resolvedSlug);
         formData.append('name[id]', form.data['name.id']);
         formData.append('name[en]', form.data['name.en']);
         formData.append('package_type', form.data.package_type);
@@ -708,13 +709,9 @@ export function PackageForm({
                 </TabsList>
 
                 <TabsContent value="info" className="mt-4">
-                    <SectionHeader
-                        icon={Info}
-                        title="Informasi Dasar"
-                        desc="Identitas dan detail utama package."
-                    />
+                    <SectionHeader icon={Info} title="Informasi Dasar" />
                     <FieldGroup>
-                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                        <div className="grid gap-3">
                             <div className="rounded-2xl border border-border bg-muted/20 p-4">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="space-y-1">
@@ -729,30 +726,9 @@ export function PackageForm({
                                         Auto
                                     </span>
                                 </div>
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                    Code package dibuat otomatis dari nama
-                                    package dan durasi. Jika ada yang sama,
-                                    sistem akan menambahkan suffix.
-                                </p>
                             </div>
-                            <Field
-                                label="Slug *"
-                                error={errors.slug}
-                                hint="URL-friendly, huruf kecil dan tanda hubung"
-                            >
-                                <Input
-                                    value={form.data.slug}
-                                    onChange={(event) =>
-                                        form.setData('slug', event.target.value)
-                                    }
-                                    placeholder="umroh-reguler-10-hari"
-                                />
-                            </Field>
                         </div>
-                        <Field
-                            label="Nama Package (Indonesia) *"
-                            error={errors['name.id']}
-                        >
+                        <Field label="Nama Package *" error={errors['name.id']}>
                             <Input
                                 value={form.data['name.id']}
                                 onChange={(event) =>
@@ -796,7 +772,6 @@ export function PackageForm({
                             <Field
                                 label="Kota Keberangkatan *"
                                 error={errors.departure_city}
-                                hint="Ketik nama kota lalu pilih dari daftar saran"
                             >
                                 <div className="space-y-2">
                                     <Input
@@ -843,7 +818,7 @@ export function PackageForm({
                             </Field>
                         </div>
 
-                        <Field label="Ringkasan (Indonesia)">
+                        <Field label="Ringkasan">
                             <Textarea
                                 rows={2}
                                 value={form.data['summary.id']}
@@ -888,21 +863,13 @@ export function PackageForm({
                 </TabsContent>
 
                 <TabsContent value="gallery" className="mt-4">
-                    <SectionHeader
-                        icon={Camera}
-                        title="Gallery Package"
-                        desc="Pisahkan upload cover dan gallery ke tab khusus agar form utama lebih rapi."
-                    />
+                    <SectionHeader icon={Camera} title="Gallery Package" />
                     <FieldGroup>
                         <div className="rounded-2xl border border-border bg-card p-4">
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <p className="text-sm font-semibold text-foreground">
                                         Foto-foto Package
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Foto pertama menjadi cover utama.
-                                        Sisanya akan masuk ke gallery package.
                                     </p>
                                 </div>
                                 <Button
@@ -1009,18 +976,8 @@ export function PackageForm({
                                     <p className="text-sm font-medium text-foreground">
                                         Belum ada foto package
                                     </p>
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        Upload cover dan isi gallery langsung
-                                        dari tab ini.
-                                    </p>
                                 </div>
                             ) : null}
-
-                            <p className="mt-3 text-[11px] text-muted-foreground">
-                                Anda bisa mengunggah beberapa foto sekaligus.
-                                Urutan foto menentukan cover dan susunan
-                                gallery.
-                            </p>
 
                             {errors.images ? (
                                 <p className="mt-1 text-xs text-destructive">
@@ -1032,11 +989,7 @@ export function PackageForm({
                 </TabsContent>
 
                 <TabsContent value="harga" className="mt-4">
-                    <SectionHeader
-                        icon={Tag}
-                        title="Harga dan Promosi"
-                        desc="Input harga asli dan diskon. Harga jual akan dihitung otomatis."
-                    />
+                    <SectionHeader icon={Tag} title="Harga dan Promosi" />
                     <FieldGroup>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                             <Field
@@ -1074,10 +1027,7 @@ export function PackageForm({
                                     />
                                 </div>
                             </Field>
-                            <Field
-                                label="Diskon (%)"
-                                hint="Kosongkan atau isi 0 jika tidak ada diskon"
-                            >
+                            <Field label="Diskon (%)">
                                 <div className="relative">
                                     <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
                                         %
@@ -1151,10 +1101,7 @@ export function PackageForm({
                             </div>
                         ) : null}
 
-                        <Field
-                            label="Label Diskon"
-                            hint='Kosongkan untuk otomatis tampil "HEMAT X%"'
-                        >
+                        <Field label="Label Diskon">
                             <Input
                                 value={form.data.discount_label}
                                 onChange={(event) =>
@@ -1192,23 +1139,13 @@ export function PackageForm({
                 </TabsContent>
 
                 <TabsContent value="konten" className="mt-4">
-                    <SectionHeader
-                        icon={FileText}
-                        title="Konten Package"
-                        desc="Kelola highlight utama, fasilitas, dan kebijakan package."
-                    />
+                    <SectionHeader icon={FileText} title="Konten Package" />
                     <FieldGroup>
                         <div className="rounded-2xl border border-border bg-card p-4">
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
                                     <p className="text-sm font-semibold text-foreground">
                                         Highlight Package
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Struktur tampilan detail package adalah:
-                                        Kota Berangkat, Durasi, lalu highlight
-                                        tambahan seperti Maskapai, Hotel, Badge,
-                                        dan Periode.
                                     </p>
                                 </div>
                                 <Button
@@ -1225,12 +1162,6 @@ export function PackageForm({
                             <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
                                 <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                                     Preset cepat
-                                </p>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Fokus isi highlight tambahan seperti
-                                    Maskapai, Hotel, Badge, dan Periode. Kota
-                                    Berangkat dan Durasi tetap otomatis dari
-                                    data package.
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2">
                                     {packageHighlightPresets.map((preset) => (
@@ -1285,13 +1216,6 @@ export function PackageForm({
                                                                 {highlight.label
                                                                     .id ||
                                                                     'Highlight baru'}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                Pilih icon lalu
-                                                                isi label dan
-                                                                value yang ingin
-                                                                ditonjolkan di
-                                                                detail package.
                                                             </p>
                                                         </div>
                                                     </div>
@@ -1399,20 +1323,11 @@ export function PackageForm({
                                         <p className="text-sm font-medium text-foreground">
                                             Belum ada highlight package.
                                         </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            Klik "Tambah Highlight" untuk
-                                            membuat item seperti maskapai,
-                                            hotel, badge promo, atau periode
-                                            keberangkatan.
-                                        </p>
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <Field
-                            label="Termasuk dalam Paket"
-                            hint="Satu item per baris"
-                        >
+                        <Field label="Termasuk dalam Paket">
                             <Textarea
                                 rows={5}
                                 value={toLines(
@@ -1444,10 +1359,7 @@ export function PackageForm({
                                 }
                             />
                         </Field>
-                        <Field
-                            label="Tidak Termasuk"
-                            hint="Satu item per baris"
-                        >
+                        <Field label="Tidak Termasuk">
                             <Textarea
                                 rows={3}
                                 value={toLines(
@@ -1505,7 +1417,6 @@ export function PackageForm({
                     <SectionHeader
                         icon={BookOpenText}
                         title="Itinerary Perjalanan"
-                        desc="Jumlah hari otomatis mengikuti durasi paket. Setiap hari bisa memilih satu atau beberapa activity dari master activity."
                     />
 
                     <div className="rounded-2xl border border-border bg-muted/20 p-4">
@@ -1513,11 +1424,6 @@ export function PackageForm({
                             <div>
                                 <p className="text-sm font-semibold text-foreground">
                                     Ringkasan itinerary
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    Saat durasi berubah, daftar hari akan
-                                    menyesuaikan otomatis tanpa menghapus isi
-                                    hari yang masih relevan.
                                 </p>
                             </div>
                             <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
@@ -1562,11 +1468,6 @@ export function PackageForm({
                                                         Hari{' '}
                                                         {itinerary.day_number}
                                                     </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Pilih satu atau beberapa
-                                                        activity master untuk
-                                                        agenda hari ini.
-                                                    </p>
                                                 </div>
                                                 <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                                                     Urutan tampil #
@@ -1578,12 +1479,6 @@ export function PackageForm({
                                                 <div>
                                                     <p className="text-sm font-semibold text-foreground">
                                                         Activity itinerary
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Sumber itinerary diambil
-                                                        dari master Activity,
-                                                        bukan dari produk
-                                                        package.
                                                     </p>
                                                 </div>
 
@@ -1651,10 +1546,7 @@ export function PackageForm({
 
                                                             return (
                                                                 <>
-                                                                    <Field
-                                                                        label="Pilih Activity"
-                                                                        hint="Filter ada di dalam dropdown select. Pilih satu per satu untuk menambah beberapa activity."
-                                                                    >
+                                                                    <Field label="Pilih Activity">
                                                                         <Select
                                                                             key={`activity-select-${itinerary.day_number}-${itinerary.activity_ids.join('-')}`}
                                                                             onOpenChange={(
@@ -1917,11 +1809,7 @@ export function PackageForm({
                 </TabsContent>
 
                 <TabsContent value="produk" className="mt-4">
-                    <SectionHeader
-                        icon={Layers}
-                        title="Produk dalam Package"
-                        desc="Pilih komponen layanan yang termasuk dalam paket ini."
-                    />
+                    <SectionHeader icon={Layers} title="Produk dalam Package" />
                     <ProductSelector
                         options={productOptions}
                         selected={form.data.product_ids}

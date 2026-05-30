@@ -33,6 +33,7 @@ import {
     Folder,
     FolderTree,
     HandCoins,
+    History,
     Home,
     LayoutGrid,
     LogOut,
@@ -69,6 +70,8 @@ interface MenuItem {
     children?: MenuItem[] | null;
 }
 
+const SIDEBAR_MENU_CACHE_KEY = 'travel-proposal:sidebar-menus:v1';
+
 function canonicalAdminPath(path: string | null | undefined): string {
     if (!path) {
         return '';
@@ -95,6 +98,7 @@ const iconMap: Record<string, LucideIcon> = {
     Folder,
     FolderTree,
     HandCoins,
+    History,
     Home,
     LayoutGrid,
     LogOut,
@@ -113,21 +117,55 @@ const iconMap: Record<string, LucideIcon> = {
 };
 
 export function DynamicSidebar() {
-    const [menus, setMenus] = useState<MenuItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [menus, setMenus] = useState<MenuItem[]>(() => {
+        if (typeof window === 'undefined') {
+            return [];
+        }
+
+        try {
+            const cached = window.sessionStorage.getItem(
+                SIDEBAR_MENU_CACHE_KEY,
+            );
+            if (!cached) {
+                return [];
+            }
+
+            const parsed = JSON.parse(cached) as MenuItem[];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    });
+    const [loading, setLoading] = useState(menus.length === 0);
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
-        fetch('/api/user-menus')
+        const controller = new AbortController();
+
+        fetch('/api/user-menus', { signal: controller.signal })
             .then((res) => res.json())
             .then((data) => {
                 setMenus(data);
+                try {
+                    window.sessionStorage.setItem(
+                        SIDEBAR_MENU_CACHE_KEY,
+                        JSON.stringify(data),
+                    );
+                } catch {
+                    // ignore storage failures
+                }
                 setLoading(false);
             })
             .catch((error) => {
-                console.error('Error fetching menus:', error);
+                if (!controller.signal.aborted) {
+                    console.error('Error fetching menus:', error);
+                }
                 setLoading(false);
             });
+
+        return () => {
+            controller.abort();
+        };
     }, []);
 
     const filteredMenus = menus.filter((menu) => {
@@ -144,15 +182,15 @@ export function DynamicSidebar() {
         <Sidebar
             collapsible="icon"
             variant="inset"
-            className="border-r border-sidebar-border/50 bg-sidebar text-sidebar-foreground shadow-xl [&_[data-sidebar=sidebar]]:bg-sidebar"
+            className="border-r border-black/15 bg-[color:var(--secondary)] text-white shadow-[0_20px_40px_-26px_rgba(0,0,0,0.55)] [&_[data-sidebar=sidebar]]:bg-[color:var(--secondary)]"
         >
-            <SidebarHeader className="border-b border-sidebar-border/60 bg-[var(--brand-surface)]/10 p-4">
+            <SidebarHeader className="border-b border-white/15 bg-transparent px-3 pt-3 pb-3">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             size="lg"
                             asChild
-                            className="h-12 rounded-xl border border-sidebar-border/40 bg-white/80 shadow-sm transition-all hover:bg-white hover:shadow-md dark:bg-black/20"
+                            className="h-12 rounded-2xl border border-transparent bg-transparent shadow-none transition-colors hover:bg-transparent"
                         >
                             <Link href={dashboard()} prefetch>
                                 <AppLogo />
@@ -161,20 +199,20 @@ export function DynamicSidebar() {
                     </SidebarMenuItem>
                 </SidebarMenu>
 
-                <div className="mt-4 group-data-[collapsible=icon]:hidden">
+                <div className="mt-2 group-data-[collapsible=icon]:hidden">
                     <div className="relative">
-                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground/60" />
+                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-white/65" />
                         <Input
                             placeholder="Cari menu..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-10 border-sidebar-border/60 bg-white/40 pl-9 text-xs shadow-none ring-offset-background placeholder:text-muted-foreground/50 focus-visible:ring-1 focus-visible:ring-primary/30 dark:bg-black/20"
+                            className="h-10 rounded-xl border-white/25 bg-white pl-9 text-xs text-[#475569] shadow-none ring-offset-background placeholder:text-[#94a3b8] focus-visible:ring-1 focus-visible:ring-white/45 dark:border-white/20 dark:bg-white/12 dark:text-white dark:placeholder:text-white/55"
                         />
                     </div>
                 </div>
             </SidebarHeader>
 
-            <SidebarContent className="px-2 py-4">
+            <SidebarContent className="px-2 py-3">
                 {loading ? (
                     <div className="space-y-2 px-2">
                         {[1, 2, 3, 4].map((i) => (
@@ -185,8 +223,8 @@ export function DynamicSidebar() {
                         ))}
                     </div>
                 ) : (
-                    <SidebarGroup className="p-0">
-                        <SidebarGroupLabel className="px-4 text-[0.65rem] font-bold tracking-widest text-muted-foreground/50 uppercase">
+                    <SidebarGroup className="rounded-2xl border border-white/15 bg-white/8 p-2 backdrop-blur-sm">
+                        <SidebarGroupLabel className="px-3 text-[0.62rem] font-medium tracking-[0.14em] text-white/55 uppercase">
                             Menu Navigasi
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
@@ -214,7 +252,7 @@ export function DynamicSidebar() {
                 )}
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-sidebar-border/40 bg-sidebar/50 p-3 backdrop-blur">
+            <SidebarFooter className="border-t border-white/15 bg-transparent p-2.5">
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
@@ -234,10 +272,10 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
             false);
 
     const buttonClasses = cn(
-        'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+        'group relative flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2 text-sm font-medium tracking-[0.01em] transition-colors',
         isActive
-            ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20'
-            : 'text-sidebar-foreground/90 hover:bg-sidebar-accent hover:text-sidebar-foreground',
+            ? 'border-white/35 bg-white/18 text-white shadow-[0_10px_22px_-16px_rgba(0,0,0,0.35)]'
+            : 'text-white/90 hover:border-white/25 hover:bg-white/12 hover:text-white',
     );
 
     if (item.children && item.children.length > 0) {
@@ -259,8 +297,8 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
                                 className={cn(
                                     'size-4 shrink-0',
                                     isActive
-                                        ? 'text-primary-foreground'
-                                        : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                                        ? 'text-white'
+                                        : 'text-white/70 group-hover:text-white',
                                 )}
                             />
                             <span className="flex-1 truncate">{item.name}</span>
@@ -268,7 +306,7 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
                         </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-0 py-1">
-                        <SidebarMenuSub className="mr-0 ml-4 border-l border-sidebar-border/60 pr-0 pl-2">
+                        <SidebarMenuSub className="mr-0 ml-4 border-l border-sidebar-border/70 pr-0 pl-2">
                             {item.children.map((child) => (
                                 <SubMenuItem
                                     key={child.menu_key}
@@ -290,14 +328,14 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
                 isActive={isActive}
                 className={buttonClasses}
             >
-                <Link href={itemHref}>
+                <Link href={itemHref} prefetch>
                     <div className="flex size-5 items-center justify-center transition-transform group-hover:scale-110">
                         <IconComponent
                             className={cn(
                                 'size-full shrink-0',
                                 isActive
-                                    ? 'text-primary'
-                                    : 'text-slate-400 group-hover:text-primary',
+                                    ? 'text-white'
+                                    : 'text-white/70 group-hover:text-white',
                             )}
                         />
                     </div>
@@ -350,10 +388,10 @@ function SubMenuItem({ item }: { item: MenuItem }) {
             false);
 
     const subButtonClasses = cn(
-        'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-[0.825rem] font-medium transition-colors',
+        'group relative flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-1.5 text-[0.82rem] font-medium transition-colors',
         isActive
-            ? 'bg-primary/10 text-primary'
-            : 'text-sidebar-foreground/85 hover:bg-sidebar-accent hover:text-sidebar-foreground',
+            ? 'border-white/35 bg-white/18 text-white'
+            : 'text-white/85 hover:border-white/20 hover:bg-white/10 hover:text-white',
     );
 
     if (item.children && item.children.length > 0) {
@@ -374,8 +412,8 @@ function SubMenuItem({ item }: { item: MenuItem }) {
                                 className={cn(
                                     'size-3.5 shrink-0',
                                     isActive
-                                        ? 'text-primary'
-                                        : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                                        ? 'text-white'
+                                        : 'text-white/70 group-hover:text-white',
                                 )}
                             />
                             <span className="flex-1 truncate">{item.name}</span>
@@ -404,13 +442,13 @@ function SubMenuItem({ item }: { item: MenuItem }) {
                 isActive={isActive}
                 className={subButtonClasses}
             >
-                <Link href={itemHref}>
+                <Link href={itemHref} prefetch>
                     <IconComponent
                         className={cn(
                             'size-3.5 shrink-0',
                             isActive
-                                ? 'text-primary'
-                                : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                                ? 'text-white'
+                                : 'text-white/70 group-hover:text-white',
                         )}
                     />
                     <span className="flex-1 truncate">{item.name}</span>

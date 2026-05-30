@@ -239,7 +239,6 @@ export default function ContentIndex({
     menuKey?: string;
     resources: ResourceSection[];
 }) {
-    const { can } = usePermission(menuKey);
     const isPolicyHelp = heading === 'Policy & Help';
     const defaultTab =
         pages.length > 0 ? 'pages' : (resources[0]?.key ?? 'resource');
@@ -249,8 +248,8 @@ export default function ContentIndex({
 
             {/* DEBUG BANNER: Jika anda melihat ini, file Index.tsx sudah terupdate */}
             <div className="hidden">
-                Sistem Terupdate: {new Date().toLocaleTimeString()} â€¢ Cek
-                Filter Di Bawah
+                Sistem Terupdate: {new Date().toLocaleTimeString()} - Cek Filter
+                Di Bawah
             </div>
 
             <div className="space-y-6 p-4 md:p-6">
@@ -355,9 +354,6 @@ function ResourceSectionPanel({
 }) {
     const { can } = usePermission(menuKey);
     const canCreate = can('create');
-    const canEdit = can('edit');
-    const canDelete = can('delete');
-    const showActions = canEdit || canDelete;
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<ResourceItem | null>(null);
     const [activeFilters, setActiveFilters] = useState<Record<string, string>>(
@@ -683,7 +679,7 @@ function ResourceSectionPanel({
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-border text-sm">
-                                        <thead className="bg-muted/40 text-left text-xs tracking-wide text-muted-foreground uppercase">
+                                        <thead className="bg-muted/35 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                                             <tr>
                                                 <th className="px-4 py-3">
                                                     Data
@@ -695,14 +691,17 @@ function ResourceSectionPanel({
                                                     Status
                                                 </th>
                                                 <th className="px-4 py-3 text-right">
-                                                    Action
+                                                    Aksi
                                                 </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
                                             {searchedRows.length > 0 ? (
                                                 searchedRows.map((row) => (
-                                                    <tr key={row.id}>
+                                                    <tr
+                                                        key={row.id}
+                                                        className="transition-colors hover:bg-muted/20"
+                                                    >
                                                         <td className="px-4 py-4">
                                                             <div className="space-y-1">
                                                                 <p className="font-medium text-foreground">
@@ -731,52 +730,38 @@ function ResourceSectionPanel({
                                                                     : 'Inactive'}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-4">
-                                                            <div className="flex justify-end">
-                                                                <Select
-                                                                    value=""
-                                                                    onValueChange={(
-                                                                        value,
-                                                                    ) => {
-                                                                        if (
-                                                                            value ===
-                                                                            'edit'
-                                                                        ) {
-                                                                            setEditingItem(
-                                                                                row.item,
-                                                                            );
-                                                                            return;
-                                                                        }
-
-                                                                        if (
-                                                                            value ===
-                                                                            'delete'
-                                                                        ) {
-                                                                            destroyResourceItem(
-                                                                                resource.key,
-                                                                                resource.label,
-                                                                                row.id,
-                                                                            );
-                                                                        }
-                                                                    }}
+                                                        <td className="px-4 py-4 text-right">
+                                                            <div className="inline-flex items-center gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-9 rounded-xl"
+                                                                    onClick={() =>
+                                                                        setEditingItem(
+                                                                            row.item,
+                                                                        )
+                                                                    }
                                                                 >
-                                                                    <SelectTrigger className="h-9 w-[172px]">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <SquarePen className="h-4 w-4" />
-                                                                            <SelectValue placeholder="Pilih action" />
-                                                                        </div>
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        <SelectItem value="edit">
-                                                                            Edit
-                                                                            data
-                                                                        </SelectItem>
-                                                                        <SelectItem value="delete">
-                                                                            Hapus
-                                                                            data
-                                                                        </SelectItem>
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                    <SquarePen className="mr-2 h-3.5 w-3.5" />
+                                                                    Edit
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="destructive"
+                                                                    size="sm"
+                                                                    className="h-9 rounded-xl"
+                                                                    onClick={() =>
+                                                                        destroyResourceItem(
+                                                                            resource.key,
+                                                                            resource.label,
+                                                                            row.id,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Trash2 className="mr-2 h-3.5 w-3.5" />
+                                                                    Hapus
+                                                                </Button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -869,6 +854,7 @@ function ResourceSectionPanel({
                                     }
                                     processing={form.processing}
                                     onSubmit={handleCreate}
+                                    autoGenerateIdentifiers
                                     compact={compact}
                                 />
                             </div>
@@ -891,6 +877,7 @@ function ResourceSectionPanel({
                                 }
                                 processing={form.processing}
                                 onSubmit={handleCreate}
+                                autoGenerateIdentifiers
                                 compact={compact}
                             />
                         </div>
@@ -1016,31 +1003,21 @@ function StaticPagesPanel({
                 id: 'actions',
                 header: () => (
                     <div className="text-right text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                        Action
+                        Aksi
                     </div>
                 ),
                 cell: ({ row }) => (
                     <div className="flex justify-end">
-                        <Select
-                            value=""
-                            onValueChange={(value) => {
-                                if (value === 'edit') {
-                                    setEditingPage(row.original.item);
-                                }
-                            }}
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 rounded-xl"
+                            onClick={() => setEditingPage(row.original.item)}
                         >
-                            <SelectTrigger className="h-9 w-[172px]">
-                                <div className="flex items-center gap-2">
-                                    <SquarePen className="h-4 w-4" />
-                                    <SelectValue placeholder="Pilih action" />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="edit">
-                                    Edit halaman
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                            <SquarePen className="mr-2 h-3.5 w-3.5" />
+                            Edit
+                        </Button>
                     </div>
                 ),
             });
@@ -1454,6 +1431,7 @@ function EditResourceDialog({
                                 }
                                 processing={form.processing}
                                 onSubmit={handleUpdate}
+                                autoGenerateIdentifiers={false}
                                 compact={compact}
                             />
                         </div>
@@ -1481,6 +1459,7 @@ function EditResourceDialog({
                                 }
                                 processing={form.processing}
                                 onSubmit={handleUpdate}
+                                autoGenerateIdentifiers={false}
                                 compact={compact}
                             />
                         </div>
@@ -1501,6 +1480,7 @@ function ResourceEditorForm({
     setImages,
     processing,
     onSubmit,
+    autoGenerateIdentifiers = false,
     compact = false,
 }: any) {
     const locale = 'id' as const;
@@ -1510,12 +1490,36 @@ function ResourceEditorForm({
     );
     const onChange = useCallback(
         (path: string, val: any) => {
-            setData((prev: any) => ({
-                ...prev,
-                payload: updateNestedValue(prev.payload, path, val),
-            }));
+            setData((prev: any) => {
+                const nextPayload = updateNestedValue(prev.payload, path, val);
+
+                if (
+                    autoGenerateIdentifiers &&
+                    path === 'name' &&
+                    (resourceKey === 'products' || resourceKey === 'packages')
+                ) {
+                    const sourceName =
+                        typeof val === 'string'
+                            ? val
+                            : (val?.id ?? val?.en ?? '');
+                    const normalized = String(sourceName)
+                        .trim()
+                        .toUpperCase()
+                        .replace(/[^A-Z0-9]+/g, '-')
+                        .replace(/^-+|-+$/g, '')
+                        .slice(0, 40);
+                    const prefix = resourceKey === 'products' ? 'PRD' : 'ASF';
+
+                    nextPayload.code = `${prefix}-${normalized || 'ITEM'}`;
+                }
+
+                return {
+                    ...prev,
+                    payload: nextPayload,
+                };
+            });
         },
-        [setData],
+        [autoGenerateIdentifiers, resourceKey, setData],
     );
 
     return compact ? (
@@ -1555,6 +1559,7 @@ function ResourceEditorForm({
                             setImages={setImages}
                             onChange={onChange}
                             compact={compact}
+                            autoGenerateIdentifiers={autoGenerateIdentifiers}
                         />
                     ))}
                 </div>
@@ -1580,6 +1585,7 @@ function ResourceEditorForm({
                         setImages={setImages}
                         onChange={onChange}
                         compact={compact}
+                        autoGenerateIdentifiers={autoGenerateIdentifiers}
                     />
                 ))}
             </div>
@@ -1602,6 +1608,7 @@ const MemoizedFieldRenderer = memo(
         p.locale === n.locale &&
         p.resourceMeta === n.resourceMeta &&
         p.images === n.images &&
+        p.autoGenerateIdentifiers === n.autoGenerateIdentifiers &&
         p.compact === n.compact,
 );
 
@@ -1613,6 +1620,7 @@ function FieldRenderer({
     images,
     setImages,
     onChange,
+    autoGenerateIdentifiers = false,
     compact = false,
 }: any) {
     const labelClasses = compact
@@ -1985,6 +1993,8 @@ function FieldRenderer({
                         : inputClasses + ' border-4 border-primary/5 shadow-2xl'
                 }
                 value={stringValue(value)}
+                readOnly={autoGenerateIdentifiers && field.path === 'code'}
+                disabled={autoGenerateIdentifiers && field.path === 'code'}
                 onChange={(e) =>
                     onChange(
                         field.path,
@@ -2282,38 +2292,32 @@ function getColumns(
             header: () =>
                 compact ? (
                     <div className="text-right text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                        Actions
+                        Aksi
                     </div>
                 ) : null,
             cell: ({ row }) =>
                 compact ? (
-                    <div className="flex justify-end">
-                        <Select
-                            value=""
-                            onValueChange={(value) => {
-                                if (value === 'edit') {
-                                    setEdit(row.original.item);
-                                    return;
-                                }
-
-                                if (value === 'delete') {
-                                    setDelete(row.original.id);
-                                }
-                            }}
+                    <div className="flex justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 rounded-xl"
+                            onClick={() => setEdit(row.original.item)}
                         >
-                            <SelectTrigger className="h-9 w-[172px]">
-                                <div className="flex items-center gap-2">
-                                    <Pencil className="h-4 w-4" />
-                                    <SelectValue placeholder="Pilih action" />
-                                </div>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="edit">Edit data</SelectItem>
-                                <SelectItem value="delete">
-                                    Hapus data
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                            <Pencil className="mr-2 h-3.5 w-3.5" />
+                            Edit
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="h-9 rounded-xl"
+                            onClick={() => setDelete(row.original.id)}
+                        >
+                            <Trash2 className="mr-2 h-3.5 w-3.5" />
+                            Hapus
+                        </Button>
                     </div>
                 ) : (
                     <div className="flex justify-end gap-6">
@@ -2484,7 +2488,7 @@ function summarizeResourceItem(k: string, p: any) {
     return k === 'products'
         ? `CODE: ${p.code}`
         : k === 'packages'
-          ? `HUB: ${p.departure_city} â€¢ ${p.code}`
+          ? `HUB: ${p.departure_city} - ${p.code}`
           : k === 'faqs'
             ? `URUTAN: ${p.sort_order ?? 0}`
             : k === 'legal_documents'

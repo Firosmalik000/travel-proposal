@@ -8,7 +8,7 @@ import {
     usePublicData,
     usePublicPageContent,
     whatsappLinkFromSeo,
-} from '@/lib/public-content';
+} from '@/lib/public/content';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -23,8 +23,8 @@ import {
     CreditCard,
     FileCheck2,
     Globe,
-    HeartHandshake,
     Headset,
+    HeartHandshake,
     Hotel,
     IdCard,
     Images,
@@ -132,6 +132,13 @@ function formatCompactPackagePrice(
 
 export default function PublicHomeLanding() {
     const page = usePage<any>();
+    const forceWebsite = page.props.forceWebsite === true;
+    const forceMockup = page.props.forceMockup === true;
+    const pageSlug = forceMockup
+        ? 'home_landing_mockup'
+        : forceWebsite
+          ? 'home_landing'
+          : String(page.props.pageSlug ?? 'home_landing');
     const { branding, seoSettings } = page.props;
     const locale = 'id' as const;
     const shouldReduceMotion = useReducedMotion();
@@ -140,7 +147,7 @@ export default function PublicHomeLanding() {
         new URLSearchParams(window.location.search).get('animations') === '1';
     const animationsEnabled = forceAnimations || !shouldReduceMotion;
     const publicData = usePublicData();
-    const homePage = usePublicPageContent('home');
+    const homePage = usePublicPageContent(pageSlug);
     const homeContent = (homePage?.content as Record<string, any>) ?? {};
     const contactLink = whatsappLinkFromSeo(seoSettings ?? {});
     const address = getPublicAddress(seoSettings ?? {});
@@ -634,7 +641,7 @@ export default function PublicHomeLanding() {
                             <div className="relative">
                                 <div className="pointer-events-none absolute top-6 right-6 left-6 hidden h-0.5 rounded-full bg-white/22 sm:block" />
                                 <motion.div
-                                    className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:gap-5 sm:pb-0"
+                                    className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] sm:gap-5 sm:pb-0 [&::-webkit-scrollbar]:hidden"
                                     {...getInViewProps(stagger)}
                                 >
                                     {timelineSteps.map((item, index) => {
@@ -925,7 +932,10 @@ export default function PublicHomeLanding() {
                                         <div className="h-32 w-32 shrink-0 overflow-hidden rounded-[6px] bg-[#efe5d8] sm:h-36 sm:w-36">
                                             <img
                                                 src={image}
-                                                alt={title || `service-${index + 1}`}
+                                                alt={
+                                                    title ||
+                                                    `service-${index + 1}`
+                                                }
                                                 className="h-full w-full object-cover"
                                             />
                                         </div>
@@ -1394,7 +1404,7 @@ export default function PublicHomeLanding() {
                                                         {title}
                                                     </p>
                                                     {excerpt ? (
-                                                        <p className="mt-3 min-h-[64px] line-clamp-3 text-sm leading-relaxed text-[#2a120c]/70">
+                                                        <p className="mt-3 line-clamp-3 min-h-[64px] text-sm leading-relaxed text-[#2a120c]/70">
                                                             {excerpt}
                                                         </p>
                                                     ) : null}
@@ -1517,7 +1527,7 @@ export default function PublicHomeLanding() {
                                             </div>
                                         ) : (
                                             <p className="mt-2 text-sm font-semibold text-[#2a120c]">
-                                                â€”
+                                                -
                                             </p>
                                         )}
                                     </div>

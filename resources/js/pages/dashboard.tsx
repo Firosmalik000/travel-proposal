@@ -1,14 +1,9 @@
 ﻿import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 import AppLayout from '@/layouts/app-layout';
 import { handleApiError } from '@/lib/notifications';
 import { dashboard } from '@/routes';
@@ -29,12 +24,11 @@ import axios from 'axios';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import {
-    Activity,
-    ArrowUpRight,
     Building2,
     Cake,
     Clock,
     FolderTree,
+    Globe2,
     Loader2,
     Minus,
     RefreshCw,
@@ -45,8 +39,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
-    Bar,
-    BarChart,
     CartesianGrid,
     Cell,
     Legend,
@@ -73,6 +65,14 @@ interface Stats {
     upcomingDepartures: { value: number; description: string };
     estimatedRevenue: { value: number; currency: string; description: string };
     publishedContent: { value: number; description: string };
+    publicVisitors: { value: number; description: string };
+    landingVisitors: { value: number; description: string };
+}
+
+interface WeeklyActivityData {
+    day: string;
+    public_visits: number;
+    landing_visits: number;
 }
 
 interface MonthlyGrowthData {
@@ -85,12 +85,6 @@ interface DepartmentData {
     name: string;
     value: number;
     color: string;
-}
-
-interface WeeklyActivityData {
-    day: string;
-    departures: number;
-    contents: number;
 }
 
 interface UpcomingDepartureData {
@@ -174,13 +168,28 @@ function formatCurrency(amount: number, currency = 'IDR'): string {
     }
 }
 
+function formatCompactNumber(value: number): string {
+    if (!Number.isFinite(value)) {
+        return '0';
+    }
+
+    return new Intl.NumberFormat('id-ID', {
+        notation: 'compact',
+        maximumFractionDigits: 1,
+    }).format(value);
+}
+
 export default function Dashboard() {
+    const isMobile = useIsMobile();
     const [stats, setStats] = useState<Stats | null>(null);
-    const [monthlyGrowth, setMonthlyGrowth] = useState<MonthlyGrowthData[]>([]);
-    const [departmentData, setDepartmentData] = useState<DepartmentData[]>([]);
     const [weeklyActivity, setWeeklyActivity] = useState<WeeklyActivityData[]>(
         [],
     );
+    const [monthlyGrowth, setMonthlyGrowth] = useState<MonthlyGrowthData[]>([]);
+    const [departmentData, setDepartmentData] = useState<DepartmentData[]>([]);
+    const [visitPeriod, setVisitPeriod] = useState<
+        'weekly' | 'monthly' | 'yearly'
+    >('weekly');
     const [upcomingDepartures, setUpcomingDepartures] = useState<
         UpcomingDepartureData[]
     >([]);
@@ -198,18 +207,22 @@ export default function Dashboard() {
             try {
                 const [
                     statsRes,
+                    weeklyRes,
                     monthlyRes,
                     deptRes,
-                    weeklyRes,
                     birthdaysRes,
                     recentRes,
                     pendingRes,
                     statusRes,
                 ] = await Promise.all([
                     axios.get(dashboardStats().url),
+                    axios.get(
+                        dashboardWeeklyActivity({
+                            query: { period: visitPeriod },
+                        }).url,
+                    ),
                     axios.get(dashboardMonthlyGrowth().url),
                     axios.get(dashboardDepartmentDistribution().url),
-                    axios.get(dashboardWeeklyActivity().url),
                     axios.get(dashboardBirthdays().url),
                     axios.get(dashboardRecentActivity().url),
                     axios.get(dashboardPendingTasks().url),
@@ -218,9 +231,9 @@ export default function Dashboard() {
 
                 // Extract data from success response
                 setStats(statsRes.data.data || statsRes.data);
+                setWeeklyActivity(weeklyRes.data.data || weeklyRes.data);
                 setMonthlyGrowth(monthlyRes.data.data || monthlyRes.data);
                 setDepartmentData(deptRes.data.data || deptRes.data);
-                setWeeklyActivity(weeklyRes.data.data || weeklyRes.data);
                 setUpcomingDepartures(
                     birthdaysRes.data.data || birthdaysRes.data,
                 );
@@ -237,25 +250,29 @@ export default function Dashboard() {
         };
 
         fetchDashboardData();
-    }, []);
+    }, [visitPeriod]);
 
     const refreshDashboard = async () => {
         setRefreshing(true);
         try {
             const [
                 statsRes,
+                weeklyRes,
                 monthlyRes,
                 deptRes,
-                weeklyRes,
                 birthdaysRes,
                 recentRes,
                 pendingRes,
                 statusRes,
             ] = await Promise.all([
                 axios.get(dashboardStats().url),
+                axios.get(
+                    dashboardWeeklyActivity({
+                        query: { period: visitPeriod },
+                    }).url,
+                ),
                 axios.get(dashboardMonthlyGrowth().url),
                 axios.get(dashboardDepartmentDistribution().url),
-                axios.get(dashboardWeeklyActivity().url),
                 axios.get(dashboardBirthdays().url),
                 axios.get(dashboardRecentActivity().url),
                 axios.get(dashboardPendingTasks().url),
@@ -263,9 +280,9 @@ export default function Dashboard() {
             ]);
 
             setStats(statsRes.data.data || statsRes.data);
+            setWeeklyActivity(weeklyRes.data.data || weeklyRes.data);
             setMonthlyGrowth(monthlyRes.data.data || monthlyRes.data);
             setDepartmentData(deptRes.data.data || deptRes.data);
-            setWeeklyActivity(weeklyRes.data.data || weeklyRes.data);
             setUpcomingDepartures(birthdaysRes.data.data || birthdaysRes.data);
             setRecentActivity(recentRes.data.data || recentRes.data);
             setPendingTasks(pendingRes.data.data || pendingRes.data);
@@ -294,14 +311,7 @@ export default function Dashboard() {
                       : 'stable'
                 : 'stable',
             color: statPalette[0],
-        },
-        {
-            title: 'Paket Aktif',
-            value: stats?.activePackages.value || 0,
-            description: stats?.activePackages.description || 'Loading...',
-            icon: FolderTree,
-            trend: 'up',
-            color: statPalette[1],
+            tone: 'from-emerald-500/10 to-teal-500/5',
         },
         {
             title: 'Jadwal Berangkat',
@@ -310,14 +320,25 @@ export default function Dashboard() {
             icon: Building2,
             trend: 'stable',
             color: statPalette[2],
+            tone: 'from-amber-500/10 to-orange-500/5',
         },
         {
-            title: 'Konten Aktif',
-            value: stats?.publishedContent.value || 0,
-            description: stats?.publishedContent.description || 'Loading...',
-            icon: Activity,
+            title: 'Pengunjung Public',
+            value: stats?.publicVisitors.value || 0,
+            description: stats?.publicVisitors.description || 'Loading...',
+            icon: Globe2,
             trend: 'up',
-            color: statPalette[3],
+            color: '#0f766e',
+            tone: 'from-blue-500/10 to-cyan-500/5',
+        },
+        {
+            title: 'Pengunjung Landing',
+            value: stats?.landingVisitors.value || 0,
+            description: stats?.landingVisitors.description || 'Loading...',
+            icon: Globe2,
+            trend: 'up',
+            color: '#1d4ed8',
+            tone: 'from-violet-500/10 to-indigo-500/5',
         },
     ];
 
@@ -348,30 +369,27 @@ export default function Dashboard() {
         );
     }
 
-    const chartContainerClassName =
-        'w-full overflow-x-auto [&_.recharts-wrapper]:min-w-[620px]';
+    const chartContainerClassName = isMobile
+        ? 'w-full overflow-x-auto [&_.recharts-wrapper]:min-w-[540px]'
+        : 'w-full overflow-x-auto [&_.recharts-wrapper]:min-w-[620px]';
+    const hasWeeklyActivityData = weeklyActivity.length > 0;
+    const hasMonthlyGrowthData = monthlyGrowth.length > 0;
+    const hasDepartmentData =
+        departmentData.length > 0 &&
+        departmentData.some((item) => Number(item.value) > 0);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className="relative h-full w-full">
-                <div className="pointer-events-none absolute inset-0 -z-10">
-                    <div className="absolute top-[-20%] right-[-20%] h-96 w-96 rounded-full bg-primary/10 blur-3xl dark:bg-primary/15" />
-                    <div className="absolute bottom-[-15%] left-[-18%] h-96 w-96 rounded-full bg-amber-300/20 blur-3xl dark:bg-amber-300/10" />
-                </div>
-
-                <div className="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="h-full w-full">
+                <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-4 p-4 md:p-6">
                     {/* Header */}
-                    <div className="rounded-3xl border bg-card p-4 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.25)] sm:p-6">
+                    <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm sm:p-5">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="space-y-2">
+                            <div>
                                 <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                                     Dashboard
                                 </h1>
-                                <p className="text-sm text-muted-foreground sm:text-base">
-                                    Ringkasan paket, jadwal keberangkatan, dan
-                                    status konten travel.
-                                </p>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
@@ -406,155 +424,86 @@ export default function Dashboard() {
                             </div>
                         </div>
                     </div>
+                    <Card className="rounded-2xl border border-border/60 bg-card shadow-sm">
+                        <CardContent className="flex flex-col gap-2 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+                            <div>
+                                <p className="text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                                    Estimasi Revenue
+                                </p>
+                                <p className="mt-1 text-2xl font-semibold text-foreground sm:text-3xl">
+                                    {formatCurrency(
+                                        stats?.estimatedRevenue.value ?? 0,
+                                        stats?.estimatedRevenue.currency ??
+                                            'IDR',
+                                    )}
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    {stats?.estimatedRevenue.description ??
+                                        'Estimasi dari booking registered.'}
+                                </p>
+                            </div>
+                            <Badge variant="secondary" className="w-fit">
+                                {formatCompactNumber(
+                                    stats?.estimatedRevenue.value ?? 0,
+                                )}
+                            </Badge>
+                        </CardContent>
+                    </Card>
 
-                    {/* Quick Actions */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.22)]">
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base font-semibold">
-                                    Toolkit Akses
-                                </CardTitle>
-                                <CardDescription>
-                                    Pintasan untuk konfigurasi utama.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {[
-                                        {
-                                            title: 'Menu Management',
-                                            desc: 'Susun navigasi dan struktur menu.',
-                                            href: menusIndex().url,
-                                            icon: FolderTree,
-                                        },
-                                        {
-                                            title: 'Role Management',
-                                            desc: 'Atur akses menu per role.',
-                                            href: '/admin/administrator/roles',
-                                            icon: Shield,
-                                        },
-                                        {
-                                            title: 'User Management',
-                                            desc: 'Undang user dan assign role.',
-                                            href: '/admin/administrator/users',
-                                            icon: Users,
-                                        },
-                                    ].map((item) => {
-                                        const Icon = item.icon;
-                                        return (
-                                            <Link
-                                                key={item.title}
-                                                href={item.href}
-                                                className="group rounded-2xl border border-border/60 bg-muted/30 p-4 shadow-sm transition hover:-translate-y-[2px] hover:border-primary/30 hover:shadow-md"
-                                            >
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-foreground group-hover:text-primary">
-                                                            {item.title}
-                                                        </p>
-                                                        <p className="mt-1 text-xs text-muted-foreground">
-                                                            {item.desc}
-                                                        </p>
-                                                    </div>
-                                                    <div className="rounded-full bg-primary/10 p-2 text-primary ring-1 ring-border/50">
-                                                        <Icon className="h-4 w-4" />
-                                                    </div>
-                                                </div>
-                                                <div className="mt-3 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                                                    <span>Buka</span>
-                                                    <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-[2px] group-hover:-translate-y-[2px]" />
-                                                </div>
-                                            </Link>
-                                        );
-                                    })}
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.22)] lg:col-span-2">
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-base font-semibold">
-                                    Fokus Hari Ini
-                                </CardTitle>
-                                <CardDescription>
-                                    Prioritas aktivitas operasional hari ini.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                                    <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 shadow-sm">
-                                        <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-                                            Aktivitas
+                    <div className="order-4 grid gap-3 sm:grid-cols-3">
+                        {[
+                            {
+                                title: 'Menu Management',
+                                href: menusIndex().url,
+                                icon: FolderTree,
+                            },
+                            {
+                                title: 'Role Management',
+                                href: '/admin/administrator/roles',
+                                icon: Shield,
+                            },
+                            {
+                                title: 'User Management',
+                                href: '/admin/administrator/users',
+                                icon: Users,
+                            },
+                        ].map((item) => {
+                            const Icon = item.icon;
+                            return (
+                                <Link
+                                    key={item.title}
+                                    href={item.href}
+                                    className="group rounded-xl border border-border/60 bg-card p-3 shadow-sm transition hover:border-primary/30"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-semibold text-foreground group-hover:text-primary">
+                                            {item.title}
                                         </p>
-                                        <p className="mt-2 text-2xl font-semibold text-foreground">
-                                            {stats?.publishedContent.value ?? 0}
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            Konten aktif yang tampil.
-                                        </p>
+                                        <Icon className="h-4 w-4 text-primary" />
                                     </div>
-                                    <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 shadow-sm">
-                                        <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-                                            Paket
-                                        </p>
-                                        <p className="mt-2 text-2xl font-semibold text-foreground">
-                                            {stats?.activePackages.value ?? 0}
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            Jumlah paket aktif saat ini.
-                                        </p>
-                                    </div>
-                                    <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 shadow-sm">
-                                        <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-                                            Keberangkatan
-                                        </p>
-                                        <p className="mt-2 text-2xl font-semibold text-foreground">
-                                            {stats?.upcomingDepartures.value ??
-                                                0}
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            Jadwal siap dipasarkan.
-                                        </p>
-                                    </div>
-                                    <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 shadow-sm">
-                                        <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-                                            Revenue
-                                        </p>
-                                        <p className="mt-2 text-2xl font-semibold text-foreground">
-                                            {formatCurrency(
-                                                stats?.estimatedRevenue.value ??
-                                                    0,
-                                                stats?.estimatedRevenue
-                                                    .currency ?? 'IDR',
-                                            )}
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            Estimasi dari booking registered.
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </Link>
+                            );
+                        })}
                     </div>
 
                     {/* Stats Cards */}
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="order-1 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                         {statCards.map((stat, index) => {
                             const Icon = stat.icon;
                             return (
                                 <Card
                                     key={index}
-                                    className="rounded-2xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-all duration-200 hover:-translate-y-[2px] hover:shadow-lg"
+                                    className={`rounded-2xl border border-border/60 bg-gradient-to-br ${stat.tone} shadow-sm transition-all duration-200 hover:-translate-y-[2px] hover:shadow-md`}
                                     style={{ borderLeftColor: stat.color }}
                                 >
-                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                        <CardTitle className="text-base font-semibold text-card-foreground">
+                                    <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-semibold text-muted-foreground">
                                             {stat.title}
                                         </CardTitle>
                                         <div
-                                            className="rounded-full p-2 ring-1 ring-border/50"
+                                            className="rounded-xl p-2 ring-1 ring-white/40"
                                             style={{
-                                                backgroundColor: `${stat.color}14`,
+                                                backgroundColor: `${stat.color}22`,
                                             }}
                                         >
                                             <Icon
@@ -564,18 +513,17 @@ export default function Dashboard() {
                                         </div>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="flex items-baseline gap-2">
+                                        <div className="flex items-center justify-between gap-3">
                                             <div
-                                                className="text-3xl font-bold"
+                                                className="text-3xl font-bold tracking-tight"
                                                 style={{ color: stat.color }}
                                             >
                                                 {stat.value}
                                             </div>
-                                            {getTrendIcon(stat.trend)}
+                                            <div className="rounded-full border border-border/60 bg-muted/40 p-1.5">
+                                                {getTrendIcon(stat.trend)}
+                                            </div>
                                         </div>
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                            {stat.description}
-                                        </p>
                                     </CardContent>
                                 </Card>
                             );
@@ -583,17 +531,13 @@ export default function Dashboard() {
                     </div>
 
                     {/* Birthday Card */}
-                    <div className="grid grid-cols-1">
+                    <div className="order-5 grid grid-cols-1">
                         <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-shadow duration-200 hover:shadow-lg">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-xl font-semibold text-card-foreground">
                                     <Cake className="h-6 w-6 text-primary" />
                                     Keberangkatan Terdekat
                                 </CardTitle>
-                                <CardDescription>
-                                    Jadwal keberangkatan yang perlu dipantau
-                                    dalam waktu dekat.
-                                </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
@@ -671,15 +615,12 @@ export default function Dashboard() {
                     </div>
 
                     {/* Operational Overview */}
-                    <div className="grid gap-4 lg:grid-cols-3">
+                    <div className="order-6 grid gap-4 lg:grid-cols-3">
                         <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)]">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-base font-semibold">
                                     Status Sistem
                                 </CardTitle>
-                                <CardDescription>
-                                    Kesehatan layanan utama aplikasi.
-                                </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
@@ -717,9 +658,6 @@ export default function Dashboard() {
                                 <CardTitle className="text-base font-semibold">
                                     Tugas Pending
                                 </CardTitle>
-                                <CardDescription>
-                                    Item yang perlu dicek/ditindak.
-                                </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
@@ -760,9 +698,6 @@ export default function Dashboard() {
                                 <CardTitle className="text-base font-semibold">
                                     Aktivitas Terbaru
                                 </CardTitle>
-                                <CardDescription>
-                                    Ringkasan aktivitas yang terdeteksi.
-                                </CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
@@ -794,9 +729,166 @@ export default function Dashboard() {
                         </Card>
                     </div>
 
-                    {/* Charts Row 1 */}
-                    <div className="grid gap-6 md:grid-cols-2">
-                        {/* Line Chart - User Growth */}
+                    {/* Charts Kunjungan */}
+                    <div className="order-2 grid gap-6">
+                        <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-shadow duration-200 hover:shadow-lg">
+                            <CardHeader>
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground sm:text-xl">
+                                        <div
+                                            className="h-2 w-2 rounded-full"
+                                            style={{
+                                                backgroundColor: '#3b82f6',
+                                            }}
+                                        ></div>
+                                        Kunjungan Website
+                                    </CardTitle>
+                                    <div className="flex items-center rounded-lg border border-border/60 p-1">
+                                        {[
+                                            {
+                                                value: 'weekly',
+                                                label: 'Mingguan',
+                                            },
+                                            {
+                                                value: 'monthly',
+                                                label: 'Bulanan',
+                                            },
+                                            {
+                                                value: 'yearly',
+                                                label: 'Tahunan',
+                                            },
+                                        ].map((period) => (
+                                            <Button
+                                                key={period.value}
+                                                type="button"
+                                                variant={
+                                                    visitPeriod === period.value
+                                                        ? 'default'
+                                                        : 'ghost'
+                                                }
+                                                size="sm"
+                                                className="h-8 rounded-md px-3 text-xs"
+                                                onClick={() =>
+                                                    setVisitPeriod(
+                                                        period.value as
+                                                            | 'weekly'
+                                                            | 'monthly'
+                                                            | 'yearly',
+                                                    )
+                                                }
+                                            >
+                                                {period.label}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                {hasWeeklyActivityData ? (
+                                    <div className={chartContainerClassName}>
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height={300}
+                                        >
+                                            <LineChart data={weeklyActivity}>
+                                                <defs>
+                                                    <linearGradient
+                                                        id="colorPublicLine"
+                                                        x1="0"
+                                                        y1="0"
+                                                        x2="0"
+                                                        y2="1"
+                                                    >
+                                                        <stop
+                                                            offset="5%"
+                                                            stopColor="#3b82f6"
+                                                            stopOpacity={0.8}
+                                                        />
+                                                        <stop
+                                                            offset="95%"
+                                                            stopColor="#3b82f6"
+                                                            stopOpacity={0}
+                                                        />
+                                                    </linearGradient>
+                                                    <linearGradient
+                                                        id="colorLandingLine"
+                                                        x1="0"
+                                                        y1="0"
+                                                        x2="0"
+                                                        y2="1"
+                                                    >
+                                                        <stop
+                                                            offset="5%"
+                                                            stopColor="#f97316"
+                                                            stopOpacity={0.8}
+                                                        />
+                                                        <stop
+                                                            offset="95%"
+                                                            stopColor="#f97316"
+                                                            stopOpacity={0}
+                                                        />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid
+                                                    strokeDasharray="3 3"
+                                                    stroke="hsl(var(--border))"
+                                                />
+                                                <XAxis
+                                                    dataKey="day"
+                                                    tick={{
+                                                        fill: 'hsl(var(--muted-foreground))',
+                                                    }}
+                                                    axisLine={{
+                                                        stroke: 'hsl(var(--border))',
+                                                    }}
+                                                />
+                                                <YAxis
+                                                    tick={{
+                                                        fill: 'hsl(var(--muted-foreground))',
+                                                    }}
+                                                    axisLine={{
+                                                        stroke: 'hsl(var(--border))',
+                                                    }}
+                                                />
+                                                <Tooltip
+                                                    content={<CustomTooltip />}
+                                                />
+                                                {!isMobile ? <Legend /> : null}
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="public_visits"
+                                                    stroke="#3b82f6"
+                                                    strokeWidth={3}
+                                                    name="Public"
+                                                    dot={false}
+                                                    activeDot={{ r: 6 }}
+                                                    fillOpacity={1}
+                                                    fill="url(#colorPublicLine)"
+                                                />
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="landing_visits"
+                                                    stroke="#f97316"
+                                                    strokeWidth={3}
+                                                    name="Landing"
+                                                    dot={false}
+                                                    activeDot={{ r: 6 }}
+                                                    fillOpacity={1}
+                                                    fill="url(#colorLandingLine)"
+                                                />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                ) : (
+                                    <div className="flex h-[300px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+                                        Data kunjungan belum tersedia.
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="order-3 grid gap-6 md:grid-cols-2">
                         <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-shadow duration-200 hover:shadow-lg">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground sm:text-xl">
@@ -806,109 +898,69 @@ export default function Dashboard() {
                                     ></div>
                                     Pertumbuhan Data
                                 </CardTitle>
-                                <CardDescription>
-                                    User baru dan jadwal keberangkatan per bulan
-                                </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className={chartContainerClassName}>
-                                    <ResponsiveContainer
-                                        width="100%"
-                                        height={300}
-                                    >
-                                        <LineChart data={monthlyGrowth}>
-                                            <defs>
-                                                <linearGradient
-                                                    id="colorUsers"
-                                                    x1="0"
-                                                    y1="0"
-                                                    x2="0"
-                                                    y2="1"
-                                                >
-                                                    <stop
-                                                        offset="5%"
-                                                        stopColor="#3b82f6"
-                                                        stopOpacity={0.8}
-                                                    />
-                                                    <stop
-                                                        offset="95%"
-                                                        stopColor="#3b82f6"
-                                                        stopOpacity={0}
-                                                    />
-                                                </linearGradient>
-                                                <linearGradient
-                                                    id="colorDepartures"
-                                                    x1="0"
-                                                    y1="0"
-                                                    x2="0"
-                                                    y2="1"
-                                                >
-                                                    <stop
-                                                        offset="5%"
-                                                        stopColor="#f97316"
-                                                        stopOpacity={0.8}
-                                                    />
-                                                    <stop
-                                                        offset="95%"
-                                                        stopColor="#f97316"
-                                                        stopOpacity={0}
-                                                    />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                stroke="hsl(var(--border))"
-                                            />
-                                            <XAxis
-                                                dataKey="month"
-                                                tick={{
-                                                    fill: 'hsl(var(--muted-foreground))',
-                                                }}
-                                                axisLine={{
-                                                    stroke: 'hsl(var(--border))',
-                                                }}
-                                            />
-                                            <YAxis
-                                                tick={{
-                                                    fill: 'hsl(var(--muted-foreground))',
-                                                }}
-                                                axisLine={{
-                                                    stroke: 'hsl(var(--border))',
-                                                }}
-                                            />
-                                            <Tooltip
-                                                content={<CustomTooltip />}
-                                            />
-                                            <Legend />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="users"
-                                                stroke="#3b82f6"
-                                                strokeWidth={3}
-                                                name="Total Users"
-                                                dot={false}
-                                                activeDot={{ r: 6 }}
-                                                fillOpacity={1}
-                                                fill="url(#colorUsers)"
-                                            />
-                                            <Line
-                                                type="monotone"
-                                                dataKey="departures"
-                                                stroke="#f97316"
-                                                strokeWidth={3}
-                                                name="Keberangkatan"
-                                                dot={false}
-                                                activeDot={{ r: 6 }}
-                                                fillOpacity={1}
-                                                fill="url(#colorDepartures)"
-                                            />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                {hasMonthlyGrowthData ? (
+                                    <div className={chartContainerClassName}>
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height={300}
+                                        >
+                                            <LineChart data={monthlyGrowth}>
+                                                <CartesianGrid
+                                                    strokeDasharray="3 3"
+                                                    stroke="hsl(var(--border))"
+                                                />
+                                                <XAxis
+                                                    dataKey="month"
+                                                    tick={{
+                                                        fill: 'hsl(var(--muted-foreground))',
+                                                    }}
+                                                    axisLine={{
+                                                        stroke: 'hsl(var(--border))',
+                                                    }}
+                                                />
+                                                <YAxis
+                                                    tick={{
+                                                        fill: 'hsl(var(--muted-foreground))',
+                                                    }}
+                                                    axisLine={{
+                                                        stroke: 'hsl(var(--border))',
+                                                    }}
+                                                />
+                                                <Tooltip
+                                                    content={<CustomTooltip />}
+                                                />
+                                                {!isMobile ? <Legend /> : null}
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="users"
+                                                    stroke="#3b82f6"
+                                                    strokeWidth={3}
+                                                    name="Total Users"
+                                                    dot={false}
+                                                    activeDot={{ r: 6 }}
+                                                />
+                                                <Line
+                                                    type="monotone"
+                                                    dataKey="departures"
+                                                    stroke="#f97316"
+                                                    strokeWidth={3}
+                                                    name="Keberangkatan"
+                                                    dot={false}
+                                                    activeDot={{ r: 6 }}
+                                                />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                ) : (
+                                    <div className="flex h-[300px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+                                        Data pertumbuhan belum tersedia.
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 
-                        {/* Pie Chart - Department Distribution */}
                         <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-shadow duration-200 hover:shadow-lg">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground sm:text-xl">
@@ -918,151 +970,56 @@ export default function Dashboard() {
                                     ></div>
                                     Distribusi Paket
                                 </CardTitle>
-                                <CardDescription>
-                                    Sebaran paket berdasarkan tipe layanan
-                                </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className={chartContainerClassName}>
-                                    <ResponsiveContainer
-                                        width="100%"
-                                        height={300}
-                                    >
-                                        <PieChart>
-                                            <Pie
-                                                data={departmentData as any}
-                                                cx="50%"
-                                                cy="50%"
-                                                labelLine={false}
-                                                label={({ name, percent }) =>
-                                                    `${String(name)}: ${(Number(percent) * 100).toFixed(0)}%`
-                                                }
-                                                outerRadius={100}
-                                                fill="#8884d8"
-                                                dataKey="value"
-                                                animationBegin={0}
-                                                animationDuration={800}
-                                            >
-                                                {departmentData.map(
-                                                    (entry, index) => (
-                                                        <Cell
-                                                            key={`cell-${index}`}
-                                                            fill={entry.color}
-                                                        />
-                                                    ),
-                                                )}
-                                            </Pie>
-                                            <Tooltip
-                                                content={<CustomTooltip />}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    {/* Charts Row 2 */}
-                    <div className="grid gap-6">
-                        {/* Bar Chart - Weekly Activity */}
-                        <Card className="rounded-3xl border bg-card shadow-[0_16px_40px_-30px_rgba(15,23,42,0.2)] transition-shadow duration-200 hover:shadow-lg">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-card-foreground sm:text-xl">
-                                    <div
-                                        className="h-2 w-2 rounded-full"
-                                        style={{ backgroundColor: '#3b82f6' }}
-                                    ></div>
-                                    Aktivitas Mingguan
-                                </CardTitle>
-                                <CardDescription>
-                                    Jadwal dan konten yang diperbarui minggu ini
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className={chartContainerClassName}>
-                                    <ResponsiveContainer
-                                        width="100%"
-                                        height={300}
-                                    >
-                                        <BarChart data={weeklyActivity}>
-                                            <defs>
-                                                <linearGradient
-                                                    id="colorDeparturesWeekly"
-                                                    x1="0"
-                                                    y1="0"
-                                                    x2="0"
-                                                    y2="1"
+                                {hasDepartmentData ? (
+                                    <div className={chartContainerClassName}>
+                                        <ResponsiveContainer
+                                            width="100%"
+                                            height={300}
+                                        >
+                                            <PieChart>
+                                                <Pie
+                                                    data={departmentData as any}
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    labelLine={false}
+                                                    label={
+                                                        isMobile
+                                                            ? false
+                                                            : ({
+                                                                  name,
+                                                                  percent,
+                                                              }) =>
+                                                                  `${String(name)}: ${(Number(percent) * 100).toFixed(0)}%`
+                                                    }
+                                                    outerRadius={100}
+                                                    fill="#8884d8"
+                                                    dataKey="value"
                                                 >
-                                                    <stop
-                                                        offset="5%"
-                                                        stopColor="#3b82f6"
-                                                        stopOpacity={0.8}
-                                                    />
-                                                    <stop
-                                                        offset="95%"
-                                                        stopColor="#3b82f6"
-                                                        stopOpacity={0}
-                                                    />
-                                                </linearGradient>
-                                                <linearGradient
-                                                    id="colorContents"
-                                                    x1="0"
-                                                    y1="0"
-                                                    x2="0"
-                                                    y2="1"
-                                                >
-                                                    <stop
-                                                        offset="5%"
-                                                        stopColor="#f97316"
-                                                        stopOpacity={0.8}
-                                                    />
-                                                    <stop
-                                                        offset="95%"
-                                                        stopColor="#f97316"
-                                                        stopOpacity={0}
-                                                    />
-                                                </linearGradient>
-                                            </defs>
-                                            <CartesianGrid
-                                                strokeDasharray="3 3"
-                                                stroke="hsl(var(--border))"
-                                            />
-                                            <XAxis
-                                                dataKey="day"
-                                                tick={{
-                                                    fill: 'hsl(var(--muted-foreground))',
-                                                }}
-                                                axisLine={{
-                                                    stroke: 'hsl(var(--border))',
-                                                }}
-                                            />
-                                            <YAxis
-                                                tick={{
-                                                    fill: 'hsl(var(--muted-foreground))',
-                                                }}
-                                                axisLine={{
-                                                    stroke: 'hsl(var(--border))',
-                                                }}
-                                            />
-                                            <Tooltip
-                                                content={<CustomTooltip />}
-                                            />
-                                            <Legend />
-                                            <Bar
-                                                dataKey="departures"
-                                                fill="url(#colorDeparturesWeekly)"
-                                                name="Jadwal"
-                                                radius={[8, 8, 0, 0]}
-                                            />
-                                            <Bar
-                                                dataKey="contents"
-                                                fill="url(#colorContents)"
-                                                name="Konten"
-                                                radius={[8, 8, 0, 0]}
-                                            />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
+                                                    {departmentData.map(
+                                                        (entry, index) => (
+                                                            <Cell
+                                                                key={`cell-dept-${index}`}
+                                                                fill={
+                                                                    entry.color
+                                                                }
+                                                            />
+                                                        ),
+                                                    )}
+                                                </Pie>
+                                                <Tooltip
+                                                    content={<CustomTooltip />}
+                                                />
+                                                {!isMobile ? <Legend /> : null}
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                ) : (
+                                    <div className="flex h-[300px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+                                        Data distribusi paket belum tersedia.
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

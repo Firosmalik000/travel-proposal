@@ -61,7 +61,7 @@ export function DataTable<TData, TValue>({
   });
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
       {searchKey && (
         <div className="flex items-center gap-2">
           <div className="relative w-full sm:max-w-sm">
@@ -131,7 +131,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* DESKTOP / TABLET: regular table (hidden on mobile) */}
-      <div className="hidden overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-sm sm:block">
+      <div className="hidden w-full overflow-x-auto rounded-2xl border border-border/70 bg-card/95 shadow-sm sm:block">
         <Table className="min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

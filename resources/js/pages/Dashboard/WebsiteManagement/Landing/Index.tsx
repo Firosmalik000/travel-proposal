@@ -40,6 +40,15 @@ interface LandingPageItem {
     is_active: boolean;
 }
 
+interface PackageOption {
+    id: number;
+    name: string;
+    package_type?: string | null;
+    duration_days?: number | null;
+    departure_city?: string | null;
+    is_active: boolean;
+}
+
 interface EditableField {
     path: string;
     label: string;
@@ -56,20 +65,9 @@ interface ExtraSectionField {
 }
 
 const pageLabels: Record<string, string> = {
-    home: 'Home',
-    'tentang-kami': 'Tentang Kami',
-    kontak: 'Kontak',
-    galeri: 'Galeri',
-    karier: 'Karier',
-    'custom-umroh': 'Custom Umroh',
+    home_landing: 'Website Utama (/)',
+    home_landing_mockup: 'Landing Public (/landing)',
 };
-
-const landingTabOrder = [
-    'home',
-    'kontak',
-    'tentang-kami',
-    'custom-umroh',
-] as const;
 
 const hiddenLandingSlugs = new Set([
     'paket-umroh',
@@ -85,37 +83,38 @@ const hiddenLandingSlugs = new Set([
 ]);
 
 const landingSectionMap: Record<string, string[]> = {
-    home: [
+    home_landing: [
         'hero',
         'timeline',
         'problem',
-        'packages',
         'services',
         'gallery',
+        'packages',
         'testimonials',
         'articles',
+        'faq',
         'contact',
     ],
-    'tentang-kami': ['hero', 'profile', 'stats', 'values'],
-    kontak: ['heading', 'description', 'map'],
-    galeri: ['badge', 'description'],
-    karier: ['badge', 'subtitle', 'cta'],
-    'custom-umroh': ['badge', 'description', 'subtitle', 'cta'],
+    home_landing_mockup: [
+        'hero',
+        'services',
+        'packages',
+        'testimonials',
+        'faq',
+        'contact',
+        'footer',
+    ],
 };
 
 const sectionLabels: Record<string, string> = {
-    hero: 'Hero Section',
-    timeline: 'Timeline & Value',
-    problem: 'Penting Diketahui',
-    about: 'Tentang Kami',
-    packages: 'Paket Unggulan',
-    services: 'Layanan Kami',
-    gallery: 'Galeri Foto',
+    hero: 'Hero + Statistik',
+    timeline: 'Timeline Website',
+    packages: 'Paket',
     testimonials: 'Testimoni',
-    articles: 'News / Artikel',
-    contact: 'Kontak Kami',
-    stats: 'Statistik Data',
-    faq: 'Pertanyaan Umum',
+    faq: 'FAQ',
+    contact: 'Chat Admin',
+    footer: 'Footer Landing',
+    services: 'Keunggulan',
     profile: 'Profil Perusahaan',
     values: 'Nilai & Budaya',
     team: 'Tim Kami',
@@ -146,31 +145,31 @@ const sectionLabels: Record<string, string> = {
 };
 
 const iconOptions = [
-    { value: '', label: 'Tanpa ikon' },
-    { value: 'users', label: 'Users' },
-    { value: 'credit-card', label: 'Credit Card' },
-    { value: 'check-circle-2', label: 'Check Circle' },
-    { value: 'plane', label: 'Plane' },
-    { value: 'landmark', label: 'Landmark' },
-    { value: 'calendar-days', label: 'Calendar' },
-    { value: 'shield-check', label: 'Shield Check' },
-    { value: 'heart-handshake', label: 'Handshake' },
-    { value: 'map-pin', label: 'Map Pin' },
-    { value: 'briefcase', label: 'Briefcase' },
-    { value: 'building-2', label: 'Building' },
-    { value: 'circle-dollar-sign', label: 'Dollar' },
-    { value: 'clipboard-list', label: 'Checklist' },
-    { value: 'file-check-2', label: 'File Check' },
-    { value: 'globe', label: 'Globe' },
-    { value: 'headset', label: 'Headset' },
-    { value: 'hotel', label: 'Hotel' },
-    { value: 'id-card', label: 'ID Card' },
-    { value: 'images', label: 'Images' },
-    { value: 'luggage', label: 'Luggage' },
-    { value: 'message-circle', label: 'Message' },
-    { value: 'notebook-pen', label: 'Notebook' },
-    { value: 'star', label: 'Star' },
-    { value: 'ticket', label: 'Ticket' },
+    { value: '', label: 'Tanpa ikon', preview: '○' },
+    { value: 'hotel', label: 'Hotel', preview: '🏨' },
+    { value: 'plane', label: 'Pesawat', preview: '✈️' },
+    { value: 'images', label: 'Dokumentasi', preview: '📸' },
+    { value: 'shield-check', label: 'Legal & Amanah', preview: '📋' },
+    { value: 'users', label: 'Jamaah / Tim', preview: '👥' },
+    { value: 'heart-handshake', label: 'Pendampingan', preview: '🤝' },
+    { value: 'check-circle-2', label: 'Checklist', preview: '✅' },
+    { value: 'credit-card', label: 'Pembayaran', preview: '💳' },
+    { value: 'landmark', label: 'Kemenag / Legalitas', preview: '🏛️' },
+    { value: 'calendar-days', label: 'Jadwal', preview: '📅' },
+    { value: 'map-pin', label: 'Lokasi', preview: '📍' },
+    { value: 'briefcase', label: 'Layanan', preview: '💼' },
+    { value: 'building-2', label: 'Fasilitas', preview: '🏢' },
+    { value: 'circle-dollar-sign', label: 'Biaya', preview: '💰' },
+    { value: 'clipboard-list', label: 'List Dokumen', preview: '📋' },
+    { value: 'file-check-2', label: 'Verifikasi', preview: '🧾' },
+    { value: 'globe', label: 'Perjalanan', preview: '🌍' },
+    { value: 'headset', label: 'Support', preview: '🎧' },
+    { value: 'id-card', label: 'Identitas', preview: '🪪' },
+    { value: 'luggage', label: 'Perlengkapan', preview: '🧳' },
+    { value: 'message-circle', label: 'Konsultasi', preview: '💬' },
+    { value: 'notebook-pen', label: 'Catatan Ibadah', preview: '📝' },
+    { value: 'star', label: 'Unggulan', preview: '⭐' },
+    { value: 'ticket', label: 'Tiket', preview: '🎫' },
 ] as const;
 
 function IconSelect({
@@ -188,7 +187,7 @@ function IconSelect({
         >
             {iconOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                    {option.label}
+                    {option.preview} {option.label}
                 </option>
             ))}
         </select>
@@ -293,28 +292,54 @@ function Field({
 }
 
 function Row({ children }: { children: React.ReactNode }) {
-    return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
+    return <div className="grid gap-4 md:grid-cols-2">{children}</div>;
 }
 
-export default function LandingIndex({ pages }: { pages: LandingPageItem[] }) {
+function GroupCard({
+    title,
+    desc,
+    children,
+}: {
+    title: string;
+    desc?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="rounded-xl border border-border bg-muted/10 p-4">
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            {desc ? (
+                <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
+            ) : null}
+            <div className="mt-3 space-y-4">{children}</div>
+        </div>
+    );
+}
+
+export default function LandingIndex({
+    pages,
+    editorType = 'landing',
+    packageOptions = [],
+}: {
+    pages: LandingPageItem[];
+    editorType?: 'landing' | 'website';
+    packageOptions?: PackageOption[];
+}) {
+    const targetSlug =
+        editorType === 'landing' ? 'home_landing_mockup' : 'home_landing';
     const visiblePages = pages
         .filter(
             (page) =>
-                !hiddenLandingSlugs.has(page.slug) &&
-                landingTabOrder.includes(
-                    page.slug as (typeof landingTabOrder)[number],
-                ),
+                !hiddenLandingSlugs.has(page.slug) && page.slug === targetSlug,
         )
-        .sort(
-            (leftPage, rightPage) =>
-                landingTabOrder.indexOf(
-                    leftPage.slug as (typeof landingTabOrder)[number],
-                ) -
-                landingTabOrder.indexOf(
-                    rightPage.slug as (typeof landingTabOrder)[number],
-                ),
-        );
+        .sort((leftPage, rightPage) => leftPage.id - rightPage.id);
     const defaultTab = visiblePages[0]?.slug ?? 'home';
+    const isLandingEditor = editorType === 'landing';
+    const editorLabel = isLandingEditor
+        ? 'Landing Page Editor'
+        : 'Website Page Editor';
+    const editorPath = isLandingEditor
+        ? '/admin/website-management/landing'
+        : '/admin/website-management/website';
 
     return (
         <AppSidebarLayout
@@ -322,23 +347,17 @@ export default function LandingIndex({ pages }: { pages: LandingPageItem[] }) {
                 { title: 'Website Management', href: '#' },
                 {
                     label: 'Landing Page Editor',
-                    href: '/admin/website-management/landing',
+                    href: editorPath,
                 },
             ]}
         >
-            <Head title="Landing Page Editor" />
+            <Head title={editorLabel} />
 
             <div className="p-4 md:p-6">
                 <Tabs defaultValue={defaultTab} className="space-y-5">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
-                            <h1 className="text-xl font-bold">
-                                Landing Page Editor
-                            </h1>
-                            <p className="text-sm text-muted-foreground">
-                                Kelola konten visual dan naratif halaman utama
-                                website Anda.
-                            </p>
+                            <h1 className="text-xl font-bold">{editorLabel}</h1>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3">
@@ -374,7 +393,10 @@ export default function LandingIndex({ pages }: { pages: LandingPageItem[] }) {
                             value={page.slug}
                             className="mt-0 outline-none"
                         >
-                            <LandingPageEditor page={page} />
+                            <LandingPageEditor
+                                page={page}
+                                packageOptions={packageOptions}
+                            />
                         </TabsContent>
                     ))}
                 </Tabs>
@@ -383,7 +405,13 @@ export default function LandingIndex({ pages }: { pages: LandingPageItem[] }) {
     );
 }
 
-function LandingPageEditor({ page }: { page: LandingPageItem }) {
+function LandingPageEditor({
+    page,
+    packageOptions,
+}: {
+    page: LandingPageItem;
+    packageOptions: PackageOption[];
+}) {
     const initialContent = normalizeLandingContentForEditor(
         page.slug,
         stripLocaleData(page.content ?? {}),
@@ -402,8 +430,16 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
         page.slug,
         data.content ?? {},
     );
-    const isHomePage = page.slug === 'home';
-    const previewUrl = isHomePage ? '/' : `/${page.slug}`;
+    const previewUrl =
+        page.slug === 'home_landing'
+            ? '/'
+            : page.slug === 'home_landing_mockup'
+              ? '/landing'
+              : `/${page.slug}`;
+    const isHomePage =
+        page.slug === 'home_landing' || page.slug === 'home_landing_mockup';
+    const isLandingPage = page.slug === 'home_landing_mockup';
+    const isLandingMockupEditor = page.slug === 'home_landing_mockup';
     const [activeSection, setActiveSection] = useState<string>(
         contentSections[0]?.[0] ?? 'hero',
     );
@@ -422,6 +458,15 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
             page.slug,
             stripLocaleData(page.content ?? {}),
         );
+        const normalizedContent =
+            isLandingMockupEditor &&
+            String(nextContent?.hero?.background?.type ?? '') === 'image'
+                ? updateNestedValue(
+                      nextContent,
+                      'hero.background.type',
+                      'default',
+                  )
+                : nextContent;
         setOpenSections(
             Object.fromEntries(
                 contentSections.map(([sectionKey]) => [
@@ -433,7 +478,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
         setActiveSection(contentSections[0]?.[0] ?? 'hero');
         setData((current) => ({
             ...current,
-            content: nextContent,
+            content: normalizedContent,
             media: {},
         }));
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -466,6 +511,29 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
         });
     };
 
+    if (isLandingMockupEditor) {
+        return (
+            <LandingMockupSectionedEditor
+                page={page}
+                packageOptions={packageOptions}
+                data={data}
+                processing={processing}
+                previewUrl={previewUrl}
+                onSubmit={submit}
+                onSetData={(path, value) =>
+                    setData((current) => ({
+                        ...current,
+                        content: updateNestedValue(
+                            current.content,
+                            path,
+                            value,
+                        ),
+                    }))
+                }
+            />
+        );
+    }
+
     return (
         <form className="space-y-5" onSubmit={submit}>
             <div className="sticky top-3 z-30 rounded-2xl border border-border bg-background/90 p-3 shadow-sm backdrop-blur">
@@ -475,7 +543,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                             {pageLabels[page.slug] ??
                                 humanizeSegment(page.slug)}
                         </span>
-                        <span className="hidden sm:inline">•</span>
+                        <span className="hidden sm:inline">-</span>
                         <span className="hidden sm:inline">
                             Editor konten halaman
                         </span>
@@ -492,7 +560,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                                 Preview
                             </Button>
                         </a>
-                        {isHomePage ? (
+                        {isLandingPage ? (
                             <>
                                 <Button
                                     type="button"
@@ -540,7 +608,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                     </div>
                 </div>
 
-                {isHomePage ? (
+                {isLandingPage ? (
                     <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                         {contentSections.map(([sectionKey]) => {
                             const label =
@@ -567,79 +635,85 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                     </div>
                 ) : null}
             </div>
-            {/* 1. Status Halaman */}
-            <Section
-                icon={Settings}
-                title="Status & Ringkasan"
-                desc="Atur visibilitas halaman di website publik."
-            >
-                <Row>
-                    <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3">
-                        <Checkbox
-                            id={`active_${page.slug}`}
-                            checked={Boolean(data.is_active)}
-                            onCheckedChange={(checked) =>
-                                setData((current) => ({
-                                    ...current,
-                                    is_active: checked === true,
-                                }))
-                            }
-                        />
-                        <Label
-                            htmlFor={`active_${page.slug}`}
-                            className="cursor-pointer space-y-0.5"
-                        >
-                            <p className="text-sm font-bold">Halaman Aktif</p>
-                            <p className="text-[0.65rem] text-muted-foreground">
-                                Tampil di website publik
-                            </p>
-                        </Label>
-                    </div>
-                    <div className="flex flex-col justify-center gap-0.5 rounded-xl border border-border bg-muted/20 px-4 py-3">
-                        <p className="text-[0.65rem] font-bold tracking-widest text-muted-foreground uppercase">
-                            Slug Halaman
-                        </p>
-                        <p className="font-mono text-xs font-bold text-primary">
-                            {page.slug}
-                        </p>
-                    </div>
-                </Row>
-            </Section>
+            {!isLandingMockupEditor ? (
+                <>
+                    {/* 1. Status Halaman */}
+                    <Section
+                        icon={Settings}
+                        title="Status & Ringkasan"
+                        desc="Atur visibilitas halaman di website publik."
+                    >
+                        <Row>
+                            <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 px-4 py-3">
+                                <Checkbox
+                                    id={`active_${page.slug}`}
+                                    checked={Boolean(data.is_active)}
+                                    onCheckedChange={(checked) =>
+                                        setData((current) => ({
+                                            ...current,
+                                            is_active: checked === true,
+                                        }))
+                                    }
+                                />
+                                <Label
+                                    htmlFor={`active_${page.slug}`}
+                                    className="cursor-pointer space-y-0.5"
+                                >
+                                    <p className="text-sm font-bold">
+                                        Halaman Aktif
+                                    </p>
+                                    <p className="text-[0.65rem] text-muted-foreground">
+                                        Tampil di website publik
+                                    </p>
+                                </Label>
+                            </div>
+                            <div className="flex flex-col justify-center gap-0.5 rounded-xl border border-border bg-muted/20 px-4 py-3">
+                                <p className="text-[0.65rem] font-bold tracking-widest text-muted-foreground uppercase">
+                                    Slug Halaman
+                                </p>
+                                <p className="font-mono text-xs font-bold text-primary">
+                                    {page.slug}
+                                </p>
+                            </div>
+                        </Row>
+                    </Section>
 
-            {/* 2. Informasi Utama */}
-            <Section
-                icon={Globe}
-                title="Informasi Utama"
-                desc="Judul dan ringkasan halaman untuk website."
-            >
-                <Row>
-                    <Field label="Judul Halaman">
-                        <Input
-                            value={data.title}
-                            onChange={(e) =>
-                                setData((current) => ({
-                                    ...current,
-                                    title: e.target.value,
-                                }))
-                            }
-                            placeholder="Contoh: Beranda Utama"
-                        />
-                    </Field>
-                    <Field label="Ringkasan (Excerpt)">
-                        <Textarea
-                            rows={2}
-                            value={data.excerpt}
-                            onChange={(e) =>
-                                setData((current) => ({
-                                    ...current,
-                                    excerpt: e.target.value,
-                                }))
-                            }
-                            placeholder="Deskripsi singkat halaman ini..."
-                        />
-                    </Field>
-                </Row>
-            </Section>
+                    {/* 2. Informasi Utama */}
+                    <Section
+                        icon={Globe}
+                        title="Informasi Utama"
+                        desc="Judul dan ringkasan halaman untuk website."
+                    >
+                        <Row>
+                            <Field label="Judul Halaman">
+                                <Input
+                                    value={data.title}
+                                    onChange={(e) =>
+                                        setData((current) => ({
+                                            ...current,
+                                            title: e.target.value,
+                                        }))
+                                    }
+                                    placeholder="Contoh: Beranda Utama"
+                                />
+                            </Field>
+                            <Field label="Ringkasan (Excerpt)">
+                                <Textarea
+                                    rows={2}
+                                    value={data.excerpt}
+                                    onChange={(e) =>
+                                        setData((current) => ({
+                                            ...current,
+                                            excerpt: e.target.value,
+                                        }))
+                                    }
+                                    placeholder="Deskripsi singkat halaman ini..."
+                                />
+                            </Field>
+                        </Row>
+                    </Section>
+                </>
+            ) : null}
 
             {/* 3. Section Konten Dinamis */}
             <div
@@ -701,10 +775,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                         const sectionId = `landing_${page.slug}_${sectionKey}`;
                         const isSectionOpen = openSections[sectionKey] ?? true;
 
-                        if (
-                            page.slug === 'tentang-kami' &&
-                            sectionKey === 'stats'
-                        ) {
+                        if (sectionKey === 'stats') {
                             return (
                                 <Section
                                     key={sectionKey}
@@ -751,7 +822,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                             );
                         }
 
-                        if (page.slug === 'home' && sectionKey === 'services') {
+                        if (isHomePage && sectionKey === 'services') {
                             return (
                                 <Section
                                     key={sectionKey}
@@ -855,7 +926,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                             );
                         }
 
-                        if (page.slug === 'home' && sectionKey === 'gallery') {
+                        if (isHomePage && sectionKey === 'gallery') {
                             return (
                                 <Section
                                     key={sectionKey}
@@ -885,7 +956,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                             );
                         }
 
-                        if (page.slug === 'home' && sectionKey === 'timeline') {
+                        if (isHomePage && sectionKey === 'timeline') {
                             return (
                                 <Section
                                     key={sectionKey}
@@ -932,7 +1003,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                             );
                         }
 
-                        if (page.slug === 'home' && sectionKey === 'problem') {
+                        if (isHomePage && sectionKey === 'problem') {
                             return (
                                 <Section
                                     key={sectionKey}
@@ -985,7 +1056,7 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                         );
 
                         const visibleFields =
-                            page.slug === 'home' && sectionKey === 'contact'
+                            isHomePage && sectionKey === 'contact'
                                 ? fields.filter(
                                       (field) =>
                                           field.path !==
@@ -994,12 +1065,17 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                                               'contact.office_hours_lines',
                                   )
                                 : fields;
-                        if (visibleFields.length === 0) {
+                        const sectionFields = isLandingMockupEditor
+                            ? visibleFields.filter((field) =>
+                                  isLandingMockupFieldAllowed(field.path),
+                              )
+                            : visibleFields;
+                        if (sectionFields.length === 0) {
                             return null;
                         }
 
                         const showOfficeHoursNotice =
-                            page.slug === 'home' && sectionKey === 'contact';
+                            isHomePage && sectionKey === 'contact';
 
                         return (
                             <Section
@@ -1032,14 +1108,20 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                                 ) : null}
                                 <Row>
                                     {[
-                                        ...visibleFields,
-                                        ...buildExtraSectionFields(
-                                            page.slug,
-                                            sectionKey,
-                                            data.content,
-                                        ),
+                                        ...sectionFields,
+                                        ...(isLandingMockupEditor
+                                            ? []
+                                            : buildExtraSectionFields(
+                                                  page.slug,
+                                                  sectionKey,
+                                                  data.content,
+                                              )),
                                     ].map((field) => {
                                         if (isBackgroundTypeField(field.path)) {
+                                            const isHeroBackgroundTypeField =
+                                                field.path ===
+                                                'hero.background.type';
+
                                             return (
                                                 <div
                                                     key={field.path}
@@ -1082,9 +1164,14 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                                                                 <SelectItem value="color">
                                                                     Warna
                                                                 </SelectItem>
-                                                                <SelectItem value="image">
-                                                                    Foto
-                                                                </SelectItem>
+                                                                {!(
+                                                                    isLandingMockupEditor &&
+                                                                    isHeroBackgroundTypeField
+                                                                ) ? (
+                                                                    <SelectItem value="image">
+                                                                        Foto
+                                                                    </SelectItem>
+                                                                ) : null}
                                                             </SelectContent>
                                                         </Select>
                                                     </Field>
@@ -1170,6 +1257,15 @@ function LandingPageEditor({ page }: { page: LandingPageItem }) {
                                         }
 
                                         if (isImageField(field.path)) {
+                                            if (
+                                                isLandingMockupEditor &&
+                                                (field.path === 'hero.image' ||
+                                                    field.path ===
+                                                        'hero.background.image')
+                                            ) {
+                                                return null;
+                                            }
+
                                             const section =
                                                 field.path.split('.')[0];
                                             const backgroundType = String(
@@ -1441,6 +1537,907 @@ function ServiceItemsEditor({
     );
 }
 
+function LandingMockupSectionedEditor({
+    page,
+    packageOptions,
+    data,
+    processing,
+    previewUrl,
+    onSubmit,
+    onSetData,
+}: {
+    page: LandingPageItem;
+    packageOptions: PackageOption[];
+    data: {
+        title: string;
+        excerpt: string;
+        content: Record<string, any>;
+        media: Record<string, File | null>;
+        is_active: boolean;
+        _method: string;
+    };
+    processing: boolean;
+    previewUrl: string;
+    onSubmit: (event: React.FormEvent) => void;
+    onSetData: (path: string, value: unknown) => void;
+}) {
+    const isFilled = (value: unknown): boolean =>
+        String(value ?? '').trim().length > 0;
+    const sectionNavigation = [
+        { key: 'hero', label: 'Hero + Statistik' },
+        { key: 'services', label: 'Keunggulan' },
+        { key: 'packages', label: 'Paket' },
+        { key: 'testimonials', label: 'Testimoni' },
+        { key: 'faq', label: 'FAQ' },
+        { key: 'cta', label: 'CTA' },
+        { key: 'footer', label: 'Footer' },
+    ] as const;
+    const statItems = Array.isArray(data.content?.stats)
+        ? data.content.stats
+        : [];
+    const serviceItems = Array.isArray(data.content?.services?.items)
+        ? data.content.services.items
+        : [];
+    const selectedPackageIds = Array.isArray(
+        data.content?.packages?.selected_package_ids,
+    )
+        ? data.content.packages.selected_package_ids
+              .map((value: unknown) => Number(value))
+              .filter((value: number) => Number.isFinite(value))
+        : [];
+    const heroTitleLines = String(data.content?.hero?.title ?? '')
+        .split('\n')
+        .map((line) => line.trim());
+
+    const setHeroTitleLine = (lineIndex: number, value: string) => {
+        const nextLines = [...heroTitleLines];
+        while (nextLines.length < 4) {
+            nextLines.push('');
+        }
+        nextLines[lineIndex] = value;
+        onSetData(
+            'hero.title',
+            nextLines
+                .map((line) => String(line ?? '').trim())
+                .filter((line) => line !== '')
+                .join('\n'),
+        );
+    };
+
+    const addStatItem = () => {
+        onSetData('stats', [
+            ...statItems,
+            {
+                value: '',
+                label: '',
+            },
+        ]);
+    };
+
+    const removeStatItem = (index: number) => {
+        onSetData(
+            'stats',
+            statItems.filter(
+                (_: unknown, itemIndex: number) => itemIndex !== index,
+            ),
+        );
+    };
+
+    const addServiceItem = () => {
+        onSetData('services.items', [
+            ...serviceItems,
+            {
+                title: '',
+                icon: 'shield-check',
+                description: '',
+            },
+        ]);
+    };
+
+    const removeServiceItem = (index: number) => {
+        onSetData(
+            'services.items',
+            serviceItems.filter(
+                (_: unknown, itemIndex: number) => itemIndex !== index,
+            ),
+        );
+    };
+
+    const togglePackageSelection = (packageId: number, checked: boolean) => {
+        const alreadySelected = selectedPackageIds.includes(packageId);
+        if (checked && alreadySelected) {
+            return;
+        }
+
+        if (checked) {
+            if (selectedPackageIds.length >= 3) {
+                return;
+            }
+
+            onSetData('packages.selected_package_ids', [
+                ...selectedPackageIds,
+                packageId,
+            ]);
+
+            return;
+        }
+
+        onSetData(
+            'packages.selected_package_ids',
+            selectedPackageIds.filter((id: number) => id !== packageId),
+        );
+    };
+
+    const sectionCompletion: Record<string, boolean> = {
+        hero:
+            isFilled(data.content?.hero?.label) &&
+            isFilled(data.content?.hero?.title) &&
+            isFilled(data.content?.hero?.description) &&
+            isFilled(data.content?.hero?.cta_label),
+        services:
+            isFilled(data.content?.services?.title) &&
+            serviceItems.filter((item: Record<string, any>) =>
+                isFilled(item?.title),
+            ).length >= 4,
+        packages:
+            isFilled(data.content?.packages?.title) &&
+            isFilled(data.content?.packages?.heading),
+        testimonials: isFilled(data.content?.testimonials?.heading),
+        faq: isFilled(data.content?.faq?.title),
+        cta:
+            isFilled(data.content?.contact?.banner_title) &&
+            isFilled(data.content?.contact?.whatsapp_label),
+        footer:
+            isFilled(data.content?.footer?.brand) &&
+            isFilled(data.content?.footer?.copyright),
+    };
+    return (
+        <form className="space-y-6 pb-10" onSubmit={onSubmit}>
+            <div className="sticky top-3 z-30 rounded-2xl border border-border bg-background/95 p-4 shadow-sm backdrop-blur">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p className="text-sm font-semibold text-foreground">
+                            Landing Editor (/landing)
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex"
+                        >
+                            <Button type="button" variant="outline" size="sm">
+                                <Eye className="mr-2 h-4 w-4" />
+                                Preview /landing
+                            </Button>
+                        </a>
+                        <Button type="submit" size="sm" disabled={processing}>
+                            {processing ? 'Menyimpan...' : 'Simpan'}
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground"></div>
+
+            <Section
+                sectionId="landing-mockup-hero"
+                icon={FileText}
+                title="Hero + Statistik"
+                desc="Mengubah judul utama, deskripsi, tombol hero, dan 3 angka statistik di area paling atas landing."
+                actions={
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        Wajib
+                    </span>
+                }
+            >
+                <GroupCard
+                    title="Konten Hero"
+                    desc="Isi mengikuti urutan tampilan paling atas landing."
+                >
+                    <Row>
+                        <Field label="Label">
+                            <Input
+                                placeholder="Contoh: Hajj & Umrah Terpercaya"
+                                value={String(data.content?.hero?.label ?? '')}
+                                onChange={(e) =>
+                                    onSetData('hero.label', e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Judul Baris 1 (putih besar)"
+                            hint="Bagian paling atas dari judul hero."
+                        >
+                            <Textarea
+                                rows={2}
+                                placeholder="Contoh: Perjalanan"
+                                value={String(heroTitleLines[0] ?? '')}
+                                onChange={(e) =>
+                                    setHeroTitleLine(0, e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Judul Baris 2 (putih besar)"
+                            hint="Lanjutan judul hero warna putih."
+                        >
+                            <Input
+                                placeholder="Contoh: Menuju"
+                                value={String(heroTitleLines[1] ?? '')}
+                                onChange={(e) =>
+                                    setHeroTitleLine(1, e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Judul Baris 3 (highlight kuning)"
+                            hint="Bagian judul berwarna kuning/oranye."
+                        >
+                            <Input
+                                placeholder="Contoh: Tanah Suci"
+                                value={String(heroTitleLines[2] ?? '')}
+                                onChange={(e) =>
+                                    setHeroTitleLine(2, e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Judul Baris 4 (outline)"
+                            hint="Bagian judul dengan efek outline."
+                        >
+                            <Input
+                                placeholder="Contoh: Impian Anda"
+                                value={String(heroTitleLines[3] ?? '')}
+                                onChange={(e) =>
+                                    setHeroTitleLine(3, e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field label="Deskripsi">
+                            <Textarea
+                                rows={3}
+                                placeholder="Deskripsi hero landing"
+                                value={String(
+                                    data.content?.hero?.description ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'hero.description',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field label="Label Tombol Utama">
+                            <Input
+                                placeholder="Contoh: Konsultasi Gratis"
+                                value={String(
+                                    data.content?.hero?.cta_label ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData('hero.cta_label', e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field label="Label Tombol Kedua">
+                            <Input
+                                placeholder="Contoh: Lihat Paket ->"
+                                value={String(
+                                    data.content?.hero?.secondary_cta_label ??
+                                        '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'hero.secondary_cta_label',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                    </Row>
+                </GroupCard>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                        Tambahkan statistik sesuai kebutuhan.
+                    </p>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addStatItem}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Tambah Statistik
+                    </Button>
+                </div>
+                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    {statItems.map((_: unknown, index: number) => (
+                        <div
+                            key={index}
+                            className="rounded-xl border border-border p-4"
+                        >
+                            <div className="mb-3 flex items-center justify-between">
+                                <p className="text-xs font-semibold text-muted-foreground">
+                                    Statistik {index + 1}
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-destructive hover:text-destructive"
+                                    onClick={() => removeStatItem(index)}
+                                    disabled={statItems.length <= 1}
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                            <Field label={`Nilai ${index + 1}`}>
+                                <Input
+                                    value={String(
+                                        statItems[index]?.value ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        onSetData(
+                                            `stats.${index}.value`,
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field label={`Label ${index + 1}`}>
+                                <Input
+                                    value={String(
+                                        statItems[index]?.label ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        onSetData(
+                                            `stats.${index}.label`,
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                        </div>
+                    ))}
+                </div>
+            </Section>
+
+            <Section
+                sectionId="landing-mockup-services"
+                icon={Layers3}
+                title="Keunggulan"
+                desc="Mengubah judul keunggulan dan 4 kartu benefit yang tampil setelah area hero."
+                actions={
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        4 Item
+                    </span>
+                }
+            >
+                <GroupCard
+                    title="Heading Keunggulan"
+                    desc="Isi berurutan: judul section, heading baris 1, kata merah, lalu heading baris 2."
+                >
+                    <Row>
+                        <Field label="Judul">
+                            <Textarea
+                                rows={2}
+                                placeholder="Contoh: Mengapa Asfar Tour"
+                                value={String(
+                                    data.content?.services?.title ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData('services.title', e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Heading Baris 1"
+                            hint="Contoh: Ibadah Lebih"
+                        >
+                            <Input
+                                placeholder="Ibadah Lebih"
+                                value={String(
+                                    data.content?.services?.heading_top ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'services.heading_top',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Kata Merah Heading Keunggulan"
+                            hint="Contoh: Bermakna"
+                        >
+                            <Input
+                                placeholder="Bermakna"
+                                value={String(
+                                    data.content?.services?.heading_highlight ??
+                                        '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'services.heading_highlight',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field
+                            label="Heading Baris 2"
+                            hint="Contoh: Bersama Kami"
+                        >
+                            <Input
+                                placeholder="Bersama Kami"
+                                value={String(
+                                    data.content?.services?.heading_bottom ??
+                                        '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'services.heading_bottom',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field label="Deskripsi">
+                            <Textarea
+                                rows={3}
+                                placeholder="Contoh: Kami tidak sekadar memberangkatkan..."
+                                value={String(
+                                    data.content?.services?.description ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'services.description',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                    </Row>
+                </GroupCard>
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs text-muted-foreground">
+                        Item keunggulan bisa ditambah sesuai kebutuhan landing.
+                    </p>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addServiceItem}
+                    >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Tambah Item
+                    </Button>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    {serviceItems.map((_: unknown, index: number) => (
+                        <div
+                            key={index}
+                            className="rounded-xl border border-border p-4"
+                        >
+                            <div className="mb-3 flex items-center justify-between">
+                                <p className="text-xs font-semibold text-muted-foreground">
+                                    Item {index + 1}
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-destructive hover:text-destructive"
+                                    onClick={() => removeServiceItem(index)}
+                                    disabled={serviceItems.length <= 1}
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                            <Field label={`Judul Item ${index + 1}`}>
+                                <Input
+                                    value={String(
+                                        serviceItems[index]?.title ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        onSetData(
+                                            `services.items.${index}.title`,
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field label={`Icon Item ${index + 1}`}>
+                                <IconSelect
+                                    value={String(
+                                        serviceItems[index]?.icon ?? '',
+                                    )}
+                                    onChange={(value) =>
+                                        onSetData(
+                                            `services.items.${index}.icon`,
+                                            value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field label={`Deskripsi Item ${index + 1}`}>
+                                <Textarea
+                                    rows={2}
+                                    value={String(
+                                        serviceItems[index]?.description ?? '',
+                                    )}
+                                    onChange={(e) =>
+                                        onSetData(
+                                            `services.items.${index}.description`,
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                        </div>
+                    ))}
+                </div>
+            </Section>
+
+            <Section
+                sectionId="landing-mockup-packages"
+                icon={FileText}
+                title="Paket"
+                desc="Atur judul section paket dan pilih maksimal 3 paket yang tampil di /landing."
+                actions={
+                    <a
+                        href="/admin/product-management/packages"
+                        className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100"
+                    >
+                        Kelola semua paket
+                    </a>
+                }
+            >
+                <GroupCard
+                    title="Heading Section Paket"
+                    desc="Ini teks yang tampil di atas kartu paket pada landing."
+                >
+                    <Row>
+                        <Field label="Paket - Judul Kecil">
+                            <Input
+                                placeholder="Contoh: Pilihan Paket"
+                                value={String(
+                                    data.content?.packages?.title ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData('packages.title', e.target.value)
+                                }
+                            />
+                        </Field>
+                        <Field label="Paket - Judul Besar">
+                            <Input
+                                placeholder="Contoh: Paket Umrah Kami"
+                                value={String(
+                                    data.content?.packages?.heading ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'packages.heading',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field label="Paket - Deskripsi">
+                            <Textarea
+                                rows={2}
+                                placeholder="Contoh: Pilih paket yang sesuai dengan kebutuhan..."
+                                value={String(
+                                    data.content?.packages?.description ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'packages.description',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field label="Label Tombol Lihat Paket Lainnya">
+                            <Input
+                                placeholder="Contoh: Lihat Paket Lainnya"
+                                value={String(
+                                    data.content?.packages
+                                        ?.more_packages_label ?? '',
+                                )}
+                                onChange={(e) =>
+                                    onSetData(
+                                        'packages.more_packages_label',
+                                        e.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                    </Row>
+                </GroupCard>
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-foreground">
+                            Pilih Paket untuk Landing (Maksimal 3)
+                        </p>
+                        <span className="rounded-full border border-border bg-background px-2.5 py-0.5 text-xs font-semibold text-muted-foreground">
+                            {selectedPackageIds.length}/3 dipilih
+                        </span>
+                    </div>
+                    <p className="mb-4 text-xs text-muted-foreground">
+                        Jika butuh lebih dari 3 paket, arahkan pengunjung ke
+                        halaman{' '}
+                        <span className="font-semibold text-foreground">
+                            /paket-umroh
+                        </span>
+                        .
+                    </p>
+                    <div className="space-y-3">
+                        {[0, 1, 2].map((slotIndex) => {
+                            const slotValue = String(
+                                selectedPackageIds[slotIndex] ?? '',
+                            );
+                            const selectedInOtherSlots = selectedPackageIds
+                                .filter(
+                                    (_: number, index: number) =>
+                                        index !== slotIndex,
+                                )
+                                .map(String);
+
+                            return (
+                                <Field
+                                    key={slotIndex}
+                                    label={`Paket Pilihan ${slotIndex + 1}`}
+                                >
+                                    <Select
+                                        value={slotValue}
+                                        onValueChange={(value) => {
+                                            const nextSlots = [
+                                                selectedPackageIds[0] ?? null,
+                                                selectedPackageIds[1] ?? null,
+                                                selectedPackageIds[2] ?? null,
+                                            ] as Array<number | null>;
+
+                                            if (value === '__none__') {
+                                                nextSlots[slotIndex] = null;
+                                            } else {
+                                                const nextId = Number(value);
+                                                if (!Number.isFinite(nextId)) {
+                                                    return;
+                                                }
+
+                                                for (
+                                                    let index = 0;
+                                                    index < nextSlots.length;
+                                                    index += 1
+                                                ) {
+                                                    if (
+                                                        index !== slotIndex &&
+                                                        nextSlots[index] ===
+                                                            nextId
+                                                    ) {
+                                                        nextSlots[index] = null;
+                                                    }
+                                                }
+
+                                                nextSlots[slotIndex] = nextId;
+                                            }
+
+                                            onSetData(
+                                                'packages.selected_package_ids',
+                                                nextSlots.filter(
+                                                    (item): item is number =>
+                                                        typeof item ===
+                                                        'number',
+                                                ),
+                                            );
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih paket" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none__">
+                                                Tidak dipilih
+                                            </SelectItem>
+                                            {packageOptions.map((pkg) => {
+                                                const optionValue = String(
+                                                    pkg.id,
+                                                );
+                                                const isDisabled =
+                                                    selectedInOtherSlots.includes(
+                                                        optionValue,
+                                                    ) &&
+                                                    optionValue !== slotValue;
+
+                                                return (
+                                                    <SelectItem
+                                                        key={pkg.id}
+                                                        value={optionValue}
+                                                        disabled={isDisabled}
+                                                    >
+                                                        {pkg.name} -{' '}
+                                                        {pkg.package_type ??
+                                                            'Reguler'}{' '}
+                                                        -{' '}
+                                                        {pkg.duration_days ??
+                                                            '-'}{' '}
+                                                        Hari -{' '}
+                                                        {pkg.departure_city ??
+                                                            '-'}
+                                                    </SelectItem>
+                                                );
+                                            })}
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+                            );
+                        })}
+                        <p className="text-xs text-muted-foreground">
+                            Pilih maksimal 3 paket dari dropdown di atas.
+                        </p>
+                    </div>
+                </div>
+            </Section>
+
+            <Section
+                sectionId="landing-mockup-testimonials"
+                icon={FileText}
+                title="Testimoni"
+                desc="Mengubah heading section testimoni. Untuk isi testimoni, atur di menu Portal Content."
+                actions={
+                    <a
+                        href="/admin/website-management/portal-content"
+                        className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100"
+                    >
+                        Atur item di Portal Content
+                    </a>
+                }
+            >
+                <Row>
+                    <Field label="Judul Testimoni">
+                        <Input
+                            value={String(
+                                data.content?.testimonials?.heading ?? '',
+                            )}
+                            onChange={(e) =>
+                                onSetData(
+                                    'testimonials.heading',
+                                    e.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                </Row>
+            </Section>
+
+            <Section
+                sectionId="landing-mockup-faq"
+                icon={FileText}
+                title="FAQ"
+                desc="Mengubah heading FAQ. Untuk daftar pertanyaan, atur di menu Portal Content."
+                actions={
+                    <a
+                        href="/admin/website-management/portal-content"
+                        className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100"
+                    >
+                        Atur item di Portal Content
+                    </a>
+                }
+            >
+                <Row>
+                    <Field label="Judul FAQ">
+                        <Input
+                            value={String(data.content?.faq?.title ?? '')}
+                            onChange={(e) =>
+                                onSetData('faq.title', e.target.value)
+                            }
+                        />
+                    </Field>
+                    <Field label="Deskripsi FAQ">
+                        <Textarea
+                            rows={2}
+                            value={String(data.content?.faq?.description ?? '')}
+                            onChange={(e) =>
+                                onSetData('faq.description', e.target.value)
+                            }
+                        />
+                    </Field>
+                </Row>
+            </Section>
+
+            <Section
+                sectionId="landing-mockup-cta"
+                icon={FileText}
+                title="CTA"
+                desc="Mengubah area ajakan terakhir sebelum footer."
+            >
+                <Row>
+                    <Field label="Kicker CTA">
+                        <Input
+                            value={String(
+                                data.content?.contact?.banner_kicker ?? '',
+                            )}
+                            onChange={(e) =>
+                                onSetData(
+                                    'contact.banner_kicker',
+                                    e.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Judul CTA">
+                        <Textarea
+                            rows={2}
+                            value={String(
+                                data.content?.contact?.banner_title ?? '',
+                            )}
+                            onChange={(e) =>
+                                onSetData(
+                                    'contact.banner_title',
+                                    e.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Label Tombol Chat">
+                        <Input
+                            value={String(
+                                data.content?.contact?.whatsapp_label ?? '',
+                            )}
+                            onChange={(e) =>
+                                onSetData(
+                                    'contact.whatsapp_label',
+                                    e.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                </Row>
+            </Section>
+
+            <Section
+                sectionId="landing-mockup-footer"
+                icon={FileText}
+                title="Footer"
+                desc="Mengubah identitas footer paling bawah pada halaman /landing."
+            >
+                <Row>
+                    <Field label="Brand Footer">
+                        <Input
+                            value={String(data.content?.footer?.brand ?? '')}
+                            onChange={(e) =>
+                                onSetData('footer.brand', e.target.value)
+                            }
+                        />
+                    </Field>
+                    <Field label="Subtitle Footer">
+                        <Input
+                            value={String(data.content?.footer?.subtitle ?? '')}
+                            onChange={(e) =>
+                                onSetData('footer.subtitle', e.target.value)
+                            }
+                        />
+                    </Field>
+                    <Field label="Copyright Footer">
+                        <Input
+                            value={String(
+                                data.content?.footer?.copyright ?? '',
+                            )}
+                            onChange={(e) =>
+                                onSetData('footer.copyright', e.target.value)
+                            }
+                        />
+                    </Field>
+                </Row>
+            </Section>
+        </form>
+    );
+}
+
 function ValuesSectionEditor({
     content,
     setContent,
@@ -1680,7 +2677,7 @@ function normalizeLandingContentForEditor(
     pageSlug: string,
     content: Record<string, any>,
 ): Record<string, any> {
-    if (pageSlug !== 'home') {
+    if (!isLandingHomeSlug(pageSlug)) {
         return content;
     }
 
@@ -1689,9 +2686,46 @@ function normalizeLandingContentForEditor(
         ? next.services.items
         : [];
     const minimumItems = 4;
+    const totalItems = Math.max(minimumItems, items.length);
 
     if (!next.services) {
         next.services = {};
+    }
+
+    const headingTop = String(next.services.heading_top ?? '').trim();
+    const headingHighlight = String(
+        next.services.heading_highlight ?? '',
+    ).trim();
+    const headingBottom = String(next.services.heading_bottom ?? '').trim();
+    const legacyHeading = String(next.services.heading ?? '').trim();
+    const legacyHighlightWord = String(
+        next.services.highlight_word ?? '',
+    ).trim();
+
+    if (!headingTop || !headingBottom || !headingHighlight) {
+        const legacyLines = legacyHeading
+            .split('\n')
+            .map((line: string) => String(line ?? '').trim())
+            .filter(Boolean);
+
+        const resolvedHighlight =
+            headingHighlight ||
+            legacyHighlightWord ||
+            (legacyLines.join(' ').includes('Bermakna') ? 'Bermakna' : '');
+
+        const firstLine = legacyLines[0] ?? '';
+        const secondLine = legacyLines[1] ?? '';
+
+        const resolvedTop =
+            headingTop ||
+            (resolvedHighlight && firstLine.includes(resolvedHighlight)
+                ? firstLine.replace(resolvedHighlight, '').trim()
+                : firstLine);
+
+        next.services.heading_top = resolvedTop || 'Ibadah Lebih';
+        next.services.heading_highlight = resolvedHighlight || 'Bermakna';
+        next.services.heading_bottom =
+            headingBottom || secondLine || 'Bersama Kami';
     }
 
     const defaultServiceItems = [
@@ -1716,15 +2750,25 @@ function normalizeLandingContentForEditor(
         },
     ];
 
-    next.services.items = Array.from({ length: minimumItems }, (_, index) => {
+    next.services.items = Array.from({ length: totalItems }, (_, index) => {
         const currentItem = items[index] ?? {};
         const defaults = defaultServiceItems[index];
 
         return {
             image_path: String(currentItem.image_path ?? '/images/dummy.jpg'),
-            title: String(currentItem.title ?? defaults.title),
+            title: String(currentItem.title ?? defaults?.title ?? ''),
+            icon: String(
+                currentItem.icon ??
+                    (index === 0
+                        ? 'hotel'
+                        : index === 1
+                          ? 'plane'
+                          : index === 2
+                            ? 'images'
+                            : 'shield-check'),
+            ),
             description: String(
-                currentItem.description ?? defaults.description,
+                currentItem.description ?? defaults?.description ?? '',
             ),
         };
     });
@@ -1910,7 +2954,7 @@ function buildExtraSectionFields(
     sectionKey: string,
     content: Record<string, any>,
 ): EditableField[] {
-    if (pageSlug === 'home') {
+    if (isLandingHomeSlug(pageSlug)) {
         const typeValue = String(
             getNestedValue(content, `${sectionKey}.background.type`) ??
                 'default',
@@ -1965,11 +3009,15 @@ function buildExtraSectionFields(
         ];
     }
 
-    if (pageSlug !== 'home' || sectionKey !== 'gallery') {
+    if (!isLandingHomeSlug(pageSlug) || sectionKey !== 'gallery') {
         return [];
     }
 
     return [];
+}
+
+function isLandingHomeSlug(pageSlug: string): boolean {
+    return pageSlug === 'home_landing' || pageSlug === 'home_landing_mockup';
 }
 
 function SectionBackgroundEditor({
@@ -2482,7 +3530,7 @@ function ProblemSectionEditor({
                     <div>
                         <p className="text-sm font-semibold">Badge Masalah</p>
                         <p className="text-xs text-muted-foreground">
-                            Chip merah di section “Penting Diketahui”.
+                            Chip merah di section "Penting Diketahui".
                         </p>
                     </div>
                     <Button
@@ -2622,6 +3670,77 @@ function isBackgroundTypeField(path: string): boolean {
 
 function isBackgroundColorField(path: string): boolean {
     return path.endsWith('.background.color');
+}
+
+function isLandingMockupFieldAllowed(path: string): boolean {
+    const allowedPrefixes = [
+        'hero.label',
+        'hero.title',
+        'hero.description',
+        'hero.cta_label',
+        'hero.secondary_cta_label',
+        'hero.secondary_cta_href',
+        'stats.',
+        'services.label',
+        'services.title',
+        'services.description',
+        'services.items.',
+        'packages.heading',
+        'packages.cta_label',
+        'packages.detail_label',
+        'packages.duration_suffix',
+        'packages.discount_badge_label',
+        'testimonials.heading',
+        'testimonials.fallback_quote',
+        'faq.title',
+        'faq.description',
+        'contact.banner_kicker',
+        'contact.banner_title',
+        'contact.whatsapp_label',
+        'contact.secondary_label',
+        'contact.secondary_href',
+        'contact.address_label',
+        'contact.contact_info_label',
+        'contact.description',
+        'footer.brand',
+        'footer.subtitle',
+        'footer.copyright',
+        'packages.title',
+        'packages.description',
+        'testimonials.title',
+        'testimonials.description',
+        'testimonials.prev_label',
+        'testimonials.next_label',
+        'testimonials.featured_label',
+    ];
+
+    if (!allowedPrefixes.some((prefix) => path.startsWith(prefix))) {
+        return false;
+    }
+
+    const blockedExactPaths = new Set([
+        'hero.image',
+        'hero.background.image',
+        'hero.background.image_primary',
+        'hero.background.image_secondary',
+        'contact.banner_image',
+        'contact.office_hours_label',
+        'contact.office_hours_lines',
+    ]);
+
+    if (blockedExactPaths.has(path)) {
+        return false;
+    }
+
+    if (path.startsWith('hero.background.') && path.endsWith('.image')) {
+        return false;
+    }
+
+    if (path.includes('.background.')) {
+        return false;
+    }
+
+    return true;
 }
 
 function humanizePath(path: string): string {

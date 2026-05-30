@@ -48,18 +48,35 @@ class GalleryController extends Controller
 
     public function store(StoreGalleryItemRequest $request): RedirectResponse
     {
-        $storedPath = $request->file('image')->store('gallery', 'public');
+        $uploadedImages = $request->file('images', []);
 
-        GalleryItem::query()->create([
-            'title' => $request->string('title')->value(),
-            'category' => $request->filled('category') ? $request->string('category')->value() : null,
-            'description' => $request->filled('description') ? $request->string('description')->value() : null,
-            'image_path' => '/storage/'.$storedPath,
-            'sort_order' => $request->integer('sort_order'),
-            'is_active' => $request->boolean('is_active'),
-        ]);
+        if ($uploadedImages === []) {
+            $singleImage = $request->file('image');
+            if ($singleImage) {
+                $uploadedImages = [$singleImage];
+            }
+        }
 
-        return back()->with('success', 'Foto galeri berhasil ditambahkan.');
+        $baseTitle = $request->string('title')->value();
+        $baseSortOrder = $request->integer('sort_order');
+        $category = $request->filled('category') ? $request->string('category')->value() : null;
+        $description = $request->filled('description') ? $request->string('description')->value() : null;
+        $isActive = $request->boolean('is_active');
+
+        foreach ($uploadedImages as $index => $imageFile) {
+            $storedPath = $imageFile->store('gallery', 'public');
+
+            GalleryItem::query()->create([
+                'title' => count($uploadedImages) > 1 ? $baseTitle.' #'.($index + 1) : $baseTitle,
+                'category' => $category,
+                'description' => $description,
+                'image_path' => '/storage/'.$storedPath,
+                'sort_order' => $baseSortOrder + $index,
+                'is_active' => $isActive,
+            ]);
+        }
+
+        return back()->with('success', count($uploadedImages) > 1 ? 'Foto galeri berhasil ditambahkan (multi-upload).' : 'Foto galeri berhasil ditambahkan.');
     }
 
     public function update(UpdateGalleryItemRequest $request, GalleryItem $galleryItem): RedirectResponse

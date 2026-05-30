@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\HasAuditTrail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Article extends Model
 {
-    use HasFactory;
+    use HasAuditTrail, HasFactory;
 
     public const TYPE_TRAVEL_UPDATE = 'travel_update';
 

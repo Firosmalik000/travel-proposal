@@ -1,6 +1,14 @@
 import { type SharedData } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 
+type SeoData = Record<string, unknown>;
+
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object'
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
 function normalizeBaseUrl(value: string | null | undefined): string {
     const base = String(value ?? '').trim();
 
@@ -39,67 +47,70 @@ function safeString(value: unknown, fallback = ''): string {
 
 export default function PublicSeoHead() {
     const page = usePage<SharedData>();
-    const seo = (page.props.seoSettings as Record<string, any>) ?? {};
+    const seo = (page.props.seoSettings as SeoData) ?? {};
+    const seoGeneral = asRecord(seo.general);
+    const seoAdvanced = asRecord(seo.advanced);
+    const seoSocial = asRecord(seo.social);
+    const seoContact = asRecord(seo.contact);
+    const socialAccountsRaw = seoSocial.accounts;
+    const siteNameData = asRecord(seoGeneral.siteName);
+    const taglineData = asRecord(seoGeneral.tagline);
+    const defaultDescriptionData = asRecord(seoGeneral.defaultDescription);
+    const ogTitleData = asRecord(seoSocial.ogTitle);
+    const ogDescriptionData = asRecord(seoSocial.ogDescription);
 
-    const base = normalizeBaseUrl(seo.advanced?.canonicalBase);
+    const base = normalizeBaseUrl(
+        safeString(seoAdvanced.canonicalBase) || undefined,
+    );
     const urlPath = safeString(page.url).split('?')[0] ?? '/';
     const canonical = base ? absoluteUrl(base, urlPath) : urlPath;
 
     const locale = 'id';
     const siteName = safeString(
-        seo.general?.siteName?.[locale],
-        safeString(
-            seo.general?.siteName?.id,
-            safeString(seo.general?.siteName?.en, ''),
-        ),
+        siteNameData[locale],
+        safeString(siteNameData.id, safeString(siteNameData.en, '')),
     );
     const tagline = safeString(
-        seo.general?.tagline?.[locale],
-        safeString(
-            seo.general?.tagline?.id,
-            safeString(seo.general?.tagline?.en, ''),
-        ),
+        taglineData[locale],
+        safeString(taglineData.id, safeString(taglineData.en, '')),
     );
     const description = safeString(
-        seo.general?.defaultDescription?.[locale],
+        defaultDescriptionData[locale],
         safeString(
-            seo.general?.defaultDescription?.id,
-            safeString(seo.general?.defaultDescription?.en, ''),
+            defaultDescriptionData.id,
+            safeString(defaultDescriptionData.en, ''),
         ),
     );
-    const keywords = safeString(seo.general?.keywords);
+    const keywords = safeString(seoGeneral.keywords);
 
-    const robots = safeString(seo.advanced?.robotsDefault, 'index, follow');
+    const robots = safeString(seoAdvanced.robotsDefault, 'index, follow');
 
     const ogTitle = safeString(
-        seo.social?.ogTitle?.[locale],
-        safeString(
-            seo.social?.ogTitle?.id,
-            safeString(seo.social?.ogTitle?.en, siteName),
-        ),
+        ogTitleData[locale],
+        safeString(ogTitleData.id, safeString(ogTitleData.en, siteName)),
     );
     const ogDescription = safeString(
-        seo.social?.ogDescription?.[locale],
+        ogDescriptionData[locale],
         safeString(
-            seo.social?.ogDescription?.id,
-            safeString(seo.social?.ogDescription?.en, description),
+            ogDescriptionData.id,
+            safeString(ogDescriptionData.en, description),
         ),
     );
 
     const ogImagePath =
-        safeString(seo.social?.ogImage?.url) ||
-        safeString(seo.contact?.logo?.url);
+        safeString(asRecord(seoSocial.ogImage).url) ||
+        safeString(asRecord(seoContact.logo).url);
     const ogImage = ogImagePath ? absoluteUrl(base, ogImagePath) : '';
 
-    const socialAccounts = Array.isArray(seo.social?.accounts)
-        ? (seo.social.accounts as Array<Record<string, any>>)
+    const socialAccounts = Array.isArray(socialAccountsRaw)
+        ? (socialAccountsRaw as Array<Record<string, unknown>>)
         : [];
     const sameAs = socialAccounts
         .map((account) => safeString(account?.url))
         .filter(Boolean);
 
-    const phone = safeString(seo.contact?.phone);
-    const email = safeString(seo.contact?.email);
+    const phone = safeString(seoContact.phone);
+    const email = safeString(seoContact.email);
 
     const jsonLdOrg = {
         '@context': 'https://schema.org',
@@ -204,17 +215,17 @@ export default function PublicSeoHead() {
                 />
             ) : null}
 
-            {safeString(seo.advanced?.googleVerification) ? (
+            {safeString(seoAdvanced.googleVerification) ? (
                 <meta
                     name="google-site-verification"
-                    content={safeString(seo.advanced?.googleVerification)}
+                    content={safeString(seoAdvanced.googleVerification)}
                     head-key="google-site-verification"
                 />
             ) : null}
-            {safeString(seo.advanced?.bingVerification) ? (
+            {safeString(seoAdvanced.bingVerification) ? (
                 <meta
                     name="msvalidate.01"
-                    content={safeString(seo.advanced?.bingVerification)}
+                    content={safeString(seoAdvanced.bingVerification)}
                     head-key="bing-site-verification"
                 />
             ) : null}

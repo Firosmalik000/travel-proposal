@@ -7,6 +7,12 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
     Table,
@@ -23,6 +29,7 @@ import {
     CalendarDays,
     Copy,
     Mail,
+    MoreHorizontal,
     PackageCheck,
     Search,
     Users,
@@ -236,56 +243,56 @@ export default function BookingRegisterIndex({ registrations }: Props) {
         >
             <Head title="Booking Register" />
 
-            <div className="space-y-6 p-4 md:p-6">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-2xl font-bold tracking-tight">
+            <div className="space-y-4 p-4 md:p-5">
+                <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+                    <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                         Booking Register
                     </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Menampilkan data calon jamaah yang masih berstatus
-                        pending sebelum dipindahkan ke listing registered.
-                    </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                     {stats.map((stat) => (
-                        <Card key={stat.label}>
-                            <CardContent className="flex items-center justify-between p-5">
+                        <Card
+                            key={stat.label}
+                            className="border-border/60 shadow-sm"
+                        >
+                            <CardContent className="flex items-center justify-between p-3.5">
                                 <div>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
                                         {stat.label}
                                     </p>
                                     <p className="mt-1 text-2xl font-semibold">
                                         {stat.value}
                                     </p>
                                 </div>
-                                <div className="rounded-full bg-muted p-3">
-                                    <stat.icon className="h-5 w-5 text-muted-foreground" />
+                                <div className="rounded-xl bg-muted p-2.5">
+                                    <stat.icon className="h-4.5 w-4.5 text-muted-foreground" />
                                 </div>
                             </CardContent>
                         </Card>
                     ))}
                 </div>
 
-                <Card>
-                    <CardHeader className="gap-3">
-                        <div>
-                            <CardTitle>Data Register</CardTitle>
-                            <CardDescription>
-                                Daftar pendaftar pending dari halaman paket
-                                umroh.
-                            </CardDescription>
-                        </div>
-                        <div className="relative w-full max-w-md">
-                            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                value={search}
-                                onChange={(event) =>
-                                    setSearch(event.target.value)
-                                }
-                                placeholder="Cari nama, paket, kota, atau nomor telepon..."
-                                className="pl-9"
-                            />
+                <Card className="border-border/60 shadow-sm">
+                    <CardHeader className="gap-3 border-b border-border/60 pb-4">
+                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                            <div>
+                                <CardTitle>Data Register</CardTitle>
+                                <CardDescription className="text-xs">
+                                    Total data: {registrationItems.length}
+                                </CardDescription>
+                            </div>
+                            <div className="relative w-full lg:w-[420px]">
+                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <Input
+                                    value={search}
+                                    onChange={(event) =>
+                                        setSearch(event.target.value)
+                                    }
+                                    placeholder="Cari nama, paket, kota, atau nomor telepon..."
+                                    className="h-10 rounded-lg pl-9"
+                                />
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -303,24 +310,27 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                 </p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <Table>
+                            <div className="w-full overflow-x-auto">
+                                <Table className="min-w-[1100px]">
                                     <TableHeader>
                                         <TableRow>
+                                            <TableHead className="w-14 text-center">
+                                                No
+                                            </TableHead>
+                                            <TableHead className="w-20 text-right">
+                                                Aksi
+                                            </TableHead>
                                             <TableHead>Pendaftar</TableHead>
                                             <TableHead>Paket</TableHead>
                                             <TableHead>Jadwal</TableHead>
                                             <TableHead>Kontak</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead>Masuk</TableHead>
-                                            <TableHead className="text-right">
-                                                Aksi
-                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredRegistrations.map(
-                                            (registration) => {
+                                            (registration, index) => {
                                                 const packageName =
                                                     registration.travel_package
                                                         .name?.[locale] ??
@@ -332,6 +342,84 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                                     <TableRow
                                                         key={registration.id}
                                                     >
+                                                        <TableCell className="text-center text-sm text-muted-foreground">
+                                                            {index + 1}
+                                                        </TableCell>
+                                                        <TableCell className="min-w-20">
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger
+                                                                    asChild
+                                                                >
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="icon"
+                                                                        className="ml-auto"
+                                                                        aria-label={`Aksi ${registration.full_name}`}
+                                                                    >
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    {canApprove ? (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                markAsRegistered(
+                                                                                    registration,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Registered
+                                                                        </DropdownMenuItem>
+                                                                    ) : null}
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openWhatsApp(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        WA
+                                                                    </DropdownMenuItem>
+                                                                    {registration.email ? (
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                window.open(
+                                                                                    `mailto:${registration.email}`,
+                                                                                    '_blank',
+                                                                                    'noopener,noreferrer',
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Mail className="h-4 w-4" />
+                                                                            Email
+                                                                        </DropdownMenuItem>
+                                                                    ) : null}
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            copyContact(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Copy className="h-4 w-4" />
+                                                                        Copy
+                                                                    </DropdownMenuItem>
+                                                                    {canDelete ? (
+                                                                        <DropdownMenuItem
+                                                                            variant="destructive"
+                                                                            onClick={() =>
+                                                                                deleteRegistration(
+                                                                                    registration,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Hapus
+                                                                        </DropdownMenuItem>
+                                                                    ) : null}
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </TableCell>
                                                         <TableCell className="min-w-52">
                                                             <div className="space-y-1">
                                                                 <p className="font-medium">
@@ -419,78 +507,6 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                                             {formatDateTime(
                                                                 registration.created_at,
                                                             )}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex justify-end gap-2">
-                                                                {canApprove ? (
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() =>
-                                                                            markAsRegistered(
-                                                                                registration,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        Registered
-                                                                    </Button>
-                                                                ) : null}
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() =>
-                                                                        openWhatsApp(
-                                                                            registration,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    WA
-                                                                </Button>
-                                                                {registration.email && (
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="outline"
-                                                                        size="icon"
-                                                                        asChild
-                                                                    >
-                                                                        <a
-                                                                            href={`mailto:${registration.email}`}
-                                                                            aria-label={`Email ${registration.full_name}`}
-                                                                        >
-                                                                            <Mail className="h-4 w-4" />
-                                                                        </a>
-                                                                    </Button>
-                                                                )}
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    size="icon"
-                                                                    onClick={() =>
-                                                                        copyContact(
-                                                                            registration,
-                                                                        )
-                                                                    }
-                                                                    aria-label={`Salin kontak ${registration.full_name}`}
-                                                                >
-                                                                    <Copy className="h-4 w-4" />
-                                                                </Button>
-                                                                {canDelete ? (
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="destructive"
-                                                                        size="sm"
-                                                                        onClick={() =>
-                                                                            deleteRegistration(
-                                                                                registration,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        Hapus
-                                                                    </Button>
-                                                                ) : null}
-                                                            </div>
                                                         </TableCell>
                                                     </TableRow>
                                                 );

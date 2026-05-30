@@ -1,11 +1,16 @@
-import { Button } from '@/components/ui/button';
+﻿import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Sheet,
     SheetContent,
-    SheetDescription,
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
@@ -13,7 +18,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Eye, ImagePlus, Plus, Search, SquarePen, Trash2 } from 'lucide-react';
+import {
+    ImagePlus,
+    MoreHorizontal,
+    Plus,
+    Search,
+    SquarePen,
+    Trash2,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -58,12 +70,14 @@ function buildFormData(item: GalleryItemRow | null): GalleryFormData {
 }
 
 function GalleryTableRow({
+    index,
     item,
     onEdit,
     onDelete,
     canEdit,
     canDelete,
 }: {
+    index: number;
     item: GalleryItemRow;
     onEdit: (item: GalleryItemRow) => void;
     onDelete: (item: GalleryItemRow) => void;
@@ -73,7 +87,49 @@ function GalleryTableRow({
     const showActions = canEdit || canDelete;
 
     return (
-        <tr key={item.id} className="border-b border-border last:border-b-0">
+        <tr
+            key={item.id}
+            className="border-b border-border transition-colors last:border-b-0 hover:bg-muted/20"
+        >
+            <td className="px-4 py-4 text-center text-sm text-muted-foreground">
+                {index}
+            </td>
+            <td className="px-4 py-4 text-right">
+                {showActions ? (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="ml-auto"
+                                aria-label={`Aksi ${item.title}`}
+                            >
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            {canEdit ? (
+                                <DropdownMenuItem onClick={() => onEdit(item)}>
+                                    <SquarePen className="h-4 w-4" />
+                                    Edit
+                                </DropdownMenuItem>
+                            ) : null}
+                            {canDelete ? (
+                                <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => onDelete(item)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    Hapus
+                                </DropdownMenuItem>
+                            ) : null}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ) : (
+                    <span className="text-muted-foreground">-</span>
+                )}
+            </td>
             <td className="px-4 py-4">
                 <div className="flex items-center gap-3">
                     <div className="h-14 w-20 overflow-hidden rounded-xl border border-border bg-muted">
@@ -89,16 +145,13 @@ function GalleryTableRow({
                             {item.title}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            {item.category || 'Tanpa kategori'} • Urutan{' '}
-                            {item.sort_order}
+                            {item.category || 'Tanpa kategori'}
                         </p>
                     </div>
                 </div>
             </td>
-            <td className="px-4 py-4 text-muted-foreground">
-                <p className="line-clamp-2 max-w-xl text-sm">
-                    {item.description || '-'}
-                </p>
+            <td className="px-4 py-4 text-sm text-muted-foreground">
+                {item.sort_order}
             </td>
             <td className="px-4 py-4">
                 <span
@@ -110,36 +163,6 @@ function GalleryTableRow({
                 >
                     {item.is_active ? 'Aktif' : 'Nonaktif'}
                 </span>
-            </td>
-            <td className="px-4 py-4 text-right">
-                {showActions ? (
-                    <div className="inline-flex items-center gap-2">
-                        {canEdit ? (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onEdit(item)}
-                                className="h-9 rounded-xl"
-                            >
-                                <SquarePen className="mr-2 h-4 w-4" />
-                                Edit
-                            </Button>
-                        ) : null}
-                        {canDelete ? (
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => onDelete(item)}
-                                className="h-9 rounded-xl"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Hapus
-                            </Button>
-                        ) : null}
-                    </div>
-                ) : null}
             </td>
         </tr>
     );
@@ -262,19 +285,12 @@ export default function GalleryManagement({ items, stats }: Props) {
         >
             <Head title="Gallery" />
 
-            <div className="space-y-6 p-4 sm:p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold text-foreground">
+            <div className="space-y-4 p-4 sm:p-5">
+                <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <h1 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                             Gallery
                         </h1>
-                        <p className="max-w-2xl text-sm text-muted-foreground">
-                            Upload foto galeri untuk halaman publik{' '}
-                            <span className="font-medium text-foreground">
-                                /galeri
-                            </span>
-                            .
-                        </p>
                     </div>
                     {canCreate ? (
                         <Button onClick={openCreate}>
@@ -284,7 +300,7 @@ export default function GalleryManagement({ items, stats }: Props) {
                     ) : null}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-3">
                     {[
                         ['Total Foto', stats.total],
                         ['Aktif', stats.active],
@@ -292,26 +308,21 @@ export default function GalleryManagement({ items, stats }: Props) {
                     ].map(([label, value]) => (
                         <div
                             key={label}
-                            className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+                            className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm"
                         >
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                                        {label}
-                                    </p>
-                                    <p className="mt-2 text-3xl font-semibold text-foreground">
-                                        {value}
-                                    </p>
-                                </div>
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                                    <Eye className="h-5 w-5" />
-                                </div>
+                            <div>
+                                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                    {label}
+                                </p>
+                                <p className="mt-1 text-xl font-semibold text-foreground md:text-2xl">
+                                    {value}
+                                </p>
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="relative w-full sm:max-w-sm">
                             <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -322,30 +333,29 @@ export default function GalleryManagement({ items, stats }: Props) {
                                 className="h-10 pl-9"
                             />
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            Total ditampilkan: {filtered.length}
-                        </p>
                     </div>
 
-                    <div className="mt-4 overflow-x-auto">
-                        <table className="min-w-full text-sm">
+                    <div className="mt-4 overflow-x-auto rounded-2xl border border-border/70 bg-card/95">
+                        <table className="min-w-full divide-y divide-border text-sm">
                             <thead>
-                                <tr className="border-b border-border bg-muted/30 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                <tr className="border-b border-border bg-muted/35 text-left text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                    <th className="w-16 px-4 py-3 text-center">
+                                        No
+                                    </th>
+                                    <th className="w-20 px-4 py-3 text-right">
+                                        Aksi
+                                    </th>
                                     <th className="px-4 py-3">Foto</th>
-                                    <th className="px-4 py-3">Deskripsi</th>
+                                    <th className="px-4 py-3">Order</th>
                                     <th className="px-4 py-3">Status</th>
-                                    {showActions ? (
-                                        <th className="px-4 py-3 text-right">
-                                            Aksi
-                                        </th>
-                                    ) : null}
                                 </tr>
                             </thead>
                             <tbody>
                                 {filtered.length > 0 ? (
-                                    filtered.map((item) => (
+                                    filtered.map((item, index) => (
                                         <GalleryTableRow
                                             key={item.id}
+                                            index={index + 1}
                                             item={item}
                                             onEdit={openEdit}
                                             onDelete={destroyItem}
@@ -356,7 +366,7 @@ export default function GalleryManagement({ items, stats }: Props) {
                                 ) : (
                                     <tr>
                                         <td
-                                            colSpan={showActions ? 4 : 3}
+                                            colSpan={5}
                                             className="px-4 py-10 text-center text-muted-foreground"
                                         >
                                             Belum ada foto galeri.
@@ -387,13 +397,6 @@ export default function GalleryManagement({ items, stats }: Props) {
                                 ? 'Edit Foto Galeri'
                                 : 'Tambah Foto Galeri'}
                         </SheetTitle>
-                        <SheetDescription>
-                            Foto yang diupload akan tampil di halaman{' '}
-                            <span className="font-medium text-foreground">
-                                /galeri
-                            </span>
-                            .
-                        </SheetDescription>
                     </SheetHeader>
                     <form
                         className="flex min-h-0 flex-1 flex-col"

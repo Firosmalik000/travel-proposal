@@ -2,9 +2,9 @@ import {
     MotionCard,
     MotionGroup,
     MotionSection,
-} from '@/components/public-motion';
+} from '@/components/public/motion';
 import PublicLayout from '@/layouts/PublicLayout';
-import { localize, usePublicData } from '@/lib/public-content';
+import { localize, usePublicData } from '@/lib/public/content';
 import { Head } from '@inertiajs/react';
 import { Star } from 'lucide-react';
 

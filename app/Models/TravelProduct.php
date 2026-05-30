@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\HasAuditTrail;
 use App\Traits\NormalizesLocalizedStrings;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TravelProduct extends Model
 {
-    use HasFactory;
+    use HasAuditTrail, HasFactory;
     use NormalizesLocalizedStrings;
 
     protected $table = 'products';
@@ -19,7 +21,6 @@ class TravelProduct extends Model
         'code',
         'name',
         'slug',
-        'icon',
         'product_type',
         'description',
         'content',
@@ -63,5 +64,10 @@ class TravelProduct extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(ProductCategory::class, 'product_type', 'key');
+    }
+
+    public function inventoryItem(): HasOne
+    {
+        return $this->hasOne(InventoryItem::class, 'product_id');
     }
 }

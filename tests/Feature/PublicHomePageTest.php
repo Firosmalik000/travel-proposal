@@ -14,6 +14,6 @@ class PublicHomePageTest extends TestCase
 
         $this->get(route('home'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('welcome'));
+            ->assertInertia(fn (Assert $page) => $page->component('public/website/index'));
     }
 }

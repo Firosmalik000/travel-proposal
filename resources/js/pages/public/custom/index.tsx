@@ -2,9 +2,9 @@ import {
     MotionCard,
     MotionGroup,
     MotionSection,
-} from '@/components/public-motion';
+} from '@/components/public/motion';
 import PublicLayout from '@/layouts/PublicLayout';
-import { localize, usePublicPageContent } from '@/lib/public-content';
+import { localize, usePublicPageContent } from '@/lib/public/content';
 import { type SharedData } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { useState, type ReactNode } from 'react';

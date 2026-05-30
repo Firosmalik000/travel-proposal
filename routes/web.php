@@ -1,18 +1,26 @@
 <?php
 
 use App\Http\Controllers\Administrator\ActivityController;
+use App\Http\Controllers\Administrator\ActivityLogController;
 use App\Http\Controllers\Administrator\ArticleController as AdministratorArticleController;
 use App\Http\Controllers\Administrator\BookingRegisterController;
 use App\Http\Controllers\Administrator\BrandingController;
+use App\Http\Controllers\Administrator\CashflowController;
 use App\Http\Controllers\Administrator\ContentController;
+use App\Http\Controllers\Administrator\CurrencyController;
 use App\Http\Controllers\Administrator\CustomBookingController;
 use App\Http\Controllers\Administrator\CustomUmrohRequestController;
 use App\Http\Controllers\Administrator\FinancialReportController;
 use App\Http\Controllers\Administrator\GalleryController;
+use App\Http\Controllers\Administrator\HotelAssignmentController;
+use App\Http\Controllers\Administrator\HotelController;
+use App\Http\Controllers\Administrator\HotelReferenceController;
 use App\Http\Controllers\Administrator\ImpersonationController;
+use App\Http\Controllers\Administrator\InventoryController;
 use App\Http\Controllers\Administrator\InvitationController;
 use App\Http\Controllers\Administrator\MenuController;
 use App\Http\Controllers\Administrator\PackageController;
+use App\Http\Controllers\Administrator\PackageCostCalculationController;
 use App\Http\Controllers\Administrator\RoleManagementController;
 use App\Http\Controllers\Administrator\SeoController;
 use App\Http\Controllers\Administrator\UserManagementController;
@@ -29,8 +37,21 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('welcome');
+    return Inertia::render('public/website/index', [
+        'pageSlug' => 'home_landing',
+        'forceWebsite' => true,
+    ]);
 })->name('home');
+Route::get('/landing', function () {
+    $templatePath = resource_path('landing/asfar_landing.html');
+    $landingHtml = file_exists($templatePath)
+        ? (string) file_get_contents($templatePath)
+        : '';
+
+    return Inertia::render('public/landing/index', [
+        'html' => $landingHtml,
+    ]);
+})->name('public.landing');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonation.stop.global');
@@ -144,12 +165,13 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::delete('articles/{article}', [AdministratorArticleController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'articles.destroy');
             $nameRoute(Route::get('portal-content', [ContentController::class, 'portalContent'])->middleware('check.menu.permission:view'), 'portal-content.index');
             $nameRoute(Route::get('landing', [ContentController::class, 'landing'])->middleware('check.menu.permission:view'), 'landing.index');
+            $nameRoute(Route::get('website', [ContentController::class, 'website'])->middleware('check.menu.permission:view'), 'website.index');
             $nameRoute(Route::redirect('schedules', '/admin/product-management/packages'), 'schedules.index');
             $nameRoute(Route::get('gallery', [GalleryController::class, 'index'])->middleware('check.menu.permission:view'), 'gallery.index');
             $nameRoute(Route::post('gallery', [GalleryController::class, 'store'])->middleware('check.menu.permission:create'), 'gallery.store');
             $nameRoute(Route::patch('gallery/{galleryItem}', [GalleryController::class, 'update'])->middleware('check.menu.permission:edit'), 'gallery.update');
             $nameRoute(Route::delete('gallery/{galleryItem}', [GalleryController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'gallery.destroy');
-            $nameRoute(Route::get('content', [ContentController::class, 'index'])->middleware('check.menu.permission:view'), 'content.index');
+            $nameRoute(Route::redirect('content', '/admin/website-management/website'), 'content.index');
             Route::redirect('products', '/admin/product-management/products');
             Route::redirect('packages', '/admin/product-management/packages');
             $nameRoute(Route::patch('content/{pageContent}', [ContentController::class, 'update'])->middleware('check.menu.permission:edit'), 'content.update');
@@ -188,6 +210,10 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::post('listing', [BookingRegisterController::class, 'store'])->middleware('check.menu.permission:create'), 'booking.listing.store');
             $nameRoute(Route::put('listing/{registration}', [BookingRegisterController::class, 'update'])->middleware('check.menu.permission:edit'), 'booking.listing.update');
             $nameRoute(Route::delete('listing/{registration}', [BookingRegisterController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'booking.listing.destroy');
+            $nameRoute(Route::get('hotel-assignment', [HotelAssignmentController::class, 'index'])->middleware('check.menu.permission:view'), 'booking.hotel-assignment.index');
+            $nameRoute(Route::post('hotel-assignment', [HotelAssignmentController::class, 'store'])->middleware('check.menu.permission:create'), 'booking.hotel-assignment.store');
+            $nameRoute(Route::put('hotel-assignment/{assignment}', [HotelAssignmentController::class, 'update'])->middleware('check.menu.permission:edit'), 'booking.hotel-assignment.update');
+            $nameRoute(Route::delete('hotel-assignment/{assignment}', [HotelAssignmentController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'booking.hotel-assignment.destroy');
             $nameRoute(Route::get('custom-bookings', [CustomBookingController::class, 'index']), 'booking.custom-bookings.index');
             $nameRoute(Route::get('custom-requests', [CustomUmrohRequestController::class, 'index'])->middleware('check.menu.permission:view'), 'booking.custom-requests.index');
             $nameRoute(Route::post('custom-requests/{customUmrohRequest}/approve', [CustomUmrohRequestController::class, 'approve'])->middleware('check.menu.permission:approve'), 'booking.custom-requests.approve');
@@ -197,10 +223,47 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::get('', fn () => redirect()->route('financial.report.index')), 'financial.index');
             $nameRoute(Route::get('financial-report', [FinancialReportController::class, 'index'])->middleware('check.menu.permission:view'), 'financial.report.index');
             $nameRoute(Route::get('financial-report/pdf', [FinancialReportController::class, 'pdf'])->middleware('check.menu.permission:export'), 'financial.report.pdf');
+            $nameRoute(Route::get('cashflow', [CashflowController::class, 'index'])->middleware('check.menu.permission:view'), 'cashflow.index');
+            $nameRoute(Route::get('cashflow/pdf', [CashflowController::class, 'pdf'])->middleware('check.menu.permission:export'), 'cashflow.pdf');
+            $nameRoute(Route::post('cashflow', [CashflowController::class, 'store'])->middleware('check.menu.permission:create'), 'cashflow.store');
+            $nameRoute(Route::put('cashflow/{cashflow}', [CashflowController::class, 'update'])->middleware('check.menu.permission:edit'), 'cashflow.update');
+            $nameRoute(Route::delete('cashflow/{cashflow}', [CashflowController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'cashflow.destroy');
+            $nameRoute(Route::get('hpp-package', [PackageCostCalculationController::class, 'index'])->middleware('check.menu.permission:view'), 'hpp-package.index');
+            $nameRoute(Route::post('hpp-package', [PackageCostCalculationController::class, 'store'])->middleware('check.menu.permission:create'), 'hpp-package.store');
+            $nameRoute(Route::put('hpp-package/{hppPackage}', [PackageCostCalculationController::class, 'update'])->middleware('check.menu.permission:edit'), 'hpp-package.update');
+            $nameRoute(Route::post('hpp-package/{hppPackage}/recalculate', [PackageCostCalculationController::class, 'recalculate'])->middleware('check.menu.permission:edit'), 'hpp-package.recalculate');
+        });
+        Route::prefix($prefix.'/master-data')->group(function () use ($nameRoute) {
+            $nameRoute(Route::get('inventory', [InventoryController::class, 'index'])->middleware('check.menu.permission:view'), 'master-data.inventory.index');
+            $nameRoute(Route::post('inventory', [InventoryController::class, 'store'])->middleware('check.menu.permission:create'), 'master-data.inventory.store');
+            $nameRoute(Route::put('inventory/{inventoryItem}', [InventoryController::class, 'update'])->middleware('check.menu.permission:edit'), 'master-data.inventory.update');
+            $nameRoute(Route::delete('inventory/{inventoryItem}', [InventoryController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'master-data.inventory.destroy');
+            $nameRoute(Route::get('hotels', [HotelController::class, 'index'])->middleware('check.menu.permission:view'), 'master-data.hotels.index');
+            $nameRoute(Route::post('hotels', [HotelController::class, 'store'])->middleware('check.menu.permission:create'), 'master-data.hotels.store');
+            $nameRoute(Route::post('hotels/bulk', [HotelController::class, 'bulkStore'])->middleware('check.menu.permission:create'), 'master-data.hotels.bulk-store');
+            $nameRoute(Route::put('hotels/{hotel}', [HotelController::class, 'update'])->middleware('check.menu.permission:edit'), 'master-data.hotels.update');
+            $nameRoute(Route::delete('hotels/{hotel}', [HotelController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'master-data.hotels.destroy');
+            $nameRoute(Route::get('hotel-countries', [HotelReferenceController::class, 'countries'])->middleware('check.menu.permission:view'), 'master-data.hotel-countries.index');
+            $nameRoute(Route::post('hotel-countries', [HotelReferenceController::class, 'storeCountry'])->middleware('check.menu.permission:create'), 'master-data.hotel-countries.store');
+            $nameRoute(Route::put('hotel-countries/{hotelCountry}', [HotelReferenceController::class, 'updateCountry'])->middleware('check.menu.permission:edit'), 'master-data.hotel-countries.update');
+            $nameRoute(Route::delete('hotel-countries/{hotelCountry}', [HotelReferenceController::class, 'destroyCountry'])->middleware('check.menu.permission:delete'), 'master-data.hotel-countries.destroy');
+            $nameRoute(Route::get('hotel-cities', [HotelReferenceController::class, 'cities'])->middleware('check.menu.permission:view'), 'master-data.hotel-cities.index');
+            $nameRoute(Route::post('hotel-cities', [HotelReferenceController::class, 'storeCity'])->middleware('check.menu.permission:create'), 'master-data.hotel-cities.store');
+            $nameRoute(Route::put('hotel-cities/{hotelCity}', [HotelReferenceController::class, 'updateCity'])->middleware('check.menu.permission:edit'), 'master-data.hotel-cities.update');
+            $nameRoute(Route::delete('hotel-cities/{hotelCity}', [HotelReferenceController::class, 'destroyCity'])->middleware('check.menu.permission:delete'), 'master-data.hotel-cities.destroy');
+            $nameRoute(Route::get('hotel-room-types', [HotelReferenceController::class, 'roomTypes'])->middleware('check.menu.permission:view'), 'master-data.hotel-room-types.index');
+            $nameRoute(Route::post('hotel-room-types', [HotelReferenceController::class, 'storeRoomType'])->middleware('check.menu.permission:create'), 'master-data.hotel-room-types.store');
+            $nameRoute(Route::put('hotel-room-types/{hotelRoomType}', [HotelReferenceController::class, 'updateRoomType'])->middleware('check.menu.permission:edit'), 'master-data.hotel-room-types.update');
+            $nameRoute(Route::delete('hotel-room-types/{hotelRoomType}', [HotelReferenceController::class, 'destroyRoomType'])->middleware('check.menu.permission:delete'), 'master-data.hotel-room-types.destroy');
+            $nameRoute(Route::get('currencies', [CurrencyController::class, 'index'])->middleware('check.menu.permission:view'), 'master-data.currencies.index');
+        });
+        Route::prefix($prefix.'/activity')->group(function () use ($nameRoute) {
+            $nameRoute(Route::get('logs', [ActivityLogController::class, 'index'])->middleware('check.menu.permission:view'), 'activity.logs.index');
         });
         Route::prefix($prefix.'/administrator')->group(function () use ($nameRoute) {
             $nameRoute(Route::get('menus', [MenuController::class, 'index'])->middleware('check.menu.permission:view'), 'menus.index');
             $nameRoute(Route::post('menus', [MenuController::class, 'store'])->middleware('check.menu.permission:create'), 'menus.store');
+            $nameRoute(Route::put('menus/reorder', [MenuController::class, 'reorder'])->middleware('check.menu.permission:edit'), 'menus.reorder');
             $nameRoute(Route::put('menus/{menu}', [MenuController::class, 'update'])->middleware('check.menu.permission:edit'), 'menus.update');
             $nameRoute(Route::delete('menus/{menu}', [MenuController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'menus.destroy');
 

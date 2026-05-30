@@ -20,7 +20,7 @@ class StorePackageRegistrationRequest extends FormRequest
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:150'],
             'origin_city' => ['required', 'string', 'max:100'],
-            'passenger_count' => ['required', 'integer', 'min:1', 'max:10'],
+            'passenger_count' => ['required', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -34,7 +34,6 @@ class StorePackageRegistrationRequest extends FormRequest
             'origin_city.required' => 'Kota asal wajib diisi.',
             'passenger_count.required' => 'Jumlah jamaah wajib diisi.',
             'passenger_count.min' => 'Jumlah jamaah minimal 1 orang.',
-            'passenger_count.max' => 'Jumlah jamaah maksimal 10 orang.',
         ];
     }
 

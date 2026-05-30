@@ -2,13 +2,13 @@ import {
     MotionCard,
     MotionGroup,
     MotionSection,
-} from '@/components/public-motion';
+} from '@/components/public/motion';
 import {
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentZellige,
-} from '@/components/public-ornaments';
+} from '@/components/public/ornaments';
 import PublicLayout from '@/layouts/PublicLayout';
-import { formatDate, localize } from '@/lib/public-content';
+import { formatDate, localize } from '@/lib/public/content';
 import { Head, Link, router } from '@inertiajs/react';
 import { Search } from 'lucide-react';
 import { useState } from 'react';

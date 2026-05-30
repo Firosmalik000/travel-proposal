@@ -25,7 +25,7 @@ class ManagePackageRegistrationRequest extends FormRequest
             'phone' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:150'],
             'origin_city' => ['required', 'string', 'max:100'],
-            'passenger_count' => ['required', 'integer', 'min:1', 'max:10'],
+            'passenger_count' => ['required', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'status' => ['required', 'string', 'in:pending,registered,cancelled'],
         ];
@@ -43,7 +43,6 @@ class ManagePackageRegistrationRequest extends FormRequest
             'origin_city.required' => 'Kota asal wajib diisi.',
             'passenger_count.required' => 'Jumlah jamaah wajib diisi.',
             'passenger_count.min' => 'Jumlah jamaah minimal 1 orang.',
-            'passenger_count.max' => 'Jumlah jamaah maksimal 10 orang.',
             'status.required' => 'Status booking wajib dipilih.',
             'status.in' => 'Status booking tidak valid.',
         ];

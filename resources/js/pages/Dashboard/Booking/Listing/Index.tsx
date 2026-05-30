@@ -1,12 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -15,6 +9,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -25,7 +25,6 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import {
-    SheetDescription as DrawerDescription,
     SheetFooter as DrawerFooter,
     SheetHeader as DrawerHeader,
     SheetTitle as DrawerTitle,
@@ -48,10 +47,8 @@ import { Head, router, useForm } from '@inertiajs/react';
 import {
     CalendarDays,
     CircleDollarSign,
-    Copy,
     FileText,
-    Mail,
-    MapPin,
+    MoreHorizontal,
     Plus,
     Search,
     Users,
@@ -213,27 +210,6 @@ function statusBadgeVariant(
     return 'secondary';
 }
 
-function normalizePhone(phone: string): string {
-    const cleanedPhone = phone.replace(/[^\d]/g, '');
-
-    if (cleanedPhone.startsWith('0')) {
-        return `62${cleanedPhone.slice(1)}`;
-    }
-
-    return cleanedPhone;
-}
-
-function humanizePackageType(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return value
-        .split('_')
-        .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-        .join(' ');
-}
-
 function packageDisplayName(
     travelPackage: TravelPackageOption | Registration['travel_package'],
     locale: string,
@@ -281,7 +257,6 @@ export default function BookingListingIndex({
     const [editingRegistration, setEditingRegistration] =
         useState<Registration | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<Registration | null>(null);
-    const [actionState, setActionState] = useState<Record<number, string>>({});
     const debouncedSearch = useDebounce(search, 300);
     const isEditingCustomBooking =
         editingRegistration?.booking_type === 'custom';
@@ -542,201 +517,132 @@ export default function BookingListingIndex({
         });
     }
 
-    function handleActionChange(
-        registration: Registration,
-        action: string,
-    ): void {
-        if ((action === 'pdf' || action === 'invoice') && !canExport) {
+    function openParticipantsPdf(registration: Registration): void {
+        if (!canExport) {
             return;
         }
-
-        if ((action === 'edit' || action === 'cancel') && !canEdit) {
-            return;
-        }
-
-        if (action === 'delete' && !canDelete) {
-            return;
-        }
-
-        setActionState((current) => ({
-            ...current,
-            [registration.id]: action,
-        }));
-
-        if (action === 'pdf') {
-            window.open(
-                `/admin/booking-management/listing/${registration.id}/participants.pdf`,
-                '_blank',
-                'noopener,noreferrer',
-            );
-        } else if (action === 'invoice') {
-            window.open(
-                `/admin/booking-management/listing/${registration.id}/invoice.pdf`,
-                '_blank',
-                'noopener,noreferrer',
-            );
-        } else if (action === 'review') {
-            if (registration.review_url) {
-                window.open(
-                    registration.review_url,
-                    '_blank',
-                    'noopener,noreferrer',
-                );
-            }
-        } else if (action === 'cancel') {
-            router.put(
-                `/admin/booking-management/listing/${registration.id}`,
-                {
-                    travel_package_id: String(registration.travel_package_id),
-                    departure_schedule_id: registration.departure_schedule_id
-                        ? String(registration.departure_schedule_id)
-                        : '',
-                    full_name: registration.full_name,
-                    phone: registration.phone,
-                    email: registration.email ?? '',
-                    origin_city: registration.origin_city,
-                    passenger_count: String(registration.passenger_count),
-                    notes: registration.notes ?? '',
-                    status: 'cancelled',
-                },
-                {
-                    preserveScroll: true,
-                },
-            );
-        } else if (action === 'edit') {
-            openEditDialog(registration);
-        } else if (action === 'delete') {
-            setDeleteTarget(registration);
-        }
-
-        setTimeout(() => {
-            setActionState((current) => ({
-                ...current,
-                [registration.id]: '',
-            }));
-        }, 0);
-    }
-
-    function openWhatsApp(registration: Registration): void {
-        const packageName = packageDisplayName(
-            registration.travel_package,
-            locale,
-        );
-        const departureDate = formatDate(
-            registration.departure_schedule.departure_date,
-        );
-        const message = [
-            `Assalamu'alaikum ${registration.full_name},`,
-            '',
-            `kami menghubungi terkait booking ${registration.booking_code}.`,
-            `Paket: ${packageName}`,
-            `Keberangkatan: ${departureDate} - ${registration.departure_schedule.departure_city ?? '-'}`,
-        ].join('\n');
 
         window.open(
-            `https://wa.me/${normalizePhone(registration.phone)}?text=${encodeURIComponent(message)}`,
+            `/admin/booking-management/listing/${registration.id}/participants.pdf`,
             '_blank',
             'noopener,noreferrer',
         );
     }
 
-    function copyBooking(registration: Registration): void {
-        const packageName = packageDisplayName(
-            registration.travel_package,
-            locale,
+    function openInvoicePdf(registration: Registration): void {
+        if (!canExport) {
+            return;
+        }
+
+        window.open(
+            `/admin/booking-management/listing/${registration.id}/invoice.pdf`,
+            '_blank',
+            'noopener,noreferrer',
         );
+    }
 
-        const details = [
-            `Kode Booking: ${registration.booking_code}`,
-            `Nama: ${registration.full_name}`,
-            `WhatsApp: ${registration.phone}`,
-            `Email: ${registration.email ?? '-'}`,
-            `Paket: ${packageName}`,
-            `Kota Asal: ${registration.origin_city}`,
-            `Jumlah Pax: ${registration.passenger_count}`,
-            `Status: ${registration.status}`,
-        ].join('\n');
+    function openReviewUrl(registration: Registration): void {
+        if (!registration.review_url) {
+            return;
+        }
 
-        navigator.clipboard.writeText(details);
+        window.open(registration.review_url, '_blank', 'noopener,noreferrer');
+    }
+
+    function markAsCancelled(registration: Registration): void {
+        if (!canEdit) {
+            return;
+        }
+
+        router.put(
+            `/admin/booking-management/listing/${registration.id}`,
+            {
+                travel_package_id: String(registration.travel_package_id),
+                departure_schedule_id: registration.departure_schedule_id
+                    ? String(registration.departure_schedule_id)
+                    : '',
+                full_name: registration.full_name,
+                phone: registration.phone,
+                email: registration.email ?? '',
+                origin_city: registration.origin_city,
+                passenger_count: String(registration.passenger_count),
+                notes: registration.notes ?? '',
+                status: 'cancelled',
+            },
+            {
+                preserveScroll: true,
+            },
+        );
     }
 
     return (
         <AppSidebarLayout
             breadcrumbs={[
                 {
-                    label: 'Booking',
-                    href: '/admin/booking-management/listing',
-                },
-                {
-                    label: 'Listing',
+                    label: 'Booking Listing',
                     href: '/admin/booking-management/listing',
                 },
             ]}
         >
             <Head title="Booking Listing" />
 
-            <div className="space-y-6 p-4 md:p-6">
-                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                    <div className="flex flex-col gap-2">
-                        <h1 className="text-2xl font-bold tracking-tight">
+            <div className="min-w-0 space-y-4 overflow-x-hidden p-4 md:p-5">
+                <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                             Booking Listing
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Halaman booking yang sudah berstatus registered dan
-                            siap dikelola lebih lanjut oleh admin.
-                        </p>
-                    </div>
-                    <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
-                        {canExport ? (
-                            <Button
-                                variant="outline"
-                                onClick={openFilteredPdf}
-                                className="w-full gap-2 md:w-auto"
-                            >
-                                <FileText className="h-4 w-4" />
-                                Export PDF
-                            </Button>
-                        ) : null}
-                        {canCreate ? (
-                            <Button
-                                onClick={openCreateDialog}
-                                className="w-full md:w-auto"
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Tambah Booking
-                            </Button>
-                        ) : null}
+                        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
+                            {canExport ? (
+                                <Button
+                                    variant="outline"
+                                    onClick={openFilteredPdf}
+                                    className="w-full gap-2 md:w-auto"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                    Export PDF
+                                </Button>
+                            ) : null}
+                            {canCreate ? (
+                                <Button
+                                    onClick={openCreateDialog}
+                                    className="w-full md:w-auto"
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Tambah Booking
+                                </Button>
+                            ) : null}
+                        </div>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                     {stats.map((stat) => (
-                        <Card key={stat.label}>
-                            <CardContent className="flex items-center justify-between p-5">
+                        <Card
+                            key={stat.label}
+                            className="border-border/60 shadow-sm"
+                        >
+                            <CardContent className="flex items-center justify-between p-3.5">
                                 <div>
-                                    <p className="text-sm text-muted-foreground">
+                                    <p className="text-xs text-muted-foreground md:text-sm">
                                         {stat.label}
                                     </p>
-                                    <p className="mt-1 text-2xl font-semibold">
+                                    <p className="mt-1 text-xl font-semibold md:text-2xl">
                                         {stat.value}
                                     </p>
                                 </div>
-                                <div className="rounded-full bg-muted p-3">
-                                    <stat.icon className="h-5 w-5 text-muted-foreground" />
+                                <div className="rounded-full bg-muted p-2.5">
+                                    <stat.icon className="h-4 w-4 text-muted-foreground md:h-5 md:w-5" />
                                 </div>
                             </CardContent>
                         </Card>
                     ))}
                 </div>
 
-                <Card>
+                <Card className="min-w-0 border-border/60 shadow-sm">
                     <CardHeader className="gap-4">
                         <div>
                             <CardTitle>Data Booking Jamaah</CardTitle>
-                            <CardDescription>
-                                Tabel booking yang lebih lengkap untuk keperluan
-                                admin, termasuk kontak, jadwal, dan status.
-                            </CardDescription>
                         </div>
                         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
                             <div className="relative min-w-0">
@@ -781,7 +687,9 @@ export default function BookingListingIndex({
                                 <div className="min-w-0">
                                     <Select
                                         value={packageFilter}
-                                        disabled={bookingTypeFilter === 'custom'}
+                                        disabled={
+                                            bookingTypeFilter === 'custom'
+                                        }
                                         onValueChange={(value) => {
                                             setPackageFilter(value);
                                         }}
@@ -793,17 +701,21 @@ export default function BookingListingIndex({
                                             <SelectItem value="all">
                                                 Semua paket
                                             </SelectItem>
-                                            {packageOptions.map((travelPackage) => (
-                                                <SelectItem
-                                                    key={travelPackage.id}
-                                                    value={String(travelPackage.id)}
-                                                >
-                                                    {packageDisplayName(
-                                                        travelPackage,
-                                                        locale,
-                                                    )}
-                                                </SelectItem>
-                                            ))}
+                                            {packageOptions.map(
+                                                (travelPackage) => (
+                                                    <SelectItem
+                                                        key={travelPackage.id}
+                                                        value={String(
+                                                            travelPackage.id,
+                                                        )}
+                                                    >
+                                                        {packageDisplayName(
+                                                            travelPackage,
+                                                            locale,
+                                                        )}
+                                                    </SelectItem>
+                                                ),
+                                            )}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -836,7 +748,7 @@ export default function BookingListingIndex({
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="min-w-0">
                         {registrationItems.length === 0 ? (
                             <div className="rounded-xl border border-dashed px-6 py-12 text-center">
                                 <p className="font-medium text-foreground">
@@ -844,35 +756,36 @@ export default function BookingListingIndex({
                                         ? 'Belum ada data booking.'
                                         : 'Data booking yang dicari tidak ditemukan.'}
                                 </p>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    {registrations.total === 0
-                                        ? 'Booking akan muncul di halaman ini setelah dibuat dari website atau admin dashboard.'
-                                        : 'Coba ubah kata kunci atau filter status.'}
-                                </p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <Table>
+                            <div className="w-full overflow-x-auto">
+                                <Table className="min-w-[1320px]">
                                     <TableHeader>
                                         <TableRow>
+                                            <TableHead className="w-14 text-center">
+                                                No
+                                            </TableHead>
+                                            <TableHead className="w-20 text-right">
+                                                Aksi
+                                            </TableHead>
                                             <TableHead>Kode Booking</TableHead>
-                                            <TableHead>Jamaah</TableHead>
+                                            <TableHead>Nama</TableHead>
+                                            <TableHead>Kota</TableHead>
+                                            <TableHead className="text-center">
+                                                Pax
+                                            </TableHead>
                                             <TableHead>Paket</TableHead>
-                                            <TableHead>Jadwal</TableHead>
-                                            <TableHead>Kontak</TableHead>
+                                            <TableHead>Berangkat</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead className="text-right">
                                                 Revenue
                                             </TableHead>
                                             <TableHead>Masuk</TableHead>
-                                            <TableHead className="text-right">
-                                                Aksi
-                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {registrationItems.map(
-                                            (registration) => (
+                                            (registration, index) => (
                                                 <TableRow
                                                     key={registration.id}
                                                     className={
@@ -882,6 +795,103 @@ export default function BookingListingIndex({
                                                             : undefined
                                                     }
                                                 >
+                                                    <TableCell className="text-center align-top text-sm text-muted-foreground">
+                                                        {(registrations.from ??
+                                                            1) + index}
+                                                    </TableCell>
+                                                    <TableCell className="min-w-20 text-right align-top">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
+                                                                asChild
+                                                            >
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="ml-auto"
+                                                                    aria-label={`Aksi ${registration.booking_code}`}
+                                                                >
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                {canExport ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openParticipantsPdf(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <FileText className="h-4 w-4" />
+                                                                        PDF
+                                                                        Peserta
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {canExport ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openInvoicePdf(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <FileText className="h-4 w-4" />
+                                                                        PDF
+                                                                        Invoice
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {!registration.has_review &&
+                                                                registration.review_url ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openReviewUrl(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Review
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {registration.status ===
+                                                                    'registered' &&
+                                                                canEdit ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            markAsCancelled(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Cancel
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {canEdit ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openEditDialog(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Edit
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {canDelete ? (
+                                                                    <DropdownMenuItem
+                                                                        variant="destructive"
+                                                                        onClick={() =>
+                                                                            setDeleteTarget(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Hapus
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
                                                     <TableCell className="min-w-40 align-top">
                                                         <div className="space-y-1">
                                                             <p className="font-semibold">
@@ -897,143 +907,31 @@ export default function BookingListingIndex({
                                                             </p>
                                                         </div>
                                                     </TableCell>
-                                                    <TableCell className="min-w-56 align-top">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
-                                                                {
-                                                                    registration.full_name
-                                                                }
-                                                            </p>
-                                                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                                                <MapPin className="h-3.5 w-3.5" />
-                                                                <span>
-                                                                    {
-                                                                        registration.origin_city
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {
-                                                                    registration.passenger_count
-                                                                }{' '}
-                                                                pax
-                                                            </p>
-                                                            {registration.notes && (
-                                                                <p className="line-clamp-2 text-sm text-muted-foreground">
-                                                                    {
-                                                                        registration.notes
-                                                                    }
-                                                                </p>
-                                                            )}
-                                                        </div>
+                                                    <TableCell className="min-w-56 align-top font-medium">
+                                                        {registration.full_name}
+                                                    </TableCell>
+                                                    <TableCell className="min-w-44 align-top text-sm text-muted-foreground">
+                                                        {
+                                                            registration.origin_city
+                                                        }
+                                                    </TableCell>
+                                                    <TableCell className="min-w-20 text-center align-top font-medium whitespace-nowrap">
+                                                        {
+                                                            registration.passenger_count
+                                                        }
                                                     </TableCell>
                                                     <TableCell className="min-w-56 align-top">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
-                                                                {packageDisplayName(
-                                                                    registration.travel_package,
-                                                                    locale,
-                                                                )}
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {
-                                                                    registration
-                                                                        .travel_package
-                                                                        .code
-                                                                }
-                                                            </p>
-                                                            <Badge
-                                                                variant="outline"
-                                                                className="capitalize"
-                                                            >
-                                                                {humanizePackageType(
-                                                                    registration
-                                                                        .travel_package
-                                                                        .package_type,
-                                                                )}
-                                                            </Badge>
-                                                        </div>
+                                                        {packageDisplayName(
+                                                            registration.travel_package,
+                                                            locale,
+                                                        )}
                                                     </TableCell>
-                                                    <TableCell className="min-w-56 align-top">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
-                                                                {formatDate(
-                                                                    registration
-                                                                        .departure_schedule
-                                                                        .departure_date,
-                                                                )}
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                Pulang:{' '}
-                                                                {formatDate(
-                                                                    registration
-                                                                        .departure_schedule
-                                                                        .return_date,
-                                                                )}
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {
-                                                                    registration
-                                                                        .departure_schedule
-                                                                        .departure_city
-                                                                }
-                                                            </p>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="min-w-52 align-top">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
-                                                                {
-                                                                    registration.phone
-                                                                }
-                                                            </p>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                {registration.email ??
-                                                                    '-'}
-                                                            </p>
-                                                            <div className="flex gap-2 pt-1">
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() =>
-                                                                        openWhatsApp(
-                                                                            registration,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    WA
-                                                                </Button>
-                                                                {registration.email && (
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="outline"
-                                                                        size="icon"
-                                                                        asChild
-                                                                    >
-                                                                        <a
-                                                                            href={`mailto:${registration.email}`}
-                                                                            aria-label={`Email ${registration.full_name}`}
-                                                                        >
-                                                                            <Mail className="h-4 w-4" />
-                                                                        </a>
-                                                                    </Button>
-                                                                )}
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    size="icon"
-                                                                    onClick={() =>
-                                                                        copyBooking(
-                                                                            registration,
-                                                                        )
-                                                                    }
-                                                                    aria-label={`Salin booking ${registration.full_name}`}
-                                                                >
-                                                                    <Copy className="h-4 w-4" />
-                                                                </Button>
-                                                            </div>
-                                                        </div>
+                                                    <TableCell className="min-w-44 align-top whitespace-nowrap">
+                                                        {formatDate(
+                                                            registration
+                                                                .departure_schedule
+                                                                .departure_date,
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="align-top">
                                                         <Badge
@@ -1046,115 +944,113 @@ export default function BookingListingIndex({
                                                                 registration.status
                                                             }
                                                         </Badge>
-                                                        {registration.has_review ? (
-                                                            <div className="mt-1 text-xs font-medium text-emerald-600">
-                                                                Sudah review
-                                                            </div>
-                                                        ) : null}
                                                     </TableCell>
                                                     <TableCell className="text-right align-top whitespace-nowrap">
-                                                        <div className="space-y-1">
-                                                            <p className="font-medium">
-                                                                {formatCurrency(
-                                                                    registration
-                                                                        .revenue
-                                                                        ?.amount ??
-                                                                        0,
-                                                                    registration
-                                                                        .revenue
-                                                                        ?.currency ??
-                                                                        'IDR',
-                                                                )}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {registration.booking_type ===
-                                                                    'custom' &&
-                                                                typeof registration.custom_unit_price ===
-                                                                    'number'
-                                                                    ? `${formatCurrency(
-                                                                          registration.custom_unit_price,
-                                                                          registration
-                                                                              .revenue
-                                                                              ?.currency ??
-                                                                              'IDR',
-                                                                      )} × ${registration.passenger_count} pax`
-                                                                    : `${registration.passenger_count} pax`}
-                                                            </p>
-                                                        </div>
+                                                        {formatCurrency(
+                                                            registration.revenue
+                                                                ?.amount ?? 0,
+                                                            registration.revenue
+                                                                ?.currency ??
+                                                                'IDR',
+                                                        )}
                                                     </TableCell>
                                                     <TableCell className="align-top text-sm whitespace-nowrap text-muted-foreground">
                                                         {formatDateTime(
                                                             registration.created_at,
                                                         )}
                                                     </TableCell>
-                                                    <TableCell className="min-w-40 text-right align-top">
-                                                        <Select
-                                                            value={
-                                                                actionState[
-                                                                    registration
-                                                                        .id
-                                                                ] ?? ''
-                                                            }
-                                                            onValueChange={(
-                                                                value,
-                                                            ) =>
-                                                                handleActionChange(
-                                                                    registration,
-                                                                    value,
-                                                                )
-                                                            }
-                                                        >
-                                                            <SelectTrigger className="ml-auto w-[150px]">
-                                                                <SelectValue placeholder="Pilih aksi" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
+                                                    <TableCell className="hidden min-w-20 text-right align-top">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
+                                                                asChild
+                                                            >
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="ml-auto"
+                                                                    aria-label={`Aksi ${registration.booking_code}`}
+                                                                >
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
                                                                 {canExport ? (
-                                                                    <SelectItem value="pdf">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <FileText className="h-4 w-4" />
-                                                                            PDF
-                                                                            peserta
-                                                                        </div>
-                                                                    </SelectItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openParticipantsPdf(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <FileText className="h-4 w-4" />
+                                                                        PDF
+                                                                        Peserta
+                                                                    </DropdownMenuItem>
                                                                 ) : null}
                                                                 {canExport ? (
-                                                                    <SelectItem value="invoice">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <FileText className="h-4 w-4" />
-                                                                            PDF
-                                                                            invoice
-                                                                        </div>
-                                                                    </SelectItem>
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openInvoicePdf(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <FileText className="h-4 w-4" />
+                                                                        PDF
+                                                                        Invoice
+                                                                    </DropdownMenuItem>
                                                                 ) : null}
                                                                 {!registration.has_review &&
-                                                                    registration.review_url && (
-                                                                        <SelectItem value="review">
-                                                                            Beri
-                                                                            Review
-                                                                        </SelectItem>
-                                                                    )}
+                                                                registration.review_url ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openReviewUrl(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Review
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
                                                                 {registration.status ===
                                                                     'registered' &&
-                                                                    canEdit && (
-                                                                        <SelectItem value="cancel">
-                                                                            Batalkan
-                                                                            booking
-                                                                        </SelectItem>
-                                                                    )}
+                                                                canEdit ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            markAsCancelled(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Cancel
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
                                                                 {canEdit ? (
-                                                                    <SelectItem value="edit">
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openEditDialog(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
                                                                         Edit
-                                                                        booking
-                                                                    </SelectItem>
+                                                                    </DropdownMenuItem>
                                                                 ) : null}
                                                                 {canDelete ? (
-                                                                    <SelectItem value="delete">
+                                                                    <DropdownMenuItem
+                                                                        variant="destructive"
+                                                                        onClick={() =>
+                                                                            setDeleteTarget(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
                                                                         Hapus
-                                                                        booking
-                                                                    </SelectItem>
+                                                                    </DropdownMenuItem>
                                                                 ) : null}
-                                                            </SelectContent>
-                                                        </Select>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </TableCell>
                                                 </TableRow>
                                             ),
@@ -1254,10 +1150,6 @@ export default function BookingListingIndex({
                                         ? 'Edit Booking'
                                         : 'Tambah Booking'}
                                 </DrawerTitle>
-                                <DrawerDescription>
-                                    Isi data booking dengan lebih jelas: pilih
-                                    paket & jadwal, lalu lengkapi data jamaah.
-                                </DrawerDescription>
                             </DrawerHeader>
                         </div>
 
@@ -1268,10 +1160,6 @@ export default function BookingListingIndex({
                                         <div>
                                             <p className="text-sm font-semibold">
                                                 Paket & Jadwal
-                                            </p>
-                                            <p className="mt-1 text-xs text-muted-foreground">
-                                                Pilih paket dulu supaya opsi
-                                                jadwal terfilter otomatis.
                                             </p>
                                         </div>
                                     </div>
@@ -1431,7 +1319,7 @@ export default function BookingListingIndex({
                                                             form.data
                                                                 .passenger_count
                                                         }{' '}
-                                                        pax ×{' '}
+                                                        pax x{' '}
                                                         {form.data
                                                             .custom_unit_price ||
                                                             0}
@@ -1500,10 +1388,6 @@ export default function BookingListingIndex({
                                 <div className="rounded-2xl border bg-card p-4">
                                     <p className="text-sm font-semibold">
                                         Data Jamaah
-                                    </p>
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        Gunakan nomor WhatsApp aktif untuk
-                                        follow-up booking.
                                     </p>
 
                                     <div className="mt-4 grid gap-4 md:grid-cols-2">

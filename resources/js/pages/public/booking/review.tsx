@@ -49,7 +49,7 @@ export default function PublicBookingReview({ booking, existing }: Props) {
     const scheduleLabel = booking.departure_schedule.departure_date
         ? `${booking.departure_schedule.departure_date}${
               booking.departure_schedule.departure_city
-                  ? ` • ${booking.departure_schedule.departure_city}`
+                  ? ` - ${booking.departure_schedule.departure_city}`
                   : ''
           }`
         : '-';
@@ -92,7 +92,7 @@ export default function PublicBookingReview({ booking, existing }: Props) {
                         <span className="rounded bg-muted px-2 py-0.5 font-mono text-xs">
                             {booking.booking_code}
                         </span>{' '}
-                        • {pkgName} • {scheduleLabel}
+                        - {pkgName} - {scheduleLabel}
                     </p>
 
                     <div className="mt-5 rounded-2xl border border-border bg-muted/30 p-4 text-sm">
@@ -281,7 +281,7 @@ export default function PublicBookingReview({ booking, existing }: Props) {
                             disabled={form.processing}
                             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-60"
                         >
-                            {form.processing ? 'Menyimpan…' : 'Kirim Review'}
+                            {form.processing ? 'Menyimpan...' : 'Kirim Review'}
                         </button>
                     </form>
                 </div>

@@ -1,5 +1,5 @@
 import PublicLayout from '@/layouts/PublicLayout';
-import { localize, usePublicData } from '@/lib/public-content';
+import { localize, usePublicData } from '@/lib/public/content';
 import { Head } from '@inertiajs/react';
 
 const content = {

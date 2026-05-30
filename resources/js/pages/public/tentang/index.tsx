@@ -3,13 +3,13 @@ import {
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentRow1Col1,
     IslamicOrnamentZellige,
-} from '@/components/public-ornaments';
+} from '@/components/public/ornaments';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     localize,
     usePublicData,
     usePublicPageContent,
-} from '@/lib/public-content';
+} from '@/lib/public/content';
 import { ArrowRightIcon } from '@heroicons/react/24/outline';
 import { Head, Link } from '@inertiajs/react';
 import { motion, type Variants } from 'framer-motion';
@@ -75,7 +75,7 @@ const defaultValues = {
         {
             icon: Heart,
             title: 'Pelayanan dari Hati',
-            desc: 'Setiap jamaah diperlakukan seperti keluarga — dengan perhatian penuh dari pendaftaran hingga kepulangan.',
+            desc: 'Setiap jamaah diperlakukan seperti keluarga - dengan perhatian penuh dari pendaftaran hingga kepulangan.',
         },
         {
             icon: Award,
@@ -97,7 +97,7 @@ const defaultValues = {
         {
             icon: Heart,
             title: 'Service from the Heart',
-            desc: 'Every pilgrim is treated like family — with full attention from registration to return.',
+            desc: 'Every pilgrim is treated like family - with full attention from registration to return.',
         },
         {
             icon: Award,
@@ -175,7 +175,7 @@ export default function Tentang() {
             </Head>
 
             <main className="bg-background">
-                {/* ── Hero ── */}
+                {/* Hero */}
                 <section className="relative overflow-hidden bg-foreground py-20 sm:py-28 md:py-36">
                     {/* decorative blobs */}
                     <div className="absolute -top-32 -right-32 hidden h-96 w-96 rounded-full bg-primary/20 blur-3xl sm:block" />
@@ -305,7 +305,7 @@ export default function Tentang() {
                     </motion.div>
                 </section>
 
-                {/* ── Profile ── */}
+                {/* Profile */}
                 <section className="profile-section relative isolate overflow-hidden py-16 sm:py-24">
                     <div className="pointer-events-none absolute inset-0 -z-10">
                         <IslamicOrnamentZellige className="absolute top-[-18%] left-[-6%] h-[18rem] w-[18rem] -rotate-[10deg] text-primary/12 sm:h-[22rem] sm:w-[22rem]" />
@@ -398,7 +398,7 @@ export default function Tentang() {
                     </div>
                 </section>
 
-                {/* ── Values ── */}
+                {/* Values */}
                 <section className="values-section bg-secondary/30 py-20 sm:py-24">
                     <div className="container mx-auto px-4 sm:px-6">
                         <div className="mb-14 text-center">
@@ -418,58 +418,62 @@ export default function Tentang() {
                             viewport={viewport}
                             variants={staggerParent}
                         >
-                            {values.map((value: any, index: number) => {
-                                const defaultIcons = [
-                                    Shield,
-                                    Heart,
-                                    Award,
-                                    Star,
-                                ];
-                                const Icon =
-                                    value.icon ??
-                                    defaultIcons[index % defaultIcons.length];
-                                const title = value.icon
-                                    ? value.title
-                                    : localize(
-                                          value.title,
-                                          locale,
-                                          value.title,
-                                      );
-                                const desc = value.icon
-                                    ? value.desc
-                                    : localize(
-                                          value.description,
-                                          locale,
-                                          value.description ?? '',
-                                      );
-                                return (
-                                    <motion.div
-                                        key={index}
-                                        className="group relative overflow-hidden rounded-3xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl"
-                                        variants={slideUp}
-                                        transition={{
-                                            duration: 0.7,
-                                            ease: 'easeOut',
-                                        }}
-                                    >
-                                        <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-150 group-hover:bg-primary/10" />
-                                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 transition-colors group-hover:bg-primary/20">
-                                            <Icon className="h-6 w-6 text-primary" />
-                                        </div>
-                                        <h3 className="font-heading text-lg font-bold text-foreground">
-                                            {title}
-                                        </h3>
-                                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                                            {desc}
-                                        </p>
-                                    </motion.div>
-                                );
-                            })}
+                            {values.map(
+                                (value: Record<string, any>, index: number) => {
+                                    const defaultIcons = [
+                                        Shield,
+                                        Heart,
+                                        Award,
+                                        Star,
+                                    ];
+                                    const Icon =
+                                        value.icon ??
+                                        defaultIcons[
+                                            index % defaultIcons.length
+                                        ];
+                                    const title = value.icon
+                                        ? value.title
+                                        : localize(
+                                              value.title,
+                                              locale,
+                                              value.title,
+                                          );
+                                    const desc = value.icon
+                                        ? value.desc
+                                        : localize(
+                                              value.description,
+                                              locale,
+                                              value.description ?? '',
+                                          );
+                                    return (
+                                        <motion.div
+                                            key={index}
+                                            className="group relative overflow-hidden rounded-3xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl"
+                                            variants={slideUp}
+                                            transition={{
+                                                duration: 0.7,
+                                                ease: 'easeOut',
+                                            }}
+                                        >
+                                            <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-150 group-hover:bg-primary/10" />
+                                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 transition-colors group-hover:bg-primary/20">
+                                                <Icon className="h-6 w-6 text-primary" />
+                                            </div>
+                                            <h3 className="font-heading text-lg font-bold text-foreground">
+                                                {title}
+                                            </h3>
+                                            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                                                {desc}
+                                            </p>
+                                        </motion.div>
+                                    );
+                                },
+                            )}
                         </motion.div>
                     </div>
                 </section>
 
-                {/* ── Team ── */}
+                {/* Team */}
                 {teamMembers.length > 0 && (
                     <section className="team-section py-20 sm:py-24">
                         <div className="container mx-auto px-4 sm:px-6">
@@ -492,7 +496,7 @@ export default function Tentang() {
                                 variants={staggerParent}
                             >
                                 {teamMembers.map(
-                                    (member: Record<string, unknown>) => (
+                                    (member: Record<string, any>) => (
                                         <motion.div
                                             key={String(member.name)}
                                             className="group relative overflow-hidden rounded-3xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
@@ -542,7 +546,7 @@ export default function Tentang() {
                     </section>
                 )}
 
-                {/* ── CTA ── */}
+                {/* CTA */}
                 <section className="container mx-auto px-4 pb-20 sm:px-6 sm:pb-24">
                     <div className="relative overflow-hidden rounded-3xl bg-linear-to-br from-foreground via-foreground to-primary px-8 py-14 text-center text-background shadow-2xl sm:px-12 sm:py-16">
                         <div className="absolute -top-20 -right-20 hidden h-64 w-64 rounded-full bg-primary/20 blur-3xl sm:block" />

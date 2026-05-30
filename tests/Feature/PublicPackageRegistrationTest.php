@@ -33,9 +33,9 @@ class PublicPackageRegistrationTest extends TestCase
         ]);
 
         DepartureSchedule::query()->create([
-            'travel_package_id' => $package->id,
-            'departure_date' => '2026-05-01',
-            'return_date' => '2026-05-10',
+            'package_id' => $package->id,
+            'departure_date' => now()->addDays(10)->toDateString(),
+            'return_date' => now()->addDays(19)->toDateString(),
             'departure_city' => 'Jakarta',
             'seats_total' => 40,
             'seats_available' => 12,
@@ -82,9 +82,9 @@ class PublicPackageRegistrationTest extends TestCase
         ]);
 
         $schedule = DepartureSchedule::query()->create([
-            'travel_package_id' => $package->id,
-            'departure_date' => '2026-06-10',
-            'return_date' => '2026-06-20',
+            'package_id' => $package->id,
+            'departure_date' => now()->addDays(14)->toDateString(),
+            'return_date' => now()->addDays(24)->toDateString(),
             'departure_city' => 'Surabaya',
             'seats_total' => 45,
             'seats_available' => 18,
@@ -103,7 +103,7 @@ class PublicPackageRegistrationTest extends TestCase
         ])->assertRedirect(route('public.paket-register', ['travelPackage' => $package->slug]));
 
         $this->assertDatabaseHas('package_registrations', [
-            'travel_package_id' => $package->id,
+            'package_id' => $package->id,
             'departure_schedule_id' => $schedule->id,
             'full_name' => 'Ahmad Fauzi',
             'phone' => '081234567890',

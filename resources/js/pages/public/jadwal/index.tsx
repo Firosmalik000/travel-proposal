@@ -1,12 +1,12 @@
-import { MotionCard, MotionSection } from '@/components/public-motion';
+import { MotionCard, MotionSection } from '@/components/public/motion';
 import {
     IslamicLantern,
     IslamicOrnamentKhatam,
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentZellige,
-} from '@/components/public-ornaments';
+} from '@/components/public/ornaments';
 import PublicLayout from '@/layouts/PublicLayout';
-import { formatDate, usePublicData } from '@/lib/public-content';
+import { formatDate, usePublicData } from '@/lib/public/content';
 import { Head, Link } from '@inertiajs/react';
 
 const content = {

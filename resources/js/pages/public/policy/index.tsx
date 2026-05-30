@@ -1,5 +1,5 @@
 import PublicLayout from '@/layouts/PublicLayout';
-import { localize, usePublicPageContent } from '@/lib/public-content';
+import { localize, usePublicPageContent } from '@/lib/public/content';
 import { Head, Link } from '@inertiajs/react';
 
 type Props = {

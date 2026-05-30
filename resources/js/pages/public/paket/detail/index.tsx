@@ -1,4 +1,4 @@
-﻿import { MotionCard, MotionSection } from '@/components/public-motion';
+import { MotionCard, MotionSection } from '@/components/public/motion';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     normalizePackageHighlights,
@@ -9,7 +9,7 @@ import {
     formatPrice,
     localize,
     whatsappLinkFromSeo,
-} from '@/lib/public-content';
+} from '@/lib/public/content';
 import {
     absoluteUrl,
     canonicalUrl,
@@ -18,11 +18,31 @@ import {
 } from '@/lib/seo-jsonld';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface TravelPackagePageProps extends SharedData {
-    travelPackage?: Record<string, any>;
+    travelPackage?: TravelPackageData;
 }
+
+type TravelPackageData = {
+    [key: string]: any;
+};
+
+type PackageItinerary = {
+    [key: string]: any;
+};
+
+type PackageSchedule = {
+    [key: string]: any;
+};
+
+type PackageProduct = {
+    [key: string]: any;
+};
+
+type PackageTestimonial = {
+    [key: string]: any;
+};
 
 const typeConfig: Record<string, { label: string; color: string }> = {
     reguler: { label: 'Reguler', color: 'bg-blue-100 text-blue-700' },
@@ -49,28 +69,16 @@ export default function PaketDetail() {
     const page = usePage<TravelPackagePageProps>();
     const { travelPackage, seoSettings } = page.props;
     const seo = (seoSettings as Record<string, any>) ?? {};
-    const whatsappLink = whatsappLinkFromSeo(seo);
-
-    if (!travelPackage) {
-        return (
-            <PublicLayout>
-                <Head title="Paket tidak ditemukan" />
-                <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-                    Paket tidak ditemukan.
-                </div>
-            </PublicLayout>
-        );
-    }
-
     const pkg = travelPackage;
-    const content = pkg.content ?? {};
-    const name = localize(pkg.name, locale);
-    const summary = localize(pkg.summary, locale);
-    const type = typeConfig[pkg.package_type] ?? typeConfig.reguler;
+    const safePackage = pkg ?? ({} as TravelPackageData);
+    const content = safePackage.content ?? {};
+    const name = localize(safePackage.name, locale);
+    const summary = localize(safePackage.summary, locale);
+    const type = typeConfig[safePackage.package_type] ?? typeConfig.reguler;
 
-    const packageImages = useMemo(() => {
+    const packageImages = (() => {
         const gallery = Array.isArray(content.gallery) ? content.gallery : [];
-        const candidates = [pkg.image_path, ...gallery]
+        const candidates = [safePackage.image_path, ...gallery]
             .filter(
                 (value: unknown): value is string => typeof value === 'string',
             )
@@ -78,12 +86,12 @@ export default function PaketDetail() {
             .filter(Boolean);
 
         return Array.from(new Set(candidates));
-    }, [content.gallery, pkg.image_path]);
+    })();
 
     const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     const canonical = canonicalUrl(seo, page.url);
-    const ogImageCandidate = packageImages[0] ?? pkg.image_path ?? null;
+    const ogImageCandidate = packageImages[0] ?? safePackage.image_path ?? null;
     const ogImage = ogImageCandidate
         ? absoluteUrl(seo?.advanced?.canonicalBase, ogImageCandidate)
         : null;
@@ -99,13 +107,9 @@ export default function PaketDetail() {
         description: summary,
         url: canonical,
         image: ogImage,
-        currency: pkg.currency ?? 'IDR',
-        price: pkg.price ?? null,
+        currency: safePackage.currency ?? 'IDR',
+        price: safePackage.price ?? null,
     });
-
-    useEffect(() => {
-        setActiveImageIndex(0);
-    }, [pkg.slug]);
 
     useEffect(() => {
         if (packageImages.length <= 1) {
@@ -143,11 +147,13 @@ export default function PaketDetail() {
     const PolicyIcon = packageHighlightIconMap.ShieldCheck;
     const TestimonialIcon = packageHighlightIconMap.Users;
     const StarIcon = packageHighlightIconMap.Star;
-    const itineraries = useMemo(() => {
-        const rawItems = Array.isArray(pkg.itineraries) ? pkg.itineraries : [];
+    const itineraries = (() => {
+        const rawItems = Array.isArray(safePackage.itineraries)
+            ? safePackage.itineraries
+            : [];
 
         return rawItems
-            .map((item: any, index: number) => {
+            .map((item: PackageItinerary, index: number) => {
                 const dayNumber = Number(item?.day_number);
                 const sortOrder = Number(item?.sort_order);
 
@@ -162,9 +168,13 @@ export default function PaketDetail() {
                         item?.id ??
                             `${item?.day_number ?? index + 1}-${item?.sort_order ?? index}`,
                     ),
+                } as PackageItinerary & {
+                    day_number: number;
+                    sort_order: number | null;
+                    _key: string;
                 };
             })
-            .sort((left: any, right: any) => {
+            .sort((left, right) => {
                 const leftSort = Number.isFinite(Number(left.sort_order))
                     ? Number(left.sort_order)
                     : Number(left.day_number);
@@ -174,17 +184,28 @@ export default function PaketDetail() {
 
                 return leftSort - rightSort;
             });
-    }, [pkg.itineraries]);
+    })();
 
-    const openSchedules = (pkg.schedules ?? []).filter(
-        (s: any) => s.status === 'open',
+    const openSchedules = (safePackage.schedules ?? []).filter(
+        (s: PackageSchedule) => s.status === 'open',
     );
     const nextSchedule = openSchedules[0] ?? null;
-    const registrationLink = `/paket-umroh/${pkg.slug}/daftar${nextSchedule?.id ? `?schedule=${nextSchedule.id}` : ''}`;
-    const packagePdfDownloadUrl = `/paket-umroh/${pkg.slug}/sk.pdf?download=1`;
+    const registrationLink = `/paket-umroh/${safePackage.slug}/daftar${nextSchedule?.id ? `?schedule=${nextSchedule.id}` : ''}`;
+    const packagePdfDownloadUrl = `/paket-umroh/${safePackage.slug}/sk.pdf?download=1`;
 
-    const whatsappMsg = `Halo, saya tertarik dengan paket *${name}* (${pkg.code}). Mohon info lebih lanjut.`;
+    const whatsappMsg = `Halo, saya tertarik dengan paket *${name}* (${safePackage.code}). Mohon info lebih lanjut.`;
     const waLink = whatsappLinkFromSeo(seo, whatsappMsg);
+
+    if (!pkg) {
+        return (
+            <PublicLayout>
+                <Head title="Paket tidak ditemukan" />
+                <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
+                    Paket tidak ditemukan.
+                </div>
+            </PublicLayout>
+        );
+    }
 
     return (
         <PublicLayout>
@@ -525,7 +546,7 @@ export default function PaketDetail() {
                         Jadwal Keberangkatan
                     </h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {pkg.schedules.map((s: any, i: number) => {
+                        {pkg.schedules.map((s: PackageSchedule, i: number) => {
                             const statusColor =
                                 s.status === 'open'
                                     ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30'
@@ -618,7 +639,7 @@ export default function PaketDetail() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
-                                    {itineraries.map((itinerary: any) => (
+                                    {itineraries.map((itinerary) => (
                                         <tr
                                             key={itinerary._key}
                                             className="align-top"
@@ -637,9 +658,13 @@ export default function PaketDetail() {
                                                     <div className="space-y-2">
                                                         <div className="flex flex-wrap gap-2">
                                                             {itinerary.activities.map(
-                                                                (
-                                                                    activity: any,
-                                                                ) => {
+                                                                (activity: {
+                                                                    id?:
+                                                                        | number
+                                                                        | string;
+                                                                    code?: string;
+                                                                    name?: unknown;
+                                                                }) => {
                                                                     const activityLabel =
                                                                         localize(
                                                                             activity?.name,
@@ -840,7 +865,7 @@ export default function PaketDetail() {
                         Komponen Paket
                     </h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {pkg.products.map((p: any, i: number) => {
+                        {pkg.products.map((p: PackageProduct, i: number) => {
                             const ProductIcon =
                                 packageHighlightIconMap[
                                     productTypeIconMap[p.product_type] ??
@@ -904,79 +929,82 @@ export default function PaketDetail() {
                         Testimoni Jamaah
                     </h2>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {pkg.testimonials.map((t: any, i: number) => (
-                            <div
-                                key={i}
-                                className="rounded-2xl border border-border bg-card p-5"
-                            >
-                                <div className="flex items-center gap-1 text-amber-400">
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                        <StarIcon
-                                            key={s}
-                                            className={
-                                                s <= t.rating
-                                                    ? 'h-4 w-4 text-amber-400'
-                                                    : 'h-4 w-4 text-muted-foreground/20'
-                                            }
-                                            fill="currentColor"
-                                        />
-                                    ))}
-                                </div>
-                                <p className="mt-2 text-sm leading-relaxed text-muted-foreground italic">
-                                    "{localize(t.quote, locale)}"
-                                </p>
-                                <div className="mt-3 border-t border-border pt-3">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        {t.name}
+                        {pkg.testimonials.map(
+                            (t: PackageTestimonial, i: number) => (
+                                <div
+                                    key={i}
+                                    className="rounded-2xl border border-border bg-card p-5"
+                                >
+                                    <div className="flex items-center gap-1 text-amber-400">
+                                        {[1, 2, 3, 4, 5].map((s) => (
+                                            <StarIcon
+                                                key={s}
+                                                className={
+                                                    s <= t.rating
+                                                        ? 'h-4 w-4 text-amber-400'
+                                                        : 'h-4 w-4 text-muted-foreground/20'
+                                                }
+                                                fill="currentColor"
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground italic">
+                                        "{localize(t.quote, locale)}"
                                     </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {[
-                                            t.origin_city,
-                                            t.departure_schedule?.departure_date
-                                                ? `${formatDate(
-                                                      t.departure_schedule
-                                                          .departure_date,
-                                                      locale,
-                                                  )}${
-                                                      t.departure_schedule
-                                                          ?.departure_city
-                                                          ? ` - ${t.departure_schedule.departure_city}`
-                                                          : ''
-                                                  }`
-                                                : null,
-                                        ]
-                                            .filter(Boolean)
-                                            .join(' - ')}
-                                    </p>
-                                </div>
+                                    <div className="mt-3 border-t border-border pt-3">
+                                        <p className="text-sm font-semibold text-foreground">
+                                            {t.name}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {[
+                                                t.origin_city,
+                                                t.departure_schedule
+                                                    ?.departure_date
+                                                    ? `${formatDate(
+                                                          t.departure_schedule
+                                                              .departure_date,
+                                                          locale,
+                                                      )}${
+                                                          t.departure_schedule
+                                                              ?.departure_city
+                                                              ? ` - ${t.departure_schedule.departure_city}`
+                                                              : ''
+                                                      }`
+                                                    : null,
+                                            ]
+                                                .filter(Boolean)
+                                                .join(' - ')}
+                                        </p>
+                                    </div>
 
-                                {Array.isArray(t.photos) &&
-                                    t.photos.length > 0 && (
-                                        <div className="mt-4 grid grid-cols-3 gap-2">
-                                            {t.photos
-                                                .slice(0, 6)
-                                                .map(
-                                                    (
-                                                        src: string,
-                                                        index: number,
-                                                    ) => (
-                                                        <div
-                                                            key={`${src}-${index}`}
-                                                            className="aspect-square overflow-hidden rounded-xl border border-border bg-muted"
-                                                        >
-                                                            <img
-                                                                src={src}
-                                                                alt={`Foto testimoni ${t.name}`}
-                                                                className="h-full w-full object-cover"
-                                                                loading="lazy"
-                                                            />
-                                                        </div>
-                                                    ),
-                                                )}
-                                        </div>
-                                    )}
-                            </div>
-                        ))}
+                                    {Array.isArray(t.photos) &&
+                                        t.photos.length > 0 && (
+                                            <div className="mt-4 grid grid-cols-3 gap-2">
+                                                {t.photos
+                                                    .slice(0, 6)
+                                                    .map(
+                                                        (
+                                                            src: string,
+                                                            index: number,
+                                                        ) => (
+                                                            <div
+                                                                key={`${src}-${index}`}
+                                                                className="aspect-square overflow-hidden rounded-xl border border-border bg-muted"
+                                                            >
+                                                                <img
+                                                                    src={src}
+                                                                    alt={`Foto testimoni ${t.name}`}
+                                                                    className="h-full w-full object-cover"
+                                                                    loading="lazy"
+                                                                />
+                                                            </div>
+                                                        ),
+                                                    )}
+                                            </div>
+                                        )}
+                                </div>
+                            ),
+                        )}
                     </div>
                 </section>
             )}

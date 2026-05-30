@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\CheckMenuPermission;
 use App\Models\Booking;
 use App\Models\DepartureSchedule;
+use App\Models\InventoryItem;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
+use App\Models\TravelProduct;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -301,5 +304,116 @@ class BookingRegisterManagementTest extends TestCase
                 ->where('schedules.0.seats_total', 40)
                 ->where('schedules.0.seats_available', 36)
             );
+    }
+
+    public function test_it_deducts_inventory_stock_when_registered_booking_is_created(): void
+    {
+        $this->withoutMiddleware(CheckMenuPermission::class);
+        $user = User::factory()->create();
+
+        $product = TravelProduct::query()->create([
+            'code' => 'PRD-STOCK-001',
+            'slug' => 'prd-stock-001',
+            'name' => 'Produk Stok',
+            'product_type' => 'layanan',
+            'description' => 'Desc',
+            'content' => ['unit' => 'pcs', 'price' => 5000],
+            'is_active' => true,
+        ]);
+
+        $inventory = InventoryItem::query()->create([
+            'item_code' => $product->code,
+            'item_name' => (string) $product->name,
+            'category' => (string) $product->product_type,
+            'unit' => 'pcs',
+            'product_id' => $product->id,
+            'quantity' => 20,
+            'is_active' => true,
+        ]);
+
+        $package = TravelPackage::factory()->create();
+        $package->products()->sync([$product->id => ['sort_order' => 1]]);
+
+        $this->actingAs($user)->post(route('booking.listing.store'), [
+            'travel_package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'full_name' => 'Jamaah A',
+            'phone' => '081200000001',
+            'email' => 'jamaah@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 3,
+            'notes' => null,
+            'status' => 'registered',
+        ])->assertRedirect(route('booking.listing.index'));
+
+        $this->assertDatabaseHas('inventory_items', [
+            'id' => $inventory->id,
+            'quantity' => 17,
+        ]);
+    }
+
+    public function test_it_restores_inventory_stock_when_booking_is_cancelled(): void
+    {
+        $this->withoutMiddleware(CheckMenuPermission::class);
+        $user = User::factory()->create();
+
+        $product = TravelProduct::query()->create([
+            'code' => 'PRD-STOCK-002',
+            'slug' => 'prd-stock-002',
+            'name' => 'Produk Stok Cancel',
+            'product_type' => 'perlengkapan',
+            'description' => 'Desc',
+            'content' => ['unit' => 'pcs', 'price' => 7000],
+            'is_active' => true,
+        ]);
+
+        $inventory = InventoryItem::query()->create([
+            'item_code' => $product->code,
+            'item_name' => (string) $product->name,
+            'category' => (string) $product->product_type,
+            'unit' => 'pcs',
+            'product_id' => $product->id,
+            'quantity' => 20,
+            'is_active' => true,
+        ]);
+
+        $package = TravelPackage::factory()->create();
+        $package->products()->sync([$product->id => ['sort_order' => 1]]);
+
+        $this->actingAs($user)->post(route('booking.listing.store'), [
+            'travel_package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'full_name' => 'Jamaah Cancel',
+            'phone' => '081200000003',
+            'email' => 'jamaah-cancel@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 4,
+            'notes' => null,
+            'status' => 'registered',
+        ])->assertRedirect(route('booking.listing.index'));
+
+        $this->assertDatabaseHas('inventory_items', [
+            'id' => $inventory->id,
+            'quantity' => 16,
+        ]);
+
+        $booking = Booking::query()->latest('id')->firstOrFail();
+
+        $this->actingAs($user)->put(route('booking.listing.update', $booking), [
+            'travel_package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'full_name' => 'Jamaah Cancel',
+            'phone' => '081200000003',
+            'email' => 'jamaah-cancel@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 4,
+            'notes' => null,
+            'status' => 'cancelled',
+        ])->assertRedirect(route('booking.listing.index'));
+
+        $this->assertDatabaseHas('inventory_items', [
+            'id' => $inventory->id,
+            'quantity' => 20,
+        ]);
     }
 }

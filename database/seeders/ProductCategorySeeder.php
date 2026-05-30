@@ -11,36 +11,36 @@ class ProductCategorySeeder extends Seeder
     {
         $categories = [
             [
-                'key' => 'dokumen',
-                'name' => 'Dokumen',
-                'description' => 'Kategori untuk visa, paspor, dan dokumen pendukung jamaah.',
+                'key' => 'hotel',
+                'name' => 'Hotel',
+                'description' => 'Kategori untuk produk hotel dan akomodasi jamaah.',
                 'sort_order' => 1,
             ],
             [
-                'key' => 'transportasi',
-                'name' => 'Transportasi',
-                'description' => 'Kategori untuk tiket, bus, dan mobilitas perjalanan jamaah.',
+                'key' => 'tiket',
+                'name' => 'Tiket',
+                'description' => 'Kategori untuk tiket penerbangan dan transportasi perjalanan.',
                 'sort_order' => 2,
             ],
             [
-                'key' => 'akomodasi',
-                'name' => 'Akomodasi',
-                'description' => 'Kategori untuk hotel dan fasilitas inap selama perjalanan.',
+                'key' => 'merchandise',
+                'name' => 'Merchandise',
+                'description' => 'Kategori untuk merchandise dan perlengkapan identitas jamaah.',
                 'sort_order' => 3,
-            ],
-            [
-                'key' => 'layanan',
-                'name' => 'Layanan',
-                'description' => 'Kategori untuk manasik, pendampingan, dan layanan operasional.',
-                'sort_order' => 4,
             ],
             [
                 'key' => 'perlengkapan',
                 'name' => 'Perlengkapan',
-                'description' => 'Kategori untuk perlengkapan ibadah dan kebutuhan perjalanan jamaah.',
-                'sort_order' => 5,
+                'description' => 'Kategori untuk kebutuhan pendukung layanan dan ibadah jamaah.',
+                'sort_order' => 4,
             ],
         ];
+
+        $activeKeys = collect($categories)->pluck('key')->all();
+
+        ProductCategory::query()
+            ->whereNotIn('key', $activeKeys)
+            ->update(['is_active' => false]);
 
         foreach ($categories as $category) {
             ProductCategory::query()->updateOrCreate(

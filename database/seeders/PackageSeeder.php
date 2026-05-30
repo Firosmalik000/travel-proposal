@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Activity;
 use App\Models\DepartureSchedule;
+use App\Models\PackageItinerary;
 use App\Models\ProductCategory;
 use App\Models\Testimonial;
 use App\Models\TravelPackage;
@@ -16,6 +18,7 @@ class PackageSeeder extends Seeder
         $products = $this->seedProducts();
         $packages = $this->seedPackages($products);
         $this->seedSchedules($packages);
+        $this->seedItineraries($packages, $products);
         $this->seedTestimonials($packages);
     }
 
@@ -27,11 +30,10 @@ class PackageSeeder extends Seeder
     private function seedProducts(): array
     {
         $categories = [
-            ['key' => 'dokumen', 'name' => $this->loc('Dokumen', 'Documents'), 'sort_order' => 1],
-            ['key' => 'transportasi', 'name' => $this->loc('Transportasi', 'Transportation'), 'sort_order' => 2],
-            ['key' => 'akomodasi', 'name' => $this->loc('Akomodasi', 'Accommodation'), 'sort_order' => 3],
-            ['key' => 'layanan', 'name' => $this->loc('Layanan', 'Services'), 'sort_order' => 4],
-            ['key' => 'perlengkapan', 'name' => $this->loc('Perlengkapan', 'Equipment'), 'sort_order' => 5],
+            ['key' => 'hotel', 'name' => $this->loc('Hotel', 'Hotel'), 'sort_order' => 1],
+            ['key' => 'tiket', 'name' => $this->loc('Tiket', 'Ticket'), 'sort_order' => 2],
+            ['key' => 'merchandise', 'name' => $this->loc('Merchandise', 'Merchandise'), 'sort_order' => 3],
+            ['key' => 'perlengkapan', 'name' => $this->loc('Perlengkapan', 'Equipment'), 'sort_order' => 4],
         ];
 
         foreach ($categories as $category) {
@@ -46,47 +48,47 @@ class PackageSeeder extends Seeder
                 'code' => 'PRD-VISA',
                 'slug' => 'visa-umroh',
                 'name' => $this->loc('Visa Umroh', 'Umrah Visa'),
-                'product_type' => 'dokumen',
+                'product_type' => 'perlengkapan',
                 'description' => $this->loc('Pengurusan visa resmi Kerajaan Arab Saudi.', 'Official Saudi Arabia visa processing.'),
-                'content' => ['unit' => $this->loc('per jamaah', 'per pilgrim')],
+                'content' => ['unit' => $this->loc('per jamaah', 'per pilgrim'), 'price' => 3500000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-PASPOR',
                 'slug' => 'pengurusan-paspor',
                 'name' => $this->loc('Pengurusan Paspor', 'Passport Processing'),
-                'product_type' => 'dokumen',
+                'product_type' => 'perlengkapan',
                 'description' => $this->loc('Bantuan pengurusan paspor baru atau perpanjangan.', 'Assistance for new or renewal passport processing.'),
-                'content' => ['unit' => $this->loc('per jamaah', 'per pilgrim')],
+                'content' => ['unit' => $this->loc('per jamaah', 'per pilgrim'), 'price' => 1200000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-TIKET-GA',
                 'slug' => 'tiket-garuda',
                 'name' => $this->loc('Tiket Garuda Indonesia', 'Garuda Indonesia Ticket'),
-                'product_type' => 'transportasi',
+                'product_type' => 'tiket',
                 'description' => $this->loc('Tiket penerbangan PP dengan Garuda Indonesia.', 'Round-trip flight ticket with Garuda Indonesia.'),
-                'content' => ['unit' => $this->loc('round trip', 'round trip')],
+                'content' => ['unit' => $this->loc('round trip', 'round trip'), 'price' => 18500000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-TIKET-SV',
                 'slug' => 'tiket-saudia',
                 'name' => $this->loc('Tiket Saudia Airlines', 'Saudia Airlines Ticket'),
-                'product_type' => 'transportasi',
+                'product_type' => 'tiket',
                 'description' => $this->loc('Tiket penerbangan PP dengan Saudia Airlines.', 'Round-trip flight ticket with Saudia Airlines.'),
-                'content' => ['unit' => $this->loc('round trip', 'round trip')],
+                'content' => ['unit' => $this->loc('round trip', 'round trip'), 'price' => 16900000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-BUS',
                 'slug' => 'transportasi-bus',
                 'name' => $this->loc('Bus Selama Perjalanan', 'Bus During Trip'),
-                'product_type' => 'transportasi',
+                'product_type' => 'tiket',
                 'description' => $this->loc('Transportasi bus AC selama di tanah suci.', 'Air-conditioned bus transportation in the holy land.'),
-                'content' => ['unit' => $this->loc('per paket', 'per package')],
+                'content' => ['unit' => $this->loc('per paket', 'per package'), 'price' => 4500000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-HOTEL-3',
                 'slug' => 'hotel-bintang-3',
                 'name' => $this->loc('Hotel Bintang 3', '3-Star Hotel'),
-                'product_type' => 'akomodasi',
+                'product_type' => 'hotel',
                 'description' => $this->loc('Akomodasi hotel bintang 3 di Makkah dan Madinah.', '3-star hotel accommodation in Makkah and Madinah.'),
                 'content' => ['unit' => $this->loc('per kamar quad', 'per quad room')],
             ],
@@ -94,7 +96,7 @@ class PackageSeeder extends Seeder
                 'code' => 'PRD-HOTEL-4',
                 'slug' => 'hotel-bintang-4',
                 'name' => $this->loc('Hotel Bintang 4', '4-Star Hotel'),
-                'product_type' => 'akomodasi',
+                'product_type' => 'hotel',
                 'description' => $this->loc('Akomodasi hotel bintang 4 dekat Masjidil Haram.', '4-star hotel near Masjidil Haram.'),
                 'content' => ['unit' => $this->loc('per kamar triple', 'per triple room')],
             ],
@@ -102,7 +104,7 @@ class PackageSeeder extends Seeder
                 'code' => 'PRD-HOTEL-5',
                 'slug' => 'hotel-bintang-5',
                 'name' => $this->loc('Hotel Bintang 5', '5-Star Hotel'),
-                'product_type' => 'akomodasi',
+                'product_type' => 'hotel',
                 'description' => $this->loc('Hotel mewah dengan jarak sangat dekat ke Masjidil Haram.', 'Luxury hotel very close to Masjidil Haram.'),
                 'content' => ['unit' => $this->loc('per kamar double', 'per double room')],
             ],
@@ -110,41 +112,41 @@ class PackageSeeder extends Seeder
                 'code' => 'PRD-MANASIK',
                 'slug' => 'manasik-pembimbing',
                 'name' => $this->loc('Manasik & Pembimbing', 'Manasik & Worship Guide'),
-                'product_type' => 'layanan',
+                'product_type' => 'perlengkapan',
                 'description' => $this->loc('Manasik sebelum berangkat dan pendampingan ustadz selama ibadah.', 'Pre-departure manasik and ustadz guidance during worship.'),
-                'content' => ['unit' => $this->loc('per paket', 'per package')],
+                'content' => ['unit' => $this->loc('per paket', 'per package'), 'price' => 1750000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-MAKAN',
                 'slug' => 'konsumsi-katering',
                 'name' => $this->loc('Konsumsi & Katering', 'Meals & Catering'),
-                'product_type' => 'layanan',
+                'product_type' => 'perlengkapan',
                 'description' => $this->loc('Makan 3x sehari dengan menu Indonesia selama di tanah suci.', '3 meals per day with Indonesian menu during the trip.'),
-                'content' => ['unit' => $this->loc('per jamaah', 'per pilgrim')],
+                'content' => ['unit' => $this->loc('per jamaah', 'per pilgrim'), 'price' => 3200000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-HANDLING',
                 'slug' => 'handling-bandara',
                 'name' => $this->loc('Handling Bandara', 'Airport Handling'),
-                'product_type' => 'layanan',
+                'product_type' => 'perlengkapan',
                 'description' => $this->loc('Pendampingan check-in, bagasi, dan grouping jamaah di bandara.', 'Assistance for check-in, baggage, and pilgrim grouping at the airport.'),
-                'content' => ['unit' => $this->loc('per keberangkatan', 'per departure')],
+                'content' => ['unit' => $this->loc('per keberangkatan', 'per departure'), 'price' => 1250000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-CITYTOUR',
                 'slug' => 'city-tour-ziarah',
                 'name' => $this->loc('City Tour & Ziarah', 'City Tour & Ziarah'),
-                'product_type' => 'layanan',
+                'product_type' => 'perlengkapan',
                 'description' => $this->loc('Program ziarah dan kunjungan lokasi penting di Makkah dan Madinah.', 'Ziarah program and visits to important sites in Makkah and Madinah.'),
-                'content' => ['unit' => $this->loc('per paket', 'per package')],
+                'content' => ['unit' => $this->loc('per paket', 'per package'), 'price' => 2400000, 'currency' => 'IDR'],
             ],
             [
                 'code' => 'PRD-PERLENGKAPAN',
                 'slug' => 'perlengkapan-umroh',
                 'name' => $this->loc('Perlengkapan Umroh', 'Umrah Equipment'),
-                'product_type' => 'perlengkapan',
+                'product_type' => 'merchandise',
                 'description' => $this->loc('Koper, kain ihram, buku panduan, dan tas jamaah.', 'Luggage, ihram cloth, guidebook, and pilgrim bag.'),
-                'content' => ['unit' => $this->loc('per jamaah', 'per pilgrim')],
+                'content' => ['unit' => $this->loc('per jamaah', 'per pilgrim'), 'price' => 950000, 'currency' => 'IDR'],
             ],
         ];
 
@@ -175,29 +177,29 @@ class PackageSeeder extends Seeder
     {
         $rows = [
             [
-                'code' => 'ASF-HEMAT-09',
-                'slug' => 'umroh-hemat-9-hari',
-                'name' => $this->loc('Umroh Hemat 9 Hari', 'Economy Umrah 9 Days'),
+                'code' => 'ASF-BASIC-09',
+                'slug' => 'umroh-basic-9-hari',
+                'name' => $this->loc('Umroh Basic 9 Hari', 'Basic Umrah 9 Days'),
                 'package_type' => 'reguler',
                 'departure_city' => 'Jakarta',
                 'duration_days' => 9,
-                'price' => 27900000,
+                'price' => 28900000,
                 'original_price' => 31900000,
                 'discount_label' => 'EARLY BIRD',
-                'discount_ends_at' => '2026-04-30 23:59:59',
+                'discount_ends_at' => '2026-08-15 23:59:59',
                 'currency' => 'IDR',
                 'image_path' => '/images/dummy.jpg',
                 'summary' => $this->loc(
-                    'Paket efisien untuk jamaah yang mengutamakan keberangkatan terjangkau dengan layanan inti lengkap.',
-                    'Efficient package for pilgrims seeking affordable departure with complete core services.',
+                    'Paket basic untuk jamaah yang mengutamakan harga terjangkau dengan layanan inti lengkap.',
+                    'Basic package for pilgrims seeking affordable pricing with complete core services.',
                 ),
                 'content' => [
                     'airline' => $this->loc('Saudia Airlines', 'Saudia Airlines'),
-                    'hotel' => $this->loc('Hotel bintang 3 area Aziziyah', '3-star hotel in Aziziyah area'),
-                    'badge' => $this->loc('Hemat Favorit', 'Economy Favorite'),
-                    'period' => $this->loc('Mei - Juni 2026', 'May - June 2026'),
+                    'hotel' => $this->loc('Hotel area Ajyad / setara', 'Ajyad area hotel / equivalent'),
+                    'badge' => $this->loc('Best Value', 'Best Value'),
+                    'period' => $this->loc('Agustus - Oktober 2026', 'August - October 2026'),
                     'room' => $this->loc('Quad sharing', 'Quad sharing'),
-                    'meals' => $this->loc('Sarapan hotel dan makan terjadwal', 'Hotel breakfast and scheduled meals'),
+                    'meals' => $this->loc('Makan terjadwal', 'Scheduled meals'),
                     'handling' => $this->loc('Handling bandara Jakarta', 'Jakarta airport handling'),
                     'included' => $this->loc(
                         "Tiket pesawat PP Saudia\nVisa umroh resmi\nHotel bintang 3 Makkah & Madinah\nManasik & pembimbing\nTransportasi bus AC\nPerlengkapan umroh",
@@ -217,27 +219,27 @@ class PackageSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'code' => 'ASF-REG-10',
-                'slug' => 'umroh-reguler-10-hari',
-                'name' => $this->loc('Umroh Reguler 10 Hari', 'Regular Umrah 10 Days'),
+                'code' => 'ASF-REGULAR-10',
+                'slug' => 'umroh-regular-10-hari',
+                'name' => $this->loc('Umroh Regular 10 Hari', 'Regular Umrah 10 Days'),
                 'package_type' => 'reguler',
-                'departure_city' => 'Surabaya',
+                'departure_city' => 'Jakarta',
                 'duration_days' => 10,
-                'price' => 34900000,
-                'original_price' => 37900000,
-                'discount_label' => 'PROMO KELUARGA',
-                'discount_ends_at' => '2026-06-15 23:59:59',
+                'price' => 36900000,
+                'original_price' => 39900000,
+                'discount_label' => 'FAMILY DEAL',
+                'discount_ends_at' => '2026-09-01 23:59:59',
                 'currency' => 'IDR',
                 'image_path' => '/images/dummy.jpg',
                 'summary' => $this->loc(
-                    'Paket paling seimbang untuk keluarga dan jamaah umum dengan hotel nyaman dan pembimbing berpengalaman.',
-                    'Most balanced package for families with comfortable hotels and experienced guides.',
+                    'Paket seimbang untuk keluarga dan jamaah umum dengan hotel nyaman serta pembimbing berpengalaman.',
+                    'Balanced package for families with comfortable hotels and experienced guides.',
                 ),
                 'content' => [
                     'airline' => $this->loc('Garuda Indonesia', 'Garuda Indonesia'),
                     'hotel' => $this->loc('Hotel bintang 4 dekat Masjidil Haram', '4-star hotel near Masjidil Haram'),
                     'badge' => $this->loc('Pilihan Keluarga', 'Family Choice'),
-                    'period' => $this->loc('Juni - Agustus 2026', 'June - August 2026'),
+                    'period' => $this->loc('September - November 2026', 'September - November 2026'),
                     'room' => $this->loc('Triple / quad sharing', 'Triple / quad sharing'),
                     'meals' => $this->loc('3 kali makan menu Indonesia', '3 meals with Indonesian menu'),
                     'handling' => $this->loc('Handling bandara dan hotel', 'Airport and hotel handling'),
@@ -260,7 +262,7 @@ class PackageSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'code' => 'ASF-PREM-12',
+                'code' => 'ASF-PREMIUM-12',
                 'slug' => 'umroh-premium-12-hari',
                 'name' => $this->loc('Umroh Premium 12 Hari', 'Premium Umrah 12 Days'),
                 'package_type' => 'vip',
@@ -269,7 +271,7 @@ class PackageSeeder extends Seeder
                 'price' => 49900000,
                 'original_price' => 54900000,
                 'discount_label' => 'HEMAT 9%',
-                'discount_ends_at' => '2026-07-15 23:59:59',
+                'discount_ends_at' => '2026-10-01 23:59:59',
                 'currency' => 'IDR',
                 'image_path' => '/images/dummy.jpg',
                 'summary' => $this->loc(
@@ -280,7 +282,7 @@ class PackageSeeder extends Seeder
                     'airline' => $this->loc('Garuda Indonesia Business Class', 'Garuda Indonesia Business Class'),
                     'hotel' => $this->loc('Hotel bintang 5 walking distance ke Masjidil Haram', '5-star hotel walking distance to Masjidil Haram'),
                     'badge' => $this->loc('VIP Premium', 'VIP Premium'),
-                    'period' => $this->loc('Juli - September 2026', 'July - September 2026'),
+                    'period' => $this->loc('Oktober - Desember 2026', 'October - December 2026'),
                     'room' => $this->loc('Double sharing premium', 'Premium double sharing'),
                     'meals' => $this->loc('Menu premium 3 kali sehari', 'Premium menu 3 times a day'),
                     'handling' => $this->loc('Fast track dan handling prioritas', 'Fast track and priority handling'),
@@ -302,47 +304,14 @@ class PackageSeeder extends Seeder
                 'is_featured' => true,
                 'is_active' => true,
             ],
-            [
-                'code' => 'ASF-PRIV-10',
-                'slug' => 'umroh-private-10-hari',
-                'name' => $this->loc('Umroh Private 10 Hari', 'Private Umrah 10 Days'),
-                'package_type' => 'private',
-                'departure_city' => 'Jakarta',
-                'duration_days' => 10,
-                'price' => 65000000,
-                'original_price' => 72000000,
-                'discount_label' => 'CUSTOM FLEX',
-                'currency' => 'IDR',
-                'image_path' => '/images/dummy.jpg',
-                'summary' => $this->loc(
-                    'Paket eksklusif untuk rombongan kecil atau keluarga dengan layanan personal dan jadwal fleksibel.',
-                    'Exclusive package for small groups or families with personal service and flexible schedule.',
-                ),
-                'content' => [
-                    'airline' => $this->loc('Sesuai permintaan', 'Upon request'),
-                    'hotel' => $this->loc('Hotel bintang 5 pilihan jamaah', '5-star hotel of pilgrim choice'),
-                    'badge' => $this->loc('Eksklusif', 'Exclusive'),
-                    'period' => $this->loc('Fleksibel sesuai permintaan', 'Flexible upon request'),
-                    'room' => $this->loc('Menyesuaikan kebutuhan keluarga', 'Adjusted to family needs'),
-                    'meals' => $this->loc('Menu fleksibel sesuai preferensi rombongan', 'Flexible menu based on group preferences'),
-                    'handling' => $this->loc('Private handling dari keberangkatan sampai pulang', 'Private handling from departure to return'),
-                    'included' => $this->loc(
-                        "Tiket pesawat PP sesuai pilihan\nVisa umroh resmi\nPengurusan paspor\nHotel bintang 5 pilihan\nPembimbing pribadi\nKonsumsi 3x sehari\nTransportasi private\nPerlengkapan umroh premium",
-                        "Round-trip ticket of choice\nOfficial umrah visa\nPassport processing\n5-star hotel of choice\nPersonal guide\n3 meals per day\nPrivate transportation\nPremium umrah equipment",
-                    ),
-                    'excluded' => $this->loc('Pengeluaran pribadi', 'Personal expenses'),
-                    'policy' => $this->loc(
-                        'Jadwal dan fasilitas dapat disesuaikan. Hubungi tim kami untuk konsultasi.',
-                        'Schedule and facilities can be customized. Contact our team for consultation.',
-                    ),
-                ],
-                'products' => ['PRD-VISA', 'PRD-PASPOR', 'PRD-TIKET-GA', 'PRD-HOTEL-5', 'PRD-MANASIK', 'PRD-MAKAN', 'PRD-BUS', 'PRD-HANDLING', 'PRD-PERLENGKAPAN'],
-                'is_featured' => false,
-                'is_active' => true,
-            ],
         ];
 
         $packages = [];
+        $activeCodes = collect($rows)->pluck('code')->all();
+
+        TravelPackage::query()
+            ->whereNotIn('code', $activeCodes)
+            ->delete();
 
         foreach ($rows as $row) {
             $codes = $row['products'];
@@ -368,18 +337,27 @@ class PackageSeeder extends Seeder
 
     private function seedSchedules(array $packages): void
     {
+        $activePackageIds = collect($packages)
+            ->map(fn (TravelPackage $package): int => $package->id)
+            ->values()
+            ->all();
+
+        DepartureSchedule::query()
+            ->whereNull('package_id')
+            ->orWhereNotIn('package_id', $activePackageIds)
+            ->delete();
+
+        DepartureSchedule::query()
+            ->whereIn('package_id', $activePackageIds)
+            ->delete();
+
         $rows = [
-            ['code' => 'ASF-HEMAT-09', 'departure_date' => '2026-05-10', 'return_date' => '2026-05-18', 'city' => 'Jakarta', 'total' => 45, 'available' => 12, 'status' => 'open', 'notes' => 'Seat terbatas, segera daftar.'],
-            ['code' => 'ASF-HEMAT-09', 'departure_date' => '2026-06-08', 'return_date' => '2026-06-16', 'city' => 'Jakarta', 'total' => 45, 'available' => 28, 'status' => 'open', 'notes' => 'Cocok untuk jamaah pemula dengan budget terukur.'],
-            ['code' => 'ASF-HEMAT-09', 'departure_date' => '2026-07-12', 'return_date' => '2026-07-20', 'city' => 'Surabaya', 'total' => 40, 'available' => 40, 'status' => 'open', 'notes' => 'Keberangkatan dari Surabaya.'],
-            ['code' => 'ASF-REG-10', 'departure_date' => '2026-06-15', 'return_date' => '2026-06-24', 'city' => 'Surabaya', 'total' => 40, 'available' => 8, 'status' => 'open', 'notes' => 'Cocok untuk jamaah keluarga.'],
-            ['code' => 'ASF-REG-10', 'departure_date' => '2026-07-20', 'return_date' => '2026-07-29', 'city' => 'Jakarta', 'total' => 45, 'available' => 22, 'status' => 'open', 'notes' => 'Termasuk program city tour dan ziarah.'],
-            ['code' => 'ASF-REG-10', 'departure_date' => '2026-08-10', 'return_date' => '2026-08-19', 'city' => 'Makassar', 'total' => 35, 'available' => 35, 'status' => 'open', 'notes' => 'Keberangkatan dari Makassar.'],
-            ['code' => 'ASF-REG-10', 'departure_date' => '2026-04-05', 'return_date' => '2026-04-14', 'city' => 'Jakarta', 'total' => 40, 'available' => 0, 'status' => 'full', 'notes' => 'Sudah penuh.'],
-            ['code' => 'ASF-PREM-12', 'departure_date' => '2026-07-05', 'return_date' => '2026-07-16', 'city' => 'Jakarta', 'total' => 30, 'available' => 14, 'status' => 'open', 'notes' => 'Hotel sangat dekat Masjidil Haram.'],
-            ['code' => 'ASF-PREM-12', 'departure_date' => '2026-09-01', 'return_date' => '2026-09-12', 'city' => 'Jakarta', 'total' => 30, 'available' => 30, 'status' => 'open', 'notes' => 'Paket VIP dengan priority handling.'],
-            ['code' => 'ASF-PREM-12', 'departure_date' => '2026-10-10', 'return_date' => '2026-10-21', 'city' => 'Jakarta', 'total' => 30, 'available' => 0, 'status' => 'closed', 'notes' => 'Jadwal ditutup untuk penyesuaian operasional.'],
-            ['code' => 'ASF-PRIV-10', 'departure_date' => '2026-08-01', 'return_date' => '2026-08-10', 'city' => 'Jakarta', 'total' => 15, 'available' => 7, 'status' => 'open', 'notes' => 'Jadwal fleksibel, hubungi kami.'],
+            ['code' => 'ASF-BASIC-09', 'departure_date' => '2026-08-18', 'return_date' => '2026-08-26', 'city' => 'Jakarta', 'total' => 45, 'available' => 20, 'status' => 'open', 'notes' => 'Kuota batch 1.'],
+            ['code' => 'ASF-BASIC-09', 'departure_date' => '2026-09-16', 'return_date' => '2026-09-24', 'city' => 'Jakarta', 'total' => 45, 'available' => 35, 'status' => 'open', 'notes' => 'Kuota batch 2.'],
+            ['code' => 'ASF-REGULAR-10', 'departure_date' => '2026-10-06', 'return_date' => '2026-10-15', 'city' => 'Jakarta', 'total' => 40, 'available' => 15, 'status' => 'open', 'notes' => 'Program keluarga.'],
+            ['code' => 'ASF-REGULAR-10', 'departure_date' => '2026-11-03', 'return_date' => '2026-11-12', 'city' => 'Surabaya', 'total' => 40, 'available' => 26, 'status' => 'open', 'notes' => 'Keberangkatan Surabaya.'],
+            ['code' => 'ASF-PREMIUM-12', 'departure_date' => '2026-11-20', 'return_date' => '2026-12-01', 'city' => 'Jakarta', 'total' => 30, 'available' => 12, 'status' => 'open', 'notes' => 'Layanan premium lengkap.'],
+            ['code' => 'ASF-PREMIUM-12', 'departure_date' => '2026-12-10', 'return_date' => '2026-12-21', 'city' => 'Jakarta', 'total' => 30, 'available' => 30, 'status' => 'open', 'notes' => 'Batch akhir tahun.'],
         ];
 
         foreach ($rows as $row) {
@@ -406,17 +384,97 @@ class PackageSeeder extends Seeder
         }
     }
 
+    private function seedItineraries(array $packages, array $products): void
+    {
+        $activityMap = Activity::query()
+            ->where('is_active', true)
+            ->pluck('id', 'code');
+
+        $rows = [
+            'ASF-BASIC-09' => [
+                ['day' => 1, 'activity_code' => 'ACT-DEPARTURE-FLIGHT', 'title' => 'Keberangkatan dari Indonesia', 'description' => 'Briefing, handling bandara, dan penerbangan menuju Jeddah/Madinah.', 'products' => ['PRD-TIKET-SV', 'PRD-HANDLING']],
+                ['day' => 2, 'activity_code' => 'ACT-HOTEL-CHECKIN', 'title' => 'Check-in dan Adaptasi', 'description' => 'Check-in hotel, orientasi area, dan persiapan ibadah.', 'products' => ['PRD-HOTEL-3']],
+                ['day' => 3, 'activity_code' => 'ACT-MANASIK-ONSITE', 'title' => 'Manasik Lapangan', 'description' => 'Penguatan manasik di lokasi sebelum pelaksanaan umroh.', 'products' => ['PRD-MANASIK']],
+                ['day' => 4, 'activity_code' => 'ACT-UMRAH-RITUAL', 'title' => 'Pelaksanaan Umroh', 'description' => 'Pelaksanaan rangkaian umroh dengan pendampingan pembimbing.', 'products' => ['PRD-VISA', 'PRD-MANASIK']],
+                ['day' => 5, 'activity_code' => 'ACT-FREE-IBADAH', 'title' => 'Ibadah Mandiri', 'description' => 'Waktu bebas ibadah di Masjidil Haram.', 'products' => ['PRD-PERLENGKAPAN']],
+                ['day' => 6, 'activity_code' => 'ACT-ZIARAH-MAKKAH', 'title' => 'Ziarah Makkah', 'description' => 'Kunjungan titik bersejarah di Makkah.', 'products' => ['PRD-BUS', 'PRD-CITYTOUR']],
+                ['day' => 7, 'activity_code' => 'ACT-CITY-TRANSFER', 'title' => 'Transfer Antar Kota', 'description' => 'Perjalanan menuju Madinah dan check-in hotel.', 'products' => ['PRD-BUS', 'PRD-HOTEL-3']],
+                ['day' => 8, 'activity_code' => 'ACT-ZIARAH-MADINAH', 'title' => 'Ziarah Madinah', 'description' => 'Kunjungan area bersejarah di Madinah.', 'products' => ['PRD-BUS', 'PRD-CITYTOUR']],
+                ['day' => 9, 'activity_code' => 'ACT-RETURN-FLIGHT', 'title' => 'Kepulangan', 'description' => 'Check-out hotel, transfer bandara, dan penerbangan pulang.', 'products' => ['PRD-HANDLING', 'PRD-TIKET-SV']],
+            ],
+            'ASF-REGULAR-10' => [
+                ['day' => 1, 'activity_code' => 'ACT-DEPARTURE-FLIGHT', 'title' => 'Keberangkatan Jamaah', 'description' => 'Meeting point, handling, dan keberangkatan penerbangan.', 'products' => ['PRD-TIKET-GA', 'PRD-HANDLING']],
+                ['day' => 2, 'activity_code' => 'ACT-HOTEL-CHECKIN', 'title' => 'Kedatangan dan Check-in', 'description' => 'Tiba, transfer ke hotel, dan pembagian kamar.', 'products' => ['PRD-HOTEL-4']],
+                ['day' => 3, 'activity_code' => 'ACT-MANASIK-ONSITE', 'title' => 'Manasik Pemantapan', 'description' => 'Sesi pemantapan manasik bersama pembimbing.', 'products' => ['PRD-MANASIK']],
+                ['day' => 4, 'activity_code' => 'ACT-UMRAH-RITUAL', 'title' => 'Pelaksanaan Umroh', 'description' => 'Pelaksanaan ibadah umroh secara terstruktur.', 'products' => ['PRD-VISA', 'PRD-MANASIK']],
+                ['day' => 5, 'activity_code' => 'ACT-FREE-IBADAH', 'title' => 'Ibadah dan Evaluasi', 'description' => 'Ibadah mandiri dan evaluasi ibadah harian.', 'products' => ['PRD-MAKAN']],
+                ['day' => 6, 'activity_code' => 'ACT-ZIARAH-MAKKAH', 'title' => 'City Tour Makkah', 'description' => 'Program city tour dan ziarah sekitar Makkah.', 'products' => ['PRD-BUS', 'PRD-CITYTOUR']],
+                ['day' => 7, 'activity_code' => 'ACT-CITY-TRANSFER', 'title' => 'Transfer ke Madinah', 'description' => 'Perjalanan darat ke Madinah dan check-in hotel.', 'products' => ['PRD-BUS', 'PRD-HOTEL-4']],
+                ['day' => 8, 'activity_code' => 'ACT-ZIARAH-MADINAH', 'title' => 'Ziarah Madinah', 'description' => 'Kunjungan Masjid Quba, Uhud, dan area terkait.', 'products' => ['PRD-BUS', 'PRD-CITYTOUR']],
+                ['day' => 9, 'activity_code' => 'ACT-FREE-IBADAH', 'title' => 'Ibadah Mandiri Madinah', 'description' => 'Fokus ibadah di Masjid Nabawi dan area sekitar.', 'products' => ['PRD-MAKAN', 'PRD-PERLENGKAPAN']],
+                ['day' => 10, 'activity_code' => 'ACT-RETURN-FLIGHT', 'title' => 'Persiapan Pulang', 'description' => 'Check-out, handling bandara, dan penerbangan kembali.', 'products' => ['PRD-HANDLING', 'PRD-TIKET-GA']],
+            ],
+            'ASF-PREMIUM-12' => [
+                ['day' => 1, 'activity_code' => 'ACT-DEPARTURE-FLIGHT', 'title' => 'Keberangkatan VIP', 'description' => 'Briefing eksklusif, handling prioritas, dan keberangkatan.', 'products' => ['PRD-TIKET-GA', 'PRD-HANDLING']],
+                ['day' => 2, 'activity_code' => 'ACT-HOTEL-CHECKIN', 'title' => 'Kedatangan dan Check-in Premium', 'description' => 'Transfer cepat dan check-in hotel bintang 5.', 'products' => ['PRD-HOTEL-5']],
+                ['day' => 3, 'activity_code' => 'ACT-MANASIK-ONSITE', 'title' => 'Manasik Intensif', 'description' => 'Pendalaman fiqih manasik dan simulasi lapangan.', 'products' => ['PRD-MANASIK']],
+                ['day' => 4, 'activity_code' => 'ACT-UMRAH-RITUAL', 'title' => 'Pelaksanaan Umroh', 'description' => 'Pelaksanaan ibadah dengan pendampingan senior.', 'products' => ['PRD-VISA', 'PRD-MANASIK']],
+                ['day' => 5, 'activity_code' => 'ACT-FREE-IBADAH', 'title' => 'Ibadah Mandiri', 'description' => 'Waktu bebas ibadah dengan dukungan tim.', 'products' => ['PRD-MAKAN']],
+                ['day' => 6, 'activity_code' => 'ACT-ZIARAH-MAKKAH', 'title' => 'Ziarah Makkah Premium', 'description' => 'Program ziarah dengan kenyamanan transport eksklusif.', 'products' => ['PRD-BUS', 'PRD-CITYTOUR']],
+                ['day' => 7, 'activity_code' => 'ACT-FREE-IBADAH', 'title' => 'Ibadah dan Pendampingan', 'description' => 'Sesi ibadah terjadwal dan konsultasi pembimbing.', 'products' => ['PRD-MAKAN', 'PRD-PERLENGKAPAN']],
+                ['day' => 8, 'activity_code' => 'ACT-CITY-TRANSFER', 'title' => 'Transfer ke Madinah', 'description' => 'Perpindahan kota dan check-in hotel premium.', 'products' => ['PRD-BUS', 'PRD-HOTEL-5']],
+                ['day' => 9, 'activity_code' => 'ACT-ZIARAH-MADINAH', 'title' => 'Ziarah Madinah', 'description' => 'Kunjungan bersejarah dengan agenda terstruktur.', 'products' => ['PRD-BUS', 'PRD-CITYTOUR']],
+                ['day' => 10, 'activity_code' => 'ACT-FREE-IBADAH', 'title' => 'Ibadah Nabawi', 'description' => 'Fokus ibadah mandiri dan pendampingan ibadah.', 'products' => ['PRD-MAKAN']],
+                ['day' => 11, 'activity_code' => 'ACT-HOTEL-CHECKOUT', 'title' => 'Persiapan Kepulangan', 'description' => 'Packing, check-out, dan briefing kepulangan.', 'products' => ['PRD-HANDLING']],
+                ['day' => 12, 'activity_code' => 'ACT-RETURN-FLIGHT', 'title' => 'Penerbangan Pulang', 'description' => 'Transfer bandara dan penerbangan kembali ke Indonesia.', 'products' => ['PRD-TIKET-GA', 'PRD-HANDLING']],
+            ],
+        ];
+
+        foreach ($rows as $packageCode => $itineraries) {
+            $package = $packages[$packageCode] ?? null;
+
+            if (! $package) {
+                continue;
+            }
+
+            $package->itineraries()->each(function (PackageItinerary $itinerary): void {
+                $itinerary->products()->detach();
+                $itinerary->delete();
+            });
+
+            foreach ($itineraries as $index => $itineraryRow) {
+                $activityId = isset($itineraryRow['activity_code'])
+                    ? (int) ($activityMap[$itineraryRow['activity_code']] ?? 0)
+                    : 0;
+
+                $itinerary = $package->itineraries()->create([
+                    'activity_id' => $activityId > 0 ? $activityId : null,
+                    'activity_ids' => $activityId > 0 ? [$activityId] : [],
+                    'day_number' => $itineraryRow['day'],
+                    'sort_order' => $index + 1,
+                    'title' => $this->loc($itineraryRow['title']),
+                    'description' => $this->loc($itineraryRow['description']),
+                ]);
+
+                $productSyncData = collect($itineraryRow['products'])
+                    ->filter(fn (string $productCode): bool => isset($products[$productCode]))
+                    ->values()
+                    ->mapWithKeys(fn (string $productCode, int $productIndex): array => [
+                        $products[$productCode]->id => ['sort_order' => $productIndex + 1],
+                    ])
+                    ->all();
+
+                $itinerary->products()->sync($productSyncData);
+            }
+        }
+    }
+
     private function seedTestimonials(array $packages): void
     {
         $rows = [
-            ['code' => 'ASF-HEMAT-09', 'name' => 'Bapak Hendra S.', 'city' => 'Jakarta', 'rating' => 5, 'quote' => $this->loc('Alhamdulillah, paket hemat tapi pelayanannya tidak murahan. Pembimbing sangat sabar dan hotel cukup nyaman.', 'Alhamdulillah, affordable package but service is not cheap. The guide was very patient and the hotel was comfortable enough.')],
-            ['code' => 'ASF-HEMAT-09', 'name' => 'Ibu Sari W.', 'city' => 'Bekasi', 'rating' => 4, 'quote' => $this->loc('Pertama kali umroh dan sangat terbantu dengan manasik yang lengkap. Harga terjangkau untuk kualitas ini.', 'First umrah and greatly helped by the comprehensive manasik. Affordable price for this quality.')],
-            ['code' => 'ASF-REG-10', 'name' => 'Keluarga Pak Ridwan', 'city' => 'Surabaya', 'rating' => 5, 'quote' => $this->loc('Kami sekeluarga 4 orang sangat puas. Hotel dekat, pembimbing profesional, dan semua urusan dibantu tim Asfar.', 'Our family of 4 was very satisfied. Hotel was close, guide was professional, and all matters were assisted by the Asfar team.')],
-            ['code' => 'ASF-REG-10', 'name' => 'Ibu Dewi R.', 'city' => 'Malang', 'rating' => 5, 'quote' => $this->loc('Sudah 2x umroh bersama Asfar dan selalu memuaskan. Paket reguler ini sangat worth it untuk harganya.', 'Already 2x umrah with Asfar and always satisfying. This regular package is very worth it for the price.')],
-            ['code' => 'ASF-REG-10', 'name' => 'Bapak Fauzi A.', 'city' => 'Sidoarjo', 'rating' => 4, 'quote' => $this->loc('Pelayanan ramah dan responsif. Sedikit masukan untuk jadwal manasik yang bisa lebih fleksibel.', 'Friendly and responsive service. Minor feedback for manasik schedule that could be more flexible.')],
-            ['code' => 'ASF-PREM-12', 'name' => 'Bapak Drs. Santoso', 'city' => 'Jakarta', 'rating' => 5, 'quote' => $this->loc('Luar biasa. Hotel 5 bintang benar-benar walking distance ke Masjidil Haram. Ibadah jadi lebih khusyuk dan nyaman.', 'Outstanding. The 5-star hotel is truly walking distance to Masjidil Haram. Worship became more focused and comfortable.')],
-            ['code' => 'ASF-PREM-12', 'name' => 'Ibu Prof. Aminah', 'city' => 'Bandung', 'rating' => 5, 'quote' => $this->loc('Paket premium yang benar-benar premium. Setiap detail diperhatikan, dari makanan hingga pembimbing senior yang berpengalaman.', 'A truly premium package. Every detail is attended to, from food to experienced senior guides.')],
-            ['code' => 'ASF-PRIV-10', 'name' => 'Keluarga Ibu Nabila', 'city' => 'Jakarta', 'rating' => 5, 'quote' => $this->loc('Kami butuh perjalanan yang lebih private untuk orang tua, dan tim Asfar menyiapkan semuanya dengan sangat rapi.', 'We needed a more private journey for our parents, and the Asfar team prepared everything very neatly.')],
+            ['code' => 'ASF-BASIC-09', 'name' => 'Bapak Hendra S.', 'city' => 'Jakarta', 'rating' => 5, 'quote' => $this->loc('Paket basic-nya rapi, jelas, dan sangat membantu untuk jamaah pertama kali.', 'The basic package is neat, clear, and very helpful for first-time pilgrims.')],
+            ['code' => 'ASF-REGULAR-10', 'name' => 'Keluarga Pak Ridwan', 'city' => 'Surabaya', 'rating' => 5, 'quote' => $this->loc('Paket regular paling pas untuk keluarga kami, layanan tim sangat responsif.', 'The regular package suits our family best, and the team service is very responsive.')],
+            ['code' => 'ASF-PREMIUM-12', 'name' => 'Ibu Prof. Aminah', 'city' => 'Bandung', 'rating' => 5, 'quote' => $this->loc('Pengalaman premium sangat terasa, dari hotel sampai pendampingan ibadah.', 'The premium experience is evident, from hotel quality to worship assistance.')],
         ];
 
         foreach ($rows as $row) {

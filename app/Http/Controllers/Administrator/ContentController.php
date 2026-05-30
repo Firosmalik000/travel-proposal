@@ -10,6 +10,7 @@ use App\Models\CareerOpening;
 use App\Models\DepartureSchedule;
 use App\Models\Faq;
 use App\Models\GalleryItem;
+use App\Models\Hotel;
 use App\Models\LegalDocument;
 use App\Models\PageContent;
 use App\Models\ProductCategory;
@@ -32,8 +33,8 @@ class ContentController extends Controller
     public function index(): Response
     {
         return $this->renderContentPage(
-            heading: 'Content Management',
-            description: 'FAQ, layanan, testimoni, galeri, tim, legalitas, dan karier. Artikel kini dikelola di menu Articles & News.',
+            heading: 'Website Content',
+            description: 'Kelola konten website utama (bukan landing): FAQ, layanan, testimoni, galeri, tim, legalitas, dan karier. Artikel dikelola di menu Articles & News.',
             breadcrumbHref: '/admin/website-management/content',
             menuKey: 'content_management',
             pages: [],
@@ -56,7 +57,18 @@ class ContentController extends Controller
     public function landing(): Response
     {
         return Inertia::render('Dashboard/WebsiteManagement/Landing/Index', [
-            'pages' => $this->landingPageSections(),
+            'pages' => $this->landingPageSections('home_landing_mockup'),
+            'editorType' => 'landing',
+            'packageOptions' => $this->landingPackageOptions(),
+        ]);
+    }
+
+    public function website(): Response
+    {
+        return Inertia::render('Dashboard/WebsiteManagement/Landing/Index', [
+            'pages' => $this->landingPageSections('home_landing'),
+            'editorType' => 'website',
+            'packageOptions' => $this->landingPackageOptions(),
         ]);
     }
 
@@ -85,11 +97,29 @@ class ContentController extends Controller
                 'id' => $product->id,
                 'code' => $product->code,
                 'slug' => $product->slug,
-                'icon' => $product->icon,
                 'name' => $product->name,
                 'product_type' => $product->product_type,
                 'description' => $product->description,
-                'unit' => is_array($product->content) ? (string) ($product->content['unit'] ?? '') : '',
+                'price' => is_array($product->content) && isset($product->content['price'])
+                    ? (int) $product->content['price']
+                    : null,
+                'hotel_info' => is_array($product->content)
+                    ? [
+                        'hotel_id' => (int) ($product->content['hotel_id'] ?? 0),
+                        'city' => (string) ($product->content['city'] ?? ''),
+                        'country' => (string) ($product->content['country'] ?? ''),
+                        'currency' => (string) ($product->content['currency'] ?? ''),
+                        'pricing' => collect(is_array($product->content['pricing'] ?? null) ? $product->content['pricing'] : [])
+                            ->map(fn ($row): array => [
+                                'room_type' => (string) data_get($row, 'room_type', ''),
+                                'period_start' => data_get($row, 'period_start'),
+                                'period_end' => data_get($row, 'period_end'),
+                                'price' => data_get($row, 'price'),
+                            ])
+                            ->values()
+                            ->all(),
+                    ]
+                    : null,
                 'is_active' => $product->is_active,
             ]);
 
@@ -118,6 +148,32 @@ class ContentController extends Controller
             ],
             'stats' => $stats,
             'product_type_options' => $productTypeOptions,
+            'hotel_options' => Hotel::query()
+                ->with(['country:id,name', 'city:id,name', 'product:id,code', 'prices.roomType:id,name'])
+                ->whereNotNull('product_id')
+                ->orderBy('name')
+                ->get(['id', 'product_id', 'name', 'country_id', 'city_id', 'currency'])
+                ->map(fn (Hotel $hotel): array => [
+                    'id' => $hotel->id,
+                    'product_id' => $hotel->product_id,
+                    'name' => $hotel->name,
+                    'product_code' => $hotel->product?->code,
+                    'country' => $hotel->country?->name,
+                    'city' => $hotel->city?->name,
+                    'currency' => $hotel->currency,
+                    'pricing' => $hotel->prices
+                        ->sortBy('period_start')
+                        ->values()
+                        ->map(fn ($price): array => [
+                            'room_type' => (string) ($price->roomType?->name ?? ''),
+                            'period_start' => $price->period_start?->toDateString(),
+                            'period_end' => $price->period_end?->toDateString(),
+                            'price' => $price->price,
+                        ])
+                        ->all(),
+                ])
+                ->values()
+                ->all(),
         ]);
     }
 
@@ -271,10 +327,29 @@ class ContentController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
-    private function landingPageSections(): array
+    private function landingPageSections(string $slug): array
     {
+        $definition = collect($this->landingPageDefinitions())
+            ->first(fn (array $item): bool => ($item['slug'] ?? null) === $slug);
+
+        if ($definition) {
+            PageContent::query()->firstOrCreate(
+                [
+                    'category' => 'page',
+                    'slug' => $slug,
+                ],
+                [
+                    'title' => (string) data_get($definition, 'title.id', 'Home'),
+                    'excerpt' => (string) data_get($definition, 'excerpt.id', 'Konten landing page utama.'),
+                    'content' => $definition['content'] ?? [],
+                    'is_active' => true,
+                ],
+            );
+        }
+
         return PageContent::query()
             ->where('category', 'page')
+            ->where('slug', $slug)
             ->orderBy('slug')
             ->get()
             ->map(fn (PageContent $page): array => [
@@ -295,7 +370,7 @@ class ContentController extends Controller
     {
         return [
             [
-                'slug' => 'home',
+                'slug' => 'home_landing',
                 'title' => ['id' => 'Home', 'en' => 'Home'],
                 'excerpt' => ['id' => 'Konten landing page utama.', 'en' => 'Main landing page content.'],
                 'content' => [
@@ -601,6 +676,29 @@ class ContentController extends Controller
     /**
      * @return array<int, array<string, mixed>>
      */
+    private function landingPackageOptions(): array
+    {
+        return TravelPackage::query()
+            ->select(['id', 'name', 'package_type', 'duration_days', 'departure_city', 'is_active'])
+            ->where('is_active', true)
+            ->orderByDesc('is_featured')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (TravelPackage $package): array => [
+                'id' => $package->id,
+                'name' => (string) $this->stripLocaleData($package->name),
+                'package_type' => $package->package_type,
+                'duration_days' => $package->duration_days,
+                'departure_city' => $package->departure_city,
+                'is_active' => (bool) $package->is_active,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     private function portalPageSections(): array
     {
         $portalPageDefinitions = collect($this->portalPageDefinitions());
@@ -852,7 +950,6 @@ class ContentController extends Controller
                 'template' => [
                     'code' => 'PRD-BARU',
                     'slug' => 'produk-baru',
-                    'icon' => 'Package',
                     'name' => ['id' => 'Produk Baru', 'en' => 'New Product'],
                     'product_type' => 'layanan',
                     'description' => ['id' => 'Deskripsi produk', 'en' => 'Product description'],
@@ -962,7 +1059,7 @@ class ContentController extends Controller
                 'label' => 'Testimoni',
                 'description' => 'Testimoni jamaah yang dikaitkan dengan package.',
                 'model' => Testimonial::class,
-                'with' => ['travelPackage:id,code'],
+                'with' => ['package:id,code'],
                 'order_by' => ['id', 'desc'],
                 'template' => [
                     'name' => 'Nama Jamaah',
@@ -1040,7 +1137,7 @@ class ContentController extends Controller
     private function serializeResource(string $resource, Model $item): array
     {
         return match ($resource) {
-            'products' => Arr::only($item->toArray(), ['code', 'slug', 'icon', 'name', 'product_type', 'description', 'content', 'is_active']),
+            'products' => Arr::only($item->toArray(), ['code', 'slug', 'name', 'product_type', 'description', 'content', 'is_active']),
             'product_categories' => Arr::only($item->toArray(), ['key', 'name', 'description', 'sort_order', 'is_active']),
             'packages' => [
                 ...Arr::only($item->toArray(), ['code', 'slug', 'name', 'package_type', 'departure_city', 'duration_days', 'price', 'currency', 'image_path', 'summary', 'content', 'is_featured', 'is_active']),
@@ -1058,7 +1155,7 @@ class ContentController extends Controller
             ],
             'testimonials' => [
                 ...Arr::only($item->toArray(), ['name', 'origin_city', 'quote', 'rating', 'is_featured', 'is_active']),
-                'travel_package_code' => $item->travelPackage?->code,
+                'travel_package_code' => $item->package?->code,
             ],
             'gallery' => Arr::only($item->toArray(), ['title', 'category', 'description', 'image_path', 'sort_order', 'is_active']),
             'team' => Arr::only($item->toArray(), ['name', 'role', 'bio', 'image_path', 'sort_order', 'is_active']),
@@ -1085,11 +1182,14 @@ class ContentController extends Controller
             'products' => [
                 'code' => (string) ($payload['code'] ?? ''),
                 'slug' => (string) ($payload['slug'] ?? ''),
-                'icon' => (string) ($payload['icon'] ?? 'Package'),
                 'name' => $this->localizedValue($payload['name'] ?? []),
                 'product_type' => (string) ($payload['product_type'] ?? ''),
                 'description' => $this->localizedValue($payload['description'] ?? []),
-                'content' => is_array($payload['content'] ?? null) ? $payload['content'] : [],
+                'content' => [
+                    'price' => is_array($payload['content'] ?? null) && ($payload['content']['price'] ?? '') !== ''
+                        ? (int) $payload['content']['price']
+                        : null,
+                ],
                 'is_active' => (bool) ($payload['is_active'] ?? true),
             ],
             'packages' => $this->normalizePackagePayload($payload),

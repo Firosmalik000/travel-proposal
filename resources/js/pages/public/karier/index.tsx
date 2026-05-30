@@ -1,10 +1,10 @@
-import { MotionSection } from '@/components/public-motion';
+﻿import { MotionSection } from '@/components/public/motion';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     localize,
     usePublicData,
     usePublicPageContent,
-} from '@/lib/public-content';
+} from '@/lib/public/content';
 import { Head } from '@inertiajs/react';
 
 export default function Karier() {
@@ -56,7 +56,7 @@ export default function Karier() {
                                 {localize(item.description, locale)}
                             </p>
                             <p className="mt-3 text-xs tracking-[0.2em] text-primary uppercase">
-                                {String(item.location || '-')} •{' '}
+                                {String(item.location || '-')} -{' '}
                                 {String(item.employment_type || '-')}
                             </p>
                             <p className="mt-3 text-sm text-muted-foreground">

@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasAuditTrail;
 use App\Traits\NormalizesLocalizedStrings;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PageContent extends Model
 {
-    use HasFactory;
+    use HasAuditTrail, HasFactory;
     use NormalizesLocalizedStrings;
 
     protected $fillable = [

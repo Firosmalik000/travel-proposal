@@ -52,10 +52,10 @@ class MenuController extends Controller
                 'path' => 'required|string',
                 'icon' => 'nullable|string|max:255',
                 'children' => 'nullable|array', // JSON children
-                'order' => 'nullable|integer',
                 'is_active' => 'boolean',
             ]);
 
+            $validated['order'] = (int) (Menu::query()->max('order') ?? 0) + 1;
             $menu = Menu::create($validated);
 
             DB::commit();
@@ -89,7 +89,6 @@ class MenuController extends Controller
                 'path' => 'required|string',
                 'icon' => 'nullable|string|max:255',
                 'children' => 'nullable|array', // JSON children
-                'order' => 'nullable|integer',
                 'is_active' => 'boolean',
             ]);
 
@@ -146,6 +145,36 @@ class MenuController extends Controller
                 ],
             ]);
         }
+    }
+
+    public function reorder(Request $request)
+    {
+        $validated = $request->validate([
+            'menu_ids' => ['required', 'array', 'min:1'],
+            'menu_ids.*' => ['required', 'integer', 'exists:menus,id'],
+        ]);
+
+        DB::transaction(function () use ($validated): void {
+            $orderedIds = collect($validated['menu_ids'])->values();
+            $menus = Menu::query()
+                ->whereIn('id', $orderedIds)
+                ->get()
+                ->keyBy('id');
+
+            $orderedIds->each(function (int $menuId, int $index) use ($menus): void {
+                $menu = $menus->get($menuId);
+
+                if (! $menu) {
+                    return;
+                }
+
+                $menu->update([
+                    'order' => $index + 1,
+                ]);
+            });
+        });
+
+        return back()->with('success', 'Urutan menu berhasil diperbarui.');
     }
 
     /**
@@ -288,7 +317,7 @@ class MenuController extends Controller
                 $children = collect($menuArray['children'] ?? []);
                 $productManagementMenu = $children->firstWhere('menu_key', 'product_management');
                 $menuArray['children'] = $children
-                    ->reject(fn (array $child): bool => in_array($child['menu_key'] ?? null, ['product_management', 'content_management'], true))
+                    ->reject(fn (array $child): bool => in_array($child['menu_key'] ?? null, ['product_management'], true))
                     ->values()
                     ->all();
             }

@@ -16,16 +16,15 @@ class PublicHomeLandingContentTest extends TestCase
         $this->get(route('home'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('welcome')
-                ->has('publicData.pages.home.content.hero.cta_label')
-                ->has('publicData.pages.home.content.hero.secondary_cta_label')
-                ->has('publicData.pages.home.content.packages.detail_label')
-                ->has('publicData.pages.home.content.testimonials.heading')
-                ->has('publicData.pages.home.content.articles.read_more_label')
-                ->has('publicData.pages.home.content.articles.empty_title')
-                ->has('publicData.pages.home.content.contact.office_hours_lines'),
+                ->component('public/website/index')
+                ->has('publicData.pages.home_landing.content.hero.cta_label')
+                ->has('publicData.pages.home_landing.content.hero.secondary_cta_label')
+                ->has('publicData.pages.home_landing.content.packages.detail_label')
+                ->has('publicData.pages.home_landing.content.testimonials.heading')
+                ->has('publicData.pages.home_landing.content.articles.read_more_label')
+                ->has('publicData.pages.home_landing.content.articles.empty_title'),
             );
 
-        $this->assertTrue(PageContent::query()->where('slug', 'home')->exists());
+        $this->assertTrue(PageContent::query()->where('slug', 'home_landing')->exists());
     }
 }

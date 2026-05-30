@@ -1,11 +1,5 @@
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -93,13 +87,9 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
             <Head title="Branding" />
 
             <div className="space-y-6 p-6">
-                <Card>
+                <Card className="border border-border/60 shadow-sm">
                     <CardHeader>
-                        <CardTitle>Branding Default Asfar</CardTitle>
-                        <CardDescription>
-                            Pisahkan pengaturan branding untuk kebutuhan public
-                            website dan dashboard admin.
-                        </CardDescription>
+                        <CardTitle>Branding</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Tabs defaultValue="public" className="space-y-6">
@@ -114,7 +104,7 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
 
                             <TabsContent value="public" className="space-y-4">
                                 <form className="space-y-6" onSubmit={submit}>
-                                    <Card className="border-dashed">
+                                    <Card className="border border-border/60 shadow-sm">
                                         <CardHeader>
                                             <div className="flex flex-wrap items-start justify-between gap-3">
                                                 <div>
@@ -122,12 +112,6 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                                                         Warna Navbar & Footer
                                                         Public
                                                     </CardTitle>
-                                                    <CardDescription>
-                                                        Custom gradient
-                                                        navbar/footer serta
-                                                        warna teks untuk layout
-                                                        public website.
-                                                    </CardDescription>
                                                 </div>
                                                 <Button
                                                     type="submit"
@@ -138,8 +122,7 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                                                     {processing && (
                                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                                     )}
-                                                    Simpan Warna Navbar &
-                                                    Footer
+                                                    Simpan Warna Navbar & Footer
                                                 </Button>
                                             </div>
                                         </CardHeader>
@@ -220,16 +203,11 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                                                 ))}
                                             </div>
 
-                                            <Card className="border-dashed">
+                                            <Card className="border border-border/60 bg-background shadow-sm">
                                                 <CardHeader>
                                                     <CardTitle className="text-base">
                                                         Preview Public Theme
                                                     </CardTitle>
-                                                    <CardDescription>
-                                                        Simulasi warna untuk
-                                                        navbar dan footer
-                                                        sebelum submit.
-                                                    </CardDescription>
                                                 </CardHeader>
                                                 <CardContent>
                                                     <div
@@ -463,7 +441,7 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                                     </div>
 
                                     <div className="grid gap-4 lg:grid-cols-3">
-                                        <Card className="border-dashed">
+                                        <Card className="border border-border/60 bg-background shadow-sm">
                                             <CardHeader>
                                                 <CardTitle className="text-base">
                                                     Preview Logo Utama
@@ -483,7 +461,7 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                                                 />
                                             </CardContent>
                                         </Card>
-                                        <Card className="border-dashed">
+                                        <Card className="border border-border/60 bg-background shadow-sm">
                                             <CardHeader>
                                                 <CardTitle className="text-base">
                                                     Preview Logo Putih
@@ -499,26 +477,11 @@ export default function BrandingIndex({ branding }: BrandingPageProps) {
                                                 />
                                             </CardContent>
                                         </Card>
-                                        <Card className="border-dashed">
+                                        <Card className="border border-border/60 bg-background shadow-sm">
                                             <CardHeader>
                                                 <CardTitle className="text-base">
                                                     Preview Warna
                                                 </CardTitle>
-                                                <CardDescription>
-                                                    Prioritas review warna
-                                                    dashboard/admin:
-                                                    <span className="font-medium text-foreground">
-                                                        {' '}
-                                                        primary
-                                                    </span>{' '}
-                                                    untuk aksi utama,
-                                                    <span className="font-medium text-foreground">
-                                                        {' '}
-                                                        secondary
-                                                    </span>{' '}
-                                                    untuk pendamping, dan
-                                                    lainnya sebagai aksen.
-                                                </CardDescription>
                                             </CardHeader>
                                             <CardContent className="grid grid-cols-2 gap-3 md:grid-cols-5">
                                                 {[

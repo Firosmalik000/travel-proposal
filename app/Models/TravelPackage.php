@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasAuditTrail;
 use App\Traits\NormalizesLocalizedStrings;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TravelPackage extends Model
 {
-    use HasFactory;
+    use HasAuditTrail, HasFactory;
     use NormalizesLocalizedStrings;
 
     protected $table = 'packages';
@@ -98,5 +99,10 @@ class TravelPackage extends Model
         return $this->hasMany(PackageItinerary::class, 'package_id')
             ->orderBy('sort_order')
             ->orderBy('day_number');
+    }
+
+    public function hotelAssignments(): HasMany
+    {
+        return $this->hasMany(HotelAssignment::class, 'package_id');
     }
 }

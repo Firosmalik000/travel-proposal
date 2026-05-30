@@ -23,7 +23,6 @@ class RoleSeeder extends Seeder
                 'dashboard' => ['view'],
                 'landing_page' => ['view', 'edit'],
                 'portal_content' => ['view', 'edit'],
-                'content_management' => ['view', 'create', 'edit'],
                 'gallery_management' => ['view', 'create', 'edit'],
                 'articles_management' => ['view', 'create', 'edit', 'delete'],
             ],
@@ -36,6 +35,10 @@ class RoleSeeder extends Seeder
                 'booking_register' => ['view', 'approve', 'reject', 'export'],
                 'booking_listing' => ['view', 'export'],
                 'booking_custom_requests' => ['view', 'approve', 'reject'],
+                'booking_hotel_assignment' => ['view', 'create', 'edit', 'delete'],
+                'cashflow' => ['view', 'create', 'edit', 'delete', 'export'],
+                'hpp_package' => ['view', 'create', 'edit', 'export'],
+                'activity_log' => ['view'],
             ],
         );
 

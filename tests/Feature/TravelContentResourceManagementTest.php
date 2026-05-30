@@ -31,11 +31,7 @@ class TravelContentResourceManagementTest extends TestCase
 
         $this->actingAs($user)
             ->get(route('content.index'))
-            ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard/Administrator/Content/Index')
-                ->has('resources'),
-            );
+            ->assertRedirect(route('website.index'));
     }
 
     public function test_it_shows_package_resource_with_product_options(): void
@@ -76,9 +72,9 @@ class TravelContentResourceManagementTest extends TestCase
         $user = User::factory()->create();
 
         ProductCategory::query()->create([
-            'key' => 'layanan',
-            'name' => ['id' => 'Layanan', 'en' => 'Services'],
-            'description' => ['id' => 'Kategori layanan', 'en' => 'Service category'],
+            'key' => 'tiket',
+            'name' => ['id' => 'Tiket', 'en' => 'Ticket'],
+            'description' => ['id' => 'Kategori tiket', 'en' => 'Ticket category'],
             'sort_order' => 1,
             'is_active' => true,
         ]);
@@ -87,10 +83,9 @@ class TravelContentResourceManagementTest extends TestCase
             ->get(route('product-categories.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard/Administrator/Content/Index')
-                ->where('heading', 'Product Category')
-                ->has('resources.0.items', 1)
-                ->where('resources.0.items.0.payload.key', 'layanan'),
+                ->component('Dashboard/ProductManagement/Categories/Index')
+                ->has('categories.data')
+                ->where('categories.data.0.key', 'tiket'),
             );
     }
 
@@ -121,7 +116,7 @@ class TravelContentResourceManagementTest extends TestCase
         $user = User::factory()->create();
 
         PageContent::query()->create([
-            'slug' => 'home',
+            'slug' => 'home_landing_mockup',
             'category' => 'page',
             'title' => ['id' => 'Beranda', 'en' => 'Home'],
             'excerpt' => ['id' => 'Ringkasan', 'en' => 'Summary'],
@@ -134,7 +129,8 @@ class TravelContentResourceManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/WebsiteManagement/Landing/Index')
-                ->has('pages'),
+                ->has('pages', 1)
+                ->where('pages.0.slug', 'home_landing_mockup'),
             );
     }
 
@@ -158,7 +154,7 @@ class TravelContentResourceManagementTest extends TestCase
         $this->assertTrue(TravelService::query()->where('sort_order', 2)->exists());
     }
 
-    public function test_it_can_store_a_product_with_an_icon_from_content_management(): void
+    public function test_it_can_store_a_product_from_content_management(): void
     {
         $user = User::factory()->create();
 
@@ -173,7 +169,6 @@ class TravelContentResourceManagementTest extends TestCase
         $payload = [
             'code' => 'PRD-HOTEL',
             'slug' => 'hotel-madinah',
-            'icon' => 'Hotel',
             'name' => ['id' => 'Hotel Madinah', 'en' => 'Madinah Hotel'],
             'product_type' => 'layanan',
             'description' => ['id' => 'Hotel dekat masjid', 'en' => 'Hotel near the mosque'],
@@ -190,7 +185,7 @@ class TravelContentResourceManagementTest extends TestCase
         $product = TravelProduct::query()->where('code', 'PRD-HOTEL')->first();
 
         $this->assertNotNull($product);
-        $this->assertSame('Hotel', $product->icon);
+        $this->assertSame('PRD-HOTEL', $product->code);
     }
 
     public function test_it_can_store_a_package_with_uploaded_image(): void

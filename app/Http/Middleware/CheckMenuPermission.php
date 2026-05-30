@@ -12,7 +12,7 @@ class CheckMenuPermission
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      * @param  string  $permission  The permission to check (view, create, edit, delete, import, export, approve, reject)
      */
     public function handle(Request $request, Closure $next, string $permission = 'view'): Response
@@ -116,6 +116,15 @@ class CheckMenuPermission
     {
         $paths = [$currentPath];
 
+        // Dynamic detail routes should inherit permissions from their resource base path.
+        // Example: /admin/financial-management/cashflow/12 -> /admin/financial-management/cashflow
+        if (preg_match('#^(.+)/([^/]+)$#', $currentPath, $matches) === 1) {
+            $lastSegment = $matches[2] ?? '';
+            if ($lastSegment !== '' && $lastSegment !== 'pdf') {
+                $paths[] = $matches[1];
+            }
+        }
+
         // Map PDF / export endpoints to their base page path so permissions apply.
         // Examples:
         // - /admin/booking-management/listing.pdf -> /admin/booking-management/listing
@@ -147,11 +156,16 @@ class CheckMenuPermission
             : $currentPath;
 
         if ($dashboardPath === '/dashboard/website-management/landing') {
-            $paths[] = '/dashboard/website-management/content';
+            $paths[] = '/dashboard/website-management/website';
+        }
+
+        if ($dashboardPath === '/dashboard/website-management/website') {
+            $paths[] = '/dashboard/website-management/landing';
         }
 
         if ($dashboardPath === '/dashboard/website-management/content') {
             $paths[] = '/dashboard/website-management/landing';
+            $paths[] = '/dashboard/website-management/website';
         }
 
         if ($dashboardPath === '/dashboard/website-management/schedules') {

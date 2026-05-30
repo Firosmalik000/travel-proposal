@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\HasAuditTrail;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class PackageItinerary extends Model
 {
+    use HasAuditTrail;
+
     protected $fillable = [
         'package_id',
         'activity_id',

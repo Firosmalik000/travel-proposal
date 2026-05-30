@@ -10,6 +10,8 @@ use App\Models\Testimonial;
 use App\Models\TravelPackage;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,6 +44,12 @@ class DashboardController extends Controller
             ->where('bookings.status', 'registered')
             ->sum(DB::raw('bookings.passenger_count * packages.price')) ?? 0);
 
+        $todayKey = Carbon::today()->toDateString();
+        $dailyPublicVisits = (int) Cache::get('analytics.public.daily_visits.'.$todayKey, 0);
+        $totalPublicVisits = (int) Cache::get('analytics.public.total_visits', 0);
+        $dailyLandingVisits = (int) Cache::get('analytics.landing.daily_visits.'.$todayKey, 0);
+        $totalLandingVisits = (int) Cache::get('analytics.landing.total_visits', 0);
+
         return response()->json([
             'totalUsers' => [
                 'value' => $totalUsers,
@@ -64,6 +72,14 @@ class DashboardController extends Controller
             'publishedContent' => [
                 'value' => PageContent::query()->where('is_active', true)->count() + Article::query()->where('is_active', true)->count(),
                 'description' => 'Konten aktif di website',
+            ],
+            'publicVisitors' => [
+                'value' => $dailyPublicVisits,
+                'description' => 'Total '.$totalPublicVisits.' kunjungan public',
+            ],
+            'landingVisitors' => [
+                'value' => $dailyLandingVisits,
+                'description' => 'Total '.$totalLandingVisits.' kunjungan landing',
             ],
         ]);
     }
@@ -103,18 +119,71 @@ class DashboardController extends Controller
         return response()->json($distribution);
     }
 
-    public function getWeeklyActivity(): JsonResponse
+    public function getWeeklyActivity(Request $request): JsonResponse
     {
-        $days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        $period = (string) $request->string('period')->value();
+        $period = in_array($period, ['weekly', 'monthly', 'yearly'], true) ? $period : 'weekly';
 
+        if ($period === 'yearly') {
+            $data = collect(range(11, 0))->map(function (int $monthsAgo): array {
+                $date = Carbon::now()->subMonths($monthsAgo);
+                $monthStart = $date->copy()->startOfMonth();
+                $monthEnd = $date->copy()->endOfMonth();
+
+                $publicVisits = 0;
+                $landingVisits = 0;
+                $cursor = $monthStart->copy();
+                while ($cursor->lte($monthEnd)) {
+                    $dateKey = $cursor->toDateString();
+                    $publicVisits += (int) Cache::get('analytics.public.daily_visits.'.$dateKey, 0);
+                    $landingVisits += (int) Cache::get('analytics.landing.daily_visits.'.$dateKey, 0);
+                    $cursor->addDay();
+                }
+
+                return [
+                    'day' => $date->locale('id')->isoFormat('MMM'),
+                    'public_visits' => $publicVisits,
+                    'landing_visits' => $landingVisits,
+                ];
+            });
+
+            return response()->json($data);
+        }
+
+        if ($period === 'monthly') {
+            $data = collect(range(3, 0))->map(function (int $weeksAgo): array {
+                $weekStart = Carbon::today()->subWeeks($weeksAgo)->startOfWeek();
+                $weekEnd = $weekStart->copy()->endOfWeek();
+                $publicVisits = 0;
+                $landingVisits = 0;
+
+                $cursor = $weekStart->copy();
+                while ($cursor->lte($weekEnd)) {
+                    $dateKey = $cursor->toDateString();
+                    $publicVisits += (int) Cache::get('analytics.public.daily_visits.'.$dateKey, 0);
+                    $landingVisits += (int) Cache::get('analytics.landing.daily_visits.'.$dateKey, 0);
+                    $cursor->addDay();
+                }
+
+                return [
+                    'day' => $weekStart->isoFormat('D MMM'),
+                    'public_visits' => $publicVisits,
+                    'landing_visits' => $landingVisits,
+                ];
+            });
+
+            return response()->json($data);
+        }
+
+        $days = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
         $data = collect(range(6, 0))->map(function (int $daysAgo) use ($days): array {
             $date = Carbon::today()->subDays($daysAgo);
+            $dateKey = $date->toDateString();
 
             return [
                 'day' => $days[$date->dayOfWeek],
-                'departures' => DepartureSchedule::query()->whereDate('created_at', $date)->count(),
-                'contents' => PageContent::query()->whereDate('updated_at', $date)->count()
-                    + Article::query()->whereDate('updated_at', $date)->count(),
+                'public_visits' => (int) Cache::get('analytics.public.daily_visits.'.$dateKey, 0),
+                'landing_visits' => (int) Cache::get('analytics.landing.daily_visits.'.$dateKey, 0),
             ];
         });
 

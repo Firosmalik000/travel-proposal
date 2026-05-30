@@ -306,8 +306,8 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   return (
     <main
       data-slot="sidebar-inset"
-      className={cn(
-        "bg-[radial-gradient(circle_at_top_left,rgba(190,24,93,0.06),transparent_24%),linear-gradient(180deg,rgba(255,249,244,0.98),rgba(248,250,252,0.98))] relative flex max-w-full min-h-svh flex-1 flex-col dark:bg-[radial-gradient(circle_at_top_left,rgba(190,24,93,0.12),transparent_24%),linear-gradient(180deg,rgba(2,6,23,0.98),rgba(15,23,42,0.98))]",
+        className={cn(
+          "bg-background relative flex max-w-full min-h-svh min-w-0 flex-1 flex-col overflow-x-hidden",
         "peer-data-[variant=inset]:min-h-[calc(100svh-(--spacing(4)))] md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-0",
         className
       )}

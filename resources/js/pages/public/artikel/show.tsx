@@ -1,10 +1,10 @@
-﻿import {
+import {
     MotionCard,
     MotionGroup,
     MotionSection,
-} from '@/components/public-motion';
+} from '@/components/public/motion';
 import PublicLayout from '@/layouts/PublicLayout';
-import { formatDate, localize } from '@/lib/public-content';
+import { formatDate, localize } from '@/lib/public/content';
 import {
     absoluteUrl,
     canonicalUrl,

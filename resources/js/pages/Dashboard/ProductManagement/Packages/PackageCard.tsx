@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import {
     Calendar,
     Clock,
+    Eye,
     MapPin,
     Package as PackageIcon,
     Pencil,
@@ -14,6 +15,7 @@ import type { Package as PackageType } from './types';
 type Props = {
     pkg: PackageType;
     locale: 'id' | 'en';
+    onView: (pkg: PackageType) => void;
     onEdit: (pkg: PackageType) => void;
     onDelete: (pkg: PackageType) => void;
     onManageSchedules: (pkg: PackageType) => void;
@@ -27,34 +29,35 @@ const typeConfig: Record<
 > = {
     reguler: {
         label: 'Reguler',
-        color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-        dot: 'bg-blue-500',
+        color: 'bg-muted text-foreground',
+        dot: 'bg-primary',
     },
     hemat: {
         label: 'Hemat',
-        color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-        dot: 'bg-green-500',
+        color: 'bg-muted text-foreground',
+        dot: 'bg-primary',
     },
     vip: {
         label: 'VIP',
-        color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-        dot: 'bg-amber-500',
+        color: 'bg-muted text-foreground',
+        dot: 'bg-primary',
     },
     premium: {
         label: 'Premium',
-        color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
-        dot: 'bg-orange-500',
+        color: 'bg-muted text-foreground',
+        dot: 'bg-primary',
     },
     private: {
         label: 'Private',
-        color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-        dot: 'bg-purple-500',
+        color: 'bg-muted text-foreground',
+        dot: 'bg-primary',
     },
 };
 
 export function PackageCard({
     pkg,
     locale,
+    onView,
     onEdit,
     onDelete,
     onManageSchedules,
@@ -117,8 +120,8 @@ export function PackageCard({
                                 {type.label}
                             </span>
                             {pkg.is_featured ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                                    ★ Featured
+                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold text-foreground">
+                                    Featured
                                 </span>
                             ) : null}
                             <span className="ml-auto font-mono text-xs text-muted-foreground">
@@ -175,7 +178,7 @@ export function PackageCard({
                                     <Calendar className="h-3 w-3" />
                                     Berangkat {
                                         nextDeparture.departure_date
-                                    } • {nextDeparture.seats_available} seat
+                                    } - {nextDeparture.seats_available} seat
                                     tersisa
                                 </p>
                             ) : (
@@ -192,7 +195,18 @@ export function PackageCard({
                                 size="sm"
                                 variant="outline"
                                 className="h-8 gap-1.5 text-xs"
+                                onClick={() => onView(pkg)}
+                                title="Detail"
+                            >
+                                <Eye className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Detail</span>
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="relative h-8 gap-1.5 text-xs"
                                 onClick={() => onManageSchedules(pkg)}
+                                title="Jadwal"
                             >
                                 <Calendar className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">Jadwal</span>
@@ -208,6 +222,7 @@ export function PackageCard({
                                     variant="outline"
                                     className="h-8 gap-1.5 text-xs"
                                     onClick={() => onEdit(pkg)}
+                                    title="Edit"
                                 >
                                     <Pencil className="h-3.5 w-3.5" />
                                     <span className="hidden sm:inline">
@@ -221,6 +236,7 @@ export function PackageCard({
                                     variant="outline"
                                     className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                     onClick={() => onDelete(pkg)}
+                                    title="Hapus"
                                 >
                                     <Trash2 className="h-3.5 w-3.5" />
                                 </Button>

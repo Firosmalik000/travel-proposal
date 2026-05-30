@@ -1,9 +1,9 @@
-﻿import GlobalFaviconHead from '@/components/global-favicon-head';
-import PublicSeoHead from '@/components/public-seo-head';
+import GlobalFaviconHead from '@/components/global-favicon-head';
+import PublicSeoHead from '@/components/public/seo-head';
 import {
     getPublicSocialAccounts,
     whatsappLinkFromSeo,
-} from '@/lib/public-content';
+} from '@/lib/public/content';
 import { Link, usePage } from '@inertiajs/react';
 import {
     AtSign,

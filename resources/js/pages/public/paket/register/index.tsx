@@ -1,32 +1,58 @@
 import InputError from '@/components/input-error';
-import { MotionCard, MotionSection } from '@/components/public-motion';
+import { MotionCard, MotionSection } from '@/components/public/motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import PublicLayout from '@/layouts/PublicLayout';
-import { formatDate, formatPrice, localize } from '@/lib/public-content';
+import { formatDate, formatPrice, localize } from '@/lib/public/content';
 import { type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useMemo } from 'react';
 
 interface TravelPackageRegistrationPageProps extends SharedData {
-    travelPackage: Record<string, any>;
+    travelPackage: {
+        id: number;
+        slug: string;
+        name: unknown;
+        summary: unknown;
+        image_path?: string | null;
+        price?: number | string | null;
+        currency?: string;
+        departure_city?: string | null;
+        duration_days?: number | null;
+        schedules?: PackageSchedule[];
+    };
 }
+
+type PackageSchedule = {
+    id: number;
+    departure_date: string;
+    return_date?: string | null;
+    departure_city?: string | null;
+    seats_available?: number | null;
+};
 
 export default function PackageRegistrationPage() {
     const { travelPackage } =
         usePage<TravelPackageRegistrationPageProps>().props;
     const packageName = localize(travelPackage.name, 'id');
-    const schedules = Array.isArray(travelPackage.schedules)
-        ? travelPackage.schedules
-        : [];
+    const schedules = useMemo(
+        () =>
+            Array.isArray(travelPackage.schedules)
+                ? travelPackage.schedules
+                : [],
+        [travelPackage.schedules],
+    );
     const defaultScheduleId = schedules[0]?.id ? String(schedules[0].id) : '';
-    const [preferredScheduleId, setPreferredScheduleId] =
-        useState(defaultScheduleId);
+    const initialScheduleId =
+        typeof window !== 'undefined'
+            ? (new URLSearchParams(window.location.search).get('schedule') ??
+              defaultScheduleId)
+            : defaultScheduleId;
 
     const form = useForm({
-        departure_schedule_id: defaultScheduleId,
+        departure_schedule_id: initialScheduleId,
         full_name: '',
         phone: '',
         email: '',
@@ -34,17 +60,18 @@ export default function PackageRegistrationPage() {
         passenger_count: '1',
         notes: '',
     });
-
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const scheduleFromQuery = params.get('schedule') ?? defaultScheduleId;
-
-        setPreferredScheduleId(scheduleFromQuery);
-
-        if (!form.data.departure_schedule_id && scheduleFromQuery) {
-            form.setData('departure_schedule_id', scheduleFromQuery);
-        }
-    }, [defaultScheduleId]);
+    const selectedSchedule = useMemo(
+        () =>
+            schedules.find(
+                (schedule) =>
+                    String(schedule.id) === form.data.departure_schedule_id,
+            ) ?? null,
+        [schedules, form.data.departure_schedule_id],
+    );
+    const selectedScheduleAvailableSeats = Math.max(
+        1,
+        Number(selectedSchedule?.seats_available ?? 0),
+    );
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
@@ -60,7 +87,7 @@ export default function PackageRegistrationPage() {
                     'passenger_count',
                     'notes',
                 );
-                form.setData('departure_schedule_id', preferredScheduleId);
+                form.setData('departure_schedule_id', initialScheduleId);
             },
         });
     };
@@ -134,37 +161,33 @@ export default function PackageRegistrationPage() {
                                         Jadwal tersedia
                                     </h2>
                                     <div className="mt-3 grid gap-2">
-                                        {schedules.map(
-                                            (schedule: Record<string, any>) => (
-                                                <div
-                                                    key={schedule.id}
-                                                    className="rounded-2xl border border-border bg-background px-4 py-3 text-sm"
-                                                >
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <span className="font-semibold text-foreground">
-                                                            {formatDate(
-                                                                schedule.departure_date,
-                                                                'id',
-                                                            )}
-                                                        </span>
-                                                        <span className="text-xs text-emerald-600">
-                                                            {
-                                                                schedule.seats_available
-                                                            }{' '}
-                                                            seat tersedia
-                                                        </span>
-                                                    </div>
-                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        {schedules.map((schedule) => (
+                                            <div
+                                                key={schedule.id}
+                                                className="rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="font-semibold text-foreground">
+                                                        {formatDate(
+                                                            schedule.departure_date,
+                                                            'id',
+                                                        )}
+                                                    </span>
+                                                    <span className="text-xs text-emerald-600">
                                                         {
-                                                            schedule.departure_city
-                                                        }
-                                                        {schedule.return_date
-                                                            ? ` - Pulang ${formatDate(schedule.return_date, 'id')}`
-                                                            : ''}
-                                                    </p>
+                                                            schedule.seats_available
+                                                        }{' '}
+                                                        seat tersedia
+                                                    </span>
                                                 </div>
-                                            ),
-                                        )}
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    {schedule.departure_city}
+                                                    {schedule.return_date
+                                                        ? ` - Pulang ${formatDate(schedule.return_date, 'id')}`
+                                                        : ''}
+                                                </p>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
@@ -280,15 +303,30 @@ export default function PackageRegistrationPage() {
                                         id="passenger_count"
                                         type="number"
                                         min="1"
-                                        max="10"
+                                        max={selectedScheduleAvailableSeats}
                                         value={form.data.passenger_count}
-                                        onChange={(event) =>
+                                        onChange={(event) => {
+                                            const rawValue = Number(
+                                                event.target.value,
+                                            );
+                                            const clampedValue = Number.isNaN(
+                                                rawValue,
+                                            )
+                                                ? 1
+                                                : Math.min(
+                                                      Math.max(rawValue, 1),
+                                                      selectedScheduleAvailableSeats,
+                                                  );
                                             form.setData(
                                                 'passenger_count',
-                                                event.target.value,
-                                            )
-                                        }
+                                                String(clampedValue),
+                                            );
+                                        }}
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        Maksimal sesuai seat tersedia jadwal:{' '}
+                                        {selectedScheduleAvailableSeats}
+                                    </p>
                                     <InputError
                                         message={form.errors.passenger_count}
                                     />
@@ -303,31 +341,58 @@ export default function PackageRegistrationPage() {
                                     id="departure_schedule_id"
                                     className="h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
                                     value={form.data.departure_schedule_id}
-                                    onChange={(event) =>
+                                    onChange={(event) => {
+                                        const nextScheduleId =
+                                            event.target.value;
                                         form.setData(
                                             'departure_schedule_id',
-                                            event.target.value,
-                                        )
-                                    }
+                                            nextScheduleId,
+                                        );
+
+                                        const nextSchedule = schedules.find(
+                                            (schedule) =>
+                                                String(schedule.id) ===
+                                                nextScheduleId,
+                                        );
+                                        const nextAvailableSeats = Math.max(
+                                            1,
+                                            Number(
+                                                nextSchedule?.seats_available ??
+                                                    0,
+                                            ),
+                                        );
+                                        const currentPassengerCount = Math.max(
+                                            1,
+                                            Number(form.data.passenger_count),
+                                        );
+
+                                        if (
+                                            currentPassengerCount >
+                                            nextAvailableSeats
+                                        ) {
+                                            form.setData(
+                                                'passenger_count',
+                                                String(nextAvailableSeats),
+                                            );
+                                        }
+                                    }}
                                 >
                                     <option value="">
                                         Pilih nanti dengan admin
                                     </option>
-                                    {schedules.map(
-                                        (schedule: Record<string, any>) => (
-                                            <option
-                                                key={schedule.id}
-                                                value={schedule.id}
-                                            >
-                                                {formatDate(
-                                                    schedule.departure_date,
-                                                    'id',
-                                                )}{' '}
-                                                - {schedule.departure_city} (
-                                                {schedule.seats_available} seat)
-                                            </option>
-                                        ),
-                                    )}
+                                    {schedules.map((schedule) => (
+                                        <option
+                                            key={schedule.id}
+                                            value={schedule.id}
+                                        >
+                                            {formatDate(
+                                                schedule.departure_date,
+                                                'id',
+                                            )}{' '}
+                                            - {schedule.departure_city} (
+                                            {schedule.seats_available} seat)
+                                        </option>
+                                    ))}
                                 </select>
                                 <InputError
                                     message={form.errors.departure_schedule_id}

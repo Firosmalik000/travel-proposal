@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+﻿import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -215,7 +215,7 @@ export default function CustomBookingsIndex({
                         <Input
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Cari kode, nama, phone, kotaâ€¦"
+                            placeholder="Cari kode, nama, phone, kota..."
                             className="pl-9"
                         />
                     </div>
@@ -286,7 +286,7 @@ export default function CustomBookingsIndex({
                                                     {booking.full_name}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {booking.phone} â€¢{' '}
+                                                    {booking.phone} -{' '}
                                                     {booking.origin_city}
                                                 </p>
                                             </div>

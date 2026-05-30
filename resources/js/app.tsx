@@ -2,7 +2,7 @@ import '../css/app.css';
 
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { StrictMode } from 'react';
+import { type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
 import { initializeTheme } from './hooks/use-appearance';
@@ -13,26 +13,31 @@ const appName = rawAppName
     .replace(/[_-]+/g, ' ')
     .replace(/\b\w/g, (character: string) => character.toUpperCase());
 
+type InertiaPageModule = {
+    default: {
+        layout?: (page: ReactNode) => ReactNode;
+    };
+};
+
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) =>
         resolvePageComponent(
             `./pages/${name}.tsx`,
             import.meta.glob('./pages/**/*.tsx'),
-        ).then((module: any) => {
-            const page: any = module.default;
+        ).then((module) => {
+            const typedModule = module as InertiaPageModule;
+            const page = typedModule.default;
             page.layout =
                 page.layout ??
-                ((pageEl: React.ReactNode) => (
-                    <RootLayout>{pageEl}</RootLayout>
-                ));
-            return module;
+                ((pageEl: ReactNode) => <RootLayout>{pageEl}</RootLayout>);
+            return typedModule;
         }),
     setup({ el, App, props }) {
         const root = createRoot(el);
 
         root.render(
-            <StrictMode>
+            <>
                 <App {...props} />
                 <Toaster
                     position="top-right"
@@ -40,7 +45,7 @@ createInertiaApp({
                     richColors
                     closeButton
                 />
-            </StrictMode>,
+            </>,
         );
     },
     progress: {

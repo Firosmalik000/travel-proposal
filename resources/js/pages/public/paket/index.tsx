@@ -1,7 +1,7 @@
 import {
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentZellige,
-} from '@/components/public-ornaments';
+} from '@/components/public/ornaments';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     formatDate,
@@ -10,7 +10,7 @@ import {
     usePublicData,
     usePublicPageContent,
     whatsappLinkFromSeo,
-} from '@/lib/public-content';
+} from '@/lib/public/content';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';

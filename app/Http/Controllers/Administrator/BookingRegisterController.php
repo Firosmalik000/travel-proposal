@@ -8,8 +8,10 @@ use App\Models\Booking;
 use App\Models\DepartureSchedule;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
+use App\Services\InventoryStockService;
 use App\Services\PdfBrandingService;
 use App\Services\PdfRenderer;
+use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -24,6 +26,7 @@ class BookingRegisterController extends Controller
     public function __construct(
         private readonly PdfRenderer $pdfRenderer,
         private readonly PdfBrandingService $pdfBrandingService,
+        private readonly InventoryStockService $inventoryStockService,
     ) {}
 
     public function index(): Response
@@ -396,22 +399,32 @@ class BookingRegisterController extends Controller
             $registration->id,
         );
 
-        Booking::query()->create([
-            'booking_code' => $bookingCode,
-            'package_id' => $registration->package_id,
-            'departure_schedule_id' => $registration->departure_schedule_id,
-            'full_name' => $registration->full_name,
-            'phone' => $registration->phone,
-            'email' => $registration->email,
-            'origin_city' => $registration->origin_city,
-            'passenger_count' => $registration->passenger_count,
-            'notes' => $registration->notes,
-            'status' => 'registered',
-            'created_at' => $registration->created_at,
-        ]);
-
         $schedule = $registration->departureSchedule;
-        $registration->delete();
+
+        try {
+            DB::transaction(function () use ($bookingCode, $registration): void {
+                $booking = Booking::query()->create([
+                    'booking_code' => $bookingCode,
+                    'package_id' => $registration->package_id,
+                    'departure_schedule_id' => $registration->departure_schedule_id,
+                    'full_name' => $registration->full_name,
+                    'phone' => $registration->phone,
+                    'email' => $registration->email,
+                    'origin_city' => $registration->origin_city,
+                    'passenger_count' => $registration->passenger_count,
+                    'notes' => $registration->notes,
+                    'status' => 'registered',
+                    'created_at' => $registration->created_at,
+                ]);
+
+                $this->inventoryStockService->syncForBooking($booking);
+                $registration->delete();
+            });
+        } catch (DomainException $exception) {
+            return back()->withErrors([
+                'booking' => $exception->getMessage(),
+            ]);
+        }
 
         if ($schedule !== null) {
             $schedule->refresh()->syncSeatAvailability();
@@ -433,18 +446,28 @@ class BookingRegisterController extends Controller
             random_int(0, 9999),
         );
 
-        $booking = Booking::query()->create([
-            'booking_code' => $bookingCode,
-            'package_id' => $request->integer('travel_package_id'),
-            'departure_schedule_id' => $schedule?->id,
-            'full_name' => $request->string('full_name')->value(),
-            'phone' => $request->string('phone')->value(),
-            'email' => $request->filled('email') ? $request->string('email')->value() : null,
-            'origin_city' => $request->string('origin_city')->value(),
-            'passenger_count' => $request->integer('passenger_count'),
-            'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
-            'status' => $request->string('status')->value(),
-        ]);
+        try {
+            DB::transaction(function () use ($request, $schedule, $bookingCode): void {
+                $booking = Booking::query()->create([
+                    'booking_code' => $bookingCode,
+                    'package_id' => $request->integer('travel_package_id'),
+                    'departure_schedule_id' => $schedule?->id,
+                    'full_name' => $request->string('full_name')->value(),
+                    'phone' => $request->string('phone')->value(),
+                    'email' => $request->filled('email') ? $request->string('email')->value() : null,
+                    'origin_city' => $request->string('origin_city')->value(),
+                    'passenger_count' => $request->integer('passenger_count'),
+                    'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
+                    'status' => $request->string('status')->value(),
+                ]);
+
+                $this->inventoryStockService->syncForBooking($booking);
+            });
+        } catch (DomainException $exception) {
+            return back()->withErrors([
+                'booking' => $exception->getMessage(),
+            ]);
+        }
 
         if ($schedule !== null) {
             $schedule->syncSeatAvailability();
@@ -457,6 +480,11 @@ class BookingRegisterController extends Controller
     {
         $previousSchedule = $registration->departureSchedule;
         $schedule = $request->selectedSchedule();
+        $previousStockState = [
+            'package_id' => (int) $registration->package_id,
+            'passenger_count' => (int) $registration->passenger_count,
+            'status' => (string) $registration->status,
+        ];
 
         $payload = [
             'package_id' => $request->integer('travel_package_id'),
@@ -487,7 +515,16 @@ class BookingRegisterController extends Controller
             $payload['custom_currency'] = $registration->custom_currency ?: 'IDR';
         }
 
-        $registration->update($payload);
+        try {
+            DB::transaction(function () use ($registration, $payload, $previousStockState): void {
+                $registration->update($payload);
+                $this->inventoryStockService->syncForBooking($registration->fresh(), $previousStockState);
+            });
+        } catch (DomainException $exception) {
+            return back()->withErrors([
+                'booking' => $exception->getMessage(),
+            ]);
+        }
 
         if ($previousSchedule !== null) {
             $previousSchedule->refresh()->syncSeatAvailability();
@@ -515,7 +552,18 @@ class BookingRegisterController extends Controller
     public function destroy(Booking $registration): RedirectResponse
     {
         $schedule = $registration->departureSchedule;
-        $registration->delete();
+        $previousStockState = [
+            'package_id' => (int) $registration->package_id,
+            'passenger_count' => (int) $registration->passenger_count,
+            'status' => (string) $registration->status,
+        ];
+
+        DB::transaction(function () use ($registration, $previousStockState): void {
+            $registration->setAttribute('status', 'cancelled');
+            $registration->setAttribute('passenger_count', 0);
+            $this->inventoryStockService->syncForBooking($registration, $previousStockState);
+            $registration->delete();
+        });
 
         if ($schedule !== null) {
             $schedule->refresh()->syncSeatAvailability();

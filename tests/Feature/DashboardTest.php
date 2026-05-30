@@ -9,6 +9,7 @@ use App\Models\PageContent;
 use App\Models\TravelPackage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -38,6 +39,13 @@ class DashboardTest extends TestCase
 
     public function test_dashboard_stats_return_travel_summary(): void
     {
+        Cache::put('analytics.public.total_visitors', 12);
+        Cache::put('analytics.public.total_visits', 120);
+        Cache::put('analytics.public.daily_visits.'.now()->toDateString(), 34);
+        Cache::put('analytics.landing.total_visitors', 5);
+        Cache::put('analytics.landing.total_visits', 18);
+        Cache::put('analytics.landing.daily_visits.'.now()->toDateString(), 9);
+
         $package = TravelPackage::query()->create([
             'code' => 'PKG-001',
             'slug' => 'umroh-reguler',
@@ -89,7 +97,11 @@ class DashboardTest extends TestCase
 
         $response->assertSuccessful()
             ->assertJsonPath('activePackages.value', 1)
-            ->assertJsonPath('upcomingDepartures.value', 1);
+            ->assertJsonPath('upcomingDepartures.value', 1)
+            ->assertJsonPath('publicVisitors.value', 34)
+            ->assertJsonPath('publicVisitors.description', 'Total 120 kunjungan public')
+            ->assertJsonPath('landingVisitors.value', 9)
+            ->assertJsonPath('landingVisitors.description', 'Total 18 kunjungan landing');
 
         $this->assertGreaterThanOrEqual(2, (int) $response->json('publishedContent.value'));
         $this->assertSame(70000000.0, (float) $response->json('estimatedRevenue.value'));
@@ -108,7 +120,7 @@ class DashboardTest extends TestCase
             ->getJson(route('dashboard.weekly-activity', [], false))
             ->assertSuccessful()
             ->assertJsonStructure([
-                '*' => ['day', 'departures', 'contents'],
+                '*' => ['day', 'public_visits', 'landing_visits'],
             ]);
     }
 

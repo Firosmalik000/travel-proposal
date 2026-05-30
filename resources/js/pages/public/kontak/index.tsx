@@ -2,13 +2,13 @@ import {
     MotionCard,
     MotionGroup,
     MotionSection,
-} from '@/components/public-motion';
+} from '@/components/public/motion';
 import {
     IslamicLantern,
     IslamicOrnamentOttomanAccent,
     IslamicOrnamentRow1Col1,
     IslamicOrnamentZellige,
-} from '@/components/public-ornaments';
+} from '@/components/public/ornaments';
 import PublicLayout from '@/layouts/PublicLayout';
 import {
     getPublicAddress,
@@ -20,7 +20,7 @@ import {
     localize,
     usePublicPageContent,
     whatsappLinkFromSeo,
-} from '@/lib/public-content';
+} from '@/lib/public/content';
 import { type SharedData } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import { Facebook, Instagram, Music2, Twitter, Youtube } from 'lucide-react';

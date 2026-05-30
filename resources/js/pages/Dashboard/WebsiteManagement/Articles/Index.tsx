@@ -1,23 +1,28 @@
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import {
     Sheet,
     SheetContent,
-    SheetDescription,
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router } from '@inertiajs/react';
-import { MoreHorizontal, Plus, Search } from 'lucide-react';
+import {
+    Eye,
+    MoreHorizontal,
+    Pencil,
+    Plus,
+    Search,
+    Trash2,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Option = {
@@ -66,7 +71,13 @@ const formatPublishedAt = (publishedAt?: string | null): string => {
         return '-';
     }
 
-    return new Date(publishedAt).toLocaleString('id-ID');
+    return new Intl.DateTimeFormat('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(publishedAt));
 };
 
 export default function ArticleIndex({
@@ -177,11 +188,7 @@ export default function ArticleIndex({
         }
 
         if (action === 'preview') {
-            window.open(
-                `/admin/website-management/articles/${article.id}/preview`,
-                '_blank',
-                'noopener',
-            );
+            window.open(`/artikel/${article.slug}`, '_blank', 'noopener');
 
             return;
         }
@@ -202,36 +209,32 @@ export default function ArticleIndex({
         >
             <Head title="Articles & News" />
 
-            <div className="space-y-6 p-4 sm:p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold text-foreground">
+            <div className="space-y-4 p-4 sm:p-5">
+                <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <h1 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
                             Articles & News
                         </h1>
-                        <p className="max-w-2xl text-sm text-muted-foreground">
-                            Kelola blog, company news, travel update, dan
-                            artikel edukasi umrah dari satu modul editorial.
-                        </p>
+                        {canCreate ? (
+                            <Button asChild>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        openDrawer(
+                                            '/admin/website-management/articles/create',
+                                            'Artikel Baru',
+                                        )
+                                    }
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Artikel Baru
+                                </button>
+                            </Button>
+                        ) : null}
                     </div>
-                    {canCreate ? (
-                        <Button asChild>
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    openDrawer(
-                                        '/admin/website-management/articles/create',
-                                        'Artikel Baru',
-                                    )
-                                }
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Artikel Baru
-                            </button>
-                        </Button>
-                    ) : null}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-4">
+                <div className="grid gap-3 md:grid-cols-4">
                     {[
                         ['Total Artikel', stats.total],
                         ['Published', stats.published],
@@ -240,23 +243,20 @@ export default function ArticleIndex({
                     ].map(([label, value]) => (
                         <div
                             key={label}
-                            className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+                            className="rounded-2xl border border-border/60 bg-card p-3.5 shadow-sm"
                         >
                             <div className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                                 {label}
                             </div>
-                            <div className="mt-2 text-3xl font-semibold text-foreground">
+                            <div className="mt-1 text-xl font-semibold text-foreground md:text-2xl">
                                 {value}
                             </div>
                         </div>
                     ))}
                 </div>
 
-                <div className="grid gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm md:grid-cols-4">
+                <div className="grid gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm md:grid-cols-4">
                     <div className="md:col-span-2">
-                        <label className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                            Cari Artikel
-                        </label>
                         <div className="flex gap-2">
                             <Input
                                 value={search}
@@ -275,9 +275,6 @@ export default function ArticleIndex({
                         </div>
                     </div>
                     <div>
-                        <label className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                            Status
-                        </label>
                         <select
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                             value={status}
@@ -292,9 +289,6 @@ export default function ArticleIndex({
                         </select>
                     </div>
                     <div>
-                        <label className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                            Tipe Konten
-                        </label>
                         <select
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                             value={contentType}
@@ -311,9 +305,6 @@ export default function ArticleIndex({
                         </select>
                     </div>
                     <div>
-                        <label className="mb-2 block text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                            Featured
-                        </label>
                         <select
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                             value={featured}
@@ -327,6 +318,27 @@ export default function ArticleIndex({
                         </select>
                     </div>
                     <div className="flex items-end md:col-span-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setSearch('');
+                                setStatus('');
+                                setContentType('');
+                                setFeatured('');
+                                router.get(
+                                    '/admin/website-management/articles',
+                                    {},
+                                    {
+                                        preserveState: true,
+                                        preserveScroll: true,
+                                    },
+                                );
+                            }}
+                            className="mr-2"
+                        >
+                            Reset
+                        </Button>
                         <Button type="button" onClick={submitFilters}>
                             Terapkan Filter
                         </Button>
@@ -355,24 +367,18 @@ export default function ArticleIndex({
                     >
                         <SheetHeader className="border-b border-border p-4">
                             <SheetTitle>{drawerTitle}</SheetTitle>
-                            <SheetDescription>
-                                Buat atau edit artikel tanpa pindah halaman.
-                            </SheetDescription>
                         </SheetHeader>
                         {drawerUrl ? (
                             <iframe
                                 title={drawerTitle}
                                 src={drawerUrl}
-                                className="h-[calc(100vh-88px)] w-full bg-background"
+                                className="h-[calc(100vh-88px)] w-full bg-white"
                             />
                         ) : null}
                     </SheetContent>
                 </Sheet>
 
-                <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-                    <div className="border-b border-border px-4 py-3 text-sm text-muted-foreground">
-                        Total artikel: {articles.total}
-                    </div>
+                <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
                     <div className="divide-y divide-border md:hidden">
                         {articles.data.length === 0 ? (
                             <div className="px-4 py-12 text-center text-muted-foreground">
@@ -397,9 +403,6 @@ export default function ArticleIndex({
                                         <div className="min-w-0 flex-1 space-y-1">
                                             <div className="line-clamp-2 font-medium text-foreground">
                                                 {article.title}
-                                            </div>
-                                            <div className="truncate text-xs text-muted-foreground">
-                                                /artikel/{article.slug}
                                             </div>
                                             <div className="text-xs text-muted-foreground">
                                                 {article.author_name ||
@@ -466,41 +469,62 @@ export default function ArticleIndex({
                                             <div className="mt-1 text-foreground">
                                                 {article.views_count} views
                                             </div>
-                                            <div className="text-xs text-muted-foreground">
-                                                {article.reading_time_minutes}{' '}
-                                                menit baca
-                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                                            Action
-                                        </label>
-                                        <Select
-                                            value=""
-                                            onValueChange={(value) =>
-                                                handleArticleAction(
-                                                    value,
-                                                    article,
-                                                )
-                                            }
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Pilih action" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="edit">
-                                                    Edit artikel
-                                                </SelectItem>
-                                                <SelectItem value="preview">
-                                                    Preview artikel
-                                                </SelectItem>
-                                                <SelectItem value="delete">
-                                                    Hapus artikel
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
+                                    <div className="flex justify-end">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="icon"
+                                                    aria-label={`Aksi ${article.title}`}
+                                                >
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                {canEdit ? (
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            handleArticleAction(
+                                                                'edit',
+                                                                article,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                        Edit
+                                                    </DropdownMenuItem>
+                                                ) : null}
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        handleArticleAction(
+                                                            'preview',
+                                                            article,
+                                                        )
+                                                    }
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                    Preview
+                                                </DropdownMenuItem>
+                                                {canDelete ? (
+                                                    <DropdownMenuItem
+                                                        variant="destructive"
+                                                        onClick={() =>
+                                                            handleArticleAction(
+                                                                'delete',
+                                                                article,
+                                                            )
+                                                        }
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        Hapus
+                                                    </DropdownMenuItem>
+                                                ) : null}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
                                     </div>
                                 </div>
                             ))
@@ -508,21 +532,88 @@ export default function ArticleIndex({
                     </div>
                     <div className="hidden overflow-x-auto md:block">
                         <table className="min-w-full divide-y divide-border text-sm">
-                            <thead className="bg-muted/50 text-left text-xs tracking-wide text-muted-foreground uppercase">
+                            <thead className="bg-muted/35 text-left text-xs tracking-wide text-muted-foreground uppercase">
                                 <tr>
+                                    <th className="w-16 px-4 py-3 text-center">
+                                        No
+                                    </th>
+                                    <th className="w-20 px-4 py-3 text-right">
+                                        Aksi
+                                    </th>
                                     <th className="px-4 py-3">Artikel</th>
                                     <th className="px-4 py-3">Tipe</th>
                                     <th className="px-4 py-3">Status</th>
                                     <th className="px-4 py-3">Published</th>
                                     <th className="px-4 py-3">Stat</th>
-                                    <th className="px-4 py-3 text-right">
-                                        Actions
-                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border">
-                                {articles.data.map((article) => (
-                                    <tr key={article.id}>
+                                {articles.data.map((article, index) => (
+                                    <tr
+                                        key={article.id}
+                                        className="align-top transition-colors hover:bg-muted/20"
+                                    >
+                                        <td className="px-4 py-4 text-center text-sm text-muted-foreground">
+                                            {index + 1}
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <div className="flex justify-end">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="icon"
+                                                            aria-label={`Aksi ${article.title}`}
+                                                        >
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        {canEdit ? (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    handleArticleAction(
+                                                                        'edit',
+                                                                        article,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Pencil className="h-3.5 w-3.5" />
+                                                                Edit
+                                                            </DropdownMenuItem>
+                                                        ) : null}
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleArticleAction(
+                                                                    'preview',
+                                                                    article,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Eye className="h-3.5 w-3.5" />
+                                                            Preview
+                                                        </DropdownMenuItem>
+                                                        {canDelete ? (
+                                                            <DropdownMenuItem
+                                                                variant="destructive"
+                                                                onClick={() =>
+                                                                    handleArticleAction(
+                                                                        'delete',
+                                                                        article,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Trash2 className="h-3.5 w-3.5" />
+                                                                Hapus
+                                                            </DropdownMenuItem>
+                                                        ) : null}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </td>
                                         <td className="px-4 py-4">
                                             <div className="flex items-start gap-3">
                                                 <div className="h-14 w-14 overflow-hidden rounded-xl bg-muted">
@@ -536,12 +627,9 @@ export default function ArticleIndex({
                                                         />
                                                     ) : null}
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <div className="font-medium text-foreground">
+                                                <div className="min-w-0 space-y-1">
+                                                    <div className="line-clamp-2 font-medium text-foreground">
                                                         {article.title}
-                                                    </div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        /artikel/{article.slug}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground">
                                                         {article.author_name ||
@@ -589,47 +677,8 @@ export default function ArticleIndex({
                                             )}
                                         </td>
                                         <td className="px-4 py-4 text-muted-foreground">
-                                            <div>
+                                            <div className="font-medium text-foreground">
                                                 {article.views_count} views
-                                            </div>
-                                            <div>
-                                                {article.reading_time_minutes}{' '}
-                                                menit baca
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex justify-end">
-                                                <Select
-                                                    value=""
-                                                    onValueChange={(value) =>
-                                                        handleArticleAction(
-                                                            value,
-                                                            article,
-                                                        )
-                                                    }
-                                                >
-                                                    <SelectTrigger className="h-9 w-[172px]">
-                                                        <div className="flex items-center gap-2">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                            <SelectValue placeholder="Pilih action" />
-                                                        </div>
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {canEdit ? (
-                                                            <SelectItem value="edit">
-                                                                Edit artikel
-                                                            </SelectItem>
-                                                        ) : null}
-                                                        <SelectItem value="preview">
-                                                            Preview artikel
-                                                        </SelectItem>
-                                                        {canDelete ? (
-                                                            <SelectItem value="delete">
-                                                                Hapus artikel
-                                                            </SelectItem>
-                                                        ) : null}
-                                                    </SelectContent>
-                                                </Select>
                                             </div>
                                         </td>
                                     </tr>
@@ -637,7 +686,7 @@ export default function ArticleIndex({
                                 {articles.data.length === 0 ? (
                                     <tr>
                                         <td
-                                            colSpan={6}
+                                            colSpan={7}
                                             className="px-4 py-12 text-center text-muted-foreground"
                                         >
                                             Belum ada artikel yang cocok dengan

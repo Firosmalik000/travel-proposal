@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     Select,
     SelectContent,
@@ -152,10 +152,6 @@ export default function FinancialReportIndex({ filters, rows }: Props) {
         <AppSidebarLayout
             breadcrumbs={[
                 {
-                    label: 'Financial Management',
-                    href: '/admin/financial-management',
-                },
-                {
                     label: 'Financial Report',
                     href: '/admin/financial-management/financial-report',
                 },
@@ -163,29 +159,36 @@ export default function FinancialReportIndex({ filters, rows }: Props) {
         >
             <Head title="Financial Report" />
 
-            <div className="space-y-6 p-4 md:p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            <div className="space-y-4 p-4 md:p-5">
+                <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                             Financial Report
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Ringkasan revenue booking berdasarkan currency.
-                        </p>
+                        {can('export') && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={downloadPdf}
+                                className="w-full sm:w-auto"
+                            >
+                                <Download className="mr-2 size-4" />
+                                Download PDF
+                            </Button>
+                        )}
                     </div>
+                </div>
 
-                    <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
-                        <div className="grid w-full gap-2 sm:grid-cols-2">
+                <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+                    <div className="grid gap-4 lg:grid-cols-12">
+                        <div className="lg:col-span-3">
                             <Select
                                 value={bookingType}
-                                onValueChange={(value) => {
-                                    const nextValue =
-                                        value as BookingTypeFilter;
-                                    setBookingType(nextValue);
-                                    applyFilters(nextValue, status);
-                                }}
+                                onValueChange={(value) =>
+                                    setBookingType(value as BookingTypeFilter)
+                                }
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Tipe booking" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -198,16 +201,15 @@ export default function FinancialReportIndex({ filters, rows }: Props) {
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
-
+                        </div>
+                        <div className="lg:col-span-3">
                             <Select
                                 value={status}
-                                onValueChange={(value) => {
-                                    const nextValue = value as StatusFilter;
-                                    setStatus(nextValue);
-                                    applyFilters(bookingType, nextValue);
-                                }}
+                                onValueChange={(value) =>
+                                    setStatus(value as StatusFilter)
+                                }
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -224,47 +226,54 @@ export default function FinancialReportIndex({ filters, rows }: Props) {
                                 </SelectContent>
                             </Select>
                         </div>
-
-                        {can('export') && (
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={downloadPdf}
-                                className="w-full sm:w-auto"
-                            >
-                                <Download className="mr-2 size-4" />
-                                Download PDF
-                            </Button>
-                        )}
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setBookingType('all');
+                                setStatus('all');
+                                applyFilters('all', 'all');
+                            }}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => applyFilters(bookingType, status)}
+                        >
+                            Terapkan
+                        </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">
+                <div className="grid gap-3 md:grid-cols-3">
+                    <Card className="border-border/60 shadow-sm">
+                        <CardContent className="p-3.5">
+                            <p className="text-xs text-muted-foreground md:text-sm">
                                 Total Bookings
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-2xl font-semibold">
-                            {summary.bookings}
+                            </p>
+                            <p className="mt-1 text-xl font-semibold md:text-2xl">
+                                {summary.bookings}
+                            </p>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Total Pax</CardTitle>
-                        </CardHeader>
-                        <CardContent className="text-2xl font-semibold">
-                            {summary.pax}
+                    <Card className="border-border/60 shadow-sm">
+                        <CardContent className="p-3.5">
+                            <p className="text-xs text-muted-foreground md:text-sm">
+                                Total Pax
+                            </p>
+                            <p className="mt-1 text-xl font-semibold md:text-2xl">
+                                {summary.pax}
+                            </p>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">
+                    <Card className="border-border/60 shadow-sm">
+                        <CardContent className="space-y-1 p-3.5">
+                            <p className="text-xs text-muted-foreground md:text-sm">
                                 Total Revenue
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-1">
+                            </p>
                             {currencySummaries.length === 0 ? (
                                 <div className="text-sm text-muted-foreground">
                                     -
@@ -291,74 +300,74 @@ export default function FinancialReportIndex({ filters, rows }: Props) {
                     </Card>
                 </div>
 
-                <Card>
-                    <CardHeader>
-                        <CardTitle>By Currency</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {rows.length === 0 ? (
-                            <div className="rounded-xl border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
-                                Belum ada data.
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Tipe</TableHead>
-                                            <TableHead>Currency</TableHead>
-                                            <TableHead className="text-right">
-                                                Bookings
-                                            </TableHead>
-                                            <TableHead className="text-right">
-                                                Pax
-                                            </TableHead>
-                                            <TableHead className="text-right">
-                                                Revenue
-                                            </TableHead>
+                <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+                    <div className="overflow-x-auto">
+                        <Table className="min-w-[860px]">
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tipe</TableHead>
+                                    <TableHead>Currency</TableHead>
+                                    <TableHead className="text-right">
+                                        Bookings
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        Pax
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        Revenue
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {rows.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={5}
+                                            className="py-12 text-center text-muted-foreground"
+                                        >
+                                            Belum ada data.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    rows.map((row) => (
+                                        <TableRow
+                                            key={`${row.booking_type}-${row.currency}`}
+                                        >
+                                            <TableCell>
+                                                <Badge
+                                                    variant={
+                                                        row.booking_type ===
+                                                        'custom'
+                                                            ? 'secondary'
+                                                            : 'default'
+                                                    }
+                                                    className="capitalize"
+                                                >
+                                                    {row.booking_type}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {row.currency}
+                                            </TableCell>
+                                            <TableCell className="text-right tabular-nums">
+                                                {row.bookings}
+                                            </TableCell>
+                                            <TableCell className="text-right tabular-nums">
+                                                {row.pax}
+                                            </TableCell>
+                                            <TableCell className="text-right whitespace-nowrap tabular-nums">
+                                                {formatCurrency(
+                                                    row.amount,
+                                                    row.currency,
+                                                )}
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {rows.map((row) => (
-                                            <TableRow
-                                                key={`${row.booking_type}-${row.currency}`}
-                                            >
-                                                <TableCell>
-                                                    <Badge
-                                                        variant={
-                                                            row.booking_type ===
-                                                            'custom'
-                                                                ? 'secondary'
-                                                                : 'default'
-                                                        }
-                                                        className="capitalize"
-                                                    >
-                                                        {row.booking_type}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {row.currency}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {row.bookings}
-                                                </TableCell>
-                                                <TableCell className="text-right tabular-nums">
-                                                    {row.pax}
-                                                </TableCell>
-                                                <TableCell className="text-right whitespace-nowrap tabular-nums">
-                                                    {formatCurrency(
-                                                        row.amount,
-                                                        row.currency,
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
             </div>
         </AppSidebarLayout>
     );
