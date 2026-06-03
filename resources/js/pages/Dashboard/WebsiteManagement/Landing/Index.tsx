@@ -148,8 +148,8 @@ const iconOptions = [
     { value: '', label: 'Tanpa ikon', preview: '○' },
     { value: 'hotel', label: 'Hotel', preview: '🏨' },
     { value: 'plane', label: 'Pesawat', preview: '✈️' },
-    { value: 'images', label: 'Dokumentasi', preview: '📸' },
-    { value: 'shield-check', label: 'Legal & Amanah', preview: '📋' },
+    { value: 'images', label: 'Dokumentasi', preview: '🖼️' },
+    { value: 'shield-check', label: 'Legal & Amanah', preview: '🛡️' },
     { value: 'users', label: 'Jamaah / Tim', preview: '👥' },
     { value: 'heart-handshake', label: 'Pendampingan', preview: '🤝' },
     { value: 'check-circle-2', label: 'Checklist', preview: '✅' },
@@ -160,7 +160,7 @@ const iconOptions = [
     { value: 'briefcase', label: 'Layanan', preview: '💼' },
     { value: 'building-2', label: 'Fasilitas', preview: '🏢' },
     { value: 'circle-dollar-sign', label: 'Biaya', preview: '💰' },
-    { value: 'clipboard-list', label: 'List Dokumen', preview: '📋' },
+    { value: 'clipboard-list', label: 'List Dokumen', preview: '📝' },
     { value: 'file-check-2', label: 'Verifikasi', preview: '🧾' },
     { value: 'globe', label: 'Perjalanan', preview: '🌍' },
     { value: 'headset', label: 'Support', preview: '🎧' },
@@ -313,6 +313,44 @@ function GroupCard({
             <div className="mt-3 space-y-4">{children}</div>
         </div>
     );
+}
+
+function buildDefaultLandingServiceItems(): Array<{
+    image_path: string;
+    title: string;
+    icon: string;
+    description: string;
+}> {
+    return [
+        {
+            image_path: '/images/dummy.jpg',
+            title: 'Mutawif Berpengalaman',
+            icon: 'heart-handshake',
+            description:
+                'Didampingi pembimbing ibadah profesional yang hafal rute, doa, dan ritual di Tanah Suci.',
+        },
+        {
+            image_path: '/images/dummy.jpg',
+            title: 'Penerbangan Direct',
+            icon: 'plane',
+            description:
+                'Penerbangan langsung tanpa transit untuk kenyamanan dan efisiensi waktu jamaah.',
+        },
+        {
+            image_path: '/images/dummy.jpg',
+            title: 'Free Dokumentasi',
+            icon: 'images',
+            description:
+                'Setiap momen berharga ibadah Anda diabadikan secara profesional sebagai kenangan seumur hidup.',
+        },
+        {
+            image_path: '/images/dummy.jpg',
+            title: 'Legal & Amanah',
+            icon: 'shield-check',
+            description:
+                'Terdaftar resmi di Kemenag RI. Kepercayaan jamaah adalah prioritas utama kami.',
+        },
+    ];
 }
 
 export default function LandingIndex({
@@ -1643,6 +1681,10 @@ function LandingMockupSectionedEditor({
         );
     };
 
+    const restoreDefaultServiceItems = () => {
+        onSetData('services.items', buildDefaultLandingServiceItems());
+    };
+
     const togglePackageSelection = (packageId: number, checked: boolean) => {
         const alreadySelected = selectedPackageIds.includes(packageId);
         if (checked && alreadySelected) {
@@ -1725,7 +1767,7 @@ function LandingMockupSectionedEditor({
                 sectionId="landing-mockup-hero"
                 icon={FileText}
                 title="Hero + Statistik"
-                desc="Mengubah judul utama, deskripsi, tombol hero, dan 3 angka statistik di area paling atas landing."
+                desc="Mengubah judul utama, deskripsi, tombol hero, dan daftar statistik di area paling atas landing."
                 actions={
                     <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                         Wajib
@@ -1868,7 +1910,6 @@ function LandingMockupSectionedEditor({
                                     size="sm"
                                     className="h-7 text-destructive hover:text-destructive"
                                     onClick={() => removeStatItem(index)}
-                                    disabled={statItems.length <= 1}
                                 >
                                     <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -2006,15 +2047,25 @@ function LandingMockupSectionedEditor({
                     <p className="text-xs text-muted-foreground">
                         Item keunggulan bisa ditambah sesuai kebutuhan landing.
                     </p>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={addServiceItem}
-                    >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah Item
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={restoreDefaultServiceItems}
+                        >
+                            Gunakan Default
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addServiceItem}
+                        >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah Item
+                        </Button>
+                    </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                     {serviceItems.map((_: unknown, index: number) => (
@@ -2032,7 +2083,6 @@ function LandingMockupSectionedEditor({
                                     size="sm"
                                     className="h-7 text-destructive hover:text-destructive"
                                     onClick={() => removeServiceItem(index)}
-                                    disabled={serviceItems.length <= 1}
                                 >
                                     <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
@@ -2682,11 +2732,9 @@ function normalizeLandingContentForEditor(
     }
 
     const next = structuredClone(content ?? {});
-    const items = Array.isArray(next?.services?.items)
-        ? next.services.items
-        : [];
-    const minimumItems = 4;
-    const totalItems = Math.max(minimumItems, items.length);
+    const hasConfiguredServiceItems = Array.isArray(next?.services?.items);
+    const items = hasConfiguredServiceItems ? next.services.items : [];
+    const totalItems = hasConfiguredServiceItems ? items.length : 4;
 
     if (!next.services) {
         next.services = {};
@@ -2728,27 +2776,7 @@ function normalizeLandingContentForEditor(
             headingBottom || secondLine || 'Bersama Kami';
     }
 
-    const defaultServiceItems = [
-        {
-            title: 'Legalitas Terjamin',
-            description:
-                'Travel berizin resmi dengan informasi keberangkatan yang jelas.',
-        },
-        {
-            title: 'Pembimbing Profesional',
-            description:
-                'Ustadz berpengalaman mendampingi jamaah sejak manasik hingga pulang.',
-        },
-        {
-            title: 'Akomodasi Terbaik',
-            description: 'Pilihan hotel nyaman yang menyesuaikan kelas paket.',
-        },
-        {
-            title: 'Layanan Menyeluruh',
-            description:
-                'Visa, tiket, manasik, perlengkapan, dan dokumen ditangani satu tim.',
-        },
-    ];
+    const defaultServiceItems = buildDefaultLandingServiceItems();
 
     next.services.items = Array.from({ length: totalItems }, (_, index) => {
         const currentItem = items[index] ?? {};
@@ -2760,7 +2788,7 @@ function normalizeLandingContentForEditor(
             icon: String(
                 currentItem.icon ??
                     (index === 0
-                        ? 'hotel'
+                        ? 'heart-handshake'
                         : index === 1
                           ? 'plane'
                           : index === 2

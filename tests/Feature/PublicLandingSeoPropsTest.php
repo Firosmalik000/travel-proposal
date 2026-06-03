@@ -32,6 +32,9 @@ class PublicLandingSeoPropsTest extends TestCase
                         'en' => 'Site',
                     ],
                 ],
+                'contact' => [
+                    'whatsapp' => '6281234567890',
+                ],
             ],
             'is_active' => true,
         ]);
@@ -40,6 +43,7 @@ class PublicLandingSeoPropsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('seoSettings')
+                ->where('seoSettings.contact.whatsapp', '6281234567890')
             );
     }
 }

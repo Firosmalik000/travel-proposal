@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Administrator;
 
+use App\Models\DepartureSchedule;
 use App\Models\Faq;
 use App\Models\PageContent;
+use App\Models\TravelPackage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -39,6 +42,66 @@ class ContentManagementTest extends TestCase
                 ->has('pages', 1)
                 ->where('pages.0.slug', 'home_landing_mockup')
             );
+    }
+
+    public function test_landing_management_hydrates_default_selected_packages_when_not_saved_yet(): void
+    {
+        $user = User::factory()->create();
+
+        $firstPackage = TravelPackage::factory()->create([
+            'name' => 'Paket A',
+            'price' => 31000000,
+            'is_featured' => true,
+            'is_active' => true,
+        ]);
+        $secondPackage = TravelPackage::factory()->create([
+            'name' => 'Paket B',
+            'price' => 32000000,
+            'is_featured' => false,
+            'is_active' => true,
+        ]);
+        $thirdPackage = TravelPackage::factory()->create([
+            'name' => 'Paket C',
+            'price' => 33000000,
+            'is_featured' => false,
+            'is_active' => true,
+        ]);
+
+        foreach ([$firstPackage, $secondPackage, $thirdPackage] as $package) {
+            DepartureSchedule::query()->create([
+                'package_id' => $package->id,
+                'departure_date' => Carbon::today()->addDays(30),
+                'return_date' => Carbon::today()->addDays(39),
+                'departure_city' => 'Jakarta',
+                'seats_total' => 40,
+                'seats_available' => 40,
+                'status' => 'open',
+                'notes' => null,
+                'is_active' => true,
+            ]);
+        }
+
+        PageContent::query()->create([
+            'slug' => 'home_landing_mockup',
+            'category' => 'page',
+            'title' => 'Beranda',
+            'excerpt' => 'Excerpt',
+            'content' => [
+                'packages' => [
+                    'title' => 'Pilihan Paket',
+                ],
+            ],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('landing.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/WebsiteManagement/Landing/Index')
+                ->where('pages.0.content.packages.selected_package_ids.0', $firstPackage->id)
+                ->where('pages.0.content.packages.selected_package_ids.1', $secondPackage->id)
+                ->where('pages.0.content.packages.selected_package_ids.2', $thirdPackage->id));
     }
 
     public function test_authenticated_users_can_view_portal_content_management(): void

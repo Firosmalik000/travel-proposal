@@ -536,15 +536,6 @@ export default function Paket() {
                     </div>
                 </section>
             </main>
-
-            {whatsappLink ? (
-                <a
-                    href={whatsappLink}
-                    className="fixed right-6 bottom-6 z-50 inline-flex items-center rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg md:hidden"
-                >
-                    {t.floatingWhatsapp}
-                </a>
-            ) : null}
         </PublicLayout>
     );
 }

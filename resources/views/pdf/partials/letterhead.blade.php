@@ -1,6 +1,8 @@
 @php
     $companyName = (string) ($branding['company_name'] ?? config('app.name'));
     $companySubtitle = (string) ($branding['company_subtitle'] ?? '');
+    $logoInlineSvg = $branding['logo_inline_svg'] ?? null;
+    $logoSourceUrl = $branding['logo_source_url'] ?? null;
     $logo = $branding['logo_data_uri'] ?? null;
     $phone = (string) data_get($seo, 'contact.phone', '');
     $whatsapp = (string) data_get($seo, 'contact.whatsapp', '');
@@ -17,8 +19,12 @@
 <table width="100%" style="border-collapse: collapse;">
     <tr>
         <td style="width: 76px; vertical-align: top;">
-            @if ($logo)
-                <img src="{{ $logo }}" style="width: 64px; height: 64px; object-fit: contain;" alt="Logo" />
+            @if ($logoInlineSvg)
+                <div style="width: 64px; height: 64px;">{!! $logoInlineSvg !!}</div>
+            @elseif ($logo)
+                <img src="{{ $logo }}" style="width: 64px; height: 64px;" alt="Logo" />
+            @elseif ($logoSourceUrl)
+                <img src="{{ $logoSourceUrl }}" style="width: 64px; height: 64px;" alt="Logo" />
             @else
                 <div style="width: 64px; height: 64px; border-radius: 14px; background: #111827;"></div>
             @endif
@@ -43,18 +49,15 @@
                 </div>
             @endif
         </td>
-        <td style="width: 190px; text-align: right; vertical-align: top;">
-            <div style="display: inline-block; padding: 10px 12px; border-radius: 14px; border: 1px solid #e2e8f0; background: #f8fafc;">
-                <div style="font-size: 9px; letter-spacing: 1.4px; color: #64748b; text-transform: uppercase;">
-                    {{ $locale === 'id' ? 'Tanggal' : 'Date' }}
-                </div>
-                <div style="margin-top: 2px; font-size: 11px; font-weight: 700; color: #0f172a;">
-                    {{ $generatedAt->format('d M Y') }}
-                </div>
+        <td style="width: 135px; text-align: right; vertical-align: top;">
+            <div style="font-size: 8px; letter-spacing: 1.2px; color: #64748b; text-transform: uppercase; line-height: 1.2;">
+                {{ $locale === 'id' ? 'Tanggal' : 'Date' }}
+            </div>
+            <div style="margin-top: 3px; font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.25;">
+                {{ $generatedAt->format('d M Y') }}
             </div>
         </td>
     </tr>
 </table>
 
 <div style="margin-top: 10px; height: 3px; border-radius: 999px; background: linear-gradient(90deg, #5d0812 0%, #8e101b 35%, #bd3122 65%, #e69c32 100%);"></div>
-

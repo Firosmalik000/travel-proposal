@@ -352,14 +352,61 @@ class ContentController extends Controller
             ->where('slug', $slug)
             ->orderBy('slug')
             ->get()
-            ->map(fn (PageContent $page): array => [
-                'id' => $page->id,
-                'slug' => $page->slug,
-                'title' => $page->title,
-                'excerpt' => $page->excerpt,
-                'content' => $this->stripLocaleData($page->content ?? []),
-                'is_active' => $page->is_active,
-            ])
+            ->map(function (PageContent $page) use ($slug): array {
+                $content = $this->stripLocaleData($page->content ?? []);
+
+                if ($slug === 'home_landing_mockup') {
+                    $content = $this->hydrateLandingPackageSelection($content);
+                }
+
+                return [
+                    'id' => $page->id,
+                    'slug' => $page->slug,
+                    'title' => $page->title,
+                    'excerpt' => $page->excerpt,
+                    'content' => $content,
+                    'is_active' => $page->is_active,
+                ];
+            })
+            ->all();
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, mixed>
+     */
+    private function hydrateLandingPackageSelection(array $content): array
+    {
+        $packages = is_array($content['packages'] ?? null)
+            ? $content['packages']
+            : [];
+
+        if (array_key_exists('selected_package_ids', $packages)) {
+            return $content;
+        }
+
+        $packages['selected_package_ids'] = $this->defaultLandingSelectedPackageIds();
+        $content['packages'] = $packages;
+
+        return $content;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function defaultLandingSelectedPackageIds(): array
+    {
+        return TravelPackage::query()
+            ->where('is_active', true)
+            ->whereHas('schedules', fn ($query) => $query
+                ->where('is_active', true)
+                ->whereDate('departure_date', '>=', now()->toDateString()))
+            ->orderByDesc('is_featured')
+            ->orderBy('price')
+            ->limit(3)
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
             ->all();
     }
 

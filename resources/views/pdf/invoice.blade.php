@@ -4,13 +4,72 @@
 
 @push('styles')
     <style>
+        .document-header {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+        .document-header td {
+            border: 0;
+            vertical-align: top;
+            padding: 0;
+        }
+        .document-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .document-subtitle {
+            margin-top: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #334155;
+            line-height: 1.35;
+        }
+        .document-meta {
+            display: inline-block;
+            min-width: 170px;
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        .document-meta-value {
+            font-size: 9px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1.3;
+            white-space: nowrap;
+        }
+        .meta {
+            table-layout: fixed;
+        }
         .meta td {
             border: 0;
-            padding: 3px 0;
+            padding: 2px 0;
+            vertical-align: top;
         }
-        .meta td:first-child {
-            width: 26%;
+        .meta .label {
+            width: 22%;
+            font-size: 9px;
             color: #555;
+        }
+        .meta .colon {
+            width: 3%;
+            text-align: center;
+            font-size: 9px;
+            color: #555;
+        }
+        .meta .value {
+            width: 75%;
+            font-size: 9px;
+            font-weight: 600;
+            color: #111827;
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.35;
+            padding-left: 4px;
         }
         .totals td {
             border: 0;
@@ -28,56 +87,6 @@
 @endpush
 
 @section('content')
-    <h1>Invoice</h1>
-    <p class="muted">Dicetak: {{ now()->format('Y-m-d H:i') }}</p>
-
-    <div class="box">
-        <table class="meta">
-            @foreach ($metaRows as [$label, $value])
-                <tr>
-                    <td>{{ $label }}</td>
-                    <td><strong>{{ $value }}</strong></td>
-                </tr>
-            @endforeach
-        </table>
-    </div>
-
-    <div class="box">
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 6%">No</th>
-                    <th>Item</th>
-                    <th style="width: 10%; text-align: right">Qty</th>
-                    <th style="width: 18%; text-align: right">Harga Satuan</th>
-                    <th style="width: 18%; text-align: right">Jumlah</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($lineItems as $index => $item)
-                    <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $item['label'] }}</td>
-                        <td style="text-align: right">{{ $item['qty'] }}</td>
-                        <td style="text-align: right">
-                            {{ $currency }} {{ number_format((float) $item['unit_price'], 0, ',', '.') }}
-                        </td>
-                        <td style="text-align: right">
-                            {{ $currency }} {{ number_format((float) $item['amount'], 0, ',', '.') }}
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-
-        <table class="totals" style="margin-top: 10px">
-            <tr>
-                <td style="width: 82%">Total</td>
-                <td style="width: 18%">
-                    {{ $currency }} {{ number_format((float) $totalAmount, 0, ',', '.') }}
-                </td>
-            </tr>
-        </table>
-    </div>
+    @include('pdf.invoice.header')
+    @include('pdf.invoice.body')
 @endsection
-

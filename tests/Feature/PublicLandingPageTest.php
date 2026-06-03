@@ -2,20 +2,190 @@
 
 namespace Tests\Feature;
 
-use App\Http\Middleware\HandleInertiaRequests;
+use App\Models\DepartureSchedule;
+use App\Models\PageContent;
+use App\Models\TravelPackage;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class PublicLandingPageTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_landing_page_renders_public_landing_component(): void
     {
-        $this->withoutMiddleware(HandleInertiaRequests::class);
+        $this->get(route('public.landing'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/index'));
+    }
+
+    public function test_landing_page_exposes_package_discount_data(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'slug' => 'umroh-promo-landing',
+            'price' => 31900000,
+            'original_price' => 35900000,
+            'discount_label' => 'Promo Spesial',
+        ]);
+
+        DepartureSchedule::query()->create([
+            'package_id' => $package->id,
+            'departure_date' => Carbon::today()->addDays(30),
+            'return_date' => Carbon::today()->addDays(39),
+            'departure_city' => 'Jakarta',
+            'seats_total' => 40,
+            'seats_available' => 40,
+            'status' => 'open',
+            'notes' => null,
+            'is_active' => true,
+        ]);
 
         $this->get(route('public.landing'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('public/landing/index')
-                ->has('html'));
+                ->has('publicData.packages', 1)
+                ->where('publicData.packages.0.slug', 'umroh-promo-landing')
+                ->where('publicData.packages.0.original_price', '35900000.00')
+                ->where('publicData.packages.0.discount_label', 'Promo Spesial')
+                ->where('publicData.packages.0.discount_percent', 11));
+    }
+
+    public function test_landing_page_keeps_all_four_hero_stats_from_content(): void
+    {
+        PageContent::query()->updateOrCreate(
+            ['slug' => 'home_landing_mockup'],
+            [
+                'category' => 'page',
+                'title' => 'Landing',
+                'excerpt' => 'Landing',
+                'content' => [
+                    'stats' => [
+                        ['label' => 'Stat 1', 'value' => '100+'],
+                        ['label' => 'Stat 2', 'value' => '200+'],
+                        ['label' => 'Stat 3', 'value' => '300+'],
+                        ['label' => 'Stat 4', 'value' => '400+'],
+                    ],
+                ],
+                'is_active' => true,
+            ],
+        );
+
+        $this->get(route('public.landing'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/index')
+                ->has('publicData.pages.home_landing_mockup.content.stats', 4)
+                ->where('publicData.pages.home_landing_mockup.content.stats.3.label', 'Stat 4'));
+    }
+
+    public function test_landing_page_does_not_restore_deleted_default_stats(): void
+    {
+        PageContent::query()->updateOrCreate(
+            ['slug' => 'home_landing_mockup'],
+            [
+                'category' => 'page',
+                'title' => 'Landing',
+                'excerpt' => 'Landing',
+                'content' => [
+                    'stats' => [
+                        ['label' => 'Stat 1', 'value' => '100+'],
+                        ['label' => 'Stat 2', 'value' => '200+'],
+                        ['label' => 'Stat 3', 'value' => '300+'],
+                    ],
+                ],
+                'is_active' => true,
+            ],
+        );
+
+        $this->get(route('public.landing'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/index')
+                ->has('publicData.pages.home_landing_mockup.content.stats', 3)
+                ->where('publicData.pages.home_landing_mockup.content.stats.2.label', 'Stat 3'));
+    }
+
+    public function test_landing_page_allows_empty_hero_stats(): void
+    {
+        PageContent::query()->updateOrCreate(
+            ['slug' => 'home_landing_mockup'],
+            [
+                'category' => 'page',
+                'title' => 'Landing',
+                'excerpt' => 'Landing',
+                'content' => [
+                    'stats' => [],
+                ],
+                'is_active' => true,
+            ],
+        );
+
+        $this->get(route('public.landing'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/index')
+                ->has('publicData.pages.home_landing_mockup.content.stats', 0));
+    }
+
+    public function test_landing_page_keeps_all_configured_keunggulan_items(): void
+    {
+        PageContent::query()->updateOrCreate(
+            ['slug' => 'home_landing_mockup'],
+            [
+                'category' => 'page',
+                'title' => 'Landing',
+                'excerpt' => 'Landing',
+                'content' => [
+                    'services' => [
+                        'items' => [
+                            ['title' => 'Item 1', 'description' => 'Desc 1', 'icon' => 'heart-handshake'],
+                            ['title' => 'Item 2', 'description' => 'Desc 2', 'icon' => 'plane'],
+                            ['title' => 'Item 3', 'description' => 'Desc 3', 'icon' => 'images'],
+                            ['title' => 'Item 4', 'description' => 'Desc 4', 'icon' => 'shield-check'],
+                            ['title' => 'Item 5', 'description' => 'Desc 5', 'icon' => 'star'],
+                        ],
+                    ],
+                ],
+                'is_active' => true,
+            ],
+        );
+
+        $this->get(route('public.landing'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/index')
+                ->has('publicData.pages.home_landing_mockup.content.services.items', 5)
+                ->where(
+                    'publicData.pages.home_landing_mockup.content.services.items.4.title',
+                    'Item 5',
+                ));
+    }
+
+    public function test_landing_page_allows_empty_keunggulan_items(): void
+    {
+        PageContent::query()->updateOrCreate(
+            ['slug' => 'home_landing_mockup'],
+            [
+                'category' => 'page',
+                'title' => 'Landing',
+                'excerpt' => 'Landing',
+                'content' => [
+                    'services' => [
+                        'items' => [],
+                    ],
+                ],
+                'is_active' => true,
+            ],
+        );
+
+        $this->get(route('public.landing'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/index')
+                ->has('publicData.pages.home_landing_mockup.content.services.items', 0));
     }
 }

@@ -1,9 +1,12 @@
+import GlobalFaviconHead from '@/components/global-favicon-head';
+import PublicSeoHead from '@/components/public/seo-head';
 import {
     formatPrice,
     usePublicData,
     usePublicPageContent,
     whatsappLinkFromSeo,
 } from '@/lib/public/content';
+import type { SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import {
@@ -18,6 +21,7 @@ import {
     FileCheck2,
     Globe,
     HandHeart,
+    Handshake,
     Headset,
     Hotel,
     IdCard,
@@ -126,41 +130,220 @@ function resolveServiceIcon(raw: unknown, index: number): string {
     return fallbackByIndex[index] ?? '•';
 }
 
+function serviceIconTone(raw: unknown, index: number): {
+    iconClassName: string;
+    badgeClassName: string;
+} {
+    const normalized = text(raw).toLowerCase();
+    const toneMap: Record<
+        string,
+        { iconClassName: string; badgeClassName: string }
+    > = {
+        hotel: {
+            iconClassName: 'text-amber-300',
+            badgeClassName: 'bg-amber-500/18 ring-1 ring-amber-400/24',
+        },
+        plane: {
+            iconClassName: 'text-sky-300',
+            badgeClassName: 'bg-sky-500/16 ring-1 ring-sky-400/24',
+        },
+        flight: {
+            iconClassName: 'text-sky-300',
+            badgeClassName: 'bg-sky-500/16 ring-1 ring-sky-400/24',
+        },
+        camera: {
+            iconClassName: 'text-rose-300',
+            badgeClassName: 'bg-rose-500/16 ring-1 ring-rose-400/24',
+        },
+        image: {
+            iconClassName: 'text-rose-300',
+            badgeClassName: 'bg-rose-500/16 ring-1 ring-rose-400/24',
+        },
+        images: {
+            iconClassName: 'text-rose-300',
+            badgeClassName: 'bg-rose-500/16 ring-1 ring-rose-400/24',
+        },
+        users: {
+            iconClassName: 'text-fuchsia-300',
+            badgeClassName: 'bg-fuchsia-500/16 ring-1 ring-fuchsia-400/24',
+        },
+        handshake: {
+            iconClassName: 'text-orange-300',
+            badgeClassName: 'bg-orange-500/16 ring-1 ring-orange-400/24',
+        },
+        'heart-handshake': {
+            iconClassName: 'text-orange-300',
+            badgeClassName: 'bg-orange-500/16 ring-1 ring-orange-400/24',
+        },
+        legal: {
+            iconClassName: 'text-emerald-300',
+            badgeClassName: 'bg-emerald-500/16 ring-1 ring-emerald-400/24',
+        },
+        shield: {
+            iconClassName: 'text-emerald-300',
+            badgeClassName: 'bg-emerald-500/16 ring-1 ring-emerald-400/24',
+        },
+        'shield-check': {
+            iconClassName: 'text-emerald-300',
+            badgeClassName: 'bg-emerald-500/16 ring-1 ring-emerald-400/24',
+        },
+        'credit-card': {
+            iconClassName: 'text-cyan-300',
+            badgeClassName: 'bg-cyan-500/16 ring-1 ring-cyan-400/24',
+        },
+        'check-circle-2': {
+            iconClassName: 'text-lime-300',
+            badgeClassName: 'bg-lime-500/16 ring-1 ring-lime-400/24',
+        },
+        landmark: {
+            iconClassName: 'text-violet-300',
+            badgeClassName: 'bg-violet-500/16 ring-1 ring-violet-400/24',
+        },
+        'calendar-days': {
+            iconClassName: 'text-blue-300',
+            badgeClassName: 'bg-blue-500/16 ring-1 ring-blue-400/24',
+        },
+        'map-pin': {
+            iconClassName: 'text-red-300',
+            badgeClassName: 'bg-red-500/16 ring-1 ring-red-400/24',
+        },
+        briefcase: {
+            iconClassName: 'text-stone-300',
+            badgeClassName: 'bg-stone-500/16 ring-1 ring-stone-400/24',
+        },
+        'building-2': {
+            iconClassName: 'text-yellow-200',
+            badgeClassName: 'bg-yellow-500/16 ring-1 ring-yellow-400/24',
+        },
+        'circle-dollar-sign': {
+            iconClassName: 'text-green-300',
+            badgeClassName: 'bg-green-500/16 ring-1 ring-green-400/24',
+        },
+        'clipboard-list': {
+            iconClassName: 'text-pink-300',
+            badgeClassName: 'bg-pink-500/16 ring-1 ring-pink-400/24',
+        },
+        'file-check-2': {
+            iconClassName: 'text-teal-300',
+            badgeClassName: 'bg-teal-500/16 ring-1 ring-teal-400/24',
+        },
+        globe: {
+            iconClassName: 'text-indigo-300',
+            badgeClassName: 'bg-indigo-500/16 ring-1 ring-indigo-400/24',
+        },
+        headset: {
+            iconClassName: 'text-cyan-300',
+            badgeClassName: 'bg-cyan-500/16 ring-1 ring-cyan-400/24',
+        },
+        'id-card': {
+            iconClassName: 'text-slate-300',
+            badgeClassName: 'bg-slate-500/16 ring-1 ring-slate-400/24',
+        },
+        luggage: {
+            iconClassName: 'text-amber-200',
+            badgeClassName: 'bg-amber-500/16 ring-1 ring-amber-400/24',
+        },
+        'message-circle': {
+            iconClassName: 'text-green-300',
+            badgeClassName: 'bg-green-500/16 ring-1 ring-green-400/24',
+        },
+        'notebook-pen': {
+            iconClassName: 'text-orange-200',
+            badgeClassName: 'bg-orange-500/16 ring-1 ring-orange-400/24',
+        },
+        star: {
+            iconClassName: 'text-yellow-300',
+            badgeClassName: 'bg-yellow-500/16 ring-1 ring-yellow-400/24',
+        },
+        ticket: {
+            iconClassName: 'text-rose-300',
+            badgeClassName: 'bg-rose-500/16 ring-1 ring-rose-400/24',
+        },
+    };
+
+    if (toneMap[normalized]) {
+        return toneMap[normalized];
+    }
+
+    const fallbackByIndex = [
+        {
+            iconClassName: 'text-amber-300',
+            badgeClassName: 'bg-amber-500/18 ring-1 ring-amber-400/24',
+        },
+        {
+            iconClassName: 'text-sky-300',
+            badgeClassName: 'bg-sky-500/16 ring-1 ring-sky-400/24',
+        },
+        {
+            iconClassName: 'text-rose-300',
+            badgeClassName: 'bg-rose-500/16 ring-1 ring-rose-400/24',
+        },
+        {
+            iconClassName: 'text-emerald-300',
+            badgeClassName: 'bg-emerald-500/16 ring-1 ring-emerald-400/24',
+        },
+    ];
+
+    return (
+        fallbackByIndex[index] ?? {
+            iconClassName: 'text-amber-300',
+            badgeClassName: 'bg-amber-500/18 ring-1 ring-amber-400/24',
+        }
+    );
+}
+
 function renderServiceIcon(raw: unknown, index: number): ReactElement {
     const normalized = text(raw).toLowerCase();
+    const { iconClassName } = serviceIconTone(raw, index);
     const iconMap: Record<string, ReactElement> = {
-        hotel: <Hotel className="h-5 w-5 text-white" />,
-        plane: <Plane className="h-5 w-5 text-white" />,
-        flight: <Plane className="h-5 w-5 text-white" />,
-        camera: <Camera className="h-5 w-5 text-white" />,
-        image: <Camera className="h-5 w-5 text-white" />,
-        images: <Images className="h-5 w-5 text-white" />,
-        users: <Users className="h-5 w-5 text-white" />,
-        handshake: <HandHeart className="h-5 w-5 text-white" />,
-        'heart-handshake': <HandHeart className="h-5 w-5 text-white" />,
-        legal: <ShieldCheck className="h-5 w-5 text-white" />,
-        shield: <ShieldCheck className="h-5 w-5 text-white" />,
-        'shield-check': <ShieldCheck className="h-5 w-5 text-white" />,
-        'credit-card': <CreditCard className="h-5 w-5 text-white" />,
-        'check-circle-2': <CheckCircle2 className="h-5 w-5 text-white" />,
-        landmark: <Landmark className="h-5 w-5 text-white" />,
-        'calendar-days': <CalendarDays className="h-5 w-5 text-white" />,
-        'map-pin': <MapPin className="h-5 w-5 text-white" />,
-        briefcase: <Briefcase className="h-5 w-5 text-white" />,
-        'building-2': <Building2 className="h-5 w-5 text-white" />,
-        'circle-dollar-sign': (
-            <CircleDollarSign className="h-5 w-5 text-white" />
+        hotel: <Hotel className={`h-5 w-5 ${iconClassName}`} />,
+        plane: <Plane className={`h-5 w-5 ${iconClassName}`} />,
+        flight: <Plane className={`h-5 w-5 ${iconClassName}`} />,
+        camera: <Camera className={`h-5 w-5 ${iconClassName}`} />,
+        image: <Camera className={`h-5 w-5 ${iconClassName}`} />,
+        images: <Images className={`h-5 w-5 ${iconClassName}`} />,
+        users: <Users className={`h-5 w-5 ${iconClassName}`} />,
+        handshake: <Handshake className={`h-5 w-5 ${iconClassName}`} />,
+        'heart-handshake': (
+            <Handshake className={`h-5 w-5 ${iconClassName}`} />
         ),
-        'clipboard-list': <ClipboardList className="h-5 w-5 text-white" />,
-        'file-check-2': <FileCheck2 className="h-5 w-5 text-white" />,
-        globe: <Globe className="h-5 w-5 text-white" />,
-        headset: <Headset className="h-5 w-5 text-white" />,
-        'id-card': <IdCard className="h-5 w-5 text-white" />,
-        luggage: <Luggage className="h-5 w-5 text-white" />,
-        'message-circle': <MessageCircle className="h-5 w-5 text-white" />,
-        'notebook-pen': <NotebookPen className="h-5 w-5 text-white" />,
-        star: <Star className="h-5 w-5 text-white" />,
-        ticket: <Ticket className="h-5 w-5 text-white" />,
+        legal: <ShieldCheck className={`h-5 w-5 ${iconClassName}`} />,
+        shield: <ShieldCheck className={`h-5 w-5 ${iconClassName}`} />,
+        'shield-check': (
+            <ShieldCheck className={`h-5 w-5 ${iconClassName}`} />
+        ),
+        'credit-card': <CreditCard className={`h-5 w-5 ${iconClassName}`} />,
+        'check-circle-2': (
+            <CheckCircle2 className={`h-5 w-5 ${iconClassName}`} />
+        ),
+        landmark: <Landmark className={`h-5 w-5 ${iconClassName}`} />,
+        'calendar-days': (
+            <CalendarDays className={`h-5 w-5 ${iconClassName}`} />
+        ),
+        'map-pin': <MapPin className={`h-5 w-5 ${iconClassName}`} />,
+        briefcase: <Briefcase className={`h-5 w-5 ${iconClassName}`} />,
+        'building-2': <Building2 className={`h-5 w-5 ${iconClassName}`} />,
+        'circle-dollar-sign': (
+            <CircleDollarSign className={`h-5 w-5 ${iconClassName}`} />
+        ),
+        'clipboard-list': (
+            <ClipboardList className={`h-5 w-5 ${iconClassName}`} />
+        ),
+        'file-check-2': (
+            <FileCheck2 className={`h-5 w-5 ${iconClassName}`} />
+        ),
+        globe: <Globe className={`h-5 w-5 ${iconClassName}`} />,
+        headset: <Headset className={`h-5 w-5 ${iconClassName}`} />,
+        'id-card': <IdCard className={`h-5 w-5 ${iconClassName}`} />,
+        luggage: <Luggage className={`h-5 w-5 ${iconClassName}`} />,
+        'message-circle': (
+            <MessageCircle className={`h-5 w-5 ${iconClassName}`} />
+        ),
+        'notebook-pen': (
+            <NotebookPen className={`h-5 w-5 ${iconClassName}`} />
+        ),
+        star: <Star className={`h-5 w-5 ${iconClassName}`} />,
+        ticket: <Ticket className={`h-5 w-5 ${iconClassName}`} />,
     };
 
     if (iconMap[normalized]) {
@@ -168,13 +351,20 @@ function renderServiceIcon(raw: unknown, index: number): ReactElement {
     }
 
     const byIndex = [
-        <Hotel key="hotel" className="h-5 w-5 text-white" />,
-        <Plane key="plane" className="h-5 w-5 text-white" />,
-        <Camera key="camera" className="h-5 w-5 text-white" />,
-        <ClipboardList key="clipboard" className="h-5 w-5 text-white" />,
+        <Hotel key="hotel" className={`h-5 w-5 ${iconClassName}`} />,
+        <Plane key="plane" className={`h-5 w-5 ${iconClassName}`} />,
+        <Camera key="camera" className={`h-5 w-5 ${iconClassName}`} />,
+        <ClipboardList
+            key="clipboard"
+            className={`h-5 w-5 ${iconClassName}`}
+        />,
     ];
 
-    return byIndex[index] ?? <ShieldCheck className="h-5 w-5 text-white" />;
+    return (
+        byIndex[index] ?? (
+            <ShieldCheck className={`h-5 w-5 ${iconClassName}`} />
+        )
+    );
 }
 
 function packageBadgeIcon(index: number): ReactElement {
@@ -201,31 +391,82 @@ function highlightWord(value: string, word: string): ReactElement | string {
     );
 }
 
-const fadeUp = {
-    hidden: { opacity: 0, y: 44, scale: 0.98 },
-    show: { opacity: 1, y: 0, scale: 1 },
-};
-
 const stagger = {
     hidden: {},
     show: {
         transition: {
-            staggerChildren: 0.09,
+            staggerChildren: 0.12,
+            delayChildren: 0.06,
         },
     },
 };
 
 const punchIn = {
-    hidden: { opacity: 0, y: 48, scale: 0.94, filter: 'blur(6px)' },
-    show: { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' },
+    hidden: { opacity: 0, y: 108, scale: 0.82, rotate: -5 },
+    show: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        rotate: 0,
+        transition: {
+            type: 'spring' as const,
+            stiffness: 235,
+            damping: 15,
+            mass: 0.68,
+        },
+    },
+};
+
+const sectionRise = {
+    hidden: { opacity: 0, y: 148, scale: 0.86 },
+    show: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: {
+            type: 'spring' as const,
+            stiffness: 175,
+            damping: 16,
+            mass: 0.76,
+        },
+    },
+};
+
+const sectionSplit = {
+    hidden: { opacity: 0, y: 40 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: {
+            staggerChildren: 0.11,
+            delayChildren: 0.08,
+        },
+    },
+};
+
+const sectionLead = {
+    hidden: { opacity: 0, y: 88, scale: 0.88 },
+    show: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: {
+            type: 'spring' as const,
+            stiffness: 210,
+            damping: 15,
+            mass: 0.7,
+        },
+    },
 };
 
 export default function PublicLandingPage() {
-    const page = usePage<{ seoSettings?: CmsRecord }>();
+    const page = usePage<SharedData>();
     const publicData = usePublicData() as CmsRecord;
     const homePage = usePublicPageContent('home_landing_mockup');
     const content = (homePage?.content as CmsRecord) ?? {};
     const seo = page.props?.seoSettings ?? {};
+    const branding = page.props?.branding;
+    const publicBranding = page.props?.publicBranding;
 
     const hero = (content.hero as CmsRecord) ?? {};
     const servicesSection = (content.services as CmsRecord) ?? {};
@@ -259,21 +500,30 @@ export default function PublicLandingPage() {
     const [testimonialStart, setTestimonialStart] = useState(0);
 
     const whatsappHref = whatsappLinkFromSeo(seo);
-    const selectedPackageIds = Array.isArray(
+    const resolvedLogoPath =
+        publicBranding?.logo_path ?? branding?.logo_path ?? '/logo.svg';
+    const resolvedLogoWhitePath = branding?.logo_white_path ?? resolvedLogoPath;
+    const companyName = branding?.company_name ?? 'Asfar Tour';
+    const companySubtitle = branding?.company_subtitle ?? 'Hajj & Umrah';
+    const hasStoredPackageSelection = Array.isArray(
         packagesSection.selected_package_ids,
-    )
+    );
+    const selectedPackageIds = hasStoredPackageSelection
         ? (packagesSection.selected_package_ids as Array<string | number>)
               .map((value) => Number(value))
               .filter((value) => Number.isFinite(value))
         : [];
     const selectedPackageSet = new Set<number>(selectedPackageIds);
-    const selectedPackages =
-        selectedPackageSet.size > 0
-            ? packages.filter((pkg) =>
-                  selectedPackageSet.has(Number((pkg.id as number) ?? 0)),
-              )
-            : packages;
+    const selectedPackages = hasStoredPackageSelection
+        ? packages.filter((pkg) =>
+              selectedPackageSet.has(Number((pkg.id as number) ?? 0)),
+          )
+        : packages;
     const packageCards = selectedPackages.slice(0, 3);
+    const packageLayoutClass =
+        packageCards.length === 1
+            ? 'justify-center'
+            : 'justify-start';
     const testimonialCards =
         testimonials.length <= 3
             ? testimonials
@@ -322,7 +572,9 @@ export default function PublicLandingPage() {
 
     return (
         <>
-            <Head title="Landing" />
+            <GlobalFaviconHead />
+            <PublicSeoHead />
+            <Head title={`${companyName} | Landing`} />
 
             <style>{`
                 html{scroll-behavior:smooth}
@@ -330,11 +582,8 @@ export default function PublicLandingPage() {
                 .font-display{font-family:'Playfair Display',serif}
                 .hero-pattern{background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 5 L95 27.5 L95 72.5 L50 95 L5 72.5 L5 27.5 Z' fill='none' stroke='%23ffd700' stroke-width='0.8'/%3E%3Cpath d='M50 20 L80 35 L80 65 L50 80 L20 65 L20 35 Z' fill='none' stroke='%23ffd700' stroke-width='0.5'/%3E%3C/svg%3E")}
                 .hex-pattern{background-image:url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 5 L95 27.5 L95 72.5 L50 95 L5 72.5 L5 27.5 Z' fill='none' stroke='%23ffd700' stroke-width='1'/%3E%3C/svg%3E")}
-                @keyframes heroFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-                @keyframes contentFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-                @keyframes contentPulse{0%,100%{box-shadow:0 0 0 rgba(255,146,0,0)}50%{box-shadow:0 12px 30px rgba(255,146,0,.12)}}
-                .loop-float{animation:contentFloat 3.4s ease-in-out infinite,contentPulse 3.4s ease-in-out infinite;will-change:transform}
-                .loop-float-soft{animation:contentFloat 4.6s ease-in-out infinite;will-change:transform}
+                .loop-float{will-change:transform}
+                .loop-float-soft{will-change:transform}
                 .stroke-title{-webkit-text-stroke:1px rgba(255,255,255,.4);color:transparent}
                 .hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:120px;background:linear-gradient(to bottom,transparent,#0f0505);z-index:2;pointer-events:none}
                 .why-bg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(to bottom,#0f0505,#fdf6ec);z-index:2;pointer-events:none}
@@ -343,31 +592,45 @@ export default function PublicLandingPage() {
                 .faq-bg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:100px;background:linear-gradient(to bottom,#fff,#0f0505);z-index:2;pointer-events:none}
             `}</style>
 
+            <div id="landing-top" />
             <nav
                 className={`fixed inset-x-0 top-0 z-[100] flex h-[72px] items-center justify-between px-5 transition-all duration-300 sm:px-12 ${
                     isNavbarScrolled
-                        ? 'bg-white/95 shadow-[0_1px_40px_rgba(0,0,0,.08)] backdrop-blur-[20px]'
+                        ? 'bg-white/95 shadow-[0_1px_40px_rgba(0,0,0,.08)]'
                         : 'bg-transparent'
                 }`}
             >
-                <div>
-                    <div
-                        className={`font-display text-xl leading-none font-bold tracking-[1px] transition-colors duration-300 ${
-                            isNavbarScrolled ? 'text-[#8c0a16]' : 'text-white'
-                        }`}
-                    >
-                        {text(footerSection.brand, 'ASFAR TOUR')}
-                    </div>
-                    <div
-                        className={`text-[9px] font-semibold tracking-[3px] uppercase transition-colors duration-300 ${
+                <a href="#landing-top" className="flex items-center gap-3">
+                    <img
+                        src={
                             isNavbarScrolled
-                                ? 'text-[#ff9200]'
-                                : 'text-[#ffc578]'
-                        }`}
-                    >
-                        {text(footerSection.subtitle, 'Hajj & Umrah')}
+                                ? resolvedLogoPath
+                                : resolvedLogoWhitePath
+                        }
+                        alt={companyName}
+                        className="h-10 w-10 object-contain sm:h-12 sm:w-12"
+                    />
+                    <div>
+                        <div
+                            className={`font-display text-xl leading-none font-bold tracking-[1px] transition-colors duration-300 ${
+                                isNavbarScrolled
+                                    ? 'text-[#8c0a16]'
+                                    : 'text-white'
+                            }`}
+                        >
+                            {text(footerSection.brand, companyName)}
+                        </div>
+                        <div
+                            className={`text-[9px] font-semibold tracking-[3px] uppercase transition-colors duration-300 ${
+                                isNavbarScrolled
+                                    ? 'text-[#ff9200]'
+                                    : 'text-[#ffc578]'
+                            }`}
+                        >
+                            {text(footerSection.subtitle, companySubtitle)}
+                        </div>
                     </div>
-                </div>
+                </a>
                 <div className="flex items-center gap-8">
                     <a
                         href="#keunggulan"
@@ -486,10 +749,10 @@ export default function PublicLandingPage() {
                             </a>
                         </div>
                         <motion.div
-                            className="flex border-t border-white/10 pt-8"
+                            className="grid border-t border-white/10 pt-8 [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] gap-x-6 gap-y-6 sm:gap-x-8"
                             variants={stagger}
                         >
-                            {stats.slice(0, 3).map((item, index) =>
+                            {stats.map((item, index) =>
                                 (() => {
                                     const statLabel = text(item.label);
                                     const isRatingStat = statLabel
@@ -504,9 +767,9 @@ export default function PublicLandingPage() {
                                     return (
                                         <motion.div
                                             key={`stat-${index}`}
-                                            className={`${index < 2 ? 'mr-8 flex-1 border-r border-white/10 pr-8' : 'flex-1'}`}
+                                            className={`min-w-0 ${index < stats.length - 1 ? 'sm:border-r sm:border-white/10 sm:pr-8' : ''}`}
                                             variants={punchIn}
-                                            whileHover={{ y: -3 }}
+                                            whileHover={{ y: -10, scale: 1.04 }}
                                         >
                                             <div className="font-display text-[32px] leading-none font-bold text-white">
                                                 {statValue}
@@ -525,10 +788,7 @@ export default function PublicLandingPage() {
                         {heroFeatureCards.slice(0, 3).map((item, index) => (
                             <motion.div
                                 key={`hero-svc-${index}`}
-                                className="loop-float-soft rounded-[20px] border border-white/10 bg-white/[.04] p-[22px] backdrop-blur transition hover:-translate-x-1 hover:border-[#ffc578]/20 hover:bg-white/[.07]"
-                                style={{
-                                    animation: `heroFloat 3.2s ease-in-out ${index * 0.18}s infinite`,
-                                }}
+                                className="loop-float-soft rounded-[20px] border border-white/10 bg-white/[.04] p-[22px] transition hover:-translate-x-2 hover:-translate-y-1.5 hover:border-[#ffc578]/20 hover:bg-white/[.07]"
                                 initial={{ opacity: 0, x: 30 }}
                                 whileInView={{ opacity: 1, x: 0 }}
                                 viewport={{ once: false, amount: 0.35 }}
@@ -560,8 +820,17 @@ export default function PublicLandingPage() {
                 id="keunggulan"
                 className="why-bg relative bg-[#0f0505] px-5 py-[72px] sm:px-12 sm:py-[100px]"
             >
-                <div className="loop-float-soft mx-auto max-w-[1100px]">
-                    <div className="loop-float-soft mb-16">
+                <motion.div
+                    className="loop-float-soft mx-auto max-w-[1100px]"
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: false, amount: 0.16 }}
+                    variants={sectionRise}
+                >
+                    <motion.div
+                        className="loop-float-soft mb-16"
+                        variants={sectionLead}
+                    >
                         <div className="mb-4 inline-flex items-center gap-2.5">
                             <div className="h-px w-6 bg-[#ff9200]" />
                             <div className="text-[11px] font-bold tracking-[3px] text-[#ff9200] uppercase">
@@ -627,23 +896,25 @@ export default function PublicLandingPage() {
                         <p className="max-w-[520px] text-base leading-[1.8] text-white/45">
                             {text(servicesSection.description)}
                         </p>
-                    </div>
+                    </motion.div>
                     <motion.div
                         className="grid [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))] gap-px overflow-hidden rounded-3xl border border-white/[.06] bg-white/[.06]"
                         variants={stagger}
                     >
-                        {services.slice(0, 4).map((item, index) => (
+                        {services.map((item, index) => (
                             <motion.div
                                 key={`svc-${index}`}
                                 className="loop-float group relative overflow-hidden bg-[#0f0505] px-8 py-10 transition hover:bg-[#1a0808]"
                                 variants={punchIn}
-                                whileHover={{ y: -4 }}
+                                whileHover={{ y: -12, scale: 1.03 }}
                             >
                                 <div className="absolute top-5 right-6 font-serif text-5xl leading-none font-bold text-white/[.04]">
                                     {String(index + 1).padStart(2, '0')}
                                 </div>
-                                <span className="mb-5 block text-[32px]">
-                                    {resolveServiceIcon(item.icon, index)}
+                                <span
+                                    className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl text-[32px] ${serviceIconTone(item.icon, index).badgeClassName}`}
+                                >
+                                    {renderServiceIcon(item.icon, index)}
                                 </span>
                                 <h3 className="mb-2.5 text-base font-semibold tracking-[.3px] text-white">
                                     {text(item.title)}
@@ -655,15 +926,24 @@ export default function PublicLandingPage() {
                             </motion.div>
                         ))}
                     </motion.div>
-                </div>
+                </motion.div>
             </section>
 
             <section
                 id="paket"
                 className="pkg-bg relative bg-[#fdf6ec] px-5 py-[72px] sm:px-12 sm:py-[100px]"
             >
-                <div className="loop-float-soft mx-auto max-w-[1100px]">
-                    <div className="loop-float-soft mb-16 text-center">
+                <motion.div
+                    className="loop-float-soft mx-auto max-w-[1100px]"
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: false, amount: 0.16 }}
+                    variants={sectionRise}
+                >
+                    <motion.div
+                        className="loop-float-soft mb-16 text-center"
+                        variants={sectionLead}
+                    >
                         <div className="mb-4 inline-flex items-center justify-center gap-2.5">
                             <div className="h-px w-6 bg-[#ff9200]" />
                             <div className="text-[11px] font-bold tracking-[3px] text-[#ff9200] uppercase">
@@ -683,22 +963,40 @@ export default function PublicLandingPage() {
                         <p className="mx-auto max-w-[520px] text-base leading-[1.8] text-[#888]">
                             {text(packagesSection.description)}
                         </p>
-                    </div>
+                    </motion.div>
                     <motion.div
-                        className="mx-auto grid w-full max-w-[980px] [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))] gap-4 sm:gap-6"
+                        className={`mx-auto flex w-full max-w-[1100px] flex-wrap gap-4 sm:gap-6 ${packageLayoutClass}`}
                         variants={stagger}
                     >
                         {packageCards.map((pkg, index) => (
                             <motion.div
                                 key={`pkg-${index}`}
-                                className={`loop-float relative overflow-hidden rounded-3xl bg-white transition duration-300 hover:-translate-y-1.5 ${
+                                className={`loop-float relative w-full max-w-[460px] overflow-hidden rounded-3xl bg-white transition duration-300 hover:-translate-y-1.5 md:flex-[0_1_calc(50%-12px)] lg:flex-[0_1_calc((100%-48px)/3)] ${
                                     index === 1
                                         ? 'border-[1.5px] border-[#ff9200] shadow-[0_12px_40px_rgba(255,146,0,.12)]'
                                         : 'border border-[#ede0d0]'
                                 }`}
                                 variants={punchIn}
-                                whileHover={{ y: -6 }}
+                                whileHover={{ y: -14, scale: 1.035 }}
                             >
+                                {pkg.original_price ? (
+                                    <>
+                                        <div className="absolute top-0 right-0 z-[1] h-24 w-24 overflow-hidden">
+                                            <div className="absolute top-4 right-[-30px] w-[132px] rotate-45 bg-[linear-gradient(135deg,#ffb11a,#ff9200)] py-1.5 text-center text-[10px] font-black tracking-[1.4px] text-white uppercase shadow-[0_10px_22px_rgba(255,146,0,.28)]">
+                                                {text(
+                                                    pkg.discount_label,
+                                                    pkg.discount_percent
+                                                        ? `Hemat ${text(pkg.discount_percent)}%`
+                                                        : text(
+                                                              packagesSection.discount_badge_label,
+                                                              'Promo',
+                                                          ),
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="absolute top-4 right-4 z-[1] h-2 w-2 rounded-full bg-white/70" />
+                                    </>
+                                ) : null}
                                 <div className="border-b border-[#f5ece0] px-5 pt-7 pb-6 sm:px-8 sm:pt-9 sm:pb-7">
                                     <div
                                         className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl ${
@@ -728,6 +1026,19 @@ export default function PublicLandingPage() {
                                             )}
                                         </span>
                                     </div>
+                                    {pkg.original_price ? (
+                                        <div className="mt-2 text-sm text-[#9f8c7a] line-through">
+                                            {formatPrice(
+                                                (pkg.original_price as
+                                                    | string
+                                                    | number
+                                                    | null
+                                                    | undefined) ?? null,
+                                                'id',
+                                                text(pkg.currency, 'IDR'),
+                                            )}
+                                        </div>
+                                    ) : null}
                                 </div>
                                 <div className="px-5 py-6 sm:px-8 sm:py-7">
                                     <ul className="mb-7">
@@ -771,15 +1082,24 @@ export default function PublicLandingPage() {
                             )}
                         </Link>
                     </div>
-                </div>
+                </motion.div>
             </section>
 
             <section
                 id="testimoni"
                 className="testi-bg relative bg-[#0f0505] px-5 py-[72px] sm:px-12 sm:py-[100px]"
             >
-                <div className="loop-float-soft mx-auto max-w-[1100px]">
-                    <div className="loop-float-soft mb-16 text-center">
+                <motion.div
+                    className="loop-float-soft mx-auto max-w-[1100px]"
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: false, amount: 0.16 }}
+                    variants={sectionRise}
+                >
+                    <motion.div
+                        className="loop-float-soft mb-16 text-center"
+                        variants={sectionLead}
+                    >
                         <div className="mb-4 inline-flex items-center justify-center gap-2.5">
                             <div className="h-px w-6 bg-[#ff9200]" />
                             <div className="text-[11px] font-bold tracking-[3px] text-[#ff9200] uppercase">
@@ -829,7 +1149,7 @@ export default function PublicLandingPage() {
                                 </button>
                             </div>
                         ) : null}
-                    </div>
+                    </motion.div>
                     <motion.div
                         className="grid [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))] gap-5"
                         variants={stagger}
@@ -839,7 +1159,7 @@ export default function PublicLandingPage() {
                                 key={`testi-${index}`}
                                 className="loop-float-soft rounded-[20px] border border-white/[.07] bg-white/[.03] p-8"
                                 variants={punchIn}
-                                whileHover={{ y: -4 }}
+                                whileHover={{ y: -12, scale: 1.03 }}
                             >
                                 <div className="mb-4 text-[13px] tracking-[2px] text-[#ff9200]">
                                     ★★★★★
@@ -864,15 +1184,24 @@ export default function PublicLandingPage() {
                             </motion.div>
                         ))}
                     </motion.div>
-                </div>
+                </motion.div>
             </section>
 
             <section
                 id="faq"
                 className="faq-bg relative bg-white px-5 py-[72px] sm:px-12 sm:py-[100px]"
             >
-                <div className="loop-float-soft mx-auto max-w-[1100px]">
-                    <div className="loop-float-soft mb-16">
+                <motion.div
+                    className="loop-float-soft mx-auto max-w-[1100px]"
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: false, amount: 0.16 }}
+                    variants={sectionRise}
+                >
+                    <motion.div
+                        className="loop-float-soft mb-16"
+                        variants={sectionLead}
+                    >
                         <div className="mb-4 inline-flex items-center gap-2.5">
                             <div className="h-px w-6 bg-[#ff9200]" />
                             <div className="text-[11px] font-bold tracking-[3px] text-[#ff9200] uppercase">
@@ -891,8 +1220,11 @@ export default function PublicLandingPage() {
                         <p className="max-w-[520px] text-base leading-[1.8] text-[#888]">
                             {text(faqSection.description)}
                         </p>
-                    </div>
-                    <div className="loop-float-soft mx-auto max-w-[720px]">
+                    </motion.div>
+                    <motion.div
+                        className="loop-float-soft mx-auto max-w-[720px]"
+                        variants={sectionSplit}
+                    >
                         {faqs.slice(0, 5).map((faq, index) => {
                             const isOpen = activeFaq === index;
                             return (
@@ -933,13 +1265,19 @@ export default function PublicLandingPage() {
                                 </motion.div>
                             );
                         })}
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             </section>
 
             <section className="relative overflow-hidden bg-[linear-gradient(135deg,#0f0505_0%,#8c0a16_50%,#6b0010_100%)] px-5 py-[120px] text-center sm:px-12">
                 <div className="hex-pattern absolute inset-0 bg-[length:80px] bg-repeat opacity-[.05]" />
-                <div className="loop-float-soft relative z-[1] mx-auto max-w-[600px]">
+                <motion.div
+                    className="loop-float-soft relative z-[1] mx-auto max-w-[600px]"
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: false, amount: 0.22 }}
+                    variants={sectionRise}
+                >
                     <div className="mb-6 inline-flex items-center justify-center gap-2.5">
                         <div className="h-px w-6 bg-[#ff9200]" />
                         <div className="text-[11px] font-bold tracking-[3px] text-[#ff9200] uppercase">
@@ -971,25 +1309,44 @@ export default function PublicLandingPage() {
                             'Chat Admin WhatsApp Sekarang',
                         )}
                     </a>
-                </div>
+                </motion.div>
             </section>
 
-            <footer className="flex flex-col items-center justify-between gap-3 bg-[#080202] px-5 py-7 text-center sm:flex-row sm:px-12 sm:py-9 sm:text-left">
-                <div className="loop-float-soft">
-                    <div className="font-display text-lg font-bold text-white">
-                        {text(footerSection.brand, 'ASFAR TOUR')}
+            <motion.footer
+                className="flex flex-col items-center justify-between gap-4 bg-[#080202] px-5 py-7 text-center sm:flex-row sm:px-12 sm:py-9 sm:text-left"
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: false, amount: 0.45 }}
+                variants={sectionSplit}
+            >
+                <motion.div
+                    className="loop-float-soft flex items-center gap-3"
+                    variants={sectionLead}
+                >
+                    <img
+                        src={resolvedLogoWhitePath}
+                        alt={companyName}
+                        className="h-11 w-11 object-contain sm:h-12 sm:w-12"
+                    />
+                    <div>
+                        <div className="font-display text-lg font-bold text-white">
+                            {text(footerSection.brand, companyName)}
+                        </div>
+                        <div className="text-[9px] tracking-[3px] text-[#ffc578] uppercase">
+                            {text(footerSection.subtitle, companySubtitle)}
+                        </div>
                     </div>
-                    <div className="text-[9px] tracking-[3px] text-[#ffc578] uppercase">
-                        {text(footerSection.subtitle, 'Hajj & Umrah')}
-                    </div>
-                </div>
-                <p className="loop-float-soft text-xs tracking-[.5px] text-[#ffc578]/30">
+                </motion.div>
+                <motion.p
+                    className="loop-float-soft text-xs tracking-[.5px] text-[#ffc578]/30"
+                    variants={sectionLead}
+                >
                     {text(
                         footerSection.copyright,
                         '(c) 2025 Asfar Tour - Terdaftar Kemenag RI',
                     )}
-                </p>
-            </footer>
+                </motion.p>
+            </motion.footer>
             <a
                 href={whatsappHref}
                 target="_blank"

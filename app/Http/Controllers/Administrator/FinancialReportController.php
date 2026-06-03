@@ -50,20 +50,16 @@ class FinancialReportController extends Controller
             data: [
                 'filters' => $filters,
                 'rows' => $rows,
+                'branding' => $branding,
+                'seo' => $seo,
+                'locale' => $locale,
                 'generatedAt' => $generatedAt,
             ],
             filename: $safeFilename,
             mpdfConfig: [
                 'orientation' => 'P',
-                'margin_top' => 34,
+                'margin_top' => 18,
                 'margin_bottom' => 22,
-            ],
-            headerView: 'pdf.partials.header',
-            headerData: [
-                'locale' => $locale,
-                'branding' => $branding,
-                'seo' => $seo,
-                'generatedAt' => $generatedAt,
             ],
             footerView: 'pdf.partials.footer',
             footerData: [

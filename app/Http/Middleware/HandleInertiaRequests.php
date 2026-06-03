@@ -504,7 +504,12 @@ class HandleInertiaRequests extends Middleware
                 continue;
             }
 
-            if (is_array($value) && is_array($existing[$key])) {
+            if (
+                is_array($value) &&
+                is_array($existing[$key]) &&
+                ! array_is_list($value) &&
+                ! array_is_list($existing[$key])
+            ) {
                 $existing[$key] = $this->mergeMissingRecursive($value, $existing[$key]);
             }
         }
