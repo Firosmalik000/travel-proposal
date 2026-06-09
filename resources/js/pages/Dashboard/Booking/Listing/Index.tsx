@@ -498,6 +498,15 @@ function formatParticipantImportSkipSummary(
         .join(', ')}.`;
 }
 
+function resolveCsrfToken(): string {
+    return (
+        document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute('content')
+            ?.trim() ?? ''
+    );
+}
+
 function statusBadgeVariant(
     status: string,
 ): 'default' | 'secondary' | 'outline' | 'destructive' {
@@ -1963,7 +1972,7 @@ export default function BookingListingIndex({
     async function saveDraftParticipantsWithoutFiles(
         bookingId: number,
         rows: ParticipantImportPreviewRow[],
-        csrfToken: string | null | undefined,
+        csrfToken: string,
     ): Promise<BulkParticipantImportResult> {
         if (rows.length === 0) {
             return {
@@ -1981,9 +1990,11 @@ export default function BookingListingIndex({
                     Accept: 'application/json',
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                    ...(csrfToken !== '' ? { 'X-CSRF-TOKEN': csrfToken } : {}),
                 },
+                credentials: 'same-origin',
                 body: JSON.stringify({
+                    _token: csrfToken,
                     participants: rows.map(toBulkParticipantImportPayload),
                 }),
             },
@@ -2036,9 +2047,10 @@ export default function BookingListingIndex({
     async function saveDraftParticipantWithFiles(
         bookingId: number,
         row: ParticipantImportPreviewRow,
-        csrfToken: string | null | undefined,
+        csrfToken: string,
     ): Promise<void> {
         const payload = new FormData();
+        payload.append('_token', csrfToken);
         payload.append('full_name', row.full_name);
         payload.append('gender', row.gender ?? '');
         payload.append('birth_place', row.birth_place);
@@ -2095,8 +2107,9 @@ export default function BookingListingIndex({
                 headers: {
                     Accept: 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
-                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                    ...(csrfToken !== '' ? { 'X-CSRF-TOKEN': csrfToken } : {}),
                 },
+                credentials: 'same-origin',
                 body: payload,
             },
         );
@@ -2184,9 +2197,14 @@ export default function BookingListingIndex({
         }> = [];
 
         try {
-            const csrfToken = document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content');
+            const csrfToken = resolveCsrfToken();
+
+            if (csrfToken === '') {
+                throw new Error(
+                    'Token keamanan tidak ditemukan. Silakan refresh halaman lalu coba import lagi.',
+                );
+            }
+
             const rowsWithoutFiles = participantImportValidRows.filter(
                 (row) => !draftRowHasUploadedFiles(row),
             );
