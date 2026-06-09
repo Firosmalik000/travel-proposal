@@ -33,7 +33,7 @@ class RoleSeeder extends Seeder
             access: [
                 'dashboard' => ['view'],
                 'booking_register' => ['view', 'approve', 'reject', 'export'],
-                'booking_listing' => ['view', 'export'],
+                'booking_listing' => ['view', 'edit', 'export'],
                 'booking_custom_requests' => ['view', 'approve', 'reject'],
                 'booking_hotel_assignment' => ['view', 'create', 'edit', 'delete'],
                 'cashflow' => ['view', 'create', 'edit', 'delete', 'export'],

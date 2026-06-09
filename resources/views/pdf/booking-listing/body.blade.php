@@ -1,30 +1,35 @@
 <div class="box">
     <table class="meta">
         <tr>
-            <td>Filter Status</td>
-            <td><strong>{{ $filters['status'] }}</strong></td>
+            <td class="label">Filter Status</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ $filters['status'] }}</strong></td>
         </tr>
         <tr>
-            <td>Paket</td>
-            <td><strong>{{ $filters['package_label'] }}</strong></td>
+            <td class="label">Paket</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ $filters['package_label'] }}</strong></td>
         </tr>
         <tr>
-            <td>Tipe Booking</td>
-            <td><strong>{{ $filters['booking_type'] ?? 'regular' }}</strong></td>
+            <td class="label">Tipe Booking</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ $filters['booking_type'] ?? 'regular' }}</strong></td>
         </tr>
         <tr>
-            <td>Pencarian</td>
-            <td><strong>{{ $filters['search'] !== '' ? $filters['search'] : '-' }}</strong></td>
+            <td class="label">Pencarian</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ $filters['search'] !== '' ? $filters['search'] : '-' }}</strong></td>
         </tr>
         <tr>
-            <td>Total Data</td>
-            <td><strong>{{ count($rows) }}</strong></td>
+            <td class="label">Total Data</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ count($rows) }}</strong></td>
         </tr>
     </table>
 </div>
 
 <div class="box">
-    <table>
+    <table class="listing-table">
         <thead>
             <tr>
                 <th style="width: 5%">No</th>
@@ -41,13 +46,13 @@
         <tbody>
             @forelse ($rows as $index => $row)
                 <tr>
-                    <td>{{ $index + 1 }}</td>
+                    <td class="number">{{ $index + 1 }}</td>
                     <td>{{ $row['booking_code'] }}</td>
                     <td>{{ $row['full_name'] }}</td>
                     <td>{{ $row['phone'] }}</td>
                     <td>{{ $row['origin_city'] }}</td>
-                    <td style="text-align: right">{{ $row['pax'] ?? '-' }}</td>
-                    <td style="text-align: right">
+                    <td class="numeric">{{ $row['pax'] ?? '-' }}</td>
+                    <td class="numeric">
                         {{ $row['revenue']['currency'] ?? 'IDR' }}
                         {{ number_format((float) ($row['revenue']['amount'] ?? 0), 0, ',', '.') }}
                     </td>
@@ -56,7 +61,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" class="muted">Tidak ada data.</td>
+                    <td colspan="9" class="muted" style="text-align: center;">Tidak ada data.</td>
                 </tr>
             @endforelse
         </tbody>

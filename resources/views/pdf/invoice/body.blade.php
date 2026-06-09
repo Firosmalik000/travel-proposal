@@ -11,7 +11,7 @@
 </div>
 
 <div class="box">
-    <table>
+    <table class="invoice-table">
         <thead>
             <tr>
                 <th style="width: 6%">No</th>
@@ -24,13 +24,13 @@
         <tbody>
             @foreach ($lineItems as $index => $item)
                 <tr>
-                    <td>{{ $index + 1 }}</td>
+                    <td class="number">{{ $index + 1 }}</td>
                     <td>{{ $item['label'] }}</td>
-                    <td style="text-align: right">{{ $item['qty'] }}</td>
-                    <td style="text-align: right">
+                    <td class="numeric">{{ $item['qty'] }}</td>
+                    <td class="numeric">
                         {{ $currency }} {{ number_format((float) $item['unit_price'], 0, ',', '.') }}
                     </td>
-                    <td style="text-align: right">
+                    <td class="numeric">
                         {{ $currency }} {{ number_format((float) $item['amount'], 0, ',', '.') }}
                     </td>
                 </tr>
@@ -39,7 +39,7 @@
     </table>
 
     <table class="totals" style="margin-top: 10px">
-        <tr>
+        <tr class="totals-row">
             <td style="width: 82%">Total</td>
             <td style="width: 18%">
                 {{ $currency }} {{ number_format((float) $totalAmount, 0, ',', '.') }}

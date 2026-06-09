@@ -17,27 +17,31 @@
 <div class="box">
     <table class="meta">
         <tr>
-            <td>Filter Tipe Booking</td>
-            <td><strong>{{ $filters['booking_type'] ?? 'all' }}</strong></td>
+            <td class="label">Filter Tipe Booking</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ $filters['booking_type'] ?? 'all' }}</strong></td>
         </tr>
         <tr>
-            <td>Filter Status</td>
-            <td><strong>{{ $filters['status'] ?? 'all' }}</strong></td>
+            <td class="label">Filter Status</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ $filters['status'] ?? 'all' }}</strong></td>
         </tr>
         <tr>
-            <td>Total Bookings</td>
-            <td><strong>{{ $totalBookings }}</strong></td>
+            <td class="label">Total Bookings</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ $totalBookings }}</strong></td>
         </tr>
         <tr>
-            <td>Total Pax</td>
-            <td><strong>{{ $totalPax }}</strong></td>
+            <td class="label">Total Pax</td>
+            <td class="colon">:</td>
+            <td class="value"><strong>{{ $totalPax }}</strong></td>
         </tr>
     </table>
 </div>
 
 <div class="box">
     <h2 style="margin: 0 0 8px 0; font-size: 12px;">Revenue per Currency</h2>
-    <table>
+    <table class="report-table">
         <thead>
             <tr>
                 <th style="width: 22%">Currency</th>
@@ -50,15 +54,15 @@
             @forelse ($currencyTotals as $currency => $total)
                 <tr>
                     <td><strong>{{ $currency }}</strong></td>
-                    <td style="text-align: right">{{ $total['bookings'] }}</td>
-                    <td style="text-align: right">{{ $total['pax'] }}</td>
-                    <td style="text-align: right">
+                    <td class="numeric">{{ $total['bookings'] }}</td>
+                    <td class="numeric">{{ $total['pax'] }}</td>
+                    <td class="numeric">
                         {{ $currency }} {{ number_format((float) ($total['amount'] ?? 0), 0, ',', '.') }}
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="muted">Tidak ada data.</td>
+                    <td colspan="4" class="muted" style="text-align: center;">Tidak ada data.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -67,7 +71,7 @@
 
 <div class="box">
     <h2 style="margin: 0 0 8px 0; font-size: 12px;">Breakdown</h2>
-    <table>
+    <table class="report-table">
         <thead>
             <tr>
                 <th style="width: 16%">Tipe</th>
@@ -91,15 +95,15 @@
                         </span>
                     </td>
                     <td>{{ $currency }}</td>
-                    <td style="text-align: right">{{ (int) ($row['bookings'] ?? 0) }}</td>
-                    <td style="text-align: right">{{ (int) ($row['pax'] ?? 0) }}</td>
-                    <td style="text-align: right">
+                    <td class="numeric">{{ (int) ($row['bookings'] ?? 0) }}</td>
+                    <td class="numeric">{{ (int) ($row['pax'] ?? 0) }}</td>
+                    <td class="numeric">
                         {{ $currency }} {{ number_format($amount, 0, ',', '.') }}
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="muted">Tidak ada data.</td>
+                    <td colspan="5" class="muted" style="text-align: center;">Tidak ada data.</td>
                 </tr>
             @endforelse
         </tbody>

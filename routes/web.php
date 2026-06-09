@@ -205,6 +205,11 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::delete('register/{registration}', [BookingRegisterController::class, 'destroyPending'])->middleware('check.menu.permission:delete'), 'booking.register.destroy');
             $nameRoute(Route::get('listing', [BookingRegisterController::class, 'listing'])->middleware('check.menu.permission:view'), 'booking.listing.index');
             $nameRoute(Route::get('listing.pdf', [BookingRegisterController::class, 'listingPdf'])->middleware('check.menu.permission:export'), 'booking.listing.pdf');
+            $nameRoute(Route::get('listing/{registration}/participants', [BookingRegisterController::class, 'participants'])->middleware('check.menu.permission:view'), 'booking.listing.participants.index');
+            $nameRoute(Route::post('listing/{registration}/participants', [BookingRegisterController::class, 'storeParticipant'])->middleware('check.menu.permission:edit'), 'booking.listing.participants.store');
+            $nameRoute(Route::post('listing/{registration}/participants/import', [BookingRegisterController::class, 'importParticipants'])->middleware('check.menu.permission:edit'), 'booking.listing.participants.import');
+            $nameRoute(Route::put('listing/{registration}/participants/{participant}', [BookingRegisterController::class, 'updateParticipant'])->middleware('check.menu.permission:edit'), 'booking.listing.participants.update');
+            $nameRoute(Route::delete('listing/{registration}/participants/{participant}', [BookingRegisterController::class, 'destroyParticipant'])->middleware('check.menu.permission:edit'), 'booking.listing.participants.destroy');
             $nameRoute(Route::get('listing/{registration}/participants.pdf', [BookingRegisterController::class, 'participantPdf'])->middleware('check.menu.permission:export'), 'booking.listing.participants.pdf');
             $nameRoute(Route::get('listing/{registration}/invoice.pdf', [BookingRegisterController::class, 'invoicePdf'])->middleware('check.menu.permission:export'), 'booking.listing.invoice.pdf');
             $nameRoute(Route::post('listing', [BookingRegisterController::class, 'store'])->middleware('check.menu.permission:create'), 'booking.listing.store');

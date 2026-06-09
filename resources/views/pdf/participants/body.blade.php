@@ -11,24 +11,28 @@
 </div>
 
 <div class="box">
-    <table>
+    <table class="participant-table">
         <thead>
             <tr>
-                <th style="width: 7%">No</th>
-                <th>Nama Peserta</th>
-                <th style="width: 18%">No Paspor</th>
-                <th style="width: 18%">NIK</th>
-                <th style="width: 20%">Tgl Lahir</th>
+                <th style="width: 6%">No</th>
+                <th style="width: 24%">Nama Peserta</th>
+                <th style="width: 11%">Gender</th>
+                <th style="width: 20%">Tempat / Tgl Lahir</th>
+                <th style="width: 13%">Status</th>
+                <th style="width: 14%">Paspor</th>
+                <th style="width: 12%">Catatan</th>
             </tr>
         </thead>
         <tbody>
             @foreach ($participantRows as $row)
                 <tr>
-                    <td>{{ $row[0] }}</td>
-                    <td>{{ $row[1] }}</td>
-                    <td>{{ $row[2] }}</td>
-                    <td>{{ $row[3] }}</td>
-                    <td>{{ $row[4] }}</td>
+                    <td class="participant-number">{{ $row['number'] }}</td>
+                    <td class="{{ trim((string) $row['full_name']) === '' ? 'participant-empty' : '' }}">{{ $row['full_name'] !== '' ? $row['full_name'] : '-' }}</td>
+                    <td>{{ $row['gender'] !== '' ? $row['gender'] : '-' }}</td>
+                    <td>{{ $row['birth'] !== '' ? $row['birth'] : '-' }}</td>
+                    <td>{{ $row['marital_status'] !== '' ? $row['marital_status'] : '-' }}</td>
+                    <td>{{ $row['passport'] !== '' ? $row['passport'] : '-' }}</td>
+                    <td>{{ $row['special_notes'] !== '' ? $row['special_notes'] : '-' }}</td>
                 </tr>
             @endforeach
         </tbody>

@@ -3,19 +3,27 @@
 namespace App\Http\Controllers\Administrator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Administrator\BulkStoreBookingParticipantRequest;
+use App\Http\Requests\Administrator\StoreBookingParticipantRequest;
+use App\Http\Requests\Administrator\UpdateBookingParticipantRequest;
 use App\Http\Requests\ManagePackageRegistrationRequest;
 use App\Models\Booking;
+use App\Models\BookingParticipant;
 use App\Models\DepartureSchedule;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
+use App\Services\BookingParticipantImportService;
 use App\Services\InventoryStockService;
 use App\Services\PdfBrandingService;
 use App\Services\PdfRenderer;
+use App\Support\ParticipantUploadLimit;
 use DomainException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -27,6 +35,7 @@ class BookingRegisterController extends Controller
         private readonly PdfRenderer $pdfRenderer,
         private readonly PdfBrandingService $pdfBrandingService,
         private readonly InventoryStockService $inventoryStockService,
+        private readonly BookingParticipantImportService $bookingParticipantImportService,
     ) {}
 
     public function index(): Response
@@ -63,6 +72,7 @@ class BookingRegisterController extends Controller
             'schedules' => $this->schedules(),
             'filters' => $filters,
             'revenue' => $this->bookingRevenue($filters),
+            'participant_upload_max_kilobytes' => $this->participantUploadMaxKilobytes(),
         ]);
     }
 
@@ -200,6 +210,90 @@ class BookingRegisterController extends Controller
         );
     }
 
+    public function participants(Booking $registration): JsonResponse
+    {
+        $registration->loadMissing('participants');
+
+        return response()->json([
+            'booking' => [
+                'id' => $registration->id,
+                'booking_code' => $registration->booking_code,
+                'passenger_count' => (int) $registration->passenger_count,
+                'participants_count' => $registration->participants->count(),
+                'remaining_slots' => max((int) $registration->passenger_count - $registration->participants->count(), 0),
+            ],
+            'participants' => $registration->participants
+                ->sortBy('id')
+                ->values()
+                ->map(fn (BookingParticipant $participant): array => $this->participantPayload($participant))
+                ->all(),
+        ]);
+    }
+
+    public function storeParticipant(StoreBookingParticipantRequest $request, Booking $registration): RedirectResponse
+    {
+        $participant = $registration->participants()->create($this->participantPayloadFromRequest($request, $registration));
+
+        return back()->with('participant_payload', [
+            'participant' => $this->participantPayload($participant->fresh()),
+            'message' => 'Data peserta berhasil ditambahkan.',
+        ]);
+    }
+
+    public function updateParticipant(UpdateBookingParticipantRequest $request, Booking $registration, BookingParticipant $participant): RedirectResponse
+    {
+        abort_unless($participant->booking_id === $registration->id, 404);
+
+        $participant->fill($this->participantPayloadFromRequest($request, $registration, $participant));
+        $participant->save();
+
+        return back()->with('participant_payload', [
+            'participant' => $this->participantPayload($participant->fresh()),
+            'message' => 'Data peserta berhasil diperbarui.',
+        ]);
+    }
+
+    public function importParticipants(BulkStoreBookingParticipantRequest $request, Booking $registration): JsonResponse
+    {
+        $result = $this->bookingParticipantImportService->handle(
+            $registration,
+            (array) $request->validated('participants'),
+        );
+
+        return response()->json([
+            'message' => 'Import data peserta selesai diproses.',
+            'created_count' => $result['created_count'],
+            'skipped_rows' => $result['skipped_rows'],
+            'participants_count' => $registration->participants()->count(),
+            'remaining_slots' => max((int) $registration->passenger_count - $registration->participants()->count(), 0),
+        ]);
+    }
+
+    public function destroyParticipant(Booking $registration, BookingParticipant $participant): RedirectResponse
+    {
+        abort_unless($participant->booking_id === $registration->id, 404);
+
+        foreach ([
+            $participant->passport_scan_path,
+            $participant->family_card_scan_path,
+            $participant->marriage_book_scan_path,
+            $participant->birth_certificate_scan_path,
+            $participant->photo_path,
+            $participant->meningitis_vaccine_scan_path,
+        ] as $filePath) {
+            if (is_string($filePath) && $filePath !== '' && Str::startsWith($filePath, '/storage/')) {
+                Storage::disk('public')->delete(substr($filePath, strlen('/storage/')));
+            }
+        }
+
+        $participant->delete();
+
+        return back()->with('participant_payload', [
+            'participant_id' => $participant->id,
+            'message' => 'Data peserta berhasil dihapus.',
+        ]);
+    }
+
     public function participantPdf(Booking $registration): HttpResponse
     {
         $generatedAt = now();
@@ -210,6 +304,7 @@ class BookingRegisterController extends Controller
         $registration->loadMissing([
             'package:id,code,name,package_type,departure_city,duration_days,price,currency',
             'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
+            'participants',
         ]);
 
         $packageName = (string) ($registration->package?->name['id'] ?? $registration->package?->code ?? '');
@@ -235,15 +330,48 @@ class BookingRegisterController extends Controller
             ],
         ];
 
-        $participantRows = [];
+        $participantRows = $registration->participants
+            ->sortBy('id')
+            ->values()
+            ->map(function (BookingParticipant $participant, int $index): array {
+                $birthPlace = trim((string) ($participant->birth_place ?? ''));
+                $birthDate = $participant->birth_date?->format('d M Y');
+                $birthLabel = trim(implode(', ', array_filter([$birthPlace, $birthDate])));
+                $passportLabel = $participant->passport_ready
+                    ? trim(implode(' • ', array_filter([
+                        $participant->passport_type ? Str::headline((string) $participant->passport_type) : null,
+                        $participant->passport_validity_years ? $participant->passport_validity_years.' tahun' : null,
+                    ])))
+                    : 'Belum siap';
+                $specialNotes = array_values(array_filter([
+                    $participant->needs_wheelchair ? 'Kursi roda' : null,
+                    $participant->has_medical_history ? 'Riwayat penyakit' : null,
+                    $participant->has_performed_umrah ? 'Pernah umrah' : null,
+                ]));
+
+                return [
+                    'number' => $index + 1,
+                    'full_name' => (string) $participant->full_name,
+                    'gender' => $participant->gender === 'female' ? 'Perempuan' : ($participant->gender === 'male' ? 'Laki-laki' : '-'),
+                    'birth' => $birthLabel !== '' ? $birthLabel : '-',
+                    'marital_status' => $participant->marital_status ? Str::headline((string) $participant->marital_status) : '-',
+                    'passport' => $passportLabel !== '' ? $passportLabel : '-',
+                    'special_notes' => count($specialNotes) > 0 ? implode(', ', $specialNotes) : '-',
+                ];
+            })
+            ->all();
+
         $paxCount = max((int) $registration->passenger_count, 1);
-        for ($i = 1; $i <= $paxCount; $i++) {
+
+        for ($i = count($participantRows) + 1; $i <= $paxCount; $i++) {
             $participantRows[] = [
-                $i,
-                '',
-                '',
-                '',
-                '',
+                'number' => $i,
+                'full_name' => '',
+                'gender' => '',
+                'birth' => '',
+                'marital_status' => '',
+                'passport' => '',
+                'special_notes' => '',
             ];
         }
 
@@ -651,6 +779,7 @@ class BookingRegisterController extends Controller
                 'package:id,code,slug,name,package_type,price,currency',
                 'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
             ])
+            ->withCount('participants')
             ->withExists('testimonial')
             ->when(in_array($bookingType, ['regular', 'custom'], true), function ($query) use ($bookingType): void {
                 $query->where('booking_type', $bookingType);
@@ -711,6 +840,7 @@ class BookingRegisterController extends Controller
                     'email' => $booking->email,
                     'origin_city' => $booking->origin_city,
                     'passenger_count' => $booking->passenger_count,
+                    'participants_count' => (int) ($booking->participants_count ?? 0),
                     'custom_unit_price' => $booking->booking_type === 'custom'
                         ? (int) ($booking->custom_unit_price ?? 0)
                         : null,
@@ -904,6 +1034,194 @@ class BookingRegisterController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function participantPayload(BookingParticipant $participant): array
+    {
+        return [
+            'id' => $participant->id,
+            'full_name' => $participant->full_name,
+            'gender' => $participant->gender,
+            'birth_place' => $participant->birth_place,
+            'birth_date' => $participant->birth_date?->toDateString(),
+            'marital_status' => $participant->marital_status,
+            'address' => $participant->address,
+            'needs_wheelchair' => (bool) $participant->needs_wheelchair,
+            'shirt_size' => $participant->shirt_size,
+            'passport_ready' => (bool) $participant->passport_ready,
+            'passport_issue_date' => $participant->passport_issue_date?->toDateString(),
+            'passport_expiry_date' => $participant->passport_expiry_date?->toDateString(),
+            'passport_type' => $participant->passport_type,
+            'passport_validity_years' => $participant->passport_validity_years,
+            'passport_scan_path' => $participant->passport_scan_path,
+            'family_card_scan_path' => $participant->family_card_scan_path,
+            'marriage_book_scan_path' => $participant->marriage_book_scan_path,
+            'birth_certificate_scan_path' => $participant->birth_certificate_scan_path,
+            'photo_path' => $participant->photo_path,
+            'meningitis_vaccine_scan_path' => $participant->meningitis_vaccine_scan_path,
+            'has_medical_history' => (bool) $participant->has_medical_history,
+            'medical_history_notes' => $participant->medical_history_notes,
+            'emergency_contact_name' => $participant->emergency_contact_name,
+            'emergency_contact_phone' => $participant->emergency_contact_phone,
+            'emergency_contact_relationship' => $participant->emergency_contact_relationship,
+            'has_performed_umrah' => (bool) $participant->has_performed_umrah,
+            'referral_source' => $participant->referral_source,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function participantPayloadFromRequest(
+        StoreBookingParticipantRequest|UpdateBookingParticipantRequest $request,
+        Booking $booking,
+        ?BookingParticipant $participant = null,
+    ): array {
+        return [
+            'full_name' => $request->string('full_name')->value(),
+            'gender' => $request->filled('gender') ? $request->string('gender')->value() : null,
+            'birth_place' => $request->filled('birth_place') ? $request->string('birth_place')->value() : null,
+            'birth_date' => $request->date('birth_date'),
+            'marital_status' => $request->filled('marital_status') ? $request->string('marital_status')->value() : null,
+            'address' => $request->filled('address') ? $request->string('address')->value() : null,
+            'needs_wheelchair' => $request->boolean('needs_wheelchair'),
+            'shirt_size' => $request->filled('shirt_size') ? $request->string('shirt_size')->value() : null,
+            'passport_ready' => $request->boolean('passport_ready'),
+            'passport_issue_date' => $request->date('passport_issue_date'),
+            'passport_expiry_date' => $request->date('passport_expiry_date'),
+            'passport_type' => $request->filled('passport_type') ? $request->string('passport_type')->value() : null,
+            'passport_validity_years' => $this->detectPassportValidityYears(
+                $request->date('passport_issue_date'),
+                $request->date('passport_expiry_date'),
+            ),
+            'passport_scan_path' => $this->storeParticipantDocument($request, $booking, 'passport_scan', $participant?->passport_scan_path),
+            'family_card_scan_path' => $this->storeParticipantDocument($request, $booking, 'family_card_scan', $participant?->family_card_scan_path),
+            'marriage_book_scan_path' => $this->storeParticipantDocument($request, $booking, 'marriage_book_scan', $participant?->marriage_book_scan_path),
+            'birth_certificate_scan_path' => $this->storeParticipantDocument($request, $booking, 'birth_certificate_scan', $participant?->birth_certificate_scan_path),
+            'photo_path' => $this->storeParticipantDocument($request, $booking, 'photo', $participant?->photo_path),
+            'meningitis_vaccine_scan_path' => $this->storeParticipantDocument($request, $booking, 'meningitis_vaccine_scan', $participant?->meningitis_vaccine_scan_path),
+            'has_medical_history' => $request->boolean('has_medical_history'),
+            'medical_history_notes' => $request->filled('medical_history_notes') ? $request->string('medical_history_notes')->value() : null,
+            'emergency_contact_name' => $request->filled('emergency_contact_name') ? $request->string('emergency_contact_name')->value() : null,
+            'emergency_contact_phone' => $request->filled('emergency_contact_phone') ? $request->string('emergency_contact_phone')->value() : null,
+            'emergency_contact_relationship' => $request->filled('emergency_contact_relationship') ? $request->string('emergency_contact_relationship')->value() : null,
+            'has_performed_umrah' => $request->boolean('has_performed_umrah'),
+            'referral_source' => $request->filled('referral_source') ? $request->string('referral_source')->value() : null,
+        ];
+    }
+
+    private function storeParticipantFile(
+        StoreBookingParticipantRequest|UpdateBookingParticipantRequest $request,
+        Booking $booking,
+        string $field,
+        ?string $existingPath = null,
+    ): ?string {
+        if (! $request->hasFile($field)) {
+            return $existingPath;
+        }
+
+        $file = $request->file($field);
+        $directory = 'booking-participants/'.$booking->getKey();
+        $filename = $this->participantUploadFilename(
+            bookingCode: $booking->booking_code,
+            field: $field,
+            extension: $file->getClientOriginalExtension(),
+        );
+
+        $storedPath = '/storage/'.$file->storeAs($directory, $filename, 'public');
+
+        if (is_string($existingPath) && Str::startsWith($existingPath, '/storage/')) {
+            Storage::disk('public')->delete(substr($existingPath, strlen('/storage/')));
+        }
+
+        return $storedPath;
+    }
+
+    private function storeParticipantDocument(
+        StoreBookingParticipantRequest|UpdateBookingParticipantRequest $request,
+        Booking $booking,
+        string $field,
+        ?string $existingPath = null,
+    ): ?string {
+        if ($request->hasFile($field)) {
+            return $this->storeParticipantFile($request, $booking, $field, $existingPath);
+        }
+
+        $urlField = $field.'_url';
+        $documentUrl = trim((string) $request->input($urlField, ''));
+
+        if ($documentUrl === '') {
+            return $existingPath;
+        }
+
+        $storedPath = $this->bookingParticipantImportService->storeImportedDocument(
+            $booking,
+            $field,
+            $documentUrl,
+        );
+
+        if ($storedPath === null) {
+            return $existingPath;
+        }
+
+        if (is_string($existingPath) && Str::startsWith($existingPath, '/storage/')) {
+            Storage::disk('public')->delete(substr($existingPath, strlen('/storage/')));
+        }
+
+        return $storedPath;
+    }
+
+    private function participantUploadFilename(
+        string $bookingCode,
+        string $field,
+        string $extension,
+    ): string {
+        $documentName = match ($field) {
+            'passport_scan' => 'scan-paspor',
+            'family_card_scan' => 'kartu-keluarga',
+            'marriage_book_scan' => 'buku-nikah',
+            'birth_certificate_scan' => 'akta-lahir',
+            'photo' => 'pas-foto',
+            'meningitis_vaccine_scan' => 'vaksin-meningitis',
+            default => 'dokumen',
+        };
+
+        $normalizedBookingCode = Str::of($bookingCode)
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/i', '-')
+            ->trim('-')
+            ->value();
+        $normalizedExtension = Str::of($extension)
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/i', '')
+            ->value();
+
+        return sprintf(
+            '%s-%s-%s.%s',
+            $documentName,
+            $normalizedBookingCode,
+            now()->format('YmdHis'),
+            $normalizedExtension !== '' ? $normalizedExtension : 'bin',
+        );
+    }
+
+    private function detectPassportValidityYears(mixed $issuedAt, mixed $expiresAt): ?int
+    {
+        if (! $issuedAt instanceof \DateTimeInterface || ! $expiresAt instanceof \DateTimeInterface) {
+            return null;
+        }
+
+        $years = (int) round($issuedAt->diff($expiresAt)->days / 365);
+
+        return $years > 0 ? $years : null;
+    }
+
+    private function participantUploadMaxKilobytes(): int
+    {
+        return ParticipantUploadLimit::kilobytes();
     }
 
     /**
