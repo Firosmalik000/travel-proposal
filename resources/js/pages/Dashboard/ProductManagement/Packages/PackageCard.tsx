@@ -91,12 +91,12 @@ export function PackageCard({
                 </div>
             ) : null}
 
-            <div className="flex gap-0">
-                <div className="relative hidden w-36 shrink-0 overflow-hidden sm:block lg:w-44">
+            <div className="flex items-stretch gap-0">
+                <div className="relative hidden min-h-[180px] w-36 shrink-0 self-stretch overflow-hidden sm:block lg:w-44">
                     <img
                         src={pkg.image_path || '/images/dummy.jpg'}
                         alt={name}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
                     {!pkg.is_active ? (
@@ -135,21 +135,21 @@ export function PackageCard({
 
                         <div className="mt-2 flex flex-wrap gap-2">
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                <MapPin className="h-3 w-3" />{' '}
+                                <MapPin className="h-3 w-3" />
                                 {pkg.departure_city}
                             </span>
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />{' '}
+                                <Clock className="h-3 w-3" />
                                 {pkg.duration_days} hari
                             </span>
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                <PackageIcon className="h-3 w-3" />{' '}
+                                <PackageIcon className="h-3 w-3" />
                                 {pkg.product_ids.length} produk
                             </span>
                             {pkg.rating_avg ? (
                                 <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-                                    <Star className="h-3 w-3 fill-current" />{' '}
-                                    {pkg.rating_avg}{' '}
+                                    <Star className="h-3 w-3 fill-current" />
+                                    {pkg.rating_avg}
                                     <span className="font-normal text-muted-foreground">
                                         ({pkg.rating_count})
                                     </span>

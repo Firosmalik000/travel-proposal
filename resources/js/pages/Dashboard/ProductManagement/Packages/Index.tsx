@@ -29,12 +29,14 @@ type Props = {
     packages: Package[];
     productOptions: ProductOption[];
     activityOptions: ActivityOption[];
+    packageImageUploadMaxKilobytes: number;
 };
 
 export default function PackagesIndex({
     packages: packageList,
     productOptions,
     activityOptions,
+    packageImageUploadMaxKilobytes,
 }: Props) {
     const locale: 'id' | 'en' = 'id';
     const { can } = usePermission('package');
@@ -51,7 +53,7 @@ export default function PackagesIndex({
     const [search, setSearch] = useState('');
     const [editingPkg, setEditingPkg] = useState<Package | null | 'new'>(null);
     const [viewingPkg, setViewingPkg] = useState<Package | null>(null);
-    const [schedulePkg, setSchedulePkg] = useState<Package | null>(null);
+    const [schedulePkgId, setSchedulePkgId] = useState<number | null>(null);
 
     const filtered = safePackageList.filter((pkg) => {
         const localizedName =
@@ -126,6 +128,8 @@ export default function PackagesIndex({
     ];
 
     const editingPackage = editingPkg === 'new' ? null : editingPkg;
+    const schedulePkg =
+        safePackageList.find((pkg) => pkg.id === schedulePkgId) ?? null;
     const editingPackageName = editingPackage
         ? editingPackage.name?.[locale] ||
           editingPackage.name?.id ||
@@ -256,7 +260,7 @@ export default function PackagesIndex({
                                 onEdit={openEditPackage}
                                 onDelete={handleDelete}
                                 onManageSchedules={(selectedPackage) =>
-                                    setSchedulePkg(selectedPackage)
+                                    setSchedulePkgId(selectedPackage.id)
                                 }
                                 canEdit={canEdit}
                                 canDelete={canDelete}
@@ -286,6 +290,9 @@ export default function PackagesIndex({
                             pkg={editingPackage}
                             productOptions={safeProductOptions}
                             activityOptions={safeActivityOptions}
+                            packageImageUploadMaxKilobytes={
+                                packageImageUploadMaxKilobytes
+                            }
                             locale={locale}
                             onSuccess={() => setEditingPkg(null)}
                         />
@@ -371,7 +378,7 @@ export default function PackagesIndex({
 
             <Sheet
                 open={schedulePkg !== null}
-                onOpenChange={(open) => !open && setSchedulePkg(null)}
+                onOpenChange={(open) => !open && setSchedulePkgId(null)}
             >
                 <SheetContent
                     side="right"

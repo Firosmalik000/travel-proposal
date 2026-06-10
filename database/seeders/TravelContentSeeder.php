@@ -499,6 +499,279 @@ class TravelContentSeeder extends Seeder
                 ],
             ],
             [
+                'slug' => 'home_landing',
+                'category' => 'page',
+                'title' => $this->localize('Home Landing Website', 'Home Landing Website'),
+                'excerpt' => $this->localize('Konten utama untuk halaman /.', 'Primary content for the / homepage.'),
+                'content' => [
+                    'hero' => [
+                        'label' => ['id' => 'Asfar Tour', 'en' => 'Asfar Tour'],
+                        'title' => ['id' => 'Jelas Rencananya, Terjamin Amanahnya.', 'en' => 'Clear in Planning, Trusted in Delivery.'],
+                        'description' => [
+                            'id' => 'Pengalaman ibadah umroh yang khusyuk, nyaman, dan terarah bersama tim yang amanah.',
+                            'en' => 'A focused, comfortable, and well-guided umrah journey with a trusted team.',
+                        ],
+                        'image' => '/images/dummy.jpg',
+                        'cta_label' => ['id' => 'FREE KONSULTASI', 'en' => 'FREE CONSULTATION'],
+                        'secondary_cta_label' => ['id' => 'Lihat Paket', 'en' => 'View Packages'],
+                        'secondary_cta_href' => '/paket-umroh',
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#0f766e',
+                            'overlay_intensity' => 'strong',
+                        ],
+                    ],
+                    'timeline' => [
+                        'label' => ['id' => 'Alur Perjalanan yang Kami Jalankan', 'en' => 'Journey Flow'],
+                        'heading' => [
+                            'id' => 'Sistem Perjalanan yang Jelas, Bukan Sekadar Janji',
+                            'en' => 'A Clear System, Not Just Promises',
+                        ],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#155e75',
+                            'overlay_intensity' => 'strong',
+                        ],
+                        'steps' => [
+                            [
+                                'icon' => 'users',
+                                'caption' => ['id' => 'DAFTAR & KONSULTASI', 'en' => 'REGISTER'],
+                                'title' => ['id' => 'Registrasi', 'en' => 'Registration'],
+                                'description' => ['id' => 'Konsultasi & pilih paket yang sesuai.', 'en' => 'Consult and pick the right package.'],
+                            ],
+                            [
+                                'icon' => 'credit-card',
+                                'caption' => ['id' => 'DP / PELUNASAN', 'en' => 'PAYMENT'],
+                                'title' => ['id' => 'Pembayaran', 'en' => 'Payment'],
+                                'description' => ['id' => 'Skema biaya jelas, konfirmasi transparan.', 'en' => 'Clear costs and transparent confirmation.'],
+                            ],
+                            [
+                                'icon' => 'check-circle-2',
+                                'caption' => ['id' => 'MANASIK & DOKUMEN', 'en' => 'PREP'],
+                                'title' => ['id' => 'Persiapan Umroh', 'en' => 'Preparation'],
+                                'description' => ['id' => 'Manasik, perlengkapan, dan dokumen.', 'en' => 'Manasik, gear, and documents.'],
+                            ],
+                            [
+                                'icon' => 'plane',
+                                'caption' => ['id' => 'BERANGKAT BARENG', 'en' => 'DEPART'],
+                                'title' => ['id' => 'Keberangkatan', 'en' => 'Departure'],
+                                'description' => ['id' => 'Briefing & pendampingan sebelum berangkat.', 'en' => 'Briefing and guidance before departure.'],
+                            ],
+                            [
+                                'icon' => 'landmark',
+                                'caption' => ['id' => 'BIMBINGAN IBADAH', 'en' => 'GUIDANCE'],
+                                'title' => ['id' => 'Ibadah', 'en' => 'Worship'],
+                                'description' => ['id' => 'Bimbingan ibadah sepanjang perjalanan.', 'en' => 'Guidance throughout the journey.'],
+                            ],
+                            [
+                                'icon' => 'calendar-days',
+                                'caption' => ['id' => 'PULANG AMAN', 'en' => 'RETURN'],
+                                'title' => ['id' => 'Kepulangan', 'en' => 'Return'],
+                                'description' => ['id' => 'Kontrol perjalanan sampai tiba di tanah air.', 'en' => 'Managed until you return home.'],
+                            ],
+                        ],
+                        'value_cards' => [
+                            [
+                                'icon' => 'shield-check',
+                                'title' => ['id' => 'Transparansi Biaya', 'en' => 'Transparent Fees'],
+                                'description' => ['id' => 'Rincian biaya jelas sejak awal, tanpa kejutan di tengah jalan.', 'en' => 'Clear fees from the start, no surprises.'],
+                            ],
+                            [
+                                'icon' => 'calendar-days',
+                                'title' => ['id' => 'Timeline Terencana', 'en' => 'Planned Timeline'],
+                                'description' => ['id' => 'Jadwal terstruktur dari pendaftaran sampai kepulangan.', 'en' => 'Structured schedule from start to return.'],
+                            ],
+                            [
+                                'icon' => 'heart-handshake',
+                                'title' => ['id' => 'Pendampingan Ibadah', 'en' => 'Worship Assistance'],
+                                'description' => ['id' => 'Pembimbing berpengalaman memastikan ibadah lebih tenang dan khusyuk.', 'en' => 'Experienced guidance for calm worship.'],
+                            ],
+                            [
+                                'icon' => 'check-circle-2',
+                                'title' => ['id' => 'Sistem Terstruktur', 'en' => 'Structured System'],
+                                'description' => ['id' => 'Proses administrasi, keberangkatan, dan pelayanan berjalan rapi.', 'en' => 'Administration, departure, and service are organized.'],
+                            ],
+                        ],
+                    ],
+                    'problem' => [
+                        'label' => ['id' => 'PENTING DIKETAHUI', 'en' => 'IMPORTANT'],
+                        'heading' => [
+                            'id' => 'Banyak Jamaah Gagal Berangkat Bukan Karena Niat, Tapi Karena Salah Pilih Travel',
+                            'en' => 'Many Fail to Depart Due to Choosing the Wrong Travel',
+                        ],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#7a0d17',
+                            'overlay_intensity' => 'strong',
+                        ],
+                        'badges' => [
+                            ['id' => 'Biaya tiba-tiba berubah di tengah jalan', 'en' => 'Fees change unexpectedly'],
+                            ['id' => 'Minimnya informasi & komunikasi', 'en' => 'Lack of info & communication'],
+                            ['id' => 'Jadwal keberangkatan tidak jelas', 'en' => 'Unclear departure schedule'],
+                            ['id' => 'Takut tertipu travel yang tidak amanah', 'en' => 'Fear of untrustworthy travel'],
+                        ],
+                        'quote' => [
+                            'id' => 'â€œKami memahami kekhawatiran itu. Karena itu, Asfar Tour hadir dengan sistem yang jelas dan transparan.â€',
+                            'en' => 'â€œWe understand the concerns. Thatâ€™s why we provide a clear and transparent system.â€',
+                        ],
+                    ],
+                    'stats' => [
+                        ['value' => '15+', 'label' => ['id' => 'Tahun Melayani', 'en' => 'Years of Service']],
+                        ['value' => '98%', 'label' => ['id' => 'Kepuasan Jamaah', 'en' => 'Pilgrim Satisfaction']],
+                        ['value' => '20K+', 'label' => ['id' => 'Jamaah Berangkat', 'en' => 'Pilgrims Departed']],
+                        ['value' => '50+', 'label' => ['id' => 'Program Terlaksana', 'en' => 'Programs Delivered']],
+                    ],
+                    'about' => [
+                        'label' => ['id' => 'Tentang Kami', 'en' => 'About Us'],
+                        'title' => [
+                            'id' => 'Pelayanan Umroh yang Tertata dan Menenangkan',
+                            'en' => 'Structured and Reassuring Umrah Service',
+                        ],
+                        'description' => [
+                            'id' => 'Kami mengelola keberangkatan umroh dengan alur yang jelas, pendampingan ibadah, dan komunikasi yang transparan.',
+                            'en' => 'We manage umrah departures with clear flows, worship guidance, and transparent communication.',
+                        ],
+                        'cta' => ['id' => 'Baca Selengkapnya', 'en' => 'Read More'],
+                        'image_primary' => '/images/dummy.jpg',
+                        'image_secondary' => '/images/dummy.jpg',
+                    ],
+                    'packages' => [
+                        'title' => ['id' => 'Paket Unggulan', 'en' => 'Featured Packages'],
+                        'price_prefix' => ['id' => 'Mulai', 'en' => 'From'],
+                        'heading' => ['id' => 'PAKET UMROH KAMI', 'en' => 'OUR UMRAH PACKAGES'],
+                        'cta_label' => ['id' => 'Lihat Paket Lainnya', 'en' => 'See More Packages'],
+                        'detail_label' => ['id' => 'Lihat Detail', 'en' => 'View Details'],
+                        'duration_suffix' => ['id' => 'hari', 'en' => 'days'],
+                        'fallback_name' => ['id' => 'Paket Umroh', 'en' => 'Umrah Package'],
+                        'fallback_summary' => ['id' => 'Detail paket akan tampil di sini.', 'en' => 'Package details will appear here.'],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#0f766e',
+                            'overlay_intensity' => 'strong',
+                        ],
+                    ],
+                    'services' => [
+                        'label' => ['id' => 'Layanan Kami', 'en' => 'Our Services'],
+                        'title' => ['id' => 'Apa yang Kami Tawarkan?', 'en' => 'What We Offer'],
+                        'description' => [
+                            'id' => 'Layanan umroh menyeluruh untuk menjaga perjalanan ibadah tetap aman, nyaman, dan terarah.',
+                            'en' => 'A complete umrah service to keep the worship journey safe, comfortable, and well-guided.',
+                        ],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#0f766e',
+                            'overlay_intensity' => 'strong',
+                        ],
+                        'fallback_title_prefix' => ['id' => 'Layanan', 'en' => 'Service'],
+                        'fallback_description' => [
+                            'id' => 'Deskripsi layanan akan tampil di sini.',
+                            'en' => 'Service description will appear here.',
+                        ],
+                        'items' => [
+                            [
+                                'image_path' => '/images/dummy.jpg',
+                                'title' => ['id' => 'Legalitas Terjamin', 'en' => 'Guaranteed Legality'],
+                                'description' => ['id' => 'Travel berizin resmi dengan informasi keberangkatan yang jelas.', 'en' => 'Licensed travel with clear departure information.'],
+                            ],
+                            [
+                                'image_path' => '/images/dummy.jpg',
+                                'title' => ['id' => 'Pembimbing Profesional', 'en' => 'Professional Guidance'],
+                                'description' => ['id' => 'Ustadz berpengalaman mendampingi jamaah sejak manasik hingga pulang.', 'en' => 'Experienced guides assist pilgrims from manasik until return.'],
+                            ],
+                            [
+                                'image_path' => '/images/dummy.jpg',
+                                'title' => ['id' => 'Akomodasi Terbaik', 'en' => 'Best Accommodation'],
+                                'description' => ['id' => 'Pilihan hotel nyaman yang menyesuaikan kelas paket.', 'en' => 'Comfortable hotel options tailored to the package class.'],
+                            ],
+                            [
+                                'image_path' => '/images/dummy.jpg',
+                                'title' => ['id' => 'Layanan Menyeluruh', 'en' => 'Comprehensive Services'],
+                                'description' => ['id' => 'Visa, tiket, manasik, perlengkapan, dan dokumen ditangani satu tim.', 'en' => 'Visa, tickets, manasik, equipment, and documents are handled by one team.'],
+                            ],
+                        ],
+                    ],
+                    'gallery' => [
+                        'title' => ['id' => 'Galeri Perjalanan', 'en' => 'Travel Gallery'],
+                        'description' => [
+                            'id' => 'Momen-momen berharga selama perjalanan jamaah.',
+                            'en' => 'Meaningful moments from pilgrim journeys.',
+                        ],
+                        'cta_label' => ['id' => 'OUR HISTORY', 'en' => 'OUR HISTORY'],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#e6a34a',
+                            'overlay_intensity' => 'strong',
+                        ],
+                        'images' => [],
+                    ],
+                    'faq' => [
+                        'title' => ['id' => 'Pertanyaan Umum', 'en' => 'FAQ'],
+                        'description' => [
+                            'id' => 'Temukan jawaban untuk pertanyaan yang sering ditanyakan.',
+                            'en' => 'Find answers to common questions.',
+                        ],
+                    ],
+                    'testimonials' => [
+                        'heading' => ['id' => 'Kesan Jamaah', 'en' => 'Testimonials'],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#155e75',
+                            'overlay_intensity' => 'strong',
+                        ],
+                        'fallback_quote' => [
+                            'id' => 'Testimoni jamaah akan tampil di sini.',
+                            'en' => 'Testimonials will appear here.',
+                        ],
+                    ],
+                    'articles' => [
+                        'label' => ['id' => 'Artikel', 'en' => 'Articles'],
+                        'heading' => ['id' => 'News & Update Terbaru', 'en' => 'Latest News & Updates'],
+                        'cta_label' => ['id' => 'Lihat Semua Artikel', 'en' => 'View All Articles'],
+                        'read_more_label' => ['id' => 'Baca selengkapnya', 'en' => 'Read more'],
+                        'empty_title' => ['id' => 'Belum ada artikel yang tampil.', 'en' => 'No articles available yet.'],
+                        'empty_description' => [
+                            'id' => 'Pastikan artikel sudah berstatus Terbit dan tanggal publikasinya tidak di masa depan.',
+                            'en' => 'Make sure the article is Published and the publish date is not in the future.',
+                        ],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#e6a34a',
+                            'overlay_intensity' => 'strong',
+                        ],
+                        'fallback_item_title_prefix' => ['id' => 'Artikel', 'en' => 'Article'],
+                    ],
+                    'contact' => [
+                        'label' => ['id' => 'Kontak Cepat', 'en' => 'Quick Contact'],
+                        'title' => [
+                            'id' => 'Siap berangkat? Konsultasi gratis dulu.',
+                            'en' => 'Ready to depart? Start with a free consultation.',
+                        ],
+                        'description' => [
+                            'id' => 'Tim kami siap membantu memilih paket terbaik, jadwal, dan kebutuhan dokumen.',
+                            'en' => 'Our team helps you choose the right package, schedule, and documents.',
+                        ],
+                        'whatsapp_label' => ['id' => 'Konsultasi WhatsApp', 'en' => 'WhatsApp Consultation'],
+                        'contact_label' => ['id' => 'Lihat Kontak Lengkap', 'en' => 'View Full Contact'],
+                        'banner_image' => '/images/dummy.jpg',
+                        'banner_kicker' => ['id' => 'Konsultasi Gratis', 'en' => 'Free Consultation'],
+                        'banner_title' => [
+                            'id' => 'AYO WUJUDKAN IBADAH KE TANAH SUCI BARENG {company_name}',
+                            'en' => 'Letâ€™s go to the holy land with {company_name}',
+                        ],
+                        'secondary_label' => ['id' => 'Lihat Paket', 'en' => 'View Packages'],
+                        'secondary_href' => '/paket-umroh',
+                        'address_label' => ['id' => 'Alamat', 'en' => 'Address'],
+                        'contact_info_label' => ['id' => 'Kontak', 'en' => 'Contact'],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#7a0d17',
+                            'overlay_intensity' => 'strong',
+                        ],
+                    ],
+                ],
+                'is_active' => true,
+            ],
+            [
                 'slug' => 'terms-conditions',
                 'category' => 'page',
                 'title' => $this->localize('Syarat & Ketentuan', 'Terms & Conditions'),

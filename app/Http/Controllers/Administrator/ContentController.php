@@ -432,12 +432,22 @@ class ContentController extends Controller
                         'cta_label' => ['id' => 'FREE KONSULTASI', 'en' => 'FREE CONSULTATION'],
                         'secondary_cta_label' => ['id' => 'Lihat Paket', 'en' => 'View Packages'],
                         'secondary_cta_href' => '/paket-umroh',
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#0f766e',
+                            'overlay_intensity' => 'strong',
+                        ],
                     ],
                     'timeline' => [
                         'label' => ['id' => 'Alur Perjalanan yang Kami Jalankan', 'en' => 'Journey Flow'],
                         'heading' => [
                             'id' => 'Sistem Perjalanan yang Jelas, Bukan Sekadar Janji',
                             'en' => 'A Clear System, Not Just Promises',
+                        ],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#155e75',
+                            'overlay_intensity' => 'strong',
                         ],
                         'steps' => [
                             [
@@ -506,6 +516,11 @@ class ContentController extends Controller
                             'id' => 'Banyak Jamaah Gagal Berangkat Bukan Karena Niat, Tapi Karena Salah Pilih Travel',
                             'en' => 'Many Fail to Depart Due to Choosing the Wrong Travel',
                         ],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#7a0d17',
+                            'overlay_intensity' => 'strong',
+                        ],
                         'badges' => [
                             ['id' => 'Biaya tiba-tiba berubah di tengah jalan', 'en' => 'Fees change unexpectedly'],
                             ['id' => 'Minimnya informasi & komunikasi', 'en' => 'Lack of info & communication'],
@@ -546,6 +561,11 @@ class ContentController extends Controller
                         'duration_suffix' => ['id' => 'hari', 'en' => 'days'],
                         'fallback_name' => ['id' => 'Paket Umroh', 'en' => 'Umrah Package'],
                         'fallback_summary' => ['id' => 'Detail paket akan tampil di sini.', 'en' => 'Package details will appear here.'],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#0f766e',
+                            'overlay_intensity' => 'strong',
+                        ],
                     ],
                     'services' => [
                         'label' => ['id' => 'Layanan Kami', 'en' => 'Our Services'],
@@ -553,6 +573,11 @@ class ContentController extends Controller
                         'description' => [
                             'id' => 'Layanan umroh menyeluruh untuk menjaga perjalanan ibadah tetap aman, nyaman, dan terarah.',
                             'en' => 'A complete umrah service to keep the worship journey safe, comfortable, and well-guided.',
+                        ],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#0f766e',
+                            'overlay_intensity' => 'strong',
                         ],
                         'fallback_title_prefix' => ['id' => 'Layanan', 'en' => 'Service'],
                         'fallback_description' => [
@@ -589,6 +614,11 @@ class ContentController extends Controller
                             'en' => 'Meaningful moments from pilgrim journeys.',
                         ],
                         'cta_label' => ['id' => 'OUR HISTORY', 'en' => 'OUR HISTORY'],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#e6a34a',
+                            'overlay_intensity' => 'strong',
+                        ],
                         'images' => [],
                     ],
                     'faq' => [
@@ -600,6 +630,11 @@ class ContentController extends Controller
                     ],
                     'testimonials' => [
                         'heading' => ['id' => 'Kesan Jamaah', 'en' => 'Testimonials'],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#155e75',
+                            'overlay_intensity' => 'strong',
+                        ],
                         'fallback_quote' => [
                             'id' => 'Testimoni jamaah akan tampil di sini.',
                             'en' => 'Testimonials will appear here.',
@@ -614,6 +649,11 @@ class ContentController extends Controller
                         'empty_description' => [
                             'id' => 'Pastikan artikel sudah berstatus Terbit dan tanggal publikasinya tidak di masa depan.',
                             'en' => 'Make sure the article is Published and the publish date is not in the future.',
+                        ],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#e6a34a',
+                            'overlay_intensity' => 'strong',
                         ],
                         'fallback_item_title_prefix' => ['id' => 'Artikel', 'en' => 'Article'],
                     ],
@@ -639,6 +679,11 @@ class ContentController extends Controller
                         'secondary_href' => '/paket-umroh',
                         'address_label' => ['id' => 'Alamat', 'en' => 'Address'],
                         'contact_info_label' => ['id' => 'Kontak', 'en' => 'Contact'],
+                        'background' => [
+                            'type' => 'default',
+                            'color' => '#7a0d17',
+                            'overlay_intensity' => 'strong',
+                        ],
                     ],
                 ],
             ],

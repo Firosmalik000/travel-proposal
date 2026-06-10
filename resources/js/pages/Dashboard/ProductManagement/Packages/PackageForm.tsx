@@ -42,11 +42,13 @@ import type {
     PackageFormData,
     ProductOption,
 } from './types';
+import { packageImageMimeTypes } from './types';
 
 type Props = {
     pkg: Package | null;
     productOptions: ProductOption[];
     activityOptions: ActivityOption[];
+    packageImageUploadMaxKilobytes: number;
     locale: 'id' | 'en';
     onSuccess: () => void;
 };
@@ -114,6 +116,24 @@ function normalizeItineraries(
     durationDays: number,
     itineraries: Array<Itinerary | ItineraryInput> = [],
 ): ItineraryInput[] {
+    const localizedField = (value: unknown): { id: string; en: string } => {
+        if (typeof value === 'string') {
+            return { id: value, en: value };
+        }
+
+        if (typeof value === 'object' && value !== null) {
+            return {
+                id: (value as { id?: string }).id ?? '',
+                en:
+                    (value as { en?: string }).en ??
+                    (value as { id?: string }).id ??
+                    '',
+            };
+        }
+
+        return { id: '', en: '' };
+    };
+
     const itineraryByDay = new Map<number, Itinerary | ItineraryInput>();
 
     itineraries.forEach((itinerary) => {
@@ -138,14 +158,8 @@ function normalizeItineraries(
                     : []),
             day_number: dayNumber,
             sort_order: Number(existingItinerary.sort_order ?? dayNumber),
-            title: {
-                id: existingItinerary.title?.id ?? '',
-                en: existingItinerary.title?.en ?? '',
-            },
-            description: {
-                id: existingItinerary.description?.id ?? '',
-                en: existingItinerary.description?.en ?? '',
-            },
+            title: localizedField(existingItinerary.title),
+            description: localizedField(existingItinerary.description),
             product_ids: [],
         };
     });
@@ -373,6 +387,7 @@ export function PackageForm({
     pkg,
     productOptions,
     activityOptions,
+    packageImageUploadMaxKilobytes,
     locale,
     onSuccess,
 }: Props) {
@@ -393,6 +408,8 @@ export function PackageForm({
     const [isItineraryPanelLoading, setIsItineraryPanelLoading] =
         useState(false);
     const form = useForm<PackageFormData>(initialFormData);
+    const packageImageUploadMaxBytes = packageImageUploadMaxKilobytes * 1024;
+    const packageImageUploadMaxLabel = `${Math.max(1, Math.round(packageImageUploadMaxKilobytes / 1024))} MB`;
 
     useEffect(() => {
         if (lastDurationRef.current === form.data.duration_days) {
@@ -432,7 +449,39 @@ export function PackageForm({
             return;
         }
 
+        const invalidTypeFiles = selectedFiles.filter(
+            (file) =>
+                !packageImageMimeTypes.includes(
+                    file.type as (typeof packageImageMimeTypes)[number],
+                ),
+        );
+        const oversizedFiles = selectedFiles.filter(
+            (file) => file.size > packageImageUploadMaxBytes,
+        );
+
+        if (invalidTypeFiles.length > 0 || oversizedFiles.length > 0) {
+            const messages: string[] = [];
+
+            if (invalidTypeFiles.length > 0) {
+                messages.push('Format gambar harus png, jpg, jpeg, atau webp.');
+            }
+
+            if (oversizedFiles.length > 0) {
+                messages.push(
+                    `Ukuran tiap gambar maksimal ${packageImageUploadMaxLabel}.`,
+                );
+            }
+
+            const message = messages.join(' ');
+            form.setError('images', message);
+            toast.error(message);
+            event.target.value = '';
+
+            return;
+        }
+
         const newImages = [...form.data.images, ...selectedFiles];
+        form.clearErrors('images');
         form.setData('images', newImages);
 
         const newPreviewUrls = selectedFiles.map((file) =>
@@ -458,7 +507,6 @@ export function PackageForm({
     }
 
     function removeExistingImage(index: number) {
-        const imagePath = existingImages[index];
         setExistingImages((prev) => prev.filter((_, i) => i !== index));
 
         // Mark for deletion on backend if needed, but for now we'll just handle it by what's NOT in the payload
@@ -978,6 +1026,11 @@ export function PackageForm({
                                     </p>
                                 </div>
                             ) : null}
+
+                            <p className="mt-3 text-xs text-muted-foreground">
+                                Format: PNG, JPG, JPEG, WEBP. Maksimal{' '}
+                                {packageImageUploadMaxLabel} per gambar.
+                            </p>
 
                             {errors.images ? (
                                 <p className="mt-1 text-xs text-destructive">

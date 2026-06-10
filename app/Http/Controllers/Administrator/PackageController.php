@@ -10,6 +10,7 @@ use App\Models\DepartureSchedule;
 use App\Models\PackageItinerary;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
+use App\Support\ParticipantUploadLimit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -40,6 +41,7 @@ class PackageController extends Controller
             'packages' => $packages,
             'productOptions' => $this->productOptions(),
             'activityOptions' => $this->activityOptions(),
+            'packageImageUploadMaxKilobytes' => ParticipantUploadLimit::kilobytes(4096),
         ]);
     }
 
@@ -66,9 +68,13 @@ class PackageController extends Controller
 
     public function destroy(TravelPackage $package): RedirectResponse
     {
-        if ($package->image_path && str_starts_with($package->image_path, '/storage/')) {
-            Storage::disk('public')->delete(str_replace('/storage/', '', $package->image_path));
-        }
+        collect([
+            $package->image_path,
+            ...(($package->content['gallery'] ?? [])),
+        ])
+            ->filter(fn (?string $path) => is_string($path) && str_starts_with($path, '/storage/'))
+            ->unique()
+            ->each(fn (string $path) => Storage::disk('public')->delete(str_replace('/storage/', '', $path)));
 
         $package->delete();
 
@@ -313,14 +319,14 @@ class PackageController extends Controller
             ->sortBy('sort_order')
             ->values();
 
-        if ($normalizedItineraries->isEmpty()) {
-            return;
-        }
-
         $package->itineraries()->each(function (PackageItinerary $itinerary): void {
             $itinerary->products()->detach();
             $itinerary->delete();
         });
+
+        if ($normalizedItineraries->isEmpty()) {
+            return;
+        }
 
         $normalizedItineraries->each(function (array $itineraryData) use ($package): void {
             $productIds = $itineraryData['product_ids'];
@@ -513,14 +519,27 @@ class PackageController extends Controller
 
         return [
             $activities
-                ->map(fn (Activity $activity) => trim((string) $activity->name))
+                ->map(fn (Activity $activity) => $this->localizedText($activity->name))
                 ->filter()
                 ->implode(', '),
             $activities
-                ->map(fn (Activity $activity) => trim((string) ($activity->description ?? '')))
+                ->map(fn (Activity $activity) => $this->localizedText($activity->description))
                 ->filter()
                 ->implode("\n"),
         ];
+    }
+
+    private function localizedText(mixed $value): string
+    {
+        if (is_string($value)) {
+            return trim($value);
+        }
+
+        if (! is_array($value)) {
+            return '';
+        }
+
+        return trim((string) ($value['id'] ?? $value['en'] ?? ''));
     }
 
     /** @return array<int, array<string, mixed>> */

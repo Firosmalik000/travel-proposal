@@ -3,13 +3,16 @@
 namespace Tests\Feature;
 
 use App\Models\Activity;
+use App\Models\Booking;
 use App\Models\DepartureSchedule;
 use App\Models\PackageItinerary;
-use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use App\Models\User;
+use App\Support\ParticipantUploadLimit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -50,6 +53,7 @@ class PackageManagementTest extends TestCase
                 ->has('packages', 1)
                 ->has('productOptions')
                 ->has('activityOptions')
+                ->where('packageImageUploadMaxKilobytes', ParticipantUploadLimit::kilobytes(4096))
                 ->where('packages.0.code', 'ASF-TEST-10')
                 ->where('packages.0.images.0', '/storage/packages/cover.jpg')
                 ->where('packages.0.images.1', '/storage/packages/gallery-1.jpg')
@@ -63,8 +67,8 @@ class PackageManagementTest extends TestCase
         $package->itineraries()->create([
             'day_number' => 1,
             'sort_order' => 1,
-            'title' => ['id' => 'Hari Pertama', 'en' => 'First Day'],
-            'description' => ['id' => 'Berangkat ke Jeddah', 'en' => 'Depart to Jeddah'],
+            'title' => 'Hari Pertama',
+            'description' => 'Berangkat ke Jeddah',
         ]);
 
         $this->actingAs($user)
@@ -287,11 +291,11 @@ class PackageManagementTest extends TestCase
 
         $package = TravelPackage::query()->where('code', 'ASF-UMROH-ITINERARY-2')->first();
         $this->assertNotNull($package);
-        $this->assertEquals(2, $package->itineraries()->count());
+        $this->assertEquals(1, $package->itineraries()->count());
         $this->assertEquals($activity->id, $package->itineraries()->orderBy('day_number')->first()?->activity_id);
         $this->assertEquals([$activity->id, $secondaryActivity->id], $package->itineraries()->orderBy('day_number')->first()?->activity_ids);
-        $this->assertEquals('Keberangkatan, Check-in Hotel', $package->itineraries()->orderBy('day_number')->first()?->title['id']);
-        $this->assertEquals([], $package->itineraries()->orderBy('day_number')->first()?->products()->pluck('travel_products.id')->all());
+        $this->assertEquals('Keberangkatan, Check-in Hotel', $package->itineraries()->orderBy('day_number')->first()?->title);
+        $this->assertEquals([], $package->itineraries()->orderBy('day_number')->first()?->products()->pluck('products.id')->all());
     }
 
     public function test_it_syncs_itineraries_when_updating_a_package(): void
@@ -333,14 +337,14 @@ class PackageManagementTest extends TestCase
             [
                 'day_number' => 1,
                 'sort_order' => 1,
-                'title' => ['id' => 'Hari Lama 1', 'en' => 'Old Day 1'],
-                'description' => ['id' => 'Lama 1', 'en' => 'Old 1'],
+                'title' => 'Hari Lama 1',
+                'description' => 'Lama 1',
             ],
             [
                 'day_number' => 2,
                 'sort_order' => 2,
-                'title' => ['id' => 'Hari Lama 2', 'en' => 'Old Day 2'],
-                'description' => ['id' => 'Lama 2', 'en' => 'Old 2'],
+                'title' => 'Hari Lama 2',
+                'description' => 'Lama 2',
             ],
         ]);
 
@@ -373,10 +377,10 @@ class PackageManagementTest extends TestCase
         $freshPackage = $pkg->fresh();
         $this->assertNotNull($freshPackage);
         $this->assertEquals([1, 3], $freshPackage->itineraries()->orderBy('day_number')->pluck('day_number')->all());
-        $this->assertEquals('Muthawwif', $freshPackage->itineraries()->where('day_number', 1)->first()?->title['id']);
-        $this->assertEquals($activityB->id, $freshPackage->itineraries()->where('day_number', 3)->first()?->activity_id);
+        $this->assertEquals('Muthawwif', $freshPackage->itineraries()->where('day_number', 1)->first()?->title);
+        $this->assertEquals($activityA->id, $freshPackage->itineraries()->where('day_number', 3)->first()?->activity_id);
         $this->assertEquals([$activityA->id, $activityB->id], $freshPackage->itineraries()->where('day_number', 3)->first()?->activity_ids);
-        $this->assertEquals([], $freshPackage->itineraries()->where('day_number', 3)->first()?->products()->pluck('travel_products.id')->all());
+        $this->assertEquals([], $freshPackage->itineraries()->where('day_number', 3)->first()?->products()->pluck('products.id')->all());
     }
 
     public function test_it_syncs_products_when_updating_package(): void
@@ -446,7 +450,7 @@ class PackageManagementTest extends TestCase
         $user = User::factory()->create();
         $pkg = $this->makePackage();
         $schedule = DepartureSchedule::query()->create([
-            'travel_package_id' => $pkg->id,
+            'package_id' => $pkg->id,
             'departure_date' => '2026-08-01',
             'return_date' => '2026-08-10',
             'departure_city' => 'Jakarta',
@@ -456,9 +460,11 @@ class PackageManagementTest extends TestCase
             'is_active' => true,
         ]);
 
-        PackageRegistration::query()->create([
-            'travel_package_id' => $pkg->id,
+        Booking::query()->create([
+            'package_id' => $pkg->id,
             'departure_schedule_id' => $schedule->id,
+            'booking_code' => 'BK-TEST-001',
+            'booking_type' => 'package',
             'full_name' => 'Ahmad Fauzi',
             'phone' => '081234567890',
             'email' => 'ahmad@example.com',
@@ -467,9 +473,11 @@ class PackageManagementTest extends TestCase
             'status' => 'pending',
         ]);
 
-        PackageRegistration::query()->create([
-            'travel_package_id' => $pkg->id,
+        Booking::query()->create([
+            'package_id' => $pkg->id,
             'departure_schedule_id' => $schedule->id,
+            'booking_code' => 'BK-TEST-002',
+            'booking_type' => 'package',
             'full_name' => 'Siti Aminah',
             'phone' => '081234567891',
             'email' => 'siti@example.com',
@@ -478,9 +486,11 @@ class PackageManagementTest extends TestCase
             'status' => 'registered',
         ]);
 
-        PackageRegistration::query()->create([
-            'travel_package_id' => $pkg->id,
+        Booking::query()->create([
+            'package_id' => $pkg->id,
             'departure_schedule_id' => $schedule->id,
+            'booking_code' => 'BK-TEST-003',
+            'booking_type' => 'package',
             'full_name' => 'Budi Santoso',
             'phone' => '081234567892',
             'email' => 'budi@example.com',
@@ -505,7 +515,7 @@ class PackageManagementTest extends TestCase
         $pkg2 = $this->makePackage(['code' => 'PKG-2', 'slug' => 'pkg-2']);
 
         $schedule = DepartureSchedule::query()->create([
-            'travel_package_id' => $pkg1->id,
+            'package_id' => $pkg1->id,
             'departure_date' => '2026-08-01',
             'departure_city' => 'Jakarta',
             'seats_total' => 45,
@@ -531,7 +541,7 @@ class PackageManagementTest extends TestCase
         $pkg = $this->makePackage();
 
         $schedule = DepartureSchedule::query()->create([
-            'travel_package_id' => $pkg->id,
+            'package_id' => $pkg->id,
             'departure_date' => '2026-08-01',
             'departure_city' => 'Jakarta',
             'seats_total' => 45,
@@ -594,8 +604,8 @@ class PackageManagementTest extends TestCase
         $this->assertEquals(2, $updatedItinerary->day_number);
         $this->assertEquals($activity->id, $updatedItinerary->activity_id);
         $this->assertEquals([$activity->id], $updatedItinerary->activity_ids);
-        $this->assertEquals('City Tour', $updatedItinerary->title['id']);
-        $this->assertEquals([], $updatedItinerary->products()->pluck('travel_products.id')->all());
+        $this->assertEquals('City Tour', $updatedItinerary->title);
+        $this->assertEquals([], $updatedItinerary->products()->pluck('products.id')->all());
     }
 
     public function test_it_prevents_updating_itinerary_of_different_package(): void
@@ -605,11 +615,11 @@ class PackageManagementTest extends TestCase
         $pkg2 = $this->makePackage(['code' => 'PKG-ITI-2', 'slug' => 'pkg-iti-2']);
 
         $itinerary = PackageItinerary::query()->create([
-            'travel_package_id' => $pkg1->id,
+            'package_id' => $pkg1->id,
             'day_number' => 1,
             'sort_order' => 1,
-            'title' => ['id' => 'Hari 1', 'en' => 'Day 1'],
-            'description' => ['id' => 'Agenda 1', 'en' => 'Agenda 1'],
+            'title' => 'Hari 1',
+            'description' => 'Agenda 1',
         ]);
 
         $this->actingAs($user)
@@ -655,7 +665,7 @@ class PackageManagementTest extends TestCase
             ])
             ->assertRedirect();
 
-        $this->assertDatabaseHas('travel_packages', [
+        $this->assertDatabaseHas('packages', [
             'code' => 'ASF-UMROH-BARU-10-2',
         ]);
     }
@@ -680,7 +690,105 @@ class PackageManagementTest extends TestCase
 
         $package = TravelPackage::query()->where('code', 'ASF-UMROH-HEMAT-9')->first();
         $this->assertNotNull($package);
-        $this->assertSame('Umroh Hemat', $package->name['en']);
-        $this->assertSame('Paket hemat untuk jamaah.', $package->summary['en']);
+        $this->assertSame('Umroh Hemat', $package->name);
+        $this->assertSame('Paket hemat untuk jamaah.', $package->summary);
+    }
+
+    public function test_it_removes_all_itineraries_when_updating_package_with_empty_itineraries(): void
+    {
+        $user = User::factory()->create();
+        $pkg = $this->makePackage();
+
+        $pkg->itineraries()->createMany([
+            [
+                'day_number' => 1,
+                'sort_order' => 1,
+                'title' => 'Hari 1',
+                'description' => 'Agenda hari pertama',
+            ],
+            [
+                'day_number' => 2,
+                'sort_order' => 2,
+                'title' => 'Hari 2',
+                'description' => 'Agenda hari kedua',
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.update', $pkg), [
+                'slug' => $pkg->slug,
+                'name' => $pkg->name,
+                'package_type' => $pkg->package_type,
+                'departure_city' => $pkg->departure_city,
+                'duration_days' => $pkg->duration_days,
+                'price' => $pkg->price,
+                'currency' => $pkg->currency,
+                'product_ids' => [],
+                'itineraries' => [],
+                'is_active' => true,
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(0, $pkg->fresh()->itineraries()->count());
+    }
+
+    public function test_it_deletes_gallery_images_when_deleting_a_package(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+
+        Storage::disk('public')->putFileAs(
+            'packages',
+            UploadedFile::fake()->image('cover.jpg'),
+            'cover.jpg',
+        );
+        Storage::disk('public')->putFileAs(
+            'packages',
+            UploadedFile::fake()->image('gallery-1.jpg'),
+            'gallery-1.jpg',
+        );
+
+        $pkg = $this->makePackage([
+            'image_path' => '/storage/packages/cover.jpg',
+            'content' => [
+                'gallery' => ['/storage/packages/gallery-1.jpg'],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('packages.destroy', $pkg))
+            ->assertRedirect();
+
+        Storage::disk('public')->assertMissing('packages/cover.jpg');
+        Storage::disk('public')->assertMissing('packages/gallery-1.jpg');
+    }
+
+    public function test_it_updates_schedule_active_flag(): void
+    {
+        $user = User::factory()->create();
+        $pkg = $this->makePackage();
+        $schedule = DepartureSchedule::query()->create([
+            'package_id' => $pkg->id,
+            'departure_date' => '2026-08-01',
+            'return_date' => '2026-08-10',
+            'departure_city' => 'Jakarta',
+            'seats_total' => 45,
+            'seats_available' => 45,
+            'status' => 'open',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.schedules.update', [$pkg, $schedule]), [
+                'departure_date' => '2026-08-01',
+                'return_date' => '2026-08-10',
+                'departure_city' => 'Jakarta',
+                'seats_total' => 45,
+                'status' => 'open',
+                'is_active' => false,
+            ])
+            ->assertRedirect();
+
+        $this->assertFalse((bool) $schedule->fresh()?->is_active);
     }
 }

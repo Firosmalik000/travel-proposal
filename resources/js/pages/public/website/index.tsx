@@ -41,26 +41,156 @@ import {
     Users,
     Zap,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type ComponentType } from 'react';
+import {
+    useEffect,
+    useRef,
+    useState,
+    type ComponentType,
+    type CSSProperties,
+} from 'react';
 
 type SectionBackgroundConfig = {
     type?: 'default' | 'color' | 'image';
     color?: string | null;
     image?: string | null;
+    overlay_intensity?: 'soft' | 'medium' | 'strong' | null;
 };
+
+type SectionBackgroundTone = 'light' | 'dark';
+
+function overlayIntensityMultiplier(
+    background: SectionBackgroundConfig | null,
+): number {
+    const intensity = background?.overlay_intensity ?? 'medium';
+
+    if (intensity === 'soft') {
+        return 1;
+    }
+
+    if (intensity === 'strong') {
+        return 1.85;
+    }
+
+    return 1.4;
+}
+
+function normalizeHexColor(value: string): string | null {
+    const normalized = value.trim().replace('#', '');
+
+    if (/^[0-9a-f]{3}$/i.test(normalized)) {
+        return `#${normalized
+            .split('')
+            .map((part) => `${part}${part}`)
+            .join('')
+            .toLowerCase()}`;
+    }
+
+    if (/^[0-9a-f]{6}$/i.test(normalized)) {
+        return `#${normalized.toLowerCase()}`;
+    }
+
+    return null;
+}
+
+function hexToRgb(value: string): [number, number, number] | null {
+    const normalized = normalizeHexColor(value);
+
+    if (!normalized) {
+        return null;
+    }
+
+    const hex = normalized.slice(1);
+
+    return [
+        parseInt(hex.slice(0, 2), 16),
+        parseInt(hex.slice(2, 4), 16),
+        parseInt(hex.slice(4, 6), 16),
+    ];
+}
+
+function rgba(value: string, alpha: number): string {
+    const rgb = hexToRgb(value);
+
+    if (!rgb) {
+        return `rgba(122, 13, 23, ${alpha})`;
+    }
+
+    return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
+}
+
+function mixHexColors(color: string, mixWith: string, weight: number): string {
+    const baseRgb = hexToRgb(color);
+    const mixRgb = hexToRgb(mixWith);
+
+    if (!baseRgb || !mixRgb) {
+        return color;
+    }
+
+    const next = baseRgb.map((channel, index) => {
+        return Math.round(channel + (mixRgb[index] - channel) * weight);
+    });
+
+    return `#${next.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function resolveAccentColor(
+    background: SectionBackgroundConfig | null,
+): string {
+    const customColor = normalizeHexColor(String(background?.color ?? ''));
+
+    return customColor ?? '#7a0d17';
+}
+
+function buildGradientBackgroundStyle(
+    color: string,
+    intensity: number,
+    isDefault = false,
+): CSSProperties {
+    if (isDefault) {
+        return {};
+    }
+
+    const lightMixWeight = isDefault
+        ? 0.025 + intensity * 0.018
+        : 0.22 + intensity * 0.06;
+    const darkMixWeight = isDefault
+        ? 0.05 + intensity * 0.024
+        : 0.28 + intensity * 0.08;
+    const lighterTone = mixHexColors(
+        color,
+        '#ffffff',
+        lightMixWeight,
+    );
+    const darkerTone = mixHexColors(
+        color,
+        '#09090b',
+        darkMixWeight,
+    );
+
+    return {
+        backgroundColor: color,
+        backgroundImage: [
+            `radial-gradient(circle at bottom right, ${rgba(lighterTone, (isDefault ? 0.2 : 0.26) + intensity * (isDefault ? 0.06 : 0.08))} 0%, transparent 42%)`,
+            `radial-gradient(circle at 82% 78%, ${rgba(color, (isDefault ? 0.16 : 0.14) + intensity * (isDefault ? 0.06 : 0.06))} 0%, transparent 36%)`,
+            `radial-gradient(circle at top left, ${rgba(darkerTone, (isDefault ? 0.16 : 0.18) + intensity * (isDefault ? 0.06 : 0.08))} 0%, transparent 48%)`,
+            `linear-gradient(to top left, ${lighterTone} 0%, ${color} 48%, ${darkerTone} 100%)`,
+        ].join(', '),
+    };
+}
 
 function sectionStyleFromBackground(
     background: SectionBackgroundConfig | null,
-): React.CSSProperties | undefined {
+): CSSProperties | undefined {
     const type = background?.type ?? 'default';
+    const intensity = overlayIntensityMultiplier(background);
+    const accentColor = normalizeHexColor(String(background?.color ?? ''));
 
     if (type === 'color') {
-        const color = String(background?.color ?? '').trim();
-        if (!color) {
+        if (!accentColor) {
             return undefined;
         }
 
-        return { backgroundColor: color };
+        return buildGradientBackgroundStyle(accentColor, intensity);
     }
 
     if (type === 'image') {
@@ -77,7 +207,182 @@ function sectionStyleFromBackground(
         };
     }
 
+    if (type === 'default' && accentColor) {
+        return buildGradientBackgroundStyle(accentColor, intensity, true);
+    }
+
     return undefined;
+}
+
+function sectionOverlayStyleFromBackground(
+    background: SectionBackgroundConfig | null,
+    tone: SectionBackgroundTone,
+): CSSProperties {
+    const accentColor = resolveAccentColor(background);
+    const type = background?.type ?? 'default';
+    const intensity = overlayIntensityMultiplier(background);
+
+    if (type === 'image') {
+        return tone === 'dark'
+            ? {
+                  backgroundImage: [
+                      `linear-gradient(180deg, rgba(5, 6, 10, ${(0.56 * intensity).toFixed(3)}) 0%, rgba(5, 6, 10, ${(0.38 * intensity).toFixed(3)}) 42%, rgba(5, 6, 10, ${(0.7 * intensity).toFixed(3)}) 100%)`,
+                      `radial-gradient(circle at top right, ${rgba(accentColor, 0.26 * intensity)} 0%, transparent 44%)`,
+                      `radial-gradient(circle at bottom left, rgba(255, 255, 255, ${(0.08 * intensity).toFixed(3)}) 0%, transparent 38%)`,
+                  ].join(', '),
+              }
+            : {
+                  backgroundImage: [
+                      `linear-gradient(180deg, rgba(255, 255, 255, ${(0.74 * intensity).toFixed(3)}) 0%, rgba(255, 255, 255, ${(0.5 * intensity).toFixed(3)}) 42%, rgba(255, 255, 255, ${(0.8 * intensity).toFixed(3)}) 100%)`,
+                      `radial-gradient(circle at top right, ${rgba(accentColor, 0.18 * intensity)} 0%, transparent 40%)`,
+                      `radial-gradient(circle at bottom left, rgba(255, 255, 255, ${(0.22 * intensity).toFixed(3)}) 0%, transparent 42%)`,
+                  ].join(', '),
+              };
+    }
+
+    if (type === 'color') {
+        return tone === 'dark'
+            ? {
+                  backgroundImage: [
+                      `linear-gradient(180deg, rgba(255, 255, 255, ${(0.05 * intensity).toFixed(3)}) 0%, rgba(0, 0, 0, ${(0.14 * intensity).toFixed(3)}) 100%)`,
+                      `radial-gradient(circle at top right, rgba(255, 255, 255, ${(0.14 * intensity).toFixed(3)}) 0%, transparent 36%)`,
+                      `radial-gradient(circle at bottom left, ${rgba(accentColor, 0.16 * intensity)} 0%, transparent 42%)`,
+                  ].join(', '),
+              }
+            : {
+                  backgroundImage: [
+                      `linear-gradient(180deg, rgba(255, 255, 255, ${(0.12 * intensity).toFixed(3)}) 0%, rgba(255, 255, 255, ${(0.22 * intensity).toFixed(3)}) 100%)`,
+                      `radial-gradient(circle at top right, rgba(255, 255, 255, ${(0.16 * intensity).toFixed(3)}) 0%, transparent 38%)`,
+                      `radial-gradient(circle at bottom left, ${rgba(accentColor, 0.14 * intensity)} 0%, transparent 42%)`,
+                  ].join(', '),
+              };
+    }
+
+    if (type === 'default') {
+        return tone === 'dark'
+            ? {
+                  backgroundImage: [
+                      `linear-gradient(180deg, rgba(6, 8, 12, ${(0.08 * intensity).toFixed(3)}) 0%, rgba(6, 8, 12, ${(0.18 * intensity).toFixed(3)}) 100%)`,
+                      `radial-gradient(circle at bottom right, ${rgba(accentColor, 0.18 * intensity)} 0%, transparent 44%)`,
+                      `radial-gradient(circle at top left, rgba(255, 255, 255, ${(0.05 * intensity).toFixed(3)}) 0%, transparent 36%)`,
+                  ].join(', '),
+              }
+            : {
+                  backgroundImage: [
+                      `linear-gradient(180deg, rgba(255, 255, 255, ${(0.02 * intensity).toFixed(3)}) 0%, rgba(255, 255, 255, ${(0.06 * intensity).toFixed(3)}) 100%)`,
+                      `radial-gradient(circle at bottom right, ${rgba(accentColor, 0.12 * intensity)} 0%, transparent 42%)`,
+                      `radial-gradient(circle at top left, rgba(255, 255, 255, ${(0.08 * intensity).toFixed(3)}) 0%, transparent 34%)`,
+                  ].join(', '),
+              };
+    }
+
+    return tone === 'dark'
+        ? {
+              backgroundImage: [
+                  'linear-gradient(180deg, rgba(8, 8, 10, 0.24) 0%, rgba(8, 8, 10, 0.38) 100%)',
+                  `radial-gradient(circle at top right, ${rgba(accentColor, 0.18)} 0%, transparent 42%)`,
+                  'radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.06) 0%, transparent 34%)',
+              ].join(', '),
+          }
+        : {
+              backgroundImage: [
+                  'linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.3) 100%)',
+                  `radial-gradient(circle at top right, ${rgba(accentColor, 0.14)} 0%, transparent 40%)`,
+                  'radial-gradient(circle at bottom left, rgba(255, 255, 255, 0.16) 0%, transparent 36%)',
+              ].join(', '),
+          };
+}
+
+function sectionGlowStyleFromBackground(
+    background: SectionBackgroundConfig | null,
+    tone: SectionBackgroundTone,
+): CSSProperties {
+    const accentColor = resolveAccentColor(background);
+    const intensity = overlayIntensityMultiplier(background);
+    const type = background?.type ?? 'default';
+
+    if (type === 'default') {
+        return {
+            backgroundImage: [
+                `radial-gradient(circle at top left, ${rgba(accentColor, (tone === 'dark' ? 0.12 : 0.08) * intensity)} 0%, transparent 36%)`,
+                `radial-gradient(circle at bottom right, ${rgba(accentColor, (tone === 'dark' ? 0.14 : 0.1) * intensity)} 0%, transparent 34%)`,
+            ].join(', '),
+        };
+    }
+
+    return {
+        backgroundImage: [
+            `radial-gradient(circle at top left, ${rgba(accentColor, (tone === 'dark' ? 0.2 : 0.14) * intensity)} 0%, transparent 34%)`,
+            `radial-gradient(circle at bottom right, rgba(255, 255, 255, ${((tone === 'dark' ? 0.08 : 0.12) * intensity).toFixed(3)}) 0%, transparent 32%)`,
+        ].join(', '),
+    };
+}
+
+function sectionSurfaceClass(
+    background: SectionBackgroundConfig | null,
+    tone: SectionBackgroundTone,
+    variant: 'panel' | 'card' = 'panel',
+): string {
+    if (tone === 'dark') {
+        return variant === 'panel'
+            ? 'bg-black/46 ring-1 ring-white/24 shadow-[0_24px_80px_rgba(0,0,0,0.34)] backdrop-blur-xl'
+            : 'bg-white/90 ring-1 ring-white/40 shadow-[0_18px_48px_rgba(0,0,0,0.28)] backdrop-blur-lg';
+    }
+
+    return variant === 'panel'
+        ? 'bg-white/58 ring-1 ring-white/60 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-xl'
+        : 'bg-white/78 ring-1 ring-white/70 shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-lg';
+}
+
+function SectionBackgroundLayer({
+    background,
+    tone,
+    defaultImage,
+    defaultImageClassName = 'h-full w-full object-cover',
+    bottomFadeTo,
+}: {
+    background: SectionBackgroundConfig | null;
+    tone: SectionBackgroundTone;
+    defaultImage?: string | null;
+    defaultImageClassName?: string;
+    bottomFadeTo?: string;
+}) {
+    const type = background?.type ?? 'default';
+    const image = String(background?.image ?? '').trim();
+    const shouldRenderDefaultImage =
+        type === 'default' && Boolean(defaultImage);
+    const shouldRenderCustomImage = type === 'image' && image !== '';
+
+    return (
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+            {shouldRenderDefaultImage ? (
+                <img
+                    src={String(defaultImage)}
+                    alt=""
+                    className={defaultImageClassName}
+                />
+            ) : null}
+            {shouldRenderCustomImage ? (
+                <img src={image} alt="" className={defaultImageClassName} />
+            ) : null}
+            <div
+                className="absolute inset-0"
+                style={sectionOverlayStyleFromBackground(background, tone)}
+            />
+            <div
+                className="pointer-events-none absolute inset-0 opacity-80"
+                style={sectionGlowStyleFromBackground(background, tone)}
+            />
+            {bottomFadeTo ? (
+                <div
+                    className="absolute inset-x-0 bottom-0 h-24"
+                    style={{
+                        backgroundImage: `linear-gradient(to bottom, transparent, ${bottomFadeTo})`,
+                    }}
+                />
+            ) : null}
+        </div>
+    );
 }
 
 type StepItem = {
@@ -173,7 +478,6 @@ export default function PublicHomeLanding() {
     const hero = (homeContent.hero as Record<string, any>) ?? {};
     const heroBackgroundConfig =
         (hero.background as SectionBackgroundConfig | null) ?? null;
-    const heroBackgroundType = heroBackgroundConfig?.type ?? 'default';
     const heroLabel = String(hero.label ?? '');
     const heroTitle = String(hero.title ?? '');
     const heroDescription = String(hero.description ?? '');
@@ -471,40 +775,18 @@ export default function PublicHomeLanding() {
 
             <main className="min-h-screen">
                 <section className="relative isolate min-h-[100svh] overflow-hidden">
+                    <SectionBackgroundLayer
+                        background={heroBackgroundConfig}
+                        tone="dark"
+                        defaultImage={heroImage}
+                        bottomFadeTo="#fff7ef"
+                    />
                     <div className="absolute inset-0 -z-10">
-                        {heroBackgroundType === 'image' ? (
-                            <img
-                                src={String(
-                                    heroBackgroundConfig?.image ?? heroImage,
-                                )}
-                                alt=""
-                                className="h-full w-full object-cover"
-                            />
-                        ) : null}
-                        {heroBackgroundType === 'default' ? (
-                            <img
-                                src={heroImage}
-                                alt=""
-                                className="h-full w-full object-cover"
-                            />
-                        ) : null}
-                        {heroBackgroundType === 'color' ? (
-                            <div
-                                className="absolute inset-0"
-                                style={{
-                                    backgroundColor: String(
-                                        heroBackgroundConfig?.color ?? '#000',
-                                    ),
-                                }}
-                            />
-                        ) : null}
                         <motion.div
                             className="pointer-events-none absolute -top-24 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-[#e6a34a]/35 blur-3xl"
                             animate={heroGlow}
                             transition={heroGlowTransition}
                         />
-                        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/55 to-black/30" />
-                        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-[#fff7ef]" />
                     </div>
 
                     <div
@@ -607,22 +889,12 @@ export default function PublicHomeLanding() {
                     className="relative overflow-hidden bg-[#fff7ef] py-12 sm:py-16"
                     style={sectionStyleFromBackground(timelineBackground)}
                 >
-                    <div className="absolute inset-0">
-                        {(timelineBackground?.type ?? 'default') ===
-                        'default' ? (
-                            <img
-                                src={heroBackground}
-                                alt=""
-                                className="h-full w-full object-cover opacity-25"
-                            />
-                        ) : null}
-                        {(timelineBackground?.type ?? 'default') ===
-                        'default' ? (
-                            <div className="absolute inset-0 bg-gradient-to-b from-white/72 via-white/88 to-white/94" />
-                        ) : (
-                            <div className="absolute inset-0 bg-gradient-to-b from-white/35 via-white/55 to-white/75" />
-                        )}
-                    </div>
+                    <SectionBackgroundLayer
+                        background={timelineBackground}
+                        tone="light"
+                        defaultImage={heroBackground}
+                        defaultImageClassName="h-full w-full object-cover opacity-25"
+                    />
 
                     <div className="relative container mx-auto px-6">
                         <motion.div
@@ -635,7 +907,10 @@ export default function PublicHomeLanding() {
                         </motion.div>
 
                         <motion.div
-                            className="mt-8 rounded-[28px] bg-black/30 p-6 shadow-sm ring-1 ring-white/18 backdrop-blur sm:mt-10 sm:p-8"
+                            className={`mt-8 rounded-[28px] bg-black/30 p-6 shadow-sm ring-1 ring-white/18 backdrop-blur sm:mt-10 sm:p-8 ${sectionSurfaceClass(
+                                timelineBackground,
+                                'dark',
+                            )}`}
                             {...getInViewProps(fadeIn)}
                         >
                             <div className="relative">
@@ -713,7 +988,11 @@ export default function PublicHomeLanding() {
                                 return (
                                     <motion.div
                                         key={item.title}
-                                        className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5"
+                                        className={`rounded-2xl bg-white p-6 shadow-sm ring-1 ring-black/5 ${sectionSurfaceClass(
+                                            timelineBackground,
+                                            'light',
+                                            'card',
+                                        )}`}
                                         variants={cardVariants}
                                     >
                                         <div className="flex items-center gap-3">
@@ -743,9 +1022,20 @@ export default function PublicHomeLanding() {
                             null,
                     )}
                 >
+                    <SectionBackgroundLayer
+                        background={
+                            (problem.background as SectionBackgroundConfig | null) ??
+                            null
+                        }
+                        tone="light"
+                    />
                     <div className="container mx-auto px-6">
                         <motion.div
-                            className="mx-auto max-w-4xl rounded-[28px] bg-white/35 p-8 ring-1 ring-black/5 backdrop-blur sm:p-10"
+                            className={`mx-auto max-w-4xl rounded-[28px] bg-white/35 p-8 ring-1 ring-black/5 backdrop-blur sm:p-10 ${sectionSurfaceClass(
+                                (problem.background as SectionBackgroundConfig | null) ??
+                                    null,
+                                'light',
+                            )}`}
                             {...getInViewProps(fadeLeft)}
                         >
                             <p className="text-center text-xs font-bold tracking-[0.24em] text-[#7a0d17]/70 uppercase">
@@ -778,9 +1068,18 @@ export default function PublicHomeLanding() {
                     className="relative bg-[#fff7ef] py-14 sm:py-18"
                     style={sectionStyleFromBackground(galleryBackground)}
                 >
+                    <SectionBackgroundLayer
+                        background={galleryBackground}
+                        tone="light"
+                    />
                     <div className="container mx-auto px-6">
                         <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-                            <div>
+                            <div
+                                className={`rounded-[28px] p-6 sm:p-8 ${sectionSurfaceClass(
+                                    galleryBackground,
+                                    'light',
+                                )}`}
+                            >
                                 <motion.h2
                                     className="font-heading text-3xl font-extrabold text-[#2a120c]"
                                     {...getInViewProps(fadeLeft)}
@@ -829,7 +1128,11 @@ export default function PublicHomeLanding() {
                                 >
                                     <div className="col-span-7">
                                         <motion.div
-                                            className="overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10"
+                                            className={`overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10 ${sectionSurfaceClass(
+                                                galleryBackground,
+                                                'light',
+                                                'card',
+                                            )}`}
                                             variants={fadeUp}
                                         >
                                             <img
@@ -844,7 +1147,11 @@ export default function PublicHomeLanding() {
                                     </div>
                                     <div className="col-span-5 grid gap-4">
                                         <motion.div
-                                            className="overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10"
+                                            className={`overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10 ${sectionSurfaceClass(
+                                                galleryBackground,
+                                                'light',
+                                                'card',
+                                            )}`}
                                             variants={fadeUp}
                                         >
                                             <img
@@ -857,7 +1164,11 @@ export default function PublicHomeLanding() {
                                             />
                                         </motion.div>
                                         <motion.div
-                                            className="overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10"
+                                            className={`overflow-hidden rounded-3xl shadow-lg ring-1 ring-black/10 ${sectionSurfaceClass(
+                                                galleryBackground,
+                                                'light',
+                                                'card',
+                                            )}`}
                                             variants={fadeUp}
                                         >
                                             <img
@@ -890,6 +1201,10 @@ export default function PublicHomeLanding() {
                     className="relative bg-white py-14 sm:py-18"
                     style={sectionStyleFromBackground(servicesBackground)}
                 >
+                    <SectionBackgroundLayer
+                        background={servicesBackground}
+                        tone="light"
+                    />
                     <div className="container mx-auto px-6">
                         <motion.h2
                             className="font-heading text-center text-4xl font-extrabold text-[#2a120c] sm:text-5xl"
@@ -926,7 +1241,11 @@ export default function PublicHomeLanding() {
                                 return (
                                     <motion.div
                                         key={`${title}_${index}`}
-                                        className="flex items-start gap-5"
+                                        className={`flex items-start gap-5 rounded-[28px] p-5 sm:p-6 ${sectionSurfaceClass(
+                                            servicesBackground,
+                                            'light',
+                                            'card',
+                                        )}`}
                                         variants={cardVariants}
                                     >
                                         <div className="h-32 w-32 shrink-0 overflow-hidden rounded-[6px] bg-[#efe5d8] sm:h-36 sm:w-36">
@@ -961,6 +1280,10 @@ export default function PublicHomeLanding() {
                     className="relative bg-[#2a120c] py-14 sm:py-18"
                     style={sectionStyleFromBackground(packagesBackground)}
                 >
+                    <SectionBackgroundLayer
+                        background={packagesBackground}
+                        tone="dark"
+                    />
                     <div className="container mx-auto px-6">
                         <div className="relative flex flex-col items-center gap-4 text-center sm:min-h-[3rem] sm:justify-center sm:gap-0">
                             <motion.h2
@@ -1035,7 +1358,11 @@ export default function PublicHomeLanding() {
                                 return (
                                     <motion.div
                                         key={String(pkg.slug ?? pkg.id)}
-                                        className="group relative overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/10"
+                                        className={`group relative overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-black/10 ${sectionSurfaceClass(
+                                            packagesBackground,
+                                            'light',
+                                            'card',
+                                        )}`}
                                         variants={cardVariants}
                                     >
                                         <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
@@ -1183,35 +1510,16 @@ export default function PublicHomeLanding() {
                     </div>
                 </section>
 
-                <section className="relative isolate overflow-hidden bg-black py-14 sm:py-18">
-                    <div className="absolute inset-0 -z-10">
-                        {testimonialsBackground?.type === 'image' ? (
-                            <img
-                                src={String(
-                                    testimonialsBackground?.image ??
-                                        '/images/dummy.jpg',
-                                )}
-                                alt=""
-                                className="h-full w-full object-cover opacity-40"
-                            />
-                        ) : testimonialsBackground?.type === 'color' ? (
-                            <div
-                                className="absolute inset-0"
-                                style={{
-                                    backgroundColor: String(
-                                        testimonialsBackground?.color ?? '#000',
-                                    ),
-                                }}
-                            />
-                        ) : (
-                            <img
-                                src="/images/dummy.jpg"
-                                alt=""
-                                className="h-full w-full object-cover opacity-40"
-                            />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/55 to-black/65" />
-                    </div>
+                <section
+                    className="relative isolate overflow-hidden bg-black py-14 sm:py-18"
+                    style={sectionStyleFromBackground(testimonialsBackground)}
+                >
+                    <SectionBackgroundLayer
+                        background={testimonialsBackground}
+                        tone="dark"
+                        defaultImage="/images/dummy.jpg"
+                        defaultImageClassName="h-full w-full object-cover opacity-40"
+                    />
 
                     <div className="container mx-auto px-6">
                         <motion.h2
@@ -1278,7 +1586,11 @@ export default function PublicHomeLanding() {
                                 return (
                                     <motion.div
                                         key={testimonial.name}
-                                        className="relative w-[260px] shrink-0 snap-start overflow-hidden rounded-2xl bg-white/95 p-6 shadow-xl ring-1 ring-black/10 sm:w-[300px] lg:w-[320px]"
+                                        className={`relative w-[260px] shrink-0 snap-start overflow-hidden rounded-2xl bg-white/95 p-6 shadow-xl ring-1 ring-black/10 sm:w-[300px] lg:w-[320px] ${sectionSurfaceClass(
+                                            testimonialsBackground,
+                                            'dark',
+                                            'card',
+                                        )}`}
                                         variants={cardVariants}
                                     >
                                         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#f09c35]/18 to-transparent" />
@@ -1324,6 +1636,10 @@ export default function PublicHomeLanding() {
                     className="relative bg-[#fff7ef] py-14 sm:py-18"
                     style={sectionStyleFromBackground(articlesBackground)}
                 >
+                    <SectionBackgroundLayer
+                        background={articlesBackground}
+                        tone="light"
+                    />
                     <div className="container mx-auto px-6">
                         <motion.div
                             className="flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left"
@@ -1389,7 +1705,11 @@ export default function PublicHomeLanding() {
                                         >
                                             <Link
                                                 href={href}
-                                                className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md"
+                                                className={`group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5 transition hover:-translate-y-0.5 hover:shadow-md ${sectionSurfaceClass(
+                                                    articlesBackground,
+                                                    'light',
+                                                    'card',
+                                                )}`}
                                             >
                                                 <div className="relative h-40">
                                                     <img
@@ -1438,13 +1758,20 @@ export default function PublicHomeLanding() {
                     className="relative bg-[#fff7ef] py-14 sm:py-18"
                     style={sectionStyleFromBackground(contactBackground)}
                 >
+                    <SectionBackgroundLayer
+                        background={contactBackground}
+                        tone="light"
+                    />
                     <div className="container mx-auto px-6">
                         <motion.div
                             className="grid gap-8 lg:grid-cols-12 lg:items-stretch"
                             {...getInViewProps(stagger)}
                         >
                             <motion.div
-                                className="overflow-hidden rounded-[28px] bg-black/85 lg:col-span-7"
+                                className={`overflow-hidden rounded-[28px] bg-black/85 lg:col-span-7 ${sectionSurfaceClass(
+                                    contactBackground,
+                                    'dark',
+                                )}`}
                                 variants={fadeLeft}
                             >
                                 <div className="relative h-72 sm:h-80">
@@ -1490,7 +1817,10 @@ export default function PublicHomeLanding() {
                             </motion.div>
 
                             <motion.div
-                                className="rounded-[28px] bg-white p-7 shadow-sm ring-1 ring-black/5 sm:p-8 lg:col-span-5"
+                                className={`rounded-[28px] bg-white p-7 shadow-sm ring-1 ring-black/5 sm:p-8 lg:col-span-5 ${sectionSurfaceClass(
+                                    contactBackground,
+                                    'light',
+                                )}`}
                                 variants={fadeRight}
                             >
                                 <div className="space-y-6">

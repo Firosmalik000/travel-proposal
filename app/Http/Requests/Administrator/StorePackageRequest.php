@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Administrator;
 
+use App\Support\ParticipantUploadLimit;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -92,6 +93,7 @@ class StorePackageRequest extends FormRequest
     public function rules(): array
     {
         $packageId = $this->route('package')?->id;
+        $maxImageKilobytes = ParticipantUploadLimit::kilobytes(4096);
 
         return [
             'slug' => ['required', 'string', 'max:100', Rule::unique('packages', 'slug')->ignore($packageId)],
@@ -104,9 +106,9 @@ class StorePackageRequest extends FormRequest
             'discount_label' => ['nullable', 'string', 'max:50'],
             'discount_ends_at' => ['nullable', 'date'],
             'currency' => ['required', 'string', 'size:3'],
-            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
+            'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:'.$maxImageKilobytes],
             'images' => ['nullable', 'array'],
-            'images.*' => ['image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
+            'images.*' => ['image', 'mimes:png,jpg,jpeg,webp', 'max:'.$maxImageKilobytes],
             'existing_images' => ['nullable', 'array'],
             'existing_images.*' => ['string'],
             'summary' => ['nullable', 'string'],
@@ -134,6 +136,12 @@ class StorePackageRequest extends FormRequest
             'name.required' => 'Nama paket wajib diisi.',
             'original_price.gt' => 'Harga asli harus lebih besar dari harga jual.',
             'slug.unique' => 'Slug sudah digunakan.',
+            'image.uploaded' => 'Upload gambar gagal. Pastikan ukuran file tidak melebihi batas server.',
+            'images.*.uploaded' => 'Upload gambar gagal. Pastikan ukuran file tidak melebihi batas server.',
+            'image.max' => 'Ukuran gambar maksimal :max KB.',
+            'images.*.max' => 'Ukuran tiap gambar maksimal :max KB.',
+            'image.mimes' => 'Format gambar harus png, jpg, jpeg, atau webp.',
+            'images.*.mimes' => 'Format gambar harus png, jpg, jpeg, atau webp.',
         ];
     }
 }

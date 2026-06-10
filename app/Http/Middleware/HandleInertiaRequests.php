@@ -169,9 +169,9 @@ class HandleInertiaRequests extends Middleware
                 ->mapWithKeys(fn (PageContent $page): array => [
                     $page->slug => [
                         'slug' => $page->slug,
-                        'title' => $page->title,
-                        'excerpt' => $page->excerpt,
-                        'content' => $page->content,
+                        'title' => (string) $this->stripLocaleData($page->title),
+                        'excerpt' => $this->stripLocaleData($page->excerpt),
+                        'content' => $this->stripLocaleData($page->content),
                     ],
                 ])
                 ->all(),
@@ -343,10 +343,20 @@ class HandleInertiaRequests extends Middleware
                 'cta_label' => 'FREE KONSULTASI',
                 'secondary_cta_label' => 'Lihat Paket',
                 'secondary_cta_href' => '/paket-umroh',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#0f766e',
+                    'overlay_intensity' => 'strong',
+                ],
             ],
             'timeline' => [
                 'label' => 'Alur Perjalanan yang Kami Jalankan',
                 'heading' => 'Sistem Perjalanan yang Jelas, Bukan Sekadar Janji',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#155e75',
+                    'overlay_intensity' => 'strong',
+                ],
                 'steps' => [
                     [
                         'icon' => 'users',
@@ -411,6 +421,11 @@ class HandleInertiaRequests extends Middleware
             'problem' => [
                 'label' => 'PENTING DIKETAHUI',
                 'heading' => 'Banyak Jamaah Gagal Berangkat Bukan Karena Niat, Tapi Karena Salah Pilih Travel',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#7a0d17',
+                    'overlay_intensity' => 'strong',
+                ],
                 'badges' => [
                     'Biaya tiba-tiba berubah di tengah jalan',
                     'Minimnya informasi & komunikasi',
@@ -442,11 +457,21 @@ class HandleInertiaRequests extends Middleware
                 'duration_suffix' => 'hari',
                 'fallback_name' => 'Paket Umroh',
                 'fallback_summary' => 'Detail paket akan tampil di sini.',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#0f766e',
+                    'overlay_intensity' => 'strong',
+                ],
             ],
             'services' => [
                 'label' => 'Layanan Kami',
                 'title' => 'Apa yang Kami Tawarkan?',
                 'description' => 'Layanan umroh menyeluruh untuk menjaga perjalanan ibadah tetap aman, nyaman, dan terarah.',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#0f766e',
+                    'overlay_intensity' => 'strong',
+                ],
                 'fallback_title_prefix' => 'Layanan',
                 'fallback_description' => 'Deskripsi layanan akan tampil di sini.',
             ],
@@ -454,6 +479,11 @@ class HandleInertiaRequests extends Middleware
                 'title' => 'Galeri Perjalanan',
                 'description' => 'Momen-momen berharga selama perjalanan jamaah.',
                 'cta_label' => 'OUR HISTORY',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#e6a34a',
+                    'overlay_intensity' => 'strong',
+                ],
                 'images' => [],
             ],
             'faq' => [
@@ -462,6 +492,11 @@ class HandleInertiaRequests extends Middleware
             ],
             'testimonials' => [
                 'heading' => 'Kesan Jamaah',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#155e75',
+                    'overlay_intensity' => 'strong',
+                ],
                 'fallback_quote' => 'Testimoni jamaah akan tampil di sini.',
             ],
             'articles' => [
@@ -471,6 +506,11 @@ class HandleInertiaRequests extends Middleware
                 'read_more_label' => 'Baca selengkapnya',
                 'empty_title' => 'Belum ada artikel yang tampil.',
                 'empty_description' => 'Pastikan artikel sudah berstatus Terbit dan tanggal publikasinya tidak di masa depan.',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#e6a34a',
+                    'overlay_intensity' => 'strong',
+                ],
                 'fallback_item_title_prefix' => 'Artikel',
             ],
             'contact' => [
@@ -486,6 +526,11 @@ class HandleInertiaRequests extends Middleware
                 'secondary_href' => '/paket-umroh',
                 'address_label' => 'Alamat',
                 'contact_info_label' => 'Kontak',
+                'background' => [
+                    'type' => 'default',
+                    'color' => '#7a0d17',
+                    'overlay_intensity' => 'strong',
+                ],
             ],
         ];
     }
@@ -515,5 +560,22 @@ class HandleInertiaRequests extends Middleware
         }
 
         return $existing;
+    }
+
+    private function stripLocaleData(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+
+        if (array_key_exists('id', $value) || array_key_exists('en', $value)) {
+            return $this->stripLocaleData($value['id'] ?? $value['en'] ?? '');
+        }
+
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->stripLocaleData($item);
+        }
+
+        return $value;
     }
 }

@@ -57,6 +57,7 @@ interface EditableField {
 }
 
 type BackgroundType = 'default' | 'color' | 'image';
+type BackgroundOverlayIntensity = 'soft' | 'medium' | 'strong';
 
 interface ExtraSectionField {
     path: string;
@@ -1289,6 +1290,73 @@ function LandingPageEditor({
                                                                 placeholder="#fff7ef"
                                                             />
                                                         </div>
+                                                    </Field>
+                                                </div>
+                                            );
+                                        }
+
+                                        if (
+                                            isBackgroundIntensityField(
+                                                field.path,
+                                            )
+                                        ) {
+                                            const section =
+                                                field.path.split('.')[0];
+                                            const backgroundType = String(
+                                                getNestedValue(
+                                                    data.content,
+                                                    `${section}.background.type`,
+                                                ) ?? 'default',
+                                            );
+
+                                            if (backgroundType === 'default') {
+                                                return null;
+                                            }
+
+                                            return (
+                                                <div
+                                                    key={field.path}
+                                                    className="sm:col-span-2"
+                                                >
+                                                    <Field label={field.label}>
+                                                        <Select
+                                                            value={
+                                                                field.value ||
+                                                                'medium'
+                                                            }
+                                                            onValueChange={(
+                                                                value,
+                                                            ) =>
+                                                                setData(
+                                                                    (
+                                                                        current,
+                                                                    ) => ({
+                                                                        ...current,
+                                                                        content:
+                                                                            updateNestedValue(
+                                                                                current.content,
+                                                                                field.path,
+                                                                                value,
+                                                                            ),
+                                                                    }),
+                                                                )
+                                                            }
+                                                        >
+                                                            <SelectTrigger className="w-full">
+                                                                <SelectValue placeholder="Medium" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="soft">
+                                                                    Soft
+                                                                </SelectItem>
+                                                                <SelectItem value="medium">
+                                                                    Medium
+                                                                </SelectItem>
+                                                                <SelectItem value="strong">
+                                                                    Strong
+                                                                </SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </Field>
                                                 </div>
                                             );
@@ -2993,6 +3061,12 @@ function buildExtraSectionFields(
         const imageValue = String(
             getNestedValue(content, `${sectionKey}.background.image`) ?? '',
         );
+        const intensityValue = String(
+            getNestedValue(
+                content,
+                `${sectionKey}.background.overlay_intensity`,
+            ) ?? 'medium',
+        );
 
         return [
             {
@@ -3012,6 +3086,12 @@ function buildExtraSectionFields(
                 label: 'Background Image',
                 multiline: false,
                 value: imageValue,
+            },
+            {
+                path: `${sectionKey}.background.overlay_intensity`,
+                label: 'Overlay Intensity',
+                multiline: false,
+                value: intensityValue,
             },
         ];
     }
@@ -3064,8 +3144,12 @@ function SectionBackgroundEditor({
     const typePath = `${sectionKey}.background.type`;
     const colorPath = `${sectionKey}.background.color`;
     const imagePath = `${sectionKey}.background.image`;
+    const intensityPath = `${sectionKey}.background.overlay_intensity`;
     const backgroundType = String(
         getNestedValue(content, typePath) ?? 'default',
+    );
+    const overlayIntensity = String(
+        getNestedValue(content, intensityPath) ?? 'medium',
     );
 
     return (
@@ -3132,6 +3216,35 @@ function SectionBackgroundEditor({
                                 placeholder="#fff7ef"
                             />
                         </div>
+                    </Field>
+                ) : null}
+
+                {backgroundType !== 'default' ? (
+                    <Field label="Overlay">
+                        <Select
+                            value={
+                                (overlayIntensity as BackgroundOverlayIntensity) ??
+                                'medium'
+                            }
+                            onValueChange={(value) =>
+                                setContent(
+                                    updateNestedValue(
+                                        content,
+                                        intensityPath,
+                                        value,
+                                    ),
+                                )
+                            }
+                        >
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Medium" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="soft">Soft</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="strong">Strong</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </Field>
                 ) : null}
 
@@ -3698,6 +3811,10 @@ function isBackgroundTypeField(path: string): boolean {
 
 function isBackgroundColorField(path: string): boolean {
     return path.endsWith('.background.color');
+}
+
+function isBackgroundIntensityField(path: string): boolean {
+    return path.endsWith('.background.overlay_intensity');
 }
 
 function isLandingMockupFieldAllowed(path: string): boolean {

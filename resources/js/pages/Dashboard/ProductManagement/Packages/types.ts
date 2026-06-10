@@ -120,3 +120,9 @@ export type ScheduleFormData = {
     notes: string;
     is_active: boolean;
 };
+
+export const packageImageMimeTypes = [
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+] as const;
