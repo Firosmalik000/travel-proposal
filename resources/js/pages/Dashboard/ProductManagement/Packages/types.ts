@@ -70,8 +70,8 @@ export type ProductOption = {
 export type ActivityOption = {
     id: number;
     code: string;
-    name: { id: string; en: string };
-    description: { id: string; en: string };
+    name: { id: string; en: string } | string;
+    description: { id: string; en: string } | string;
     sort_order: number;
 };
 

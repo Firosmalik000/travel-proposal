@@ -25,11 +25,13 @@ import {
     Camera,
     DollarSign,
     FileText,
+    GripVertical,
     Info,
     Layers,
     Plus,
     Tag,
     Trash2,
+    Upload,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -100,6 +102,29 @@ const packageHighlightPresets = [
     },
 ] as const;
 
+function localizedFieldValue(
+    value: unknown,
+    locale: 'id' | 'en',
+    fallback = '',
+): string {
+    if (typeof value === 'string') {
+        const normalized = value.trim();
+
+        return normalized !== '' ? normalized : fallback;
+    }
+
+    if (typeof value === 'object' && value !== null) {
+        const localized = (value as { id?: string; en?: string })[locale];
+        const indonesian = (value as { id?: string }).id;
+        const english = (value as { en?: string }).en;
+        const normalized = (localized ?? indonesian ?? english ?? '').trim();
+
+        return normalized !== '' ? normalized : fallback;
+    }
+
+    return fallback;
+}
+
 function createEmptyItinerary(dayNumber: number): ItineraryInput {
     return {
         activity_id: null,
@@ -117,21 +142,10 @@ function normalizeItineraries(
     itineraries: Array<Itinerary | ItineraryInput> = [],
 ): ItineraryInput[] {
     const localizedField = (value: unknown): { id: string; en: string } => {
-        if (typeof value === 'string') {
-            return { id: value, en: value };
-        }
-
-        if (typeof value === 'object' && value !== null) {
-            return {
-                id: (value as { id?: string }).id ?? '',
-                en:
-                    (value as { en?: string }).en ??
-                    (value as { id?: string }).id ??
-                    '',
-            };
-        }
-
-        return { id: '', en: '' };
+        return {
+            id: localizedFieldValue(value, 'id'),
+            en: localizedFieldValue(value, 'en'),
+        };
     };
 
     const itineraryByDay = new Map<number, Itinerary | ItineraryInput>();
@@ -394,13 +408,20 @@ export function PackageForm({
     const initialFormData = buildFormData(pkg);
     const isEdit = pkg !== null;
     const imageInputRef = useRef<HTMLInputElement>(null);
-    const lastDurationRef = useRef(initialFormData.duration_days);
+    const itineraryLoadingTimeoutRef = useRef<number | null>(null);
 
     const [existingImages, setExistingImages] = useState<string[]>(
         pkg?.images ?? [],
     );
 
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+    const [isDragOverGallery, setIsDragOverGallery] = useState(false);
+    const [draggedGalleryItemKey, setDraggedGalleryItemKey] = useState<
+        string | null
+    >(null);
+    const [galleryDropTargetKey, setGalleryDropTargetKey] = useState<
+        string | null
+    >(null);
     const [activeItineraryTab, setActiveItineraryTab] = useState('day-1');
     const [itineraryActivitySearch, setItineraryActivitySearch] = useState<
         Record<number, string>
@@ -410,41 +431,63 @@ export function PackageForm({
     const form = useForm<PackageFormData>(initialFormData);
     const packageImageUploadMaxBytes = packageImageUploadMaxKilobytes * 1024;
     const packageImageUploadMaxLabel = `${Math.max(1, Math.round(packageImageUploadMaxKilobytes / 1024))} MB`;
+    const galleryItems = [
+        ...existingImages.map((url, index) => ({
+            key: `existing-${index}`,
+            kind: 'existing' as const,
+            url,
+        })),
+        ...previewUrls.map((url, index) => ({
+            key: `new-${index}`,
+            kind: 'new' as const,
+            url,
+            file: form.data.images[index],
+        })),
+    ];
 
     useEffect(() => {
-        if (lastDurationRef.current === form.data.duration_days) {
-            return;
+        return () => {
+            if (itineraryLoadingTimeoutRef.current !== null) {
+                window.clearTimeout(itineraryLoadingTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    function switchItineraryTab(nextTab: string) {
+        if (itineraryLoadingTimeoutRef.current !== null) {
+            window.clearTimeout(itineraryLoadingTimeoutRef.current);
         }
 
-        lastDurationRef.current = form.data.duration_days;
-        form.setData(
-            'itineraries',
-            normalizeItineraries(
-                form.data.duration_days,
-                form.data.itineraries,
+        setIsItineraryPanelLoading(true);
+        setActiveItineraryTab(nextTab);
+
+        itineraryLoadingTimeoutRef.current = window.setTimeout(() => {
+            setIsItineraryPanelLoading(false);
+        }, 120);
+    }
+
+    function updateDurationDays(nextDurationDays: number) {
+        const normalizedDurationDays = Math.max(1, nextDurationDays || 1);
+
+        form.setData((currentData) => ({
+            ...currentData,
+            duration_days: normalizedDurationDays,
+            itineraries: normalizeItineraries(
+                normalizedDurationDays,
+                currentData.itineraries,
             ),
-        );
+        }));
+
         const selectedDayNumber = Number(
             activeItineraryTab.replace('day-', ''),
         );
 
-        if (selectedDayNumber > form.data.duration_days) {
-            setActiveItineraryTab(`day-${form.data.duration_days}`);
+        if (selectedDayNumber > normalizedDurationDays) {
+            switchItineraryTab(`day-${normalizedDurationDays}`);
         }
-    }, [form.data.duration_days]);
+    }
 
-    useEffect(() => {
-        setIsItineraryPanelLoading(true);
-
-        const timeoutId = window.setTimeout(() => {
-            setIsItineraryPanelLoading(false);
-        }, 120);
-
-        return () => window.clearTimeout(timeoutId);
-    }, [activeItineraryTab]);
-
-    function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
-        const selectedFiles = Array.from(event.target.files || []);
+    function appendSelectedImages(selectedFiles: File[]) {
         if (selectedFiles.length === 0) {
             return;
         }
@@ -475,7 +518,9 @@ export function PackageForm({
             const message = messages.join(' ');
             form.setError('images', message);
             toast.error(message);
-            event.target.value = '';
+            if (imageInputRef.current) {
+                imageInputRef.current.value = '';
+            }
 
             return;
         }
@@ -488,11 +533,24 @@ export function PackageForm({
             URL.createObjectURL(file),
         );
         setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
+    }
+
+    function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+        const selectedFiles = Array.from(event.target.files || []);
+        appendSelectedImages(selectedFiles);
 
         // Reset input value so same file can be selected again
         if (imageInputRef.current) {
             imageInputRef.current.value = '';
         }
+    }
+
+    function handleGalleryDrop(event: React.DragEvent<HTMLDivElement>) {
+        event.preventDefault();
+        setIsDragOverGallery(false);
+
+        const selectedFiles = Array.from(event.dataTransfer.files || []);
+        appendSelectedImages(selectedFiles);
     }
 
     function removeNewImage(index: number) {
@@ -510,6 +568,65 @@ export function PackageForm({
         setExistingImages((prev) => prev.filter((_, i) => i !== index));
 
         // Mark for deletion on backend if needed, but for now we'll just handle it by what's NOT in the payload
+    }
+
+    function reorderGalleryItems(fromKey: string, toKey: string) {
+        if (fromKey === toKey) {
+            return;
+        }
+
+        const currentItems = [
+            ...existingImages.map((url, index) => ({
+                key: `existing-${index}`,
+                kind: 'existing' as const,
+                url,
+            })),
+            ...previewUrls.map((url, index) => ({
+                key: `new-${index}`,
+                kind: 'new' as const,
+                url,
+                file: form.data.images[index],
+            })),
+        ];
+
+        const fromIndex = currentItems.findIndex(
+            (item) => item.key === fromKey,
+        );
+        const toIndex = currentItems.findIndex((item) => item.key === toKey);
+
+        if (fromIndex === -1 || toIndex === -1) {
+            return;
+        }
+
+        const reorderedItems = [...currentItems];
+        const [movedItem] = reorderedItems.splice(fromIndex, 1);
+        reorderedItems.splice(toIndex, 0, movedItem);
+
+        setExistingImages(
+            reorderedItems
+                .filter((item) => item.kind === 'existing')
+                .map((item) => item.url),
+        );
+        setPreviewUrls(
+            reorderedItems
+                .filter((item) => item.kind === 'new')
+                .map((item) => item.url),
+        );
+        form.setData(
+            'images',
+            reorderedItems
+                .filter(
+                    (
+                        item,
+                    ): item is {
+                        key: string;
+                        kind: 'new';
+                        url: string;
+                        file: File;
+                    } => item.kind === 'new',
+                )
+                .map((item) => item.file),
+        );
     }
 
     function updateItineraryActivities(
@@ -533,21 +650,29 @@ export function PackageForm({
                     activity_ids: activityIds,
                     title: {
                         id: selectedActivities
-                            .map((activity) => activity.name?.id || '')
+                            .map((activity) =>
+                                localizedFieldValue(activity.name, 'id'),
+                            )
                             .filter(Boolean)
                             .join(', '),
                         en: selectedActivities
-                            .map((activity) => activity.name?.en || '')
+                            .map((activity) =>
+                                localizedFieldValue(activity.name, 'en'),
+                            )
                             .filter(Boolean)
                             .join(', '),
                     },
                     description: {
                         id: selectedActivities
-                            .map((activity) => activity.description?.id || '')
+                            .map((activity) =>
+                                localizedFieldValue(activity.description, 'id'),
+                            )
                             .filter(Boolean)
                             .join('\n'),
                         en: selectedActivities
-                            .map((activity) => activity.description?.en || '')
+                            .map((activity) =>
+                                localizedFieldValue(activity.description, 'en'),
+                            )
                             .filter(Boolean)
                             .join('\n'),
                     },
@@ -854,12 +979,8 @@ export function PackageForm({
                                     min={1}
                                     value={form.data.duration_days}
                                     onChange={(event) =>
-                                        form.setData(
-                                            'duration_days',
-                                            Math.max(
-                                                1,
-                                                Number(event.target.value) || 1,
-                                            ),
+                                        updateDurationDays(
+                                            Number(event.target.value) || 1,
                                         )
                                     }
                                 />
@@ -942,17 +1063,122 @@ export function PackageForm({
                                 onChange={handleImageChange}
                             />
 
-                            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                                {existingImages.map((url, index) => (
+                            <div
+                                className={[
+                                    'mt-4 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-all',
+                                    isDragOverGallery
+                                        ? 'border-primary bg-linear-to-br from-primary/12 via-background to-primary/5 shadow-sm'
+                                        : 'border-border bg-linear-to-br from-muted/30 via-background to-muted/10 hover:border-primary/40 hover:from-primary/8 hover:to-primary/4',
+                                ].join(' ')}
+                                onDragEnter={(event) => {
+                                    event.preventDefault();
+                                    setIsDragOverGallery(true);
+                                }}
+                                onDragOver={(event) => {
+                                    event.preventDefault();
+                                    if (!isDragOverGallery) {
+                                        setIsDragOverGallery(true);
+                                    }
+                                }}
+                                onDragLeave={(event) => {
+                                    event.preventDefault();
+                                    const nextTarget =
+                                        event.relatedTarget as Node | null;
+
+                                    if (
+                                        nextTarget &&
+                                        event.currentTarget.contains(nextTarget)
+                                    ) {
+                                        return;
+                                    }
+
+                                    setIsDragOverGallery(false);
+                                }}
+                                onDrop={handleGalleryDrop}
+                            >
+                                <div className="flex flex-col items-center gap-2">
                                     <div
-                                        key={`existing-${index}`}
-                                        className="group relative h-24 overflow-hidden rounded-xl border bg-muted"
+                                        className={[
+                                            'rounded-full p-3 shadow-sm transition-all',
+                                            isDragOverGallery
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'bg-background text-primary',
+                                        ].join(' ')}
+                                    >
+                                        <Upload className="h-5 w-5" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-semibold text-foreground">
+                                            Drag & drop foto package di sini
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Bisa pilih banyak file sekaligus
+                                            atau klik tombol tambah foto.
+                                        </p>
+                                        <p className="text-[11px] font-medium tracking-[0.18em] text-primary/80 uppercase">
+                                            Cover mengikuti urutan foto paling
+                                            pertama
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                                {galleryItems.map((item, index) => (
+                                    <div
+                                        key={item.key}
+                                        draggable
+                                        onDragStart={() => {
+                                            setDraggedGalleryItemKey(item.key);
+                                            setGalleryDropTargetKey(item.key);
+                                        }}
+                                        onDragOver={(event) => {
+                                            event.preventDefault();
+                                            if (
+                                                galleryDropTargetKey !==
+                                                item.key
+                                            ) {
+                                                setGalleryDropTargetKey(
+                                                    item.key,
+                                                );
+                                            }
+                                        }}
+                                        onDrop={(event) => {
+                                            event.preventDefault();
+
+                                            if (draggedGalleryItemKey) {
+                                                reorderGalleryItems(
+                                                    draggedGalleryItemKey,
+                                                    item.key,
+                                                );
+                                            }
+
+                                            setDraggedGalleryItemKey(null);
+                                            setGalleryDropTargetKey(null);
+                                        }}
+                                        onDragEnd={() => {
+                                            setDraggedGalleryItemKey(null);
+                                            setGalleryDropTargetKey(null);
+                                        }}
+                                        className={[
+                                            'group relative h-24 overflow-hidden rounded-xl border bg-muted transition-all',
+                                            draggedGalleryItemKey === item.key
+                                                ? 'scale-[0.98] opacity-70 ring-2 ring-primary/30'
+                                                : '',
+                                            galleryDropTargetKey === item.key &&
+                                            draggedGalleryItemKey !== item.key
+                                                ? 'ring-2 ring-primary'
+                                                : '',
+                                        ].join(' ')}
                                     >
                                         <img
-                                            src={url}
-                                            alt="Existing"
+                                            src={item.url}
+                                            alt="Gallery"
                                             className="h-full w-full object-cover transition-transform group-hover:scale-105"
                                         />
+                                        <div className="absolute top-1 right-1 rounded-full bg-black/70 p-1 text-white shadow-sm">
+                                            <GripVertical className="h-3 w-3" />
+                                        </div>
                                         <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                                             <Button
                                                 type="button"
@@ -960,7 +1186,21 @@ export function PackageForm({
                                                 size="icon"
                                                 className="h-8 w-8 rounded-full"
                                                 onClick={() =>
-                                                    removeExistingImage(index)
+                                                    item.kind === 'existing'
+                                                        ? removeExistingImage(
+                                                              existingImages.findIndex(
+                                                                  (url) =>
+                                                                      url ===
+                                                                      item.url,
+                                                              ),
+                                                          )
+                                                        : removeNewImage(
+                                                              previewUrls.findIndex(
+                                                                  (url) =>
+                                                                      url ===
+                                                                      item.url,
+                                                              ),
+                                                          )
                                                 }
                                             >
                                                 <Trash2 className="h-4 w-4" />
@@ -968,38 +1208,7 @@ export function PackageForm({
                                         </div>
                                         <div className="absolute top-1 left-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                                             {index === 0 ? 'Cover' : 'Gallery'}
-                                        </div>
-                                    </div>
-                                ))}
-
-                                {previewUrls.map((url, index) => (
-                                    <div
-                                        key={`new-${index}`}
-                                        className="group relative h-24 overflow-hidden rounded-xl border bg-muted"
-                                    >
-                                        <img
-                                            src={url}
-                                            alt="New"
-                                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                                        />
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="h-8 w-8 rounded-full"
-                                                onClick={() =>
-                                                    removeNewImage(index)
-                                                }
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                        <div className="absolute top-1 left-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
-                                            {existingImages.length === 0 &&
-                                            index === 0
-                                                ? 'Cover'
-                                                : 'Gallery'}
+                                            {item.kind === 'new' ? ' Baru' : ''}
                                         </div>
                                     </div>
                                 ))}
@@ -1486,7 +1695,7 @@ export function PackageForm({
 
                         <Tabs
                             value={activeItineraryTab}
-                            onValueChange={setActiveItineraryTab}
+                            onValueChange={switchItineraryTab}
                             className="mt-4 space-y-4"
                         >
                             <div className="overflow-x-auto pb-1">
@@ -1570,18 +1779,22 @@ export function PackageForm({
                                                                         const searchableText =
                                                                             [
                                                                                 activity.code,
-                                                                                activity
-                                                                                    .name
-                                                                                    ?.id,
-                                                                                activity
-                                                                                    .name
-                                                                                    ?.en,
-                                                                                activity
-                                                                                    .description
-                                                                                    ?.id,
-                                                                                activity
-                                                                                    .description
-                                                                                    ?.en,
+                                                                                localizedFieldValue(
+                                                                                    activity.name,
+                                                                                    'id',
+                                                                                ),
+                                                                                localizedFieldValue(
+                                                                                    activity.name,
+                                                                                    'en',
+                                                                                ),
+                                                                                localizedFieldValue(
+                                                                                    activity.description,
+                                                                                    'id',
+                                                                                ),
+                                                                                localizedFieldValue(
+                                                                                    activity.description,
+                                                                                    'en',
+                                                                                ),
                                                                             ]
                                                                                 .filter(
                                                                                     Boolean,
@@ -1703,16 +1916,11 @@ export function PackageForm({
                                                                                                     activity.id,
                                                                                                 )}
                                                                                             >
-                                                                                                {
-                                                                                                    (activity
-                                                                                                        .name?.[
-                                                                                                        locale
-                                                                                                    ] ||
-                                                                                                        activity
-                                                                                                            .name
-                                                                                                            ?.id ||
-                                                                                                        activity.code) as string
-                                                                                                }
+                                                                                                {localizedFieldValue(
+                                                                                                    activity.name,
+                                                                                                    locale,
+                                                                                                    activity.code,
+                                                                                                )}
                                                                                             </SelectItem>
                                                                                         ),
                                                                                     )
@@ -1755,16 +1963,11 @@ export function PackageForm({
                                                                                     }
                                                                                     className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
                                                                                 >
-                                                                                    {
-                                                                                        (activity
-                                                                                            .name?.[
-                                                                                            locale
-                                                                                        ] ||
-                                                                                            activity
-                                                                                                .name
-                                                                                                ?.id ||
-                                                                                            activity.code) as string
-                                                                                    }
+                                                                                    {localizedFieldValue(
+                                                                                        activity.name,
+                                                                                        locale,
+                                                                                        activity.code,
+                                                                                    )}
                                                                                     <button
                                                                                         type="button"
                                                                                         className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] transition hover:bg-white/25"
@@ -1806,28 +2009,18 @@ export function PackageForm({
                                                                                     className="rounded-xl border border-border bg-muted/20 p-3"
                                                                                 >
                                                                                     <p className="text-sm font-semibold text-foreground">
-                                                                                        {
-                                                                                            (activity
-                                                                                                .name?.[
-                                                                                                locale
-                                                                                            ] ||
-                                                                                                activity
-                                                                                                    .name
-                                                                                                    ?.id ||
-                                                                                                activity.code) as string
-                                                                                        }
+                                                                                        {localizedFieldValue(
+                                                                                            activity.name,
+                                                                                            locale,
+                                                                                            activity.code,
+                                                                                        )}
                                                                                     </p>
                                                                                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                                                        {
-                                                                                            (activity
-                                                                                                .description?.[
-                                                                                                locale
-                                                                                            ] ||
-                                                                                                activity
-                                                                                                    .description
-                                                                                                    ?.id ||
-                                                                                                'Belum ada deskripsi activity.') as string
-                                                                                        }
+                                                                                        {localizedFieldValue(
+                                                                                            activity.description,
+                                                                                            locale,
+                                                                                            'Belum ada deskripsi activity.',
+                                                                                        )}
                                                                                     </p>
                                                                                 </div>
                                                                             ),
