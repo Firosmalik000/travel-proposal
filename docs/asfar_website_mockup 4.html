@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Asfar Tour - Paket Umroh Special Agustus 9 Hari. Direct Flight, Hotel Strategis, Mutawif Berpengalaman. Mulai Rp 33.500.000. Konsultasi Gratis!">
+<title>Asfar Tour – Paket Umroh Special Agustus 9 Hari</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ========== RESET & VARS ========== */
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:#f6e7c6;color:#1a0a08;overflow-x:hidden}
+:root{
+  --red:#c80012;--maroon:#8c0a16;--deep:#3d0508;
+  --gold:#ff9200;--golds:#ffc578;
+  --cream:#f6e7c6;--cream2:#fdf3e3;--cream3:#fff8f0;
+  --white:#fff;--border:#e0c9a0;--muted:#7a5c50;
+}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--red);border-radius:2px}
+img{max-width:100%;display:block}
+a{text-decoration:none;color:inherit}
+
+/* ========== NAV ========== */
+nav{position:fixed;top:0;left:0;right:0;z-index:300;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;background:rgba(246,231,198,.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);transition:box-shadow .3s}
+nav.scrolled{box-shadow:0 4px 28px rgba(140,10,22,.12)}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo img{height:40px;width:auto;object-fit:contain}
+.nav-logo-fallback{width:40px;height:40px;border-radius:9px;background:linear-gradient(135deg,var(--maroon),var(--red));display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;color:#fff;font-size:17px;font-weight:700}
+.nav-brand .n1{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--maroon);line-height:1}
+.nav-brand .n2{font-size:9px;color:var(--gold);font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.nav-links{display:flex;align-items:center;gap:24px}
+.nav-links a{font-size:13px;color:var(--muted);font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--maroon)}
+.nav-cta{background:linear-gradient(135deg,var(--maroon),var(--red));color:#fff!important;padding:10px 20px;border-radius:22px;font-weight:700!important;font-size:13px!important;display:flex;align-items:center;gap:7px;box-shadow:0 4px 14px rgba(200,0,18,.25);transition:all .3s!important}
+.nav-cta:hover{box-shadow:0 8px 22px rgba(200,0,18,.35)!important;transform:translateY(-1px)}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px}
+.hamburger span{width:22px;height:2px;background:var(--maroon);border-radius:2px;transition:all .3s}
+@media(max-width:768px){
+  nav{padding:0 20px}
+  .nav-links{display:none;position:fixed;top:68px;left:0;right:0;background:var(--cream2);flex-direction:column;padding:20px;gap:14px;border-bottom:1px solid var(--border);z-index:200}
+  .nav-links.open{display:flex}
+  .hamburger{display:flex}
+}
+
+/* ========== WAVE ========== */
+.wave{line-height:0;overflow:hidden;display:block}
+.wave svg{display:block;width:100%}
+
+/* ========== HERO ========== */
+.hero{min-height:100vh;position:relative;overflow:hidden;padding-top:68px;display:flex;flex-direction:column}
+.hero-bg{position:absolute;inset:0;z-index:0}
+.hero-bg img{width:100%;height:100%;object-fit:cover;object-position:center}
+.hero-bg-fallback{width:100%;height:100%;background:linear-gradient(160deg,#fff8f0,var(--cream2),var(--cream))}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(120deg,rgba(246,231,198,.93) 0%,rgba(253,243,227,.88) 40%,rgba(246,231,198,.6) 100%);z-index:1}
+.hero-pattern{position:absolute;inset:0;z-index:1;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 6L74 24v32L40 74 6 56V24Z' fill='none' stroke='%238c0a16' stroke-width='1'/%3E%3C/svg%3E") repeat;background-size:80px}
+.hero-inner{flex:1;max-width:1140px;margin:0 auto;width:100%;padding:48px 40px 48px;position:relative;z-index:2;display:grid;grid-template-columns:1fr 400px;gap:48px;align-items:center}
+.hero-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(200,0,18,.1);border:1px solid rgba(200,0,18,.25);color:var(--red);font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;margin-bottom:14px;letter-spacing:1.5px}
+.hero-tag{font-size:13px;font-weight:700;color:var(--maroon);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:8px}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(34px,5.5vw,62px);font-weight:800;color:var(--maroon);line-height:1;margin-bottom:6px}
+.hero h1 .gold{color:var(--gold);font-style:italic}
+.hero-sub{font-size:14px;color:var(--muted);font-weight:500;margin-bottom:26px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hero-sub .badge{background:var(--gold);color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px}
+/* Price block */
+.price-block{background:#fff;border:1.5px solid var(--border);border-radius:20px;padding:22px;margin-bottom:22px;box-shadow:0 8px 32px rgba(140,10,22,.09)}
+.price-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.price-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.price-rows{display:flex;flex-direction:column;gap:8px}
+.price-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:12px;background:var(--cream2);border:1.5px solid var(--border);transition:all .2s;cursor:pointer}
+.price-row:hover,.price-row.active{border-color:var(--red);background:rgba(200,0,18,.05)}
+.pr-l{display:flex;align-items:center;gap:10px}
+.pr-badge{font-size:11px;font-weight:800;padding:3px 10px;border-radius:8px;background:rgba(200,0,18,.1);color:var(--red);letter-spacing:.5px;transition:all .2s}
+.price-row.active .pr-badge{background:var(--red);color:#fff}
+.pr-desc{font-size:12px;color:var(--muted)}
+.pr-price{font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:var(--maroon)}
+.pr-price sub{font-size:11px;font-weight:400;font-family:'Inter',sans-serif;color:var(--muted)}
+/* Fasil row */
+.fasil-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:24px}
+.fasil-item{background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;transition:all .2s}
+.fasil-item:hover{border-color:var(--gold)}
+.fi-icon{font-size:20px;margin-bottom:4px}
+.fi-label{font-size:10px;font-weight:700;color:var(--maroon);line-height:1.2;margin-bottom:2px}
+.fi-val{font-size:9px;color:var(--muted);line-height:1.3}
+/* CTAs */
+.hero-ctas{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.btn-wa{background:linear-gradient(135deg,#25d366,#1a9e4e);color:#fff;font-size:15px;font-weight:800;padding:15px 28px;border-radius:14px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .3s;box-shadow:0 8px 24px rgba(37,211,102,.3);letter-spacing:.3px}
+.btn-wa:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(37,211,102,.45)}
+.btn-outline{background:transparent;color:var(--maroon);font-size:14px;font-weight:700;padding:13px 24px;border-radius:14px;border:2px solid rgba(140,10,22,.3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .3s}
+.btn-outline:hover{background:rgba(140,10,22,.06);border-color:var(--maroon)}
+.hero-trust{display:flex;gap:14px;flex-wrap:wrap}
+.ht{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted)}
+.ht span{width:18px;height:18px;border-radius:50%;background:rgba(200,0,18,.1);display:flex;align-items:center;justify-content:center;font-size:9px}
+/* Hero right */
+.hero-right{position:relative}
+.hero-img-wrap{border-radius:24px;overflow:hidden;box-shadow:0 24px 60px rgba(140,10,22,.25);position:relative;height:420px}
+.hero-img-wrap img{width:100%;height:100%;object-fit:cover;object-position:center top}
+.hero-img-fallback{width:100%;height:100%;background:linear-gradient(135deg,#3d0508,var(--maroon));display:flex;align-items:center;justify-content:center;font-size:80px}
+.free-badge{position:absolute;bottom:18px;right:18px;background:linear-gradient(135deg,var(--gold),#d97700);border-radius:50%;width:110px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;box-shadow:0 8px 24px rgba(255,146,0,.4);z-index:2}
+.free-badge .fb1{font-size:10px;font-weight:800;color:#fff;letter-spacing:.5px}
+.free-badge .fb2{font-size:15px;font-weight:900;color:#fff;line-height:1.1}
+.free-badge .fb3{font-size:9px;font-weight:700;color:rgba(255,255,255,.85)}
+/* Fasil bar */
+.fasil-bar{background:linear-gradient(135deg,var(--maroon),var(--deep));padding:16px 40px;display:flex;overflow-x:auto;position:relative;z-index:2;gap:0}
+.fasil-bar::-webkit-scrollbar{height:0}
+.fbar-item{flex:1;min-width:130px;display:flex;align-items:center;gap:10px;padding:0 18px;border-right:1px solid rgba(255,255,255,.12)}
+.fbar-item:last-child{border:none}
+.fbar-icon{font-size:22px;flex-shrink:0}
+.fbar-label{font-size:10px;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.5px}
+.fbar-val{font-size:13px;color:#fff;font-weight:700;line-height:1.2}
+.fbar-sub{font-size:10px;color:var(--golds)}
+@media(max-width:900px){.hero-inner{grid-template-columns:1fr;padding:32px 20px}.hero-right{display:none}.fasil-row{grid-template-columns:repeat(2,1fr)}.fasil-bar{padding:14px 20px}}
+
+/* ========== SECTION BASE ========== */
+.sec{padding:80px 40px}
+@media(max-width:640px){.sec{padding:60px 20px}}
+.sec-inner{max-width:1100px;margin:0 auto}
+.sec-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(140,10,22,.2);color:var(--maroon);font-size:10px;font-weight:700;padding:4px 12px;border-radius:14px;margin-bottom:14px;letter-spacing:1.5px;background:rgba(140,10,22,.05)}
+h2.sh{font-family:'Playfair Display',serif;font-size:clamp(24px,3.8vw,38px);font-weight:700;color:var(--maroon);margin-bottom:10px;line-height:1.2}
+h2.sh em{font-style:italic;color:var(--gold)}
+p.sd{font-size:15px;color:var(--muted);font-weight:300;line-height:1.8;max-width:540px}
+.center{text-align:center}.center .sd{margin:0 auto}
+
+/* ========== DETAIL PAKET ========== */
+.detail-bg{background:#fff}
+.pkg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px}
+.pkg-card{border-radius:22px;overflow:hidden;border:1.5px solid var(--border);transition:all .35s;position:relative;background:#fff}
+.pkg-card:hover{transform:translateY(-6px);box-shadow:0 20px 52px rgba(140,10,22,.13);border-color:rgba(200,0,18,.25)}
+.pkg-card.best{border:2px solid var(--gold);box-shadow:0 8px 32px rgba(255,146,0,.15)}
+.pkg-ribbon{position:absolute;top:14px;right:-30px;background:linear-gradient(135deg,var(--gold),#d97700);color:#fff;font-size:10px;font-weight:800;padding:4px 42px;transform:rotate(45deg);letter-spacing:1px;z-index:2}
+.pkg-top{height:160px;position:relative;overflow:hidden}
+.pkg-top img{width:100%;height:100%;object-fit:cover}
+.pkg-top-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:52px}
+.pkg-top.quad .pkg-top-fallback{background:linear-gradient(135deg,var(--maroon),var(--red))}
+.pkg-top.triple .pkg-top-fallback{background:linear-gradient(135deg,#7a4500,var(--gold))}
+.pkg-top.double .pkg-top-fallback{background:linear-gradient(135deg,var(--deep),var(--maroon))}
+.pkg-type-tag{position:absolute;top:12px;left:12px;font-size:10px;font-weight:800;letter-spacing:1.5px;padding:4px 10px;border-radius:8px;background:rgba(255,255,255,.9);color:var(--maroon)}
+.pkg-body{padding:20px}
+.pkg-body h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--maroon);margin-bottom:4px}
+.pkg-price{font-family:'Playfair Display',serif;font-size:26px;font-weight:800;color:var(--red);margin-bottom:14px;display:flex;align-items:baseline;gap:4px}
+.pkg-price sub{font-size:12px;font-weight:400;font-family:'Inter',sans-serif;color:var(--muted)}
+.pkg-feats{list-style:none;display:flex;flex-direction:column;gap:7px;margin-bottom:18px}
+.pkg-feats li{display:flex;align-items:center;gap:8px;font-size:13px;color:#444}
+.pfc{width:17px;height:17px;border-radius:50%;background:rgba(200,0,18,.1);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--red);flex-shrink:0}
+.pkg-btn{width:100%;background:linear-gradient(135deg,var(--maroon),var(--red));color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;transition:all .3s;letter-spacing:.3px}
+.pkg-card.best .pkg-btn{background:linear-gradient(135deg,var(--gold),#d97700)}
+.pkg-btn:hover{box-shadow:0 8px 22px rgba(200,0,18,.3);transform:translateY(-1px)}
+.pkg-note{text-align:center;margin-top:18px;font-size:13px;color:var(--muted);font-style:italic}
+@media(max-width:768px){.pkg-grid{grid-template-columns:1fr}}
+
+/* ========== INCLUDE/EXCLUDE ========== */
+.inc-bg{background:var(--cream)}
+.inc-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:48px}
+.inc-card{border-radius:20px;padding:28px;border:1.5px solid}
+.inc-card.yes{background:#fff;border-color:rgba(200,0,18,.15)}
+.inc-card.no{background:var(--cream2);border-color:var(--border)}
+.inc-head{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.inc-head h3{font-family:'Playfair Display',serif;font-size:17px;font-weight:700}
+.inc-card.yes .inc-head h3{color:var(--maroon)}
+.inc-card.no .inc-head h3{color:var(--muted)}
+.inc-tag{font-size:10px;font-weight:800;padding:3px 10px;border-radius:8px;letter-spacing:1px}
+.inc-card.yes .inc-tag{background:rgba(200,0,18,.1);color:var(--red)}
+.inc-card.no .inc-tag{background:rgba(0,0,0,.07);color:var(--muted)}
+.inc-list{list-style:none;display:flex;flex-direction:column;gap:10px}
+.inc-list li{display:flex;align-items:center;gap:10px;font-size:14px;color:#444}
+.il-ic{width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.inc-card.yes .il-ic{background:rgba(200,0,18,.1);color:var(--red)}
+.inc-card.no .il-ic{background:rgba(0,0,0,.07);color:#999}
+@media(max-width:640px){.inc-grid{grid-template-columns:1fr}}
+
+/* ========== WHY ========== */
+.why-bg{background:#fff}
+.why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px}
+.why-card{background:var(--cream2);border:1px solid var(--border);border-radius:18px;padding:24px 20px;transition:all .3s;position:relative;overflow:hidden}
+.why-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--gold));transform:scaleX(0);transform-origin:left;transition:transform .4s}
+.why-card:hover{transform:translateY(-4px);box-shadow:0 14px 36px rgba(140,10,22,.1);border-color:rgba(200,0,18,.2)}
+.why-card:hover::before{transform:scaleX(1)}
+.why-icon{width:50px;height:50px;border-radius:13px;background:#fff;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+.why-card h3{font-size:15px;font-weight:700;color:var(--maroon);margin-bottom:7px}
+.why-card p{font-size:13px;color:var(--muted);line-height:1.7;font-weight:300}
+.stats-bar{background:linear-gradient(135deg,var(--maroon),var(--deep));padding:28px 32px;display:flex;margin-top:48px;border-radius:20px}
+.stat-i{flex:1;text-align:center;border-right:1px solid rgba(255,255,255,.1);padding:0 16px}
+.stat-i:last-child{border:none}
+.stat-n{font-family:'Playfair Display',serif;font-size:38px;font-weight:700;color:#fff;line-height:1}
+.stat-n sup{font-size:18px;color:var(--golds)}
+.stat-l{font-size:12px;color:rgba(255,255,255,.55);margin-top:3px}
+.stat-s{font-size:10px;color:var(--golds);font-weight:600;margin-top:2px}
+@media(max-width:768px){.why-grid{grid-template-columns:1fr 1fr}.stats-bar{flex-direction:column;gap:20px}.stat-i{border:none;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:16px}.stat-i:last-child{border:none;padding-bottom:0}}
+@media(max-width:480px){.why-grid{grid-template-columns:1fr}}
+
+/* ========== DOKUMENTASI ========== */
+.dok-bg{background:var(--cream)}
+.dok-grid{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:180px 180px;gap:10px;margin-top:48px}
+.dok-item{border-radius:16px;overflow:hidden;position:relative;cursor:pointer}
+.dok-item:first-child{grid-row:span 2}
+.dok-item img{width:100%;height:100%;object-fit:cover;object-position:center;transition:transform .4s}
+.dok-item:hover img{transform:scale(1.06)}
+.dok-item .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px}
+.dok-item:nth-child(1) .fallback{background:linear-gradient(135deg,#3d0508,var(--maroon))}
+.dok-item:nth-child(2) .fallback{background:linear-gradient(135deg,#5a3500,var(--gold))}
+.dok-item:nth-child(3) .fallback{background:linear-gradient(135deg,var(--maroon),var(--red))}
+.dok-item:nth-child(4) .fallback{background:linear-gradient(135deg,#004030,#007a5e)}
+.dok-item:nth-child(5) .fallback{background:linear-gradient(135deg,#00305a,#0055b0)}
+.fallback span{font-size:32px}.fallback p{font-size:10px;color:rgba(255,255,255,.7);font-weight:700;letter-spacing:1px}
+.dok-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(15,5,5,.85) 0%,transparent 55%);display:flex;align-items:flex-end;padding:14px;opacity:0;transition:opacity .3s}
+.dok-item:hover .dok-overlay{opacity:1}
+.dok-overlay span{font-size:13px;font-weight:600;color:#fff}
+.dok-cta{text-align:center;margin-top:28px}
+@media(max-width:640px){.dok-grid{grid-template-columns:1fr 1fr;grid-template-rows:auto}.dok-item:first-child{grid-row:auto}}
+
+/* ========== TESTIMONI ========== */
+.testi-bg{background:#fff}
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:48px}
+.tc{background:var(--cream2);border:1px solid var(--border);border-radius:18px;padding:22px;transition:all .3s}
+.tc:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(140,10,22,.1)}
+.tc.feat{border:1.5px solid rgba(200,0,18,.2);background:#fff}
+.tq{font-family:'Playfair Display',serif;font-size:46px;color:var(--red);line-height:.8;margin-bottom:10px;opacity:.5}
+.stars{color:var(--gold);font-size:13px;letter-spacing:2px;margin-bottom:10px}
+.tt{font-size:13.5px;color:#555;line-height:1.8;margin-bottom:14px;font-style:italic;font-weight:300}
+.td{height:1px;background:var(--border);margin-bottom:12px}
+.ta{display:flex;align-items:center;gap:10px}
+.tav{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--maroon),var(--red));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:'Playfair Display',serif;flex-shrink:0}
+.tname{font-size:13px;font-weight:700;color:var(--maroon)}
+.tpkg{font-size:11px;color:var(--muted)}
+.tpkg-b{background:rgba(255,146,0,.12);color:#7a4500;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;display:inline-block;margin-top:3px}
+@media(max-width:768px){.testi-grid{grid-template-columns:1fr}}
+
+/* ========== FAQ ========== */
+.faq-bg{background:var(--cream)}
+.faq-wrap{max-width:760px;margin:48px auto 0}
+.faq-item{background:#fff;border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;transition:box-shadow .2s}
+.faq-item.open{box-shadow:0 6px 20px rgba(140,10,22,.09);border-color:rgba(200,0,18,.2)}
+.faq-q{width:100%;background:transparent;border:none;padding:18px 20px;font-size:15px;font-weight:600;color:var(--maroon);text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:14px;font-family:'Inter',sans-serif;transition:color .2s}
+.faq-q:hover{color:var(--red)}
+.faq-toggle{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .3s;color:var(--red);font-size:17px;background:#fff}
+.faq-item.open .faq-toggle{background:var(--red);color:#fff;border-color:var(--red);transform:rotate(45deg)}
+.faq-a{font-size:14px;color:var(--muted);padding:0 20px 16px;line-height:1.8;display:none;font-weight:300}
+.faq-a.open{display:block}
+
+/* ========== ALAMAT ========== */
+.alamat-bg{background:#fff}
+.alamat-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-top:48px}
+.alam-info{display:flex;flex-direction:column;gap:12px;margin-bottom:24px}
+.ai{display:flex;align-items:flex-start;gap:12px;background:var(--cream2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;transition:border-color .2s}
+.ai:hover{border-color:rgba(200,0,18,.2)}
+.ai-ic{width:38px;height:38px;border-radius:10px;background:rgba(200,0,18,.08);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.ai-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.ai-val{font-size:14px;font-weight:600;color:var(--maroon);line-height:1.5}
+.alam-trust{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px}
+.at-i{background:var(--cream2);border:1px solid var(--border);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--maroon)}
+.at-chk{width:20px;height:20px;border-radius:50%;background:rgba(200,0,18,.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--red);flex-shrink:0}
+.alam-btns{display:flex;flex-direction:column;gap:10px}
+.btn-maps{background:var(--maroon);color:#fff;font-size:14px;font-weight:700;padding:13px 22px;border-radius:12px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .3s}
+.btn-maps:hover{background:var(--deep);box-shadow:0 8px 20px rgba(140,10,22,.25)}
+.btn-wa-alam{background:linear-gradient(135deg,#25d366,#1a9e4e);color:#fff;font-size:14px;font-weight:700;padding:13px 22px;border-radius:12px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .3s}
+.btn-wa-alam:hover{box-shadow:0 8px 20px rgba(37,211,102,.3)}
+.map-container{border-radius:20px;overflow:hidden;border:2px solid var(--border);box-shadow:0 12px 36px rgba(140,10,22,.1)}
+.map-frame{width:100%;height:360px;border:none;display:block}
+.map-ph{height:360px;background:linear-gradient(135deg,var(--cream2),#f0dab8);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;cursor:pointer}
+.map-ph:hover{background:linear-gradient(135deg,#f0dab8,var(--cream))}
+.map-ph span{font-size:52px}.map-ph p{font-size:14px;font-weight:600;color:var(--muted)}.map-ph small{font-size:12px;color:var(--muted);opacity:.7;text-align:center;max-width:240px;line-height:1.5}
+.map-footer{background:var(--maroon);color:#fff;padding:12px 20px;text-align:center;font-size:12px;font-weight:600}
+@media(max-width:768px){.alamat-grid{grid-template-columns:1fr}}
+
+/* ========== FINAL CTA ========== */
+.final-bg{background:linear-gradient(135deg,var(--maroon) 0%,var(--red) 60%,#a50010 100%);padding:100px 40px;position:relative;overflow:hidden;text-align:center}
+.fc-pat{position:absolute;inset:0;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 5L75 22.5v35L40 75 5 57.5v-35Z' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E") repeat;background-size:80px}
+.fc-in{max-width:640px;margin:0 auto;position:relative;z-index:1}
+.fc-pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:var(--golds);font-size:11px;font-weight:700;padding:5px 14px;border-radius:18px;margin-bottom:18px;letter-spacing:2px}
+.fc-in h2{font-family:'Playfair Display',serif;font-size:clamp(26px,5vw,46px);font-weight:700;color:#fff;margin-bottom:12px;line-height:1.2}
+.fc-in p{font-size:15px;color:rgba(255,255,255,.75);margin-bottom:32px;line-height:1.8;font-weight:300}
+.btn-wa-final{background:linear-gradient(135deg,#25d366,#1a9e4e);color:#fff;font-size:16px;font-weight:800;padding:17px 44px;border-radius:50px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:all .3s;box-shadow:0 8px 28px rgba(37,211,102,.3);margin-bottom:32px;letter-spacing:.3px}
+.btn-wa-final:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(37,211,102,.5)}
+.fc-trust{display:flex;justify-content:center;flex-wrap:wrap;gap:18px}
+.fct{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:rgba(255,255,255,.8)}
+.fct-ic{width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:11px}
+
+/* ========== FOOTER ========== */
+footer{background:var(--deep);padding:48px 40px 24px}
+.ft-inner{max-width:1100px;margin:0 auto}
+.ft-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:36px;margin-bottom:36px}
+.ft-brand .fn{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:3px}
+.ft-brand .ft{font-size:9px;color:var(--gold);letter-spacing:2.5px;text-transform:uppercase;display:block;margin-bottom:12px}
+.ft-brand p{font-size:13px;color:rgba(255,255,255,.35);line-height:1.75;font-weight:300;max-width:220px;margin-bottom:16px}
+.ft-brand img{height:36px;width:auto;margin-bottom:12px;object-fit:contain}
+.ft-soc{display:flex;gap:8px}
+.fsoc{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:14px;text-decoration:none;transition:all .3s}
+.fsoc:hover{background:var(--red);border-color:var(--red)}
+.ft-col h4{font-size:11px;font-weight:700;color:rgba(255,255,255,.5);margin-bottom:12px;letter-spacing:1px;text-transform:uppercase}
+.ft-col a{display:block;font-size:13px;color:rgba(255,255,255,.35);text-decoration:none;margin-bottom:8px;font-weight:300;transition:color .2s}
+.ft-col a:hover{color:var(--gold)}
+.ft-bot{border-top:1px solid rgba(255,255,255,.07);padding-top:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.ft-bot p{font-size:12px;color:rgba(255,255,255,.2)}
+.ft-leg{display:flex;gap:16px}
+.ft-leg a{font-size:12px;color:rgba(255,255,255,.2);text-decoration:none;transition:color .2s}
+.ft-leg a:hover{color:var(--gold)}
+@media(max-width:768px){footer{padding:40px 20px 20px}.ft-top{grid-template-columns:1fr 1fr}.ft-bot{flex-direction:column;text-align:center}}
+
+/* ========== FLOATING WA ========== */
+.wa-float{position:fixed;bottom:24px;right:24px;z-index:999;background:linear-gradient(135deg,#25d366,#1a9e4e);border-radius:50px;display:flex;align-items:center;gap:0;overflow:hidden;box-shadow:0 8px 24px rgba(37,211,102,.4);animation:wap 2.5s infinite;text-decoration:none;transition:gap .3s,padding .3s}
+.wa-float:hover{gap:8px;padding-right:16px}
+.waf-ico{width:58px;height:58px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.waf-txt{font-size:13px;font-weight:700;color:#fff;white-space:nowrap;max-width:0;overflow:hidden;transition:max-width .3s}
+.wa-float:hover .waf-txt{max-width:140px}
+@keyframes wap{0%,100%{box-shadow:0 8px 24px rgba(37,211,102,.4)}50%{box-shadow:0 8px 32px rgba(37,211,102,.65),0 0 0 12px rgba(37,211,102,.07)}}
+
+/* ========== REVEAL ========== */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.4,0,.2,1),transform .7s cubic-bezier(.4,0,.2,1)}
+.reveal.visible{opacity:1;transform:none}
+.d1{transition-delay:.1s}.d2{transition-delay:.2s}.d3{transition-delay:.3s}.d4{transition-delay:.4s}
+
+/* ========== BUTTON GENERAL ========== */
+.btn-red{background:linear-gradient(135deg,var(--maroon),var(--red));color:#fff;font-size:14px;font-weight:700;padding:12px 26px;border-radius:12px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .3s;box-shadow:0 6px 18px rgba(200,0,18,.25)}
+.btn-red:hover{box-shadow:0 10px 26px rgba(200,0,18,.35);transform:translateY(-1px)}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav id="nav">
+  <div class="nav-logo">
+    <img src="logo-asfar.png" alt="Asfar Tour" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+    <div class="nav-logo-fallback" style="display:none">A</div>
+    <div class="nav-brand"><div class="n1">ASFAR TOUR</div><div class="n2">Hajj & Umrah</div></div>
+  </div>
+  <div class="nav-links" id="navLinks">
+    <a href="#detail">Paket</a>
+    <a href="#why">Fasilitas</a>
+    <a href="#testi">Testimoni</a>
+    <a href="#faq">FAQ</a>
+    <a href="#cta" class="nav-cta">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Konsultasi Gratis
+    </a>
+  </div>
+  <div class="hamburger" id="ham" onclick="toggleNav()"><span></span><span></span><span></span></div>
+</nav>
+
+<!-- ===== SECTION 1: HERO ===== -->
+<section class="hero" id="hero">
+  <div class="hero-bg">
+    <img src="hero-kabah.jpg" alt="Ka'bah Masjidil Haram" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <div class="hero-bg-fallback" style="display:none"></div>
+  </div>
+  <div class="hero-overlay"></div>
+  <div class="hero-pattern"></div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-pill">🕌 PROGRAM TERBATAS — SEATS TERBATAS</div>
+      <div class="hero-tag">PAKET UMROH</div>
+      <h1>SPECIAL 9 HARI<br><span class="gold">Agustus</span></h1>
+      <div class="hero-sub">Berangkat Agustus 2026 <span class="badge">9 Hari Program</span></div>
+      <div class="price-block reveal">
+        <div class="price-label">MULAI DARI</div>
+        <div class="price-rows">
+          <div class="price-row active" onclick="selectPkg(this)">
+            <div class="pr-l"><div class="pr-badge">QUAD</div><div class="pr-desc">Kamar Berempat</div></div>
+            <div class="pr-price">Rp 33.500.000<sub>/Pax</sub></div>
+          </div>
+          <div class="price-row" onclick="selectPkg(this)">
+            <div class="pr-l"><div class="pr-badge">TRIPLE</div><div class="pr-desc">Kamar Bertiga</div></div>
+            <div class="pr-price">Rp 35.000.000<sub>/Pax</sub></div>
+          </div>
+          <div class="price-row" onclick="selectPkg(this)">
+            <div class="pr-l"><div class="pr-badge">DOUBLE</div><div class="pr-desc">Kamar Berdua</div></div>
+            <div class="pr-price">Rp 36.500.000<sub>/Pax</sub></div>
+          </div>
+        </div>
+      </div>
+      <div class="fasil-row reveal">
+        <div class="fasil-item"><div class="fi-icon">✈️</div><div class="fi-label">Direct Flight</div><div class="fi-val">Langsung</div></div>
+        <div class="fasil-item"><div class="fi-icon">🏨</div><div class="fi-label">Hotel Makkah</div><div class="fi-val">★★★★ 550m</div></div>
+        <div class="fasil-item"><div class="fi-icon">🕌</div><div class="fi-label">Hotel Madinah</div><div class="fi-val">★★★ 200m</div></div>
+        <div class="fasil-item"><div class="fi-icon">📸</div><div class="fi-label">Dokumentasi</div><div class="fi-val">Free</div></div>
+      </div>
+      <div class="hero-ctas reveal">
+        <a href="https://wa.me/628137892647?text=Halo%20Asfar%20Tour%2C%20saya%20tertarik%20Paket%20Umroh%20Special%20Agustus%209%20Hari.%20Mohon%20info%20lebih%20lanjut%20🙏" target="_blank" class="btn-wa">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          Konsultasi Gratis via WhatsApp
+        </a>
+        <a href="#detail" class="btn-outline">📋 Lihat Detail Paket Lengkap</a>
+      </div>
+      <div class="hero-trust">
+        <div class="ht"><span>✓</span>Izin Resmi Kemenag RI</div>
+        <div class="ht"><span>✓</span>10+ Tahun Pengalaman</div>
+        <div class="ht"><span>✓</span>FREE Konsultasi Jabodetabek</div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-img-wrap">
+        <img src="dokumentasi-jamaah.jpg" alt="Jamaah Asfar Tour di Makkah" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="hero-img-fallback" style="display:none">🕋</div>
+        <div class="free-badge">
+          <div class="fb1">FREE</div>
+          <div class="fb2">KONSULTASI</div>
+          <div class="fb3">Se-Jabodetabek</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Fasil Bar -->
+  <div class="fasil-bar">
+    <div class="fbar-item"><div class="fbar-icon">✈️</div><div><div class="fbar-label">Direct Flight</div><div class="fbar-val">Lion Air / Saudia</div><div class="fbar-sub">Penerbangan Langsung</div></div></div>
+    <div class="fbar-item"><div class="fbar-icon">🏨</div><div><div class="fbar-label">Hotel Makkah</div><div class="fbar-val">Maysan Al Maqom</div><div class="fbar-sub">Bintang 4 · 550 Meter</div></div></div>
+    <div class="fbar-item"><div class="fbar-icon">🕌</div><div><div class="fbar-label">Hotel Madinah</div><div class="fbar-val">Arkan Al Manar</div><div class="fbar-sub">Bintang 3 · 200 Meter</div></div></div>
+    <div class="fbar-item"><div class="fbar-icon">🍽️</div><div><div class="fbar-label">Konsumsi</div><div class="fbar-val">Makan 3x Sehari</div><div class="fbar-sub">Menu Enak & Variatif</div></div></div>
+  </div>
+</section>
+
+<!-- ===== SECTION 2: DETAIL PAKET ===== -->
+<section class="sec detail-bg" id="detail">
+  <div class="sec-inner">
+    <div class="center reveal">
+      <div class="sec-pill">PAKET KAMI</div>
+      <h2 class="sh">Pilih Paket Umroh Terbaik<br><em>Untuk Perjalanan Ibadah Anda</em></h2>
+      <p class="sd">Direct flight, hotel strategis, mutawif berpengalaman, dan dokumentasi profesional — semua sudah termasuk.</p>
+    </div>
+    <div class="pkg-grid">
+      <!-- QUAD -->
+      <div class="pkg-card reveal d1">
+        <div class="pkg-top quad">
+          <img src="hero-kabah.jpg" alt="Paket Quad" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pkg-top-fallback" style="display:none">🌙</div>
+          <div class="pkg-type-tag">QUAD</div>
+        </div>
+        <div class="pkg-body">
+          <h3>Paket Umroh QUAD</h3>
+          <div class="pkg-price">Rp 33.500.000<sub>/Pax</sub></div>
+          <ul class="pkg-feats">
+            <li><div class="pfc">✓</div>Kamar Berempat (Quad)</li>
+            <li><div class="pfc">✓</div>9 Hari · 7 Malam</li>
+            <li><div class="pfc">✓</div>Lion Air / Saudia Airlines</li>
+            <li><div class="pfc">✓</div>Hotel Makkah ★★★★ 550m</li>
+            <li><div class="pfc">✓</div>Hotel Madinah ★★★ 200m</li>
+            <li><div class="pfc">✓</div>Visa + Mutawif + Dokumentasi</li>
+          </ul>
+          <button class="pkg-btn" onclick="waPkg('Paket Quad Rp 33.500.000')">Daftar Paket Ini →</button>
+        </div>
+      </div>
+      <!-- TRIPLE -->
+      <div class="pkg-card best reveal d2">
+        <div class="pkg-ribbon">TERPOPULER</div>
+        <div class="pkg-top triple">
+          <img src="hotel-makkah.jpg" alt="Hotel Makkah" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pkg-top-fallback" style="display:none">🕌</div>
+          <div class="pkg-type-tag">TRIPLE</div>
+        </div>
+        <div class="pkg-body">
+          <h3>Paket Umroh TRIPLE</h3>
+          <div class="pkg-price">Rp 35.000.000<sub>/Pax</sub></div>
+          <ul class="pkg-feats">
+            <li><div class="pfc">✓</div>Kamar Bertiga (Triple)</li>
+            <li><div class="pfc">✓</div>9 Hari · 7 Malam</li>
+            <li><div class="pfc">✓</div>Lion Air / Saudia Airlines</li>
+            <li><div class="pfc">✓</div>Hotel Makkah ★★★★ 550m</li>
+            <li><div class="pfc">✓</div>Hotel Madinah ★★★ 200m</li>
+            <li><div class="pfc">✓</div>Visa + Mutawif + Dokumentasi</li>
+          </ul>
+          <button class="pkg-btn" onclick="waPkg('Paket Triple Rp 35.000.000')">Daftar Paket Ini →</button>
+        </div>
+      </div>
+      <!-- DOUBLE -->
+      <div class="pkg-card reveal d3">
+        <div class="pkg-top double">
+          <img src="hotel-madinah.jpg" alt="Hotel Madinah" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="pkg-top-fallback" style="display:none">👑</div>
+          <div class="pkg-type-tag">DOUBLE</div>
+        </div>
+        <div class="pkg-body">
+          <h3>Paket Umroh DOUBLE</h3>
+          <div class="pkg-price">Rp 36.500.000<sub>/Pax</sub></div>
+          <ul class="pkg-feats">
+            <li><div class="pfc">✓</div>Kamar Berdua (Double)</li>
+            <li><div class="pfc">✓</div>9 Hari · 7 Malam</li>
+            <li><div class="pfc">✓</div>Lion Air / Saudia Airlines</li>
+            <li><div class="pfc">✓</div>Hotel Makkah ★★★★ 550m</li>
+            <li><div class="pfc">✓</div>Hotel Madinah ★★★ 200m</li>
+            <li><div class="pfc">✓</div>Visa + Mutawif + Dokumentasi</li>
+          </ul>
+          <button class="pkg-btn" onclick="waPkg('Paket Double Rp 36.500.000')">Daftar Paket Ini →</button>
+        </div>
+      </div>
+    </div>
+    <p class="pkg-note reveal">* Harga dapat berubah sewaktu-waktu. Syarat & ketentuan berlaku.</p>
+  </div>
+</section>
+
+<!-- ===== SECTION 3: INCLUDE / EXCLUDE ===== -->
+<div class="wave" style="background:#fff"><svg viewBox="0 0 1440 50" preserveAspectRatio="none" height="50"><path d="M0,50 C360,0 1080,0 1440,50 L1440,50 L0,50Z" fill="var(--cream)"/></svg></div>
+<section class="sec inc-bg">
+  <div class="sec-inner">
+    <div class="center reveal">
+      <div class="sec-pill">DETAIL PAKET</div>
+      <h2 class="sh">Yang <em>Termasuk</em> dalam Paket</h2>
+    </div>
+    <div class="inc-grid">
+      <div class="inc-card yes reveal d1">
+        <div class="inc-head"><h3>✅ Termasuk dalam Paket</h3><span class="inc-tag">INCLUDED</span></div>
+        <ul class="inc-list">
+          <li><div class="il-ic">✓</div>Tiket Pesawat PP (Direct Flight)</li>
+          <li><div class="il-ic">✓</div>Akomodasi Hotel Sesuai Paket</li>
+          <li><div class="il-ic">✓</div>Makan 3x Sehari</li>
+          <li><div class="il-ic">✓</div>Transportasi Bus AC Eksklusif</li>
+          <li><div class="il-ic">✓</div>Muthawif & Tour Leader</li>
+          <li><div class="il-ic">✓</div>Air Zam-Zam 5 Liter</li>
+          <li><div class="il-ic">✓</div>Perlengkapan Umroh</li>
+          <li><div class="il-ic">✓</div>Dokumentasi Perjalanan</li>
+          <li><div class="il-ic">✓</div>Asuransi Perjalanan</li>
+        </ul>
+      </div>
+      <div class="inc-card no reveal d2">
+        <div class="inc-head"><h3>❌ Tidak Termasuk</h3><span class="inc-tag">EXCLUDED</span></div>
+        <ul class="inc-list">
+          <li><div class="il-ic" style="color:#999">✕</div>Pembuatan Paspor</li>
+          <li><div class="il-ic" style="color:#999">✕</div>Vaksin Meningitis</li>
+          <li><div class="il-ic" style="color:#999">✕</div>Kelebihan Bagasi</li>
+          <li><div class="il-ic" style="color:#999">✕</div>Pengeluaran Pribadi</li>
+          <li><div class="il-ic" style="color:#999">✕</div>Biaya Perubahan Jadwal (jika ada)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 4: WHY ===== -->
+<div class="wave" style="background:var(--cream)"><svg viewBox="0 0 1440 50" preserveAspectRatio="none" height="50"><path d="M0,0 C480,50 960,50 1440,0 L1440,50 L0,50Z" fill="#fff"/></svg></div>
+<section class="sec why-bg" id="why">
+  <div class="sec-inner">
+    <div class="center reveal">
+      <div class="sec-pill">KENAPA PILIH KAMI</div>
+      <h2 class="sh">Lebih dari Sekadar Perjalanan,<br><em>Ini Pengalaman Berharga</em></h2>
+    </div>
+    <div class="why-grid">
+      <div class="why-card reveal d1"><div class="why-icon">🤝</div><h3>Pembimbing Berpengalaman</h3><p>Tim mutawif ramah & profesional mendampingi setiap langkah ibadah Anda di Tanah Suci.</p></div>
+      <div class="why-card reveal d2"><div class="why-icon">🏨</div><h3>Hotel Nyaman & Strategis</h3><p>Maysan Al Maqom (550m dari Haram) & Arkan Al Manar (200m dari Nabawi).</p></div>
+      <div class="why-card reveal d3"><div class="why-icon">✈️</div><h3>Direct Flight</h3><p>Penerbangan langsung tanpa transit — lebih nyaman dan efisien waktu untuk jamaah.</p></div>
+      <div class="why-card reveal d1"><div class="why-icon">📸</div><h3>Dokumentasi Profesional</h3><p>Setiap momen ibadah diabadikan secara profesional sebagai kenangan seumur hidup.</p></div>
+      <div class="why-card reveal d2"><div class="why-icon">🏛️</div><h3>Izin Resmi Kemenag RI</h3><p>Travel resmi berizin PPIU dari Kementerian Agama RI. Aman, legal, dan terpercaya.</p></div>
+      <div class="why-card reveal d3"><div class="why-icon">📞</div><h3>Support 24/7</h3><p>Tim kami siap membantu sebelum, selama, dan setelah perjalanan ibadah Anda.</p></div>
+    </div>
+    <div class="stats-bar reveal">
+      <div class="stat-i"><div class="stat-n">10<sup>+</sup></div><div class="stat-l">Tahun Pengalaman</div><div class="stat-s">Sejak 2015</div></div>
+      <div class="stat-i"><div class="stat-n">2.500<sup>+</sup></div><div class="stat-l">Jamaah Telah Berangkat</div><div class="stat-s">Dari seluruh Indonesia</div></div>
+      <div class="stat-i"><div class="stat-n">98<sup>%</sup></div><div class="stat-l">Kepuasan Jamaah</div><div class="stat-s">Rating rata-rata ★ 4.9</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 5: DOKUMENTASI ===== -->
+<div class="wave" style="background:#fff"><svg viewBox="0 0 1440 50" preserveAspectRatio="none" height="50"><path d="M0,50 C360,0 1080,0 1440,50 L1440,50 L0,50Z" fill="var(--cream)"/></svg></div>
+<section class="sec dok-bg">
+  <div class="sec-inner">
+    <div class="reveal">
+      <div class="sec-pill">DOKUMENTASI JAMAAH</div>
+      <h2 class="sh">Momen <em>Berharga</em> Bersama Asfar Tour</h2>
+      <p class="sd">Setiap momen ibadah diabadikan secara profesional — kenangan yang akan selalu diingat.</p>
+    </div>
+    <div class="dok-grid">
+      <div class="dok-item reveal d1">
+        <img src="dokumentasi-jamaah.jpg" alt="Jamaah di Ka'bah" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="fallback" style="display:none"><span>🕋</span><p>JAMAAH DI KA'BAH</p></div>
+        <div class="dok-overlay"><span>Momen di Masjidil Haram</span></div>
+      </div>
+      <div class="dok-item reveal d2">
+        <img src="hotel-makkah.jpg" alt="Hotel Makkah" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="fallback" style="display:none"><span>🏨</span><p>HOTEL MAKKAH</p></div>
+        <div class="dok-overlay"><span>Maysan Al Maqom, Makkah</span></div>
+      </div>
+      <div class="dok-item reveal d3">
+        <img src="hotel-madinah.jpg" alt="Hotel Madinah" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="fallback" style="display:none"><span>🕌</span><p>HOTEL MADINAH</p></div>
+        <div class="dok-overlay"><span>Arkan Al Manar, Madinah</span></div>
+      </div>
+      <div class="dok-item reveal d2">
+        <img src="dokumentasi-jamaah.jpg" alt="Momen Ibadah" style="object-position:top" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="fallback" style="display:none"><span>🤲</span><p>MOMEN IBADAH</p></div>
+        <div class="dok-overlay"><span>Kekhusyukan Ibadah</span></div>
+      </div>
+      <div class="dok-item reveal d3">
+        <img src="hero-kabah.jpg" alt="Ka'bah" style="object-position:center bottom" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <div class="fallback" style="display:none"><span>✈️</span><p>KEBERANGKATAN</p></div>
+        <div class="dok-overlay"><span>Momen Keberangkatan</span></div>
+      </div>
+    </div>
+    <div class="dok-cta reveal">
+      <a href="https://wa.me/628137892647?text=Halo%20Asfar%20Tour%2C%20saya%20ingin%20melihat%20galeri%20foto%20jamaah%20lebih%20lengkap" target="_blank" class="btn-red">📷 Lihat Semua Dokumentasi</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 6: TESTIMONI ===== -->
+<div class="wave" style="background:var(--cream)"><svg viewBox="0 0 1440 50" preserveAspectRatio="none" height="50"><path d="M0,0 C480,50 960,50 1440,0 L1440,50 L0,50Z" fill="#fff"/></svg></div>
+<section class="sec testi-bg" id="testi">
+  <div class="sec-inner">
+    <div class="center reveal">
+      <div class="sec-pill">TESTIMONI JAMAAH</div>
+      <h2 class="sh">Apa Kata <em>Mereka?</em></h2>
+      <p class="sd">Ribuan jamaah telah mempercayakan perjalanan ibadahnya bersama Asfar Tour.</p>
+    </div>
+    <div class="testi-grid">
+      <div class="tc feat reveal d1">
+        <div class="tq">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="tt">Alhamdulillah perjalanan umroh bersama Asfar Tour sangat memuaskan. Hotel dekat, pembimbing ramah, dan dokumentasinya bagus sekali. Sangat recommended!</p>
+        <div class="td"></div>
+        <div class="ta"><div class="tav">BI</div><div><div class="tname">Bapak Irwan</div><div class="tpkg">Jakarta · Mei 2024</div><span class="tpkg-b">Paket Triple</span></div></div>
+      </div>
+      <div class="tc reveal d2">
+        <div class="tq">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="tt">Pelayanannya luar biasa! Semua diurus dari berangkat sampai kembali. Semoga bisa berangkat lagi bersama Asfar Tour. Recommended banget untuk keluarga!</p>
+        <div class="td"></div>
+        <div class="ta"><div class="tav">IY</div><div><div class="tname">Ibu Yani</div><div class="tpkg">Bekasi · April 2024</div><span class="tpkg-b">Paket Double</span></div></div>
+      </div>
+      <div class="tc reveal d3">
+        <div class="tq">"</div>
+        <div class="stars">★★★★★</div>
+        <p class="tt">Programnya terorganisir sangat rapi. Timnya profesional dan sangat membantu. Tidak perlu khawatir soal apapun, semua sudah diurus Asfar Tour!</p>
+        <div class="td"></div>
+        <div class="ta"><div class="tav">AF</div><div><div class="tname">Akbar Fauzi</div><div class="tpkg">Depok · Maret 2024</div><span class="tpkg-b">Paket Quad</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 7: FAQ ===== -->
+<div class="wave" style="background:#fff"><svg viewBox="0 0 1440 50" preserveAspectRatio="none" height="50"><path d="M0,50 C360,0 1080,0 1440,50 L1440,50 L0,50Z" fill="var(--cream)"/></svg></div>
+<section class="sec faq-bg" id="faq">
+  <div class="sec-inner">
+    <div class="center reveal">
+      <div class="sec-pill">FAQ</div>
+      <h2 class="sh">Pertanyaan yang <em>Sering Ditanyakan</em></h2>
+    </div>
+    <div class="faq-wrap">
+      <div class="faq-item reveal"><button class="faq-q" onclick="toggleFaq(this)">Bisa cicilan atau ada DP?<span class="faq-toggle">+</span></button><div class="faq-a">Ya, tersedia kemudahan DP mulai Rp 5.000.000 dan sisanya dapat dicicil hingga H-30 keberangkatan. Hubungi admin kami untuk info lebih lanjut.</div></div>
+      <div class="faq-item reveal"><button class="faq-q" onclick="toggleFaq(this)">Berangkat dari kota mana saja?<span class="faq-toggle">+</span></button><div class="faq-a">Saat ini keberangkatan tersedia dari Jakarta. Untuk kota lain silakan hubungi admin kami untuk mengecek ketersediaan rute.</div></div>
+      <div class="faq-item reveal"><button class="faq-q" onclick="toggleFaq(this)">Apakah ada bimbingan manasik?<span class="faq-toggle">+</span></button><div class="faq-a">Ya! Manasik umroh dilaksanakan sebelum keberangkatan. Jadwal manasik akan diinformasikan langsung oleh admin setelah pendaftaran dikonfirmasi.</div></div>
+      <div class="faq-item reveal"><button class="faq-q" onclick="toggleFaq(this)">Hotel berapa meter dari Masjid?<span class="faq-toggle">+</span></button><div class="faq-a">Hotel Makkah (Maysan Al Maqom ★★★★) berjarak 550 meter dari Masjidil Haram. Hotel Madinah (Arkan Al Manar ★★★) berjarak 200 meter dari Masjid Nabawi.</div></div>
+      <div class="faq-item reveal"><button class="faq-q" onclick="toggleFaq(this)">Apakah ada pembimbing selama perjalanan?<span class="faq-toggle">+</span></button><div class="faq-a">Ya, tersedia Tour Leader dan Muthawif berpengalaman yang mendampingi jamaah dari awal keberangkatan hingga kembali ke tanah air.</div></div>
+      <div class="faq-item reveal"><button class="faq-q" onclick="toggleFaq(this)">Bagaimana proses pendaftaran?<span class="faq-toggle">+</span></button><div class="faq-a">1. Hubungi admin via WhatsApp → 2. Pilih paket & tipe kamar → 3. Bayar DP untuk booking seat → 4. Lengkapi dokumen → 5. Ikuti manasik → 6. Berangkat! Mudah dan transparan.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 7.5: ALAMAT KANTOR ===== -->
+<div class="wave" style="background:var(--cream)"><svg viewBox="0 0 1440 50" preserveAspectRatio="none" height="50"><path d="M0,0 C480,50 960,50 1440,0 L1440,50 L0,50Z" fill="#fff"/></svg></div>
+<section class="sec alamat-bg" id="alamat">
+  <div class="sec-inner alamat-inner">
+    <div class="center reveal">
+      <div class="sec-pill">KANTOR KAMI</div>
+      <h2 class="sh">Kunjungi <em>Kantor Kami</em></h2>
+      <p class="sd">Kami siap melayani konsultasi umroh secara langsung maupun online.</p>
+    </div>
+    <div class="alamat-grid">
+      <div class="reveal">
+        <div class="alam-info">
+          <div class="ai"><div class="ai-ic">📍</div><div><div class="ai-label">Alamat Kantor</div><div class="ai-val">Casa Pesanggrahan 2 No B6, Jl. H. Sulaiman<br>Petukangan Utara, Pesanggrahan<br>Jakarta Selatan 12260</div></div></div>
+          <div class="ai"><div class="ai-ic">🕐</div><div><div class="ai-label">Jam Operasional</div><div class="ai-val">Senin – Sabtu, 09.00 – 17.00 WIB</div></div></div>
+          <div class="ai"><div class="ai-ic">📱</div><div><div class="ai-label">WhatsApp / Telepon</div><div class="ai-val">+62 813-7892-647</div></div></div>
+          <div class="ai"><div class="ai-ic">📧</div><div><div class="ai-label">Email</div><div class="ai-val">asfarumrohtour@gmail.com</div></div></div>
+        </div>
+        <div class="alam-trust">
+          <div class="at-i"><div class="at-chk">✓</div>Kantor Dapat Dikunjungi</div>
+          <div class="at-i"><div class="at-chk">✓</div>Konsultasi Langsung</div>
+          <div class="at-i"><div class="at-chk">✓</div>Tim Siap Membantu</div>
+          <div class="at-i"><div class="at-chk">✓</div>Lokasi Mudah Diakses</div>
+        </div>
+        <div class="alam-btns">
+          <a href="https://maps.app.goo.gl/PchEsNrtKKzSWjUu6" target="_blank" class="btn-maps">🗺️ Buka di Google Maps</a>
+          <a href="https://wa.me/628137892647?text=Halo%20Asfar%20Tour%2C%20saya%20ingin%20konsultasi%20langsung%20ke%20kantor" target="_blank" class="btn-wa-alam">
+            <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Konsultasi via WhatsApp
+          </a>
+        </div>
+      </div>
+      <div class="reveal d2">
+        <div class="map-container">
+          <iframe class="map-frame" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3966.0!2d106.7627!3d-6.2627!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNsKwMTUnNDUuNyJTIDEwNsKwNDUnNDUuNyJF!5e0!3m2!1sid!2sid!4v1600000000000!5m2!1sid!2sid" allowfullscreen loading="lazy" onerror="this.style.display='none';document.getElementById('mapFallback').style.display='flex'"></iframe>
+          <a href="https://maps.app.goo.gl/PchEsNrtKKzSWjUu6" target="_blank" id="mapFallback" class="map-ph" style="display:none">
+            <span>🗺️</span>
+            <p>Asfar Tour – Jakarta Selatan</p>
+            <small>Casa Pesanggrahan 2 No B6, Petukangan Utara, Jakarta Selatan 12260</small>
+          </a>
+          <div class="map-footer">📍 Casa Pesanggrahan 2 No B6, Petukangan Utara, Jakarta Selatan 12260 · <a href="https://maps.app.goo.gl/PchEsNrtKKzSWjUu6" target="_blank" style="color:var(--golds);text-decoration:none">Buka Maps →</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION 8: FINAL CTA ===== -->
+<div class="wave" style="background:#fff"><svg viewBox="0 0 1440 50" preserveAspectRatio="none" height="50"><path d="M0,0 C480,50 960,50 1440,0 L1440,50 L0,50Z" fill="var(--maroon)"/></svg></div>
+<section class="final-bg" id="cta">
+  <div class="fc-pat"></div>
+  <div class="fc-in">
+    <div class="fc-pill reveal">🕌 JANGAN TUNDA NIAT BAIK ANDA</div>
+    <h2 class="reveal">Jangan Tunda Niat<br>Baik Anda</h2>
+    <p class="reveal">Konsultasikan perjalanan ibadah Anda sekarang bersama tim Asfar Tour. Gratis, tanpa syarat, tanpa tekanan.</p>
+    <div class="reveal">
+      <a href="https://wa.me/628137892647?text=Halo%20Asfar%20Tour%2C%20saya%20tertarik%20Paket%20Umroh%20Special%20Agustus%209%20Hari.%20Bisa%20konsultasi%3F%20🙏" target="_blank" class="btn-wa-final">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Konsultasi via WhatsApp
+      </a>
+    </div>
+    <div class="fc-trust reveal">
+      <div class="fct"><div class="fct-ic">🏛️</div>Resmi Kemenag</div>
+      <div class="fct"><div class="fct-ic">⚡</div>Fast Response</div>
+      <div class="fct"><div class="fct-ic">🤝</div>Amanah</div>
+      <div class="fct"><div class="fct-ic">🕐</div>Support 24 Jam</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="ft-inner">
+    <div class="ft-top">
+      <div class="ft-brand">
+        <img src="logo-asfar.png" alt="Asfar Tour" onerror="this.style.display='none'">
+        <div class="fn">ASFAR TOUR</div>
+        <span class="ft">Hajj & Umrah</span>
+        <p>Jelas Rencananya, Terjamin Amanahnya. Melayani perjalanan umroh dengan sistem transparan & amanah sejak 2015.</p>
+        <div class="ft-soc">
+          <a class="fsoc" href="https://instagram.com/asfartour.id" target="_blank">📸</a>
+          <a class="fsoc" href="https://tiktok.com/@asfartour.id" target="_blank">🎵</a>
+          <a class="fsoc" href="https://youtube.com/channel/UChDdL-euDWUJApeDukxgEPg" target="_blank">▶️</a>
+          <a class="fsoc" href="https://wa.me/628137892647" target="_blank">💬</a>
+        </div>
+      </div>
+      <div class="ft-col"><h4>Paket</h4><a href="#">Umroh Quad</a><a href="#">Umroh Triple</a><a href="#">Umroh Double</a><a href="#">Custom/Private</a></div>
+      <div class="ft-col"><h4>Perusahaan</h4><a href="#">Tentang Kami</a><a href="#">Legalitas</a><a href="#alamat">Kantor</a><a href="#">Galeri</a></div>
+      <div class="ft-col"><h4>Legal</h4><a href="#">Syarat & Ketentuan</a><a href="#">Kebijakan Privasi</a><a href="#">Kebijakan Refund</a><a href="#">Disclaimer</a></div>
+    </div>
+    <div class="ft-bot">
+      <p>© 2026 Asfar Tour · Terdaftar Kemenag RI · PPIU-2026-001 · Jakarta Selatan</p>
+      <div class="ft-leg"><a href="#">Privasi</a><a href="#">Syarat</a><a href="#">Refund</a></div>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== FLOATING WA ===== -->
+<a class="wa-float" href="https://wa.me/628137892647?text=Halo%20Asfar%20Tour%2C%20saya%20ingin%20konsultasi%20paket%20Umroh%20Special%20Agustus%20🙏" target="_blank" aria-label="Konsultasi WhatsApp">
+  <div class="waf-ico">
+    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  </div>
+  <span class="waf-txt">Konsultasi Gratis</span>
+</a>
+
+<script>
+// Nav scroll
+window.addEventListener('scroll',function(){
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>60);
+});
+
+// Mobile nav
+function toggleNav(){
+  document.getElementById('navLinks').classList.toggle('open');
+}
+document.addEventListener('click',function(e){
+  if(!e.target.closest('nav')){document.getElementById('navLinks').classList.remove('open')}
+});
+
+// Price select
+function selectPkg(row){
+  document.querySelectorAll('.price-row').forEach(function(r){r.classList.remove('active')});
+  row.classList.add('active');
+}
+
+// FAQ accordion
+function toggleFaq(btn){
+  var item=btn.parentElement,a=btn.nextElementSibling,open=item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(function(el){el.classList.remove('open')});
+  document.querySelectorAll('.faq-a').forEach(function(el){el.classList.remove('open')});
+  if(!open){item.classList.add('open');a.classList.add('open')}
+}
+
+// WA functions
+function waPkg(pkg){
+  window.open('https://wa.me/628137892647?text='+encodeURIComponent('Halo Admin Asfar Tour 🙏\n\nSaya tertarik dengan '+pkg+' untuk Paket Umroh Special Agustus 9 Hari.\nMohon info lebih lanjut dan jadwal keberangkatan yang tersedia.'),'_blank');
+}
+
+// Scroll reveal
+var revObs=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){e.target.classList.add('visible');revObs.unobserve(e.target)}
+  });
+},{threshold:.08});
+document.querySelectorAll('.reveal').forEach(function(el){revObs.observe(el)});
+
+// Active nav link on scroll
+var sections=document.querySelectorAll('section[id],div[id]');
+window.addEventListener('scroll',function(){
+  var cur='';
+  sections.forEach(function(s){
+    if(window.scrollY>=s.offsetTop-100)cur=s.id;
+  });
+  document.querySelectorAll('.nav-links a').forEach(function(a){
+    a.classList.remove('active');
+    if(a.getAttribute('href')==='#'+cur)a.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

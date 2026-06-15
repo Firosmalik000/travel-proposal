@@ -17,6 +17,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import LandingPromoEditor, {
+    normalizeLandingPromoContent,
+} from '@/pages/Dashboard/WebsiteManagement/Landing/LandingPromoEditor';
 import { Head, useForm } from '@inertiajs/react';
 import {
     ChevronDown,
@@ -552,10 +555,10 @@ function LandingPageEditor({
 
     if (isLandingMockupEditor) {
         return (
-            <LandingMockupSectionedEditor
+            <LandingPromoEditor
                 page={page}
-                packageOptions={packageOptions}
                 data={data}
+                packageOptions={packageOptions}
                 processing={processing}
                 previewUrl={previewUrl}
                 onSubmit={submit}
@@ -2795,7 +2798,11 @@ function normalizeLandingContentForEditor(
     pageSlug: string,
     content: Record<string, any>,
 ): Record<string, any> {
-    if (!isLandingHomeSlug(pageSlug)) {
+    if (pageSlug === 'home_landing_mockup') {
+        return normalizeLandingPromoContent(content);
+    }
+
+    if (pageSlug !== 'home_landing') {
         return content;
     }
 

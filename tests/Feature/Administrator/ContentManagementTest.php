@@ -25,14 +25,6 @@ class ContentManagementTest extends TestCase
             'sort_order' => 1,
             'is_active' => true,
         ]);
-        PageContent::query()->create([
-            'slug' => 'home_landing_mockup',
-            'category' => 'page',
-            'title' => 'Beranda',
-            'excerpt' => 'Excerpt',
-            'content' => ['hero' => ['title' => 'Hero']],
-            'is_active' => true,
-        ]);
 
         $this->actingAs($user)
             ->get(route('landing.index'))
@@ -41,6 +33,9 @@ class ContentManagementTest extends TestCase
                 ->component('Dashboard/WebsiteManagement/Landing/Index')
                 ->has('pages', 1)
                 ->where('pages.0.slug', 'home_landing_mockup')
+                ->has('pages.0.content.hero.pricing_cards', 3)
+                ->has('pages.0.content.package_details.items', 9)
+                ->has('pages.0.content.packages.selected_package_ids')
             );
     }
 

@@ -36,6 +36,282 @@ class TravelContentSeeder extends Seeder
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function defaultLandingMockupSeedContent(): array
+    {
+        return [
+            'hero' => [
+                'promo_pill' => $this->localize('PROGRAM TERBATAS - SEATS TERBATAS', 'LIMITED PROGRAM - LIMITED SEATS'),
+                'badge' => $this->localize('PAKET UMROH', 'UMRAH PACKAGE'),
+                'title' => $this->localize("SPECIAL 9 HARI\nAgustus", "SPECIAL 9 DAYS\nAugust"),
+                'duration_value' => '9',
+                'duration_suffix' => $this->localize('HARI', 'DAYS'),
+                'nav_items' => [
+                    $this->localize('Paket Umroh', 'Umrah Packages'),
+                    $this->localize('Fasilitas', 'Facilities'),
+                    $this->localize('Testimoni', 'Testimonials'),
+                    $this->localize('FAQ', 'FAQ'),
+                ],
+                'nav_active_label' => $this->localize('Paket Umroh', 'Umrah Packages'),
+                'subtitle' => $this->localize(
+                    'Berangkat Agustus 2026',
+                    'Departing August 2026',
+                ),
+                'subtitle_badge' => $this->localize('9 Hari Program', '9 Day Program'),
+                'description' => $this->localize(
+                    'Bersama Asfar Tour, setiap langkah ibadah Anda kami jaga dengan sepenuh hati. Didampingi mutawif berpengalaman, fasilitas premium, dan layanan tulus.',
+                    'With Asfar Tour, every step of your worship journey is handled with care. Guided by experienced mentors, premium facilities, and heartfelt service.',
+                ),
+                'checklist_items' => [
+                    $this->localize('Izin Resmi Kemenag RI', 'Official Ministry License'),
+                    $this->localize('10+ Tahun Pengalaman', '10+ Years Experience'),
+                    $this->localize('FREE Konsultasi Jabodetabek', 'FREE Greater Jakarta Consultation'),
+                ],
+                'cta_label' => $this->localize('Konsultasi Gratis', 'Free Consultation'),
+                'secondary_cta_label' => $this->localize('Lihat Paket', 'View Packages'),
+                'secondary_cta_href' => '/paket-umroh',
+                'navbar_cta_label' => $this->localize('Konsultasi Gratis', 'Free Consultation'),
+                'pricing_cards' => [
+                    ['label' => 'QUAD', 'price' => 'Rp 33.500.000', 'note' => '/Pax'],
+                    ['label' => 'TRIPLE', 'price' => 'Rp 35.000.000', 'note' => '/Pax'],
+                    ['label' => 'DOUBLE', 'price' => 'Rp 36.500.000', 'note' => '/Pax'],
+                ],
+                'feature_cards' => [
+                    [
+                        'icon' => 'plane',
+                        'title' => $this->localize('Direct Flight'),
+                        'description' => $this->localize('Lion Air / Saudia', 'Lion Air / Saudia'),
+                    ],
+                    [
+                        'icon' => 'hotel',
+                        'title' => $this->localize('Hotel Makkah'),
+                        'description' => $this->localize('Maysan Al Maqom', 'Maysan Al Maqom'),
+                    ],
+                    [
+                        'icon' => 'hotel',
+                        'title' => $this->localize('Hotel Madinah'),
+                        'description' => $this->localize('Arkan Al Manar', 'Arkan Al Manar'),
+                    ],
+                    [
+                        'icon' => 'food',
+                        'title' => $this->localize('Konsumsi', 'Meals'),
+                        'description' => $this->localize('Makan 3x Sehari', 'Meals 3x Daily'),
+                    ],
+                ],
+                'free_badge_title' => 'FREE',
+                'free_badge_label' => $this->localize('KONSULTASI', 'CONSULTATION'),
+                'free_badge_note' => $this->localize('SE-JABODETABEK', 'GREATER JAKARTA'),
+            ],
+            'package_details' => [
+                'title' => $this->localize('PAKET KAMI', 'OUR PACKAGE'),
+                'heading' => $this->localize(
+                    "Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda",
+                    "Choose the Best Umrah Package\nFor Your Worship Journey",
+                ),
+                'description' => $this->localize(
+                    'Direct flight, hotel strategis, mutawif berpengalaman, dan dokumentasi profesional - semua sudah termasuk.',
+                    'Direct flight, strategic hotels, experienced guides, and professional documentation - all included.',
+                ),
+                'items' => [
+                    ['icon' => 'plane', 'title' => $this->localize('Maskapai', 'Airline'), 'description' => $this->localize("Lion Air / Saudia\nDirect Flight")],
+                    ['icon' => 'hotel', 'title' => $this->localize('Hotel Makkah'), 'description' => $this->localize("Maysan Al Maqom\nBintang 4")],
+                    ['icon' => 'hotel', 'title' => $this->localize('Hotel Madinah'), 'description' => $this->localize("Arkan Al Manar\nBintang 3")],
+                    ['icon' => 'cal', 'title' => $this->localize('Durasi', 'Duration'), 'description' => $this->localize("9 Hari\n7 Malam", "9 Days\n7 Nights")],
+                    ['icon' => 'food', 'title' => $this->localize('Makan', 'Meals'), 'description' => $this->localize("Makan 3x\nSehari", "Meals 3x\nDaily")],
+                    ['icon' => 'user', 'title' => $this->localize('Mutawif', 'Guide'), 'description' => $this->localize("Tour Leader & Mutawif\nBerpengalaman", "Tour Leader & Guide\nExperienced")],
+                    ['icon' => 'doc', 'title' => $this->localize('Visa'), 'description' => $this->localize("Visa Umroh\nResmi", "Official Umrah\nVisa")],
+                    ['icon' => 'bottle', 'title' => $this->localize('Zam-zam', 'Zamzam'), 'description' => $this->localize("Air Zam-zam\n5 Liter", "Zamzam Water\n5 Liters")],
+                    ['icon' => 'cam', 'title' => $this->localize('Dokumentasi', 'Documentation'), 'description' => $this->localize("Dokumentasi\nProfesional", "Professional\nDocumentation")],
+                ],
+            ],
+            'included' => [
+                'section_badge' => $this->localize('DETAIL PAKET', 'PACKAGE DETAILS'),
+                'section_heading' => $this->localize(
+                    "Yang Termasuk\ndalam Paket",
+                    "What Is Included\nin the Package",
+                ),
+                'title' => $this->localize('TERMASUK DALAM PAKET', 'INCLUDED IN THE PACKAGE'),
+                'image_url' => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=85',
+                'items' => [
+                    $this->localize('Tiket Pesawat PP Direct Flight', 'Return Direct Flight Tickets'),
+                    $this->localize('Air Zam-zam 5 Liter', '5 Liters of Zamzam Water'),
+                    $this->localize('Hotel Sesuai Paket', 'Hotel According to Package'),
+                    $this->localize('TL & Mutawif', 'Tour Leader & Guide'),
+                    $this->localize('Visa Umroh Resmi', 'Official Umrah Visa'),
+                    $this->localize('Handling'),
+                    $this->localize('Makan 3x Sehari', 'Meals 3x Daily'),
+                    $this->localize('Dokumentasi', 'Documentation'),
+                ],
+            ],
+            'excluded' => [
+                'title' => $this->localize('TIDAK TERMASUK DALAM PAKET', 'NOT INCLUDED IN THE PACKAGE'),
+                'image_url' => 'https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1000&q=85',
+                'items' => [
+                    $this->localize('Pembuatan Paspor', 'Passport Creation'),
+                    $this->localize('Vaksin Meningitis', 'Meningitis Vaccine'),
+                    $this->localize('Pengeluaran Pribadi', 'Personal Expenses'),
+                    $this->localize('Kelebihan Bagasi', 'Excess Baggage'),
+                    $this->localize('Biaya Perubahan Jadwal (jika ada)', 'Schedule Change Fee (if any)'),
+                ],
+            ],
+            'reasons' => [
+                'title' => $this->localize('KENAPA PILIH KAMI', 'WHY CHOOSE US'),
+                'heading' => $this->localize(
+                    "Lebih dari Sekadar Perjalanan,\nIni Pengalaman Berharga",
+                    "More Than Just a Journey,\nThis Is a Meaningful Experience",
+                ),
+                'items' => [
+                    ['icon' => 'users', 'title' => $this->localize('Pembimbing Berpengalaman', 'Experienced Guides'), 'description' => $this->localize('Tim mutawif ramah & profesional mendampingi setiap langkah ibadah Anda di Tanah Suci.', 'Friendly and professional mutawif team accompanies each step of your worship.')],
+                    ['icon' => 'hotel', 'title' => $this->localize('Hotel Nyaman & Strategis', 'Comfortable Strategic Hotels'), 'description' => $this->localize('Maysan Al Maqom (550m dari Haram) & Arkan Al Manar (200m dari Nabawi).', 'Maysan Al Maqom (550m from Haram) & Arkan Al Manar (200m from Nabawi).')],
+                    ['icon' => 'plane', 'title' => $this->localize('Direct Flight'), 'description' => $this->localize('Penerbangan langsung tanpa transit - lebih nyaman dan efisien waktu untuk jamaah.', 'Direct flight without transit for greater comfort and time efficiency.')],
+                    ['icon' => 'cam', 'title' => $this->localize('Dokumentasi Profesional', 'Professional Documentation'), 'description' => $this->localize('Setiap momen ibadah diabadikan secara profesional sebagai kenangan seumur hidup.', 'Each worship moment is captured professionally as a lifelong memory.')],
+                    ['icon' => 'pin', 'title' => $this->localize('Izin Resmi Kemenag RI', 'Official Ministry License'), 'description' => $this->localize('Travel resmi berizin PPIU dari Kementerian Agama RI. Aman, legal, dan terpercaya.', 'Official PPIU-licensed travel from the Ministry. Safe, legal, and trusted.')],
+                    ['icon' => 'headset', 'title' => $this->localize('Support 24/7'), 'description' => $this->localize('Tim kami siap membantu sebelum, selama, dan setelah perjalanan ibadah Anda.', 'Our team is ready to help before, during, and after your worship journey.')],
+                ],
+                'stats' => [
+                    ['value' => '10+', 'label' => $this->localize('Tahun Pengalaman', 'Years of Experience'), 'note' => $this->localize('Sejak 2015', 'Since 2015')],
+                    ['value' => '2.500+', 'label' => $this->localize('Jamaah Telah Berangkat', 'Pilgrims Departed'), 'note' => $this->localize('Dari seluruh Indonesia', 'From across Indonesia')],
+                    ['value' => '98%', 'label' => $this->localize('Kepuasan Jamaah', 'Pilgrim Satisfaction'), 'note' => $this->localize('Rating rata-rata 4.9', 'Average rating 4.9')],
+                ],
+            ],
+            'stats' => [
+                ['value' => '10+', 'label' => $this->localize('Tahun Pengalaman', 'Years of Experience')],
+                ['value' => '2.500+', 'label' => $this->localize('Jamaah Telah Berangkat', 'Pilgrims Departed')],
+                ['value' => '98%', 'label' => $this->localize('Kepuasan Jamaah', 'Pilgrim Satisfaction')],
+            ],
+            'services' => [
+                'items' => [
+                    ['icon' => 'users', 'title' => $this->localize('Pembimbing Berpengalaman', 'Experienced Guides'), 'description' => $this->localize('Tim mutawif ramah & profesional mendampingi setiap langkah ibadah Anda di Tanah Suci.', 'Friendly and professional mutawif team accompanies each step of your worship.')],
+                    ['icon' => 'hotel', 'title' => $this->localize('Hotel Nyaman & Strategis', 'Comfortable Strategic Hotels'), 'description' => $this->localize('Maysan Al Maqom (550m dari Haram) & Arkan Al Manar (200m dari Nabawi).', 'Maysan Al Maqom (550m from Haram) & Arkan Al Manar (200m from Nabawi).')],
+                    ['icon' => 'plane', 'title' => $this->localize('Direct Flight'), 'description' => $this->localize('Penerbangan langsung tanpa transit - lebih nyaman dan efisien waktu untuk jamaah.', 'Direct flight without transit for greater comfort and time efficiency.')],
+                    ['icon' => 'cam', 'title' => $this->localize('Dokumentasi Profesional', 'Professional Documentation'), 'description' => $this->localize('Setiap momen ibadah diabadikan secara profesional sebagai kenangan seumur hidup.', 'Each worship moment is captured professionally as a lifelong memory.')],
+                    ['icon' => 'pin', 'title' => $this->localize('Izin Resmi Kemenag RI', 'Official Ministry License'), 'description' => $this->localize('Travel resmi berizin PPIU dari Kementerian Agama RI. Aman, legal, dan terpercaya.', 'Official PPIU-licensed travel from the Ministry. Safe, legal, and trusted.')],
+                    ['icon' => 'headset', 'title' => $this->localize('Support 24/7'), 'description' => $this->localize('Tim kami siap membantu sebelum, selama, dan setelah perjalanan ibadah Anda.', 'Our team is ready to help before, during, and after your worship journey.')],
+                ],
+            ],
+            'packages' => [
+                'title' => $this->localize('PAKET KAMI', 'OUR PACKAGE'),
+                'heading' => $this->localize(
+                    "Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda",
+                    "Choose the Best Umrah Package\nFor Your Worship Journey",
+                ),
+                'description' => $this->localize(
+                    'Direct flight, hotel strategis, mutawif berpengalaman, dan dokumentasi profesional - semua sudah termasuk.',
+                    'Direct flight, strategic hotels, experienced guides, and professional documentation - all included.',
+                ),
+                'cta_label' => $this->localize('Lihat Semua Paket', 'View All Packages'),
+                'detail_label' => $this->localize('Tanya Paket Ini', 'Ask About This Package'),
+                'price_prefix' => $this->localize('Mulai', 'From'),
+                'duration_suffix' => $this->localize('Hari', 'Days'),
+                'fallback_name' => $this->localize('Paket Umroh', 'Umrah Package'),
+                'fallback_summary' => $this->localize('Detail paket akan tampil di sini.', 'Package details will appear here.'),
+                'discount_badge_label' => $this->localize('UNGGULAN', 'FEATURED'),
+                'selected_package_ids' => [],
+            ],
+            'gallery' => [
+                'title' => $this->localize('DOKUMENTASI JAMAAH', 'PILGRIM DOCUMENTATION'),
+                'heading' => $this->localize(
+                    "Momen Berharga\nBersama Asfar Tour",
+                    "Precious Moments\nWith Asfar Tour",
+                ),
+                'description' => $this->localize(
+                    'Setiap momen ibadah diabadikan secara profesional - kenangan yang akan selalu diingat.',
+                    'Each worship moment is captured professionally - a memory worth keeping.',
+                ),
+                'cta_label' => $this->localize('Lihat Semua Dokumentasi', 'View All Documentation'),
+            ],
+            'testimonials' => [
+                'title' => $this->localize('TESTIMONI JAMAAH', 'PILGRIM TESTIMONIALS'),
+                'heading' => $this->localize('Apa Kata Mereka?', 'What Do They Say?'),
+                'description' => $this->localize(
+                    'Ribuan jamaah telah mempercayakan perjalanan ibadahnya bersama Asfar Tour.',
+                    'Thousands of pilgrims have trusted their worship journey with Asfar Tour.',
+                ),
+                'more_label' => $this->localize('Lihat Semua Testimoni', 'View All Testimonials'),
+            ],
+            'faq' => [
+                'title' => $this->localize('PERTANYAAN YANG SERING DIAJUKAN', 'FREQUENTLY ASKED QUESTIONS'),
+                'description' => $this->localize(
+                    'Temukan jawaban untuk pertanyaan yang paling sering ditanyakan calon jamaah.',
+                    'Find answers to the questions prospective pilgrims ask most often.',
+                ),
+            ],
+            'location' => [
+                'title' => $this->localize('Kunjungi Kantor Kami', 'Visit Our Office'),
+                'description' => $this->localize(
+                    'Kami siap melayani konsultasi umroh secara langsung maupun online.',
+                    'We are ready to serve umrah consultations both in person and online.',
+                ),
+                'office_hours_title' => $this->localize('Jam Operasional', 'Office Hours'),
+                'visit_points' => [
+                    $this->localize('Kantor Dapat Dikunjungi', 'Office Available to Visit'),
+                    $this->localize('Konsultasi Langsung', 'Direct Consultation'),
+                    $this->localize('Tim Siap Membantu', 'Team Ready to Help'),
+                    $this->localize('Lokasi Mudah Diakses', 'Easy to Reach Location'),
+                ],
+                'whatsapp_label' => $this->localize('Konsultasi via WhatsApp', 'Consult via WhatsApp'),
+                'maps_label' => $this->localize('Buka Google Maps', 'Open Google Maps'),
+                'maps_cta_label' => $this->localize('Lihat Lokasi di Google Maps', 'View Location on Google Maps'),
+            ],
+            'cta' => [
+                'badge' => $this->localize(
+                    'JANGAN TUNDA NIAT BAIK ANDA',
+                    'DO NOT DELAY YOUR GOOD INTENTION',
+                ),
+                'title' => $this->localize("Jangan Tunda Niat\nBaik Anda", "Do Not Delay Your\nGood Intention"),
+                'description' => $this->localize(
+                    'Konsultasikan perjalanan ibadah Anda sekarang bersama tim Asfar Tour. Gratis, tanpa syarat, tanpa tekanan.',
+                    'Consult your worship journey now with the Asfar Tour team. Free, with no pressure.',
+                ),
+                'button_label' => $this->localize('Konsultasi via WhatsApp', 'Consult via WhatsApp'),
+                'badges' => [
+                    $this->localize('Resmi Kemenag', 'Official Ministry License'),
+                    $this->localize('Fast Response'),
+                    $this->localize('Amanah', 'Trustworthy'),
+                    $this->localize('Support 24 Jam', '24 Hour Support'),
+                ],
+            ],
+            'footer' => [
+                'brand' => $this->localize('ASFAR TOUR'),
+                'subtitle' => $this->localize('HAJI & UMRAH', 'HAJJ & UMRAH'),
+                'description' => $this->localize(
+                    'Jelas Rencananya, Terjamin Amanahnya. Melayani perjalanan umroh dengan sistem transparan & amanah sejak 2015.',
+                    'Clear in planning, trusted in delivery. Serving umrah journeys with a transparent and trustworthy system since 2015.',
+                ),
+                'package_links' => [
+                    $this->localize('Umroh Quad', 'Umrah Quad'),
+                    $this->localize('Umroh Triple', 'Umrah Triple'),
+                    $this->localize('Umroh Double', 'Umrah Double'),
+                    $this->localize('Custom/Private'),
+                ],
+                'company_links' => [
+                    $this->localize('Tentang Kami', 'About Us'),
+                    $this->localize('Legalitas', 'Legality'),
+                    $this->localize('Kantor', 'Office'),
+                    $this->localize('Galeri', 'Gallery'),
+                ],
+                'legal_links' => [
+                    $this->localize('Syarat & Ketentuan', 'Terms & Conditions'),
+                    $this->localize('Kebijakan Privasi', 'Privacy Policy'),
+                    $this->localize('Kebijakan Refund', 'Refund Policy'),
+                    $this->localize('Disclaimer'),
+                ],
+                'bottom_links' => [
+                    $this->localize('Privasi', 'Privacy'),
+                    $this->localize('Syarat', 'Terms'),
+                    $this->localize('Refund'),
+                ],
+                'whatsapp_float_label' => $this->localize(
+                    'Konsultasi Gratis',
+                    'Free Consultation',
+                ),
+                'copyright' => $this->localize('© 2026 Asfar Tour · Terdaftar Kemenag RI · PPIU-2026-001 · Jakarta Selatan'),
+            ],
+        ];
+    }
+
+    /**
      * @param  array<int, string>  $blocks
      */
     private function html(array $blocks): string
@@ -197,169 +473,7 @@ class TravelContentSeeder extends Seeder
                 'category' => 'page',
                 'title' => $this->localize('Landing Asfar Tour', 'Asfar Tour Landing'),
                 'excerpt' => $this->localize('Konten landing baru untuk halaman /landing.'),
-                'content' => [
-                    'faq' => [
-                        'title' => $this->localize('Pertanyaan yang Sering Ditanyakan'),
-                        'description' => $this->localize('Temukan jawaban atas pertanyaan jamaah kami.'),
-                    ],
-                    'hero' => [
-                        'image' => '/images/dummy.jpg',
-                        'label' => $this->localize('Hajj & Umrah', 'Hajj & Umrah'),
-                        'title' => $this->localize("Hajj & Umrah\nTerpercaya\nPerjalanan\nMenuju\nTanah Suci\nImpian Anda", 'Trusted Hajj & Umrah Journey'),
-                        'cta_label' => $this->localize('Konsultasi Gratis', 'Free Consultation'),
-                        'description' => $this->localize('Bersama Asfar Tour, setiap langkah ibadah Anda kami jaga dengan sepenuh hati. Didampingi mutawif berpengalaman, fasilitas premium, dan layanan tulus.'),
-                        'feature_cards' => [
-                            [
-                                'icon' => 'hotel',
-                                'title' => $this->localize('Hotel Premium Pilihan'),
-                                'description' => $this->localize('Dekat Masjidil Haram & Nabawi'),
-                            ],
-                            [
-                                'icon' => 'plane',
-                                'title' => $this->localize('Penerbangan Direct'),
-                                'description' => $this->localize('Jakarta - Madinah Non-stop'),
-                            ],
-                            [
-                                'icon' => 'images',
-                                'title' => $this->localize('Free Dokumentasi'),
-                                'description' => $this->localize('Kenangan ibadah Anda abadi'),
-                            ],
-                        ],
-                        'secondary_cta_href' => '/paket-umroh',
-                        'secondary_cta_label' => $this->localize('Lihat Paket', 'View Packages'),
-                    ],
-                    'about' => [
-                        'cta' => $this->localize('Baca Selengkapnya', 'Read More'),
-                        'label' => $this->localize('Tentang Kami', 'About Us'),
-                        'title' => $this->localize('Pelayanan Umroh yang Tertata dan Menenangkan'),
-                        'description' => $this->localize('Kami mengelola keberangkatan umroh dengan alur yang jelas, pendampingan ibadah, dan komunikasi yang transparan.'),
-                        'image_primary' => '/images/dummy.jpg',
-                        'image_secondary' => '/images/dummy.jpg',
-                    ],
-                    'stats' => [
-                        ['label' => $this->localize('Jamaah Diberangkatkan'), 'value' => '500+'],
-                        ['label' => $this->localize('Tahun Pengalaman'), 'value' => '10+'],
-                        ['label' => $this->localize('Rating Jamaah'), 'value' => '4.9'],
-                        ['label' => $this->localize('Program Terlaksana'), 'value' => '50+'],
-                    ],
-                    'footer' => [
-                        'brand' => $this->localize('ASFAR TOUR'),
-                        'subtitle' => $this->localize('Hajj & Umrah'),
-                        'copyright' => $this->localize('(c) 2025 Asfar Tour - Terdaftar Kemenag RI'),
-                    ],
-                    'contact' => [
-                        'label' => $this->localize('Kontak Cepat', 'Quick Contact'),
-                        'title' => $this->localize('Siap berangkat? Konsultasi gratis dulu.', 'Ready to depart? Start with a free consultation.'),
-                        'description' => $this->localize('Konsultasikan kebutuhan ibadah Anda bersama tim kami. Gratis, tanpa syarat, tanpa tekanan.'),
-                        'banner_image' => '/images/dummy.jpg',
-                        'banner_title' => $this->localize("Siap Melangkah ke\nTanah Suci?"),
-                        'address_label' => $this->localize('Alamat'),
-                        'banner_kicker' => $this->localize('Mulai Perjalanan Anda'),
-                        'contact_label' => $this->localize('Lihat Kontak Lengkap', 'View Full Contact'),
-                        'secondary_href' => '/paket-umroh',
-                        'whatsapp_label' => $this->localize('Chat Admin WhatsApp Sekarang'),
-                        'secondary_label' => $this->localize('Lihat Paket'),
-                        'contact_info_label' => $this->localize('Kontak'),
-                        'navbar_whatsapp_label' => $this->localize('Chat Admin'),
-                    ],
-                    'gallery' => [
-                        'title' => $this->localize('Galeri Perjalanan', 'Travel Gallery'),
-                        'images' => [],
-                        'cta_label' => $this->localize('OUR HISTORY'),
-                        'description' => $this->localize('Momen-momen berharga selama perjalanan jamaah.'),
-                    ],
-                    'problem' => [
-                        'label' => $this->localize('PENTING DIKETAHUI'),
-                        'quote' => $this->localize('Kami memahami kekhawatiran itu. Karena itu, kami hadir dengan sistem yang jelas dan transparan.'),
-                        'badges' => [
-                            $this->localize('Biaya tiba-tiba berubah di tengah jalan'),
-                            $this->localize('Minimnya informasi & komunikasi'),
-                            $this->localize('Jadwal keberangkatan tidak jelas'),
-                            $this->localize('Takut tertipu travel yang tidak amanah'),
-                        ],
-                        'heading' => $this->localize('Banyak Jamaah Gagal Berangkat Bukan Karena Niat, Tapi Karena Salah Pilih Travel'),
-                    ],
-                    'articles' => [
-                        'label' => $this->localize('Artikel'),
-                        'heading' => $this->localize('News & Update Terbaru'),
-                        'cta_label' => $this->localize('Lihat Semua Artikel'),
-                        'empty_title' => $this->localize('Belum ada artikel yang tampil.'),
-                        'read_more_label' => $this->localize('Baca selengkapnya'),
-                        'empty_description' => $this->localize('Pastikan artikel sudah berstatus Terbit dan tanggal publikasinya tidak di masa depan.'),
-                        'fallback_item_title_prefix' => $this->localize('Artikel'),
-                    ],
-                    'packages' => [
-                        'title' => $this->localize('Pilihan Paket'),
-                        'heading' => $this->localize('Paket Umrah Kami', 'Our Umrah Packages'),
-                        'cta_label' => $this->localize('Lihat Paket'),
-                        'description' => $this->localize('Pilih paket yang sesuai dengan kebutuhan dan budget perjalanan ibadah Anda.'),
-                        'detail_label' => $this->localize('Tanya Paket Ini'),
-                        'price_prefix' => $this->localize('Mulai'),
-                        'fallback_name' => $this->localize('Paket Umroh'),
-                        'duration_suffix' => $this->localize('Hari'),
-                        'fallback_summary' => $this->localize('Detail paket akan tampil di sini.'),
-                        'discount_badge_label' => $this->localize('UNGGULAN'),
-                        'selected_package_ids' => [],
-                    ],
-                    'services' => [
-                        'items' => [
-                            [
-                                'icon' => 'heart-handshake',
-                                'title' => $this->localize('Mutawif Berpengalaman'),
-                                'description' => $this->localize('Didampingi pembimbing ibadah profesional yang hafal rute, doa, dan ritual di Tanah Suci.'),
-                            ],
-                            [
-                                'icon' => 'plane',
-                                'title' => $this->localize('Penerbangan Direct'),
-                                'description' => $this->localize('Penerbangan langsung tanpa transit untuk kenyamanan dan efisiensi waktu jamaah.'),
-                            ],
-                            [
-                                'icon' => 'images',
-                                'title' => $this->localize('Free Dokumentasi'),
-                                'description' => $this->localize('Setiap momen berharga ibadah Anda diabadikan secara profesional sebagai kenangan seumur hidup.'),
-                            ],
-                            [
-                                'icon' => 'shield-check',
-                                'title' => $this->localize('Legal & Amanah'),
-                                'description' => $this->localize('Terdaftar resmi di Kemenag RI. Kepercayaan jamaah adalah prioritas utama kami.'),
-                            ],
-                        ],
-                        'label' => $this->localize('Layanan Kami'),
-                        'title' => $this->localize('Mengapa Asfar Tour'),
-                        'heading' => $this->localize("Ibadah Lebih Bermakna\nBersama Kami"),
-                        'description' => $this->localize('Kami tidak sekadar memberangkatkan - kami memastikan setiap momen ibadah Anda berjalan sempurna.'),
-                        'highlight_word' => $this->localize('Bermakna'),
-                        'fallback_description' => $this->localize('Deskripsi layanan akan tampil di sini.'),
-                        'fallback_title_prefix' => $this->localize('Layanan'),
-                    ],
-                    'timeline' => [
-                        'label' => $this->localize('Alur Perjalanan yang Kami Jalankan'),
-                        'steps' => [
-                            ['icon' => 'users', 'title' => $this->localize('Registrasi'), 'caption' => $this->localize('DAFTAR & KONSULTASI'), 'description' => $this->localize('Konsultasi & pilih paket yang sesuai.')],
-                            ['icon' => 'credit-card', 'title' => $this->localize('Pembayaran'), 'caption' => $this->localize('DP / PELUNASAN'), 'description' => $this->localize('Skema biaya jelas, konfirmasi transparan.')],
-                            ['icon' => 'check-circle-2', 'title' => $this->localize('Persiapan Umroh'), 'caption' => $this->localize('MANASIK & DOKUMEN'), 'description' => $this->localize('Manasik, perlengkapan, dan dokumen.')],
-                            ['icon' => 'plane', 'title' => $this->localize('Keberangkatan'), 'caption' => $this->localize('BERANGKAT BARENG'), 'description' => $this->localize('Briefing & pendampingan sebelum berangkat.')],
-                            ['icon' => 'landmark', 'title' => $this->localize('Ibadah'), 'caption' => $this->localize('BIMBINGAN IBADAH'), 'description' => $this->localize('Bimbingan ibadah sepanjang perjalanan.')],
-                            ['icon' => 'calendar-days', 'title' => $this->localize('Kepulangan'), 'caption' => $this->localize('PULANG AMAN'), 'description' => $this->localize('Kontrol perjalanan sampai tiba di tanah air.')],
-                        ],
-                        'heading' => $this->localize('Sistem Perjalanan yang Jelas, Bukan Sekadar Janji'),
-                        'value_cards' => [
-                            ['icon' => 'shield-check', 'title' => $this->localize('Transparansi Biaya'), 'description' => $this->localize('Rincian biaya jelas sejak awal, tanpa kejutan di tengah jalan.')],
-                            ['icon' => 'calendar-days', 'title' => $this->localize('Timeline Terencana'), 'description' => $this->localize('Jadwal terstruktur dari pendaftaran sampai kepulangan.')],
-                            ['icon' => 'heart-handshake', 'title' => $this->localize('Pendampingan Ibadah'), 'description' => $this->localize('Pembimbing berpengalaman memastikan ibadah lebih tenang dan khusyuk.')],
-                            ['icon' => 'check-circle-2', 'title' => $this->localize('Sistem Terstruktur'), 'description' => $this->localize('Proses administrasi, keberangkatan, dan pelayanan berjalan rapi.')],
-                        ],
-                    ],
-                    'testimonials' => [
-                        'title' => $this->localize('Testimoni Jamaah'),
-                        'heading' => $this->localize('Mereka Sudah Merasakan'),
-                        'next_label' => $this->localize('Berikutnya'),
-                        'prev_label' => $this->localize('Sebelumnya'),
-                        'description' => $this->localize('Kepercayaan jamaah adalah kebanggaan terbesar Asfar Tour.'),
-                        'fallback_quote' => $this->localize('Kepercayaan jamaah adalah kebanggaan terbesar Asfar Tour.'),
-                        'featured_label' => $this->localize('UNGGULAN'),
-                    ],
-                ],
+                'content' => $this->defaultLandingMockupSeedContent(),
             ],
             [
                 'slug' => 'tentang-kami',

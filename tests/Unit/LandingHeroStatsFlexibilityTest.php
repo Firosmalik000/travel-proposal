@@ -13,8 +13,11 @@ class LandingHeroStatsFlexibilityTest extends TestCase
         $source = file_get_contents(__DIR__.'/../../resources/js/pages/public/landing/index.tsx');
 
         $this->assertNotFalse($source);
-        $this->assertStringContainsString('{stats.map((item, index) =>', $source);
-        $this->assertStringContainsString('[grid-template-columns:repeat(auto-fit,minmax(140px,1fr))]', $source);
-        $this->assertStringNotContainsString('stats.slice(0, 4)', $source);
+        $this->assertStringContainsString('reasonStats.map((item, index) => (', $source);
+        $this->assertStringNotContainsString('reasonStats.slice(0, 3)', $source);
+        $this->assertStringContainsString(
+            ': (stats as Array<Record<string, string>>),',
+            $source,
+        );
     }
 }

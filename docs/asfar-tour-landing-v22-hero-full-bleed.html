@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Asfar Tour - Special Umroh Agustus</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            wine:'#710214',
+            wine2:'#5a0110',
+            cream:'#fff7f2',
+            panel:'#fff7f2',
+            gold:'#c88b2d',
+            ink:'#40241d'
+          },
+          fontFamily:{
+            roboto:['Roboto','sans-serif'],
+            display:['Playfair Display','serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root{--wine:#710214;--gold:#c88b2d;--cream:#fff7f2;--panel:#fff7f2;--ink:#40241d}
+    *{box-sizing:border-box}
+    body{margin:0;background:#fff7f2;font-family:Roboto,sans-serif;color:var(--ink)}
+    .wrap{width:100%;max-width:1180px;margin:0 auto;padding-left:16px;padding-right:16px}
+    .flat svg{fill:currentColor}
+    .shadow-soft{box-shadow:0 4px 16px rgba(113,2,20,.09)}
+    .border-soft{border:1px solid rgba(113,2,20,.09)}
+    .section{background:#fff7f2;border:1px solid rgba(113,2,20,.07);box-shadow:0 3px 12px rgba(113,2,20,.045)}
+    
+    .hero-bleed{
+      position: relative;
+      left: 50%;
+      right: 50%;
+      margin-left: -50vw;
+      margin-right: -50vw;
+      width: 100vw;
+    }
+    .hero-shell{
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+.hero{
+      min-height:405px;
+      background:
+        linear-gradient(90deg,rgba(255,247,242,.98) 0%,rgba(255,247,242,.92) 35%,rgba(255,247,242,.35) 60%,rgba(255,247,242,.02) 100%),
+        url('https://images.unsplash.com/photo-1564769625905-50e93615e769?auto=format&fit=crop&w=1600&q=85');
+      background-size:cover;
+      background-position:center right;
+      position:relative;
+      overflow:hidden;
+    }
+    /* Tidak ada foto tambahan di hero. Hero hanya memakai background utama. */
+    .star{
+      clip-path:polygon(50% 0%,60% 13%,75% 7%,82% 22%,98% 27%,92% 42%,100% 50%,92% 58%,98% 73%,82% 78%,75% 93%,60% 87%,50% 100%,40% 87%,25% 93%,18% 78%,2% 73%,8% 58%,0% 50%,8% 42%,2% 27%,18% 22%,25% 7%,40% 13%);
+    }
+    .tiny{font-size:9px;line-height:1.28}
+    .title-serif{font-family:"Playfair Display",serif}
+    .mock-map{background:url('https://maps.googleapis.com/maps/api/staticmap?center=Casa%20Pesanggrahan%202%20Jakarta&zoom=14&size=560x150&markers=color:red%7CCasa%20Pesanggrahan%202%20Jakarta') center/cover no-repeat}
+    @media(min-width:640px){.wrap{padding-left:22px;padding-right:22px}.hero-shell{padding-left:22px;padding-right:22px}}@media(min-width:1024px){.wrap{padding-left:28px;padding-right:28px}.hero-shell{padding-left:28px;padding-right:28px}}@media(max-width:980px){.hero{min-height:auto}}
+  </style>
+</head>
+<body>
+<svg class="hidden">
+  <symbol id="kaaba" viewBox="0 0 24 24"><path d="M3 8.5 12 4l9 4.5V21H3V8.5Zm3 2.1V19h12v-8.4L12 7.6l-6 3Zm2 1.4h8v2H8v-2Zm0 4h8v2H8v-2Z"/></symbol>
+  <symbol id="plane" viewBox="0 0 24 24"><path d="M21.7 13.2 13 12l-4 7-2-.7 1.3-6.7-5.8-.9c-.6-.1-1-.7-.8-1.3l.2-.7 6.7.6 3.2-5.7c.3-.6.9-.9 1.5-.7l.8.2-1.4 6.7 8.6 1.8c.4.1.7.5.6.9l-.2.6Z"/></symbol>
+  <symbol id="hotel" viewBox="0 0 24 24"><path d="M3 21V5c0-1.1.9-2 2-2h9c1.1 0 2 .9 2 2v4h3c1.1 0 2 .9 2 2v10h1v1H2v-1h1Zm4-12h2V7H7v2Zm4 0h2V7h-2v2Zm-4 4h2v-2H7v2Zm4 0h2v-2h-2v2Zm-4 4h2v-2H7v2Zm10 4h2v-8h-2v8Zm-6 0h2v-3h-2v3Z"/></symbol>
+  <symbol id="food" viewBox="0 0 24 24"><path d="M7 2h1v8H7V2Zm3 0h1v8h-1V2ZM4 2h1v8H4V2Zm-1 9h9c-.2 2-1.6 3.4-3.5 3.9V22h-2v-7.1C4.6 14.4 3.2 13 3 11Zm14-9c2.4 1.4 3.7 3.7 3.7 7 0 2.7-.9 4.8-2.7 5.9V22h-2V2h1Z"/></symbol>
+  <symbol id="users" viewBox="0 0 24 24"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm6.7 0A3.4 3.4 0 1 0 15.7 4a3.4 3.4 0 0 0 0 7ZM9 13c-4 0-7 2-7 4.5V20h14v-2.5C16 15 13 13 9 13Zm6.7.5c-.5 0-1 0-1.4.1 1.7 1 2.7 2.3 2.7 3.9V20h5v-2.2c0-2.4-2.9-4.3-6.3-4.3Z"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5Z"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 5h-2v6l4 4 1.4-1.4-3.4-3.4V7Z"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><path d="M7 2h2v3h6V2h2v3h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2V2Zm12 8H5v9h14v-9ZM7 12h3v3H7v-3Zm5 0h3v3h-3v-3Z"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5Z"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path d="M6 2h8l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm7 1.5V8h4.5L13 3.5ZM8 12h8v2H8v-2Zm0 4h8v2H8v-2Z"/></symbol>
+  <symbol id="bottle" viewBox="0 0 24 24"><path d="M9 2h6v4l-1.4 1.4V10H16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.4V7.4L9 6V2Zm2 2v1h2V4h-2Zm-3 9v7h8v-7H8Z"/></symbol>
+  <symbol id="cam" viewBox="0 0 24 24"><path d="M9 4h6l1.4 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.6L9 4Zm3 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-2.1a2.9 2.9 0 1 1 0-5.8 2.9 2.9 0 0 1 0 5.8Z"/></symbol>
+  <symbol id="bolt" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-13h-7l1-7Z"/></symbol>
+  <symbol id="headset" viewBox="0 0 24 24"><path d="M12 3a8 8 0 0 0-8 8v5a2 2 0 0 0 2 2h3v-7H6a6 6 0 0 1 12 0h-3v7h2.2c-.4 1.2-1.5 2-2.8 2H12v2h2.4a5 5 0 0 0 5-5v-6a8 8 0 0 0-8-8Z"/></symbol>
+  <symbol id="wa" viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 2a8 8 0 0 1 0 16 7.9 7.9 0 0 1-4-1.1l-.5-.3-2.4.7.7-2.4-.3-.4A8 8 0 0 1 12 4Z"/></symbol>
+</svg>
+
+<header class="bg-cream border-b border-wine/10">
+  <div class="wrap flex h-[55px] items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <div class="flat grid h-10 w-10 place-items-center rounded-md border-[2px] border-wine text-wine"><svg class="h-6 w-6"><use href="#kaaba"/></svg></div>
+      <div><div class="text-[18px] font-black leading-none text-wine">ASFAR TOUR</div><div class="mt-[2px] text-[7px] font-black tracking-[.28em] text-gold">HAJI & UMRAH</div></div>
+    </div>
+    <nav class="hidden gap-7 text-[9px] font-black md:flex"><a>Beranda</a><a class="border-b-2 border-wine pb-2 text-wine">Paket Umroh</a><a>Fasilitas</a><a>Tentang Kami</a><a>Testimoni</a><a>FAQ</a></nav>
+    <a class="rounded-md bg-wine px-3 py-2 text-[10px] sm:px-5 sm:py-2.5 font-black text-white">☏ Konsultasi Gratis</a>
+  </div>
+</header>
+
+<main class="wrap pb-8">
+  <section class="hero hero-bleed"><!-- Hanya background hero yang full-bleed; konten tetap rapi di dalam hero-shell --><div class="hero-shell">
+    <div class="grid min-h-[420px] lg:grid-cols-[.58fr_.42fr]">
+      <div class="px-4 py-7 sm:px-6 sm:py-8 lg:px-8 lg:py-9">
+        <span class="inline-block rounded border border-gold/50 bg-white px-3 py-1.5 text-[10px] font-black text-gold">PAKET UMROH</span>
+        <h1 class="title-serif mt-3 text-[40px] font-black leading-[.86] sm:text-[48px] lg:text-[56px] tracking-tight text-wine">SPECIAL UMROH<br><span class="text-gold">AGUSTUS</span> <span class="inline-flex translate-y-[-5px] items-center rounded-md bg-wine px-2.5 py-1 font-roboto text-[28px] sm:text-[32px] lg:text-[36px] text-white">9 <small class="ml-1 text-[10px]">HARI</small></span></h1>
+        <p class="mt-4 text-[17px] font-black leading-snug">Perjalanan Ibadah Nyaman, Aman & Berkesan<br>Bersama Asfar Tour</p>
+        <div class="mt-4 grid w-full max-w-[500px] grid-cols-1 sm:grid-cols-2 gap-x-7 gap-y-2 text-[12px] font-bold">
+          <p><span class="mr-2 rounded-full bg-wine px-1 text-[8px] text-white">✓</span>Hotel Nyaman & Strategis</p>
+          <p><span class="mr-2 rounded-full bg-wine px-1 text-[8px] text-white">✓</span>Pembimbing Berpengalaman</p>
+          <p><span class="mr-2 rounded-full bg-wine px-1 text-[8px] text-white">✓</span>Maskapai Saudi / Garuda</p>
+          <p><span class="mr-2 rounded-full bg-wine px-1 text-[8px] text-white">✓</span>Ibadah Khusyuk & Tenang</p>
+        </div>
+        <div class="mt-6 grid w-full max-w-[500px] grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="mb-3 rounded-lg border-soft bg-white p-4 sm:p-5 shadow-soft"><div class="flat flex items-center gap-1 text-[12px] font-black text-wine"><svg class="h-4 w-4"><use href="#users"/></svg>QUAD</div><p class="mt-4 text-[20px] font-black text-ink">Rp 33.500.000</p><p class="tiny mt-2 mb-1 font-bold text-ink/60">/Pax</p></div>
+          <div class="mb-3 rounded-lg border-soft bg-white p-4 sm:p-5 shadow-soft"><div class="flat flex items-center gap-1 text-[12px] font-black text-wine"><svg class="h-4 w-4"><use href="#users"/></svg>TRIPLE</div><p class="mt-4 text-[20px] font-black text-ink">Rp 35.000.000</p><p class="tiny mt-2 mb-1 font-bold text-ink/60">/Pax</p></div>
+          <div class="mb-3 rounded-lg border-soft bg-white p-4 sm:p-5 shadow-soft"><div class="flat flex items-center gap-1 text-[12px] font-black text-wine"><svg class="h-4 w-4"><use href="#users"/></svg>DOUBLE</div><p class="mt-4 text-[20px] font-black text-ink">Rp 36.500.000</p><p class="tiny mt-2 mb-1 font-bold text-ink/60">/Pax</p></div>
+        </div>
+      </div>
+      <div class="relative hidden lg:block">
+        <div class="star absolute bottom-[55px] right-[18px] grid h-[124px] w-[124px] place-items-center bg-wine text-center text-white shadow-soft">
+          <div><p class="text-[31px] font-black leading-none text-gold">FREE</p><p class="text-[13px] font-black leading-none">KONSULTASI</p><p class="mt-1 text-[7px] font-black">SE-JABODETABEK</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="mx-0 mb-0 grid overflow-hidden rounded-md bg-wine text-white sm:grid-cols-2 lg:grid-cols-4">
+      <div class="flat flex items-center gap-4 border-white/20 px-4 py-3 sm:px-5 sm:py-4 lg:px-7 md:border-r"><svg class="h-8 w-8"><use href="#plane"/></svg><div><b class="block text-[11px]">Direct Flight</b><span class="tiny text-white/80">Penerbangan Langsung</span></div></div>
+      <div class="flat flex items-center gap-4 border-white/20 px-4 py-3 sm:px-5 sm:py-4 lg:px-7 md:border-r"><svg class="h-8 w-8"><use href="#hotel"/></svg><div><b class="block text-[11px]">Hotel Makkah</b><span class="tiny text-white/80">Maysan Al Maqam<br>Bintang 4 | 550 Meter</span></div></div>
+      <div class="flat flex items-center gap-4 border-white/20 px-4 py-3 sm:px-5 sm:py-4 lg:px-7 md:border-r"><svg class="h-8 w-8"><use href="#hotel"/></svg><div><b class="block text-[11px]">Hotel Madinah</b><span class="tiny text-white/80">Anshar Al Manar<br>Bintang 3 | 200 Meter</span></div></div>
+      <div class="flat flex items-center gap-4 px-4 py-3 sm:px-5 sm:py-4 lg:px-7"><svg class="h-8 w-8"><use href="#food"/></svg><div><b class="block text-[11px]">Makan 3x Sehari</b><span class="tiny text-white/80">Menu Enak & Variatif</span></div></div>
+    </div>
+  </section>
+
+  <section class="section mt-5 p-4 sm:p-5 lg:p-6">
+    <div class="text-center"><span class="rounded border border-gold/40 bg-white px-3 py-1 text-[9px] font-black text-gold">DETAIL PAKET KAMI</span><h2 class="title-serif mt-3 text-[22px] font-black text-wine">Perjalanan Ibadah yang Terencana dengan Baik</h2></div>
+    <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-9">
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-wine"><use href="#plane"/></svg><b class="mt-2 block text-[10px] text-wine">Maskapai</b><p class="tiny mt-1">Saudi / Garuda<br>Direct Flight</p></div>
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-wine"><use href="#hotel"/></svg><b class="mt-2 block text-[10px] text-wine">Hotel Makkah</b><p class="tiny mt-1">Maysan Al Maqam<br>Bintang 4</p></div>
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-wine"><use href="#hotel"/></svg><b class="mt-2 block text-[10px] text-wine">Hotel Madinah</b><p class="tiny mt-1">Anshar Al Manar<br>Bintang 3</p></div>
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-wine"><use href="#cal"/></svg><b class="mt-2 block text-[10px] text-wine">Durasi</b><p class="tiny mt-1">9 Hari<br>7 Malam</p></div>
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-gold"><use href="#food"/></svg><b class="mt-2 block text-[10px] text-wine">Makan</b><p class="tiny mt-1">Makan 3x<br>Sehari</p></div>
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-wine"><use href="#user"/></svg><b class="mt-2 block text-[10px] text-wine">Mutawif</b><p class="tiny mt-1">TL & Mutawif<br>Berpengalaman</p></div>
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-wine"><use href="#doc"/></svg><b class="mt-2 block text-[10px] text-wine">Visa</b><p class="tiny mt-1">Visa Umroh<br>Resmi</p></div>
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-gold"><use href="#bottle"/></svg><b class="mt-2 block text-[10px] text-wine">Zam-Zam</b><p class="tiny mt-1">Air Zam-Zam<br>5 Liter</p></div>
+      <div class="flat rounded-md border-soft bg-white p-3 text-center shadow-soft"><svg class="mx-auto h-7 w-7 text-wine"><use href="#cam"/></svg><b class="mt-2 block text-[10px] text-wine">Dokumentasi</b><p class="tiny mt-1">Dokumentasi<br>Perjalanan</p></div>
+    </div>
+  </section>
+
+  <section class="mt-4 grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
+    <!-- Foto card Termasuk/Tidak Termasuk ada di background div absolute di bawah, bukan img tambahan. -->
+    <div class="relative min-h-[178px] overflow-hidden rounded-md border-soft bg-cream p-4 sm:p-5 lg:p-6 shadow-soft">
+      <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,247,242,.98)_0%,rgba(255,247,242,.90)_45%,rgba(255,247,242,.58)_68%,rgba(255,247,242,.18)_100%),url('https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=85')] bg-cover bg-[center_right]"></div>
+      <div class="relative z-10">
+        <span class="rounded bg-wine px-3 py-1.5 text-[9px] font-black text-white">TERMASUK DALAM PAKET</span>
+        <ul class="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 text-[12px] font-bold">
+          <li>● Tiket Pesawat PP Direct Flight</li>
+          <li>● Air Zam-Zam 5 Liter</li>
+          <li>● Hotel Sesuai Paket</li>
+          <li>● TL & Mutawif</li>
+          <li>● Visa Umroh Resmi</li>
+          <li>● Handling</li>
+          <li>● Makan 3x Sehari</li>
+          <li>● Dokumentasi</li>
+        </ul>
+      </div>
+    </div>
+    <div class="relative min-h-[178px] overflow-hidden rounded-md border-soft bg-cream p-4 sm:p-5 lg:p-6 shadow-soft">
+      <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,247,242,.98)_0%,rgba(255,247,242,.90)_48%,rgba(255,247,242,.58)_70%,rgba(255,247,242,.18)_100%),url('https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1000&q=85')] bg-cover bg-[center_right]"></div>
+      <div class="relative z-10">
+        <span class="rounded border border-gold/40 bg-white px-3 py-1.5 text-[9px] font-black text-gold">TIDAK TERMASUK DALAM PAKET</span>
+        <ul class="mt-4 grid gap-2 text-[12px] font-bold">
+          <li>⊗ Paspor</li>
+          <li>⊗ Vaksin</li>
+          <li>⊗ Pengeluaran Pribadi</li>
+          <li>⊗ Kelebihan Bagasi</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="mt-5 border-y border-wine/10 py-3">
+    <h2 class="text-center text-[13px] font-black text-wine">KENAPA PILIH ASFAR TOUR?</h2>
+    <div class="mt-3 grid items-center gap-3 lg:grid-cols-[1fr_190px]">
+      <div class="flat grid grid-cols-2 divide-x divide-y divide-wine/10 border-y border-wine/10 sm:grid-cols-3 lg:grid-cols-6 lg:divide-y-0">
+        <div class="flex items-center gap-2 px-2 py-3"><svg class="h-7 w-7 text-wine"><use href="#pin"/></svg><p><b class="block text-[9px] text-wine">Izin Resmi</b><span class="tiny font-bold">Kemenag RI (PPIU)</span></p></div>
+        <div class="flex items-center gap-2 px-2 py-3"><svg class="h-7 w-7 text-wine"><use href="#users"/></svg><p><b class="block text-[9px] text-wine">Pendamping</b><span class="tiny font-bold">Berpengalaman</span></p></div>
+        <div class="flex items-center gap-2 px-2 py-3"><svg class="h-7 w-7 text-wine"><use href="#hotel"/></svg><p><b class="block text-[9px] text-wine">Hotel Strategis</b><span class="tiny font-bold">Dekat Masjid</span></p></div>
+        <div class="flex items-center gap-2 px-2 py-3"><svg class="h-7 w-7 text-wine"><use href="#cam"/></svg><p><b class="block text-[9px] text-wine">Dokumentasi</b><span class="tiny font-bold">Profesional</span></p></div>
+        <div class="flex items-center gap-2 px-2 py-3"><svg class="h-7 w-7 text-wine"><use href="#bolt"/></svg><p><b class="block text-[9px] text-wine">Fast Response</b><span class="tiny font-bold">Siap Membantu</span></p></div>
+        <div class="flex items-center gap-2 px-2 py-3"><svg class="h-7 w-7 text-wine"><use href="#headset"/></svg><p><b class="block text-[9px] text-wine">Support 24/7</b><span class="tiny font-bold">Selama Perjalanan</span></p></div>
+      </div>
+      <div class="grid grid-cols-3 gap-2 border-l border-wine/10 pl-3 md:grid-cols-1"><div><b class="text-[18px] font-black text-gold">2.500+</b><p class="tiny font-bold">Jamaah Berangkat</p></div><div><b class="text-[18px] font-black text-gold">10+</b><p class="tiny font-bold">Tahun Pengalaman</p></div><div><b class="text-[18px] font-black text-gold">98%</b><p class="tiny font-bold">Kepuasan Jamaah</p></div></div>
+    </div>
+  </section>
+
+  <section class="section mt-4 p-4 sm:p-5 lg:p-6"><h2 class="text-center text-[13px] font-black text-wine">DOKUMENTASI JAMAAH</h2><div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:grid-cols-4 lg:grid-cols-7"><img class="h-[72px] w-full rounded-md object-cover" src="https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?auto=format&fit=crop&w=500&q=80"><img class="h-[72px] w-full rounded-md object-cover" src="https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=500&q=80"><img class="h-[72px] w-full rounded-md object-cover" src="https://images.unsplash.com/photo-1575101261474-5cb5653bb416?auto=format&fit=crop&w=500&q=80"><img class="h-[72px] w-full rounded-md object-cover" src="https://images.unsplash.com/photo-1564769625905-50e93615e769?auto=format&fit=crop&w=500&q=80"><img class="h-[72px] w-full rounded-md object-cover" src="https://images.unsplash.com/photo-1591276425709-b3a4a3a73c96?auto=format&fit=crop&w=500&q=80"><img class="h-[72px] w-full rounded-md object-cover" src="https://images.unsplash.com/photo-1512632578888-169bbbc64f33?auto=format&fit=crop&w=500&q=80"><img class="hidden h-[72px] w-full rounded-md object-cover md:block" src="https://images.unsplash.com/photo-1580418827493-f2b22c0a76cb?auto=format&fit=crop&w=500&q=80"></div></section>
+
+  <section class="section mt-4 p-4 sm:p-5 lg:p-6"><div class="relative flex justify-center"><h2 class="text-[13px] font-black text-wine">TESTIMONI JAMAAH</h2><a class="absolute right-0 text-[9px] font-black text-wine underline">Lihat Semua Testimoni →</a></div><div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><div class="rounded-md bg-white p-3 shadow-soft text-[10px]"><b>Ibu Yani - Jamaah Asfar Tour</b><p class="mt-2 rounded bg-green-100 p-2 text-green-900">Assalamualaikum, admin. Alhamdulillah saya dan keluarga sudah sampai dengan selamat.</p><p class="mt-2 rounded bg-green-100 p-2 text-green-900">Terima kasih banyak, semuanya sangat memuaskan 🙏</p></div><div class="rounded-md bg-white p-3 shadow-soft"><p class="text-gold text-[11px]">★★★★★</p><p class="mt-3 text-[12px] font-bold leading-relaxed">Pelayanannya luar biasa! Dari berangkat sampai pulang, semua diurus dengan sangat baik.</p><b class="mt-4 block text-[10px]">Bapak Irwan</b><span class="tiny">Umroh Reguler, Mei 2024</span></div><div class="rounded-md bg-white p-3 shadow-soft"><p class="text-gold text-[11px]">★★★★★</p><p class="mt-3 text-[12px] font-bold leading-relaxed">Hotel dekat, makanan enak, perjalanannya nyaman. Next time umroh lagi pasti sama Asfar Tour!</p><b class="mt-4 block text-[10px]">Ibu Yani</b><span class="tiny">Umroh Plus, April 2024</span></div><div class="rounded-md bg-white p-3 shadow-soft"><p class="text-gold text-[11px]">★★★★★</p><p class="mt-3 text-[12px] font-bold leading-relaxed">Programnya terorganisir dengan sangat rapi. Timnya profesional dan sangat membantu.</p><b class="mt-4 block text-[10px]">Akbar Fauzi</b><span class="tiny">Umroh VIP, Maret 2024</span></div></div></section>
+
+  <section class="section mt-4 p-4 sm:p-5 lg:p-6"><h2 class="text-center text-[13px] font-black text-wine">PERTANYAAN YANG SERING DIAJUKAN</h2><div class="mt-4 grid gap-2 sm:grid-cols-2"><div class="rounded border-soft bg-white px-4 py-2 text-[12px] font-bold">○ Apakah bisa cicilan untuk pembayaran paket umroh? <span class="float-right">⌄</span></div><div class="rounded border-soft bg-white px-4 py-2 text-[12px] font-bold">○ Berapa meter hotel dari Masjidil Haram & Nabawi? <span class="float-right">⌄</span></div><div class="rounded border-soft bg-white px-4 py-2 text-[12px] font-bold">○ Berangkat dari kota mana saja? <span class="float-right">⌄</span></div><div class="rounded border-soft bg-white px-4 py-2 text-[12px] font-bold">○ Apakah ada pembimbing selama perjalanan? <span class="float-right">⌄</span></div><div class="rounded border-soft bg-white px-4 py-2 text-[12px] font-bold">○ Apakah ada manasik sebelum berangkat? <span class="float-right">⌄</span></div><div class="rounded border-soft bg-white px-4 py-2 text-[12px] font-bold">○ Bagaimana proses pendaftaran umroh? <span class="float-right">⌄</span></div></div></section>
+
+  <section class="section mt-4 p-4 sm:p-5 lg:p-6"><h2 class="text-center text-[13px] font-black text-wine">KUNJUNGI KANTOR & LOKASI</h2><div class="mt-4 grid gap-5 lg:grid-cols-[1fr_1.35fr]"><div><div class="grid grid-cols-1 gap-3 sm:grid-cols-3"><div class="flat flex gap-2"><svg class="h-6 w-6 shrink-0 text-wine"><use href="#pin"/></svg><p class="text-[9px] font-bold leading-snug">Casa Pesanggrahan 2 No B6<br>Jl. H. Sulaiman<br>Petukangan Utara<br>Jakarta Selatan 12260</p></div><div class="flat flex gap-2"><svg class="h-6 w-6 shrink-0 text-wine"><use href="#clock"/></svg><p class="text-[9px] font-bold leading-snug"><b>Jam Operasional</b><br>Senin - Sabtu<br>09.00 - 17.00 WIB</p></div><div class="flat space-y-2 text-[9px] font-bold"><p>✓ Kantor Dapat Dikunjungi</p><p>✓ Konsultasi Langsung</p><p>✓ Tim Siap Membantu</p><p>✓ Lokasi Mudah Diakses</p></div></div><div class="mt-4 grid grid-cols-2 gap-3"><a class="rounded-md bg-wine py-2.5 text-center text-[10px] font-black text-white">☏ Konsultasi via WhatsApp ›</a><a class="rounded-md border border-gold bg-white py-2.5 text-center text-[10px] font-black text-wine">⌖ Buka Google Maps ˅</a></div></div><div><iframe class="h-[118px] w-full rounded-md border-soft" src="https://www.google.com/maps?q=Casa%20Pesanggrahan%202%20No%20B6%20Jl.%20H.%20Sulaiman%20Petukangan%20Utara%20Jakarta%20Selatan&output=embed"></iframe><a class="mt-3 block rounded-md bg-wine py-2.5 text-center text-[10px] font-black text-white">↗ Lihat Lokasi di Google Maps ↗</a></div></div></section>
+
+  <section class="mt-4 rounded-md bg-wine px-4 py-4 sm:px-5 lg:px-6 lg:py-5 text-white shadow-soft">
+    <div class="grid items-center gap-4 lg:grid-cols-[1fr_420px]">
+      <div class="flex items-center gap-4"><div class="flat grid h-[68px] w-[68px] shrink-0 place-items-center rounded-full border border-gold/40 bg-white/5 text-gold"><svg class="h-10 w-10"><use href="#kaaba"/></svg></div><div><h2 class="title-serif text-[24px] font-black leading-none">Jangan Tunda Niat Baik Anda</h2><p class="mt-2 text-[12px] font-bold text-white/85">Konsultasikan perjalanan ibadah Anda sekarang bersama tim Asfar Tour.</p></div></div>
+      <div><a class="block rounded-md bg-[#ffe4bd] py-3 text-center text-[12px] font-black text-wine">☏ Konsultasi via WhatsApp ˅</a><div class="flat mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[9px] font-bold text-white/85"><span>◎ Resmi Kemenag</span><span>◎ Fast Response</span><span>◎ Amanah</span><span>☏ Support 24 Jam</span></div></div>
+    </div>
+  </section>
+</main>
+<a class="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-xl bg-green-500 px-4 py-3 text-[12px] font-black text-white shadow-soft ring-4 ring-white/70"><svg class="h-7 w-7 fill-current"><use href="#wa"/></svg> Konsultasi<br>Gratis</a>
+</body>
+</html>

@@ -411,6 +411,273 @@ class ContentController extends Controller
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    private function defaultLandingMockupContentDefinition(): array
+    {
+        return [
+            'hero' => [
+                'promo_pill' => ['id' => 'PROGRAM TERBATAS - SEATS TERBATAS', 'en' => 'LIMITED PROGRAM - LIMITED SEATS'],
+                'badge' => ['id' => 'PAKET UMROH', 'en' => 'UMRAH PACKAGE'],
+                'title' => [
+                    'id' => "SPECIAL 9 HARI\nAgustus",
+                    'en' => "SPECIAL 9 DAYS\nAugust",
+                ],
+                'duration_value' => '9',
+                'duration_suffix' => ['id' => 'HARI', 'en' => 'DAYS'],
+                'nav_items' => [
+                    ['id' => 'Paket Umroh', 'en' => 'Umrah Packages'],
+                    ['id' => 'Fasilitas', 'en' => 'Facilities'],
+                    ['id' => 'Testimoni', 'en' => 'Testimonials'],
+                    ['id' => 'FAQ', 'en' => 'FAQ'],
+                ],
+                'nav_active_label' => ['id' => 'Paket Umroh', 'en' => 'Umrah Packages'],
+                'subtitle' => [
+                    'id' => 'Berangkat Agustus 2026',
+                    'en' => 'Departing August 2026',
+                ],
+                'subtitle_badge' => ['id' => '9 Hari Program', 'en' => '9 Day Program'],
+                'description' => [
+                    'id' => 'Bersama Asfar Tour, setiap langkah ibadah Anda kami jaga dengan sepenuh hati. Didampingi mutawif berpengalaman, fasilitas premium, dan layanan tulus.',
+                    'en' => 'With Asfar Tour, every step of your worship journey is handled with care. Guided by experienced mentors, premium facilities, and heartfelt service.',
+                ],
+                'checklist_items' => [
+                    ['id' => 'Izin Resmi Kemenag RI', 'en' => 'Official Ministry License'],
+                    ['id' => '10+ Tahun Pengalaman', 'en' => '10+ Years Experience'],
+                    ['id' => 'FREE Konsultasi Jabodetabek', 'en' => 'FREE Greater Jakarta Consultation'],
+                ],
+                'cta_label' => ['id' => 'Konsultasi Gratis', 'en' => 'Free Consultation'],
+                'secondary_cta_label' => ['id' => 'Lihat Paket', 'en' => 'View Packages'],
+                'secondary_cta_href' => '/paket-umroh',
+                'navbar_cta_label' => ['id' => 'Konsultasi Gratis', 'en' => 'Free Consultation'],
+                'pricing_cards' => [
+                    ['label' => 'QUAD', 'price' => 'Rp 33.500.000', 'note' => '/Pax'],
+                    ['label' => 'TRIPLE', 'price' => 'Rp 35.000.000', 'note' => '/Pax'],
+                    ['label' => 'DOUBLE', 'price' => 'Rp 36.500.000', 'note' => '/Pax'],
+                ],
+                'feature_cards' => [
+                    [
+                        'icon' => 'plane',
+                        'title' => ['id' => 'Direct Flight', 'en' => 'Direct Flight'],
+                        'description' => ['id' => 'Lion Air / Saudia', 'en' => 'Lion Air / Saudia'],
+                    ],
+                    [
+                        'icon' => 'hotel',
+                        'title' => ['id' => 'Hotel Makkah', 'en' => 'Makkah Hotel'],
+                        'description' => ['id' => 'Maysan Al Maqom', 'en' => 'Maysan Al Maqom'],
+                    ],
+                    [
+                        'icon' => 'hotel',
+                        'title' => ['id' => 'Hotel Madinah', 'en' => 'Madinah Hotel'],
+                        'description' => ['id' => 'Arkan Al Manar', 'en' => 'Arkan Al Manar'],
+                    ],
+                    [
+                        'icon' => 'food',
+                        'title' => ['id' => 'Konsumsi', 'en' => 'Meals'],
+                        'description' => ['id' => 'Makan 3x Sehari', 'en' => 'Meals 3x a Day'],
+                    ],
+                ],
+                'free_badge_title' => 'FREE',
+                'free_badge_label' => ['id' => 'KONSULTASI', 'en' => 'CONSULTATION'],
+                'free_badge_note' => ['id' => 'SE-JABODETABEK', 'en' => 'GREATER JAKARTA'],
+            ],
+            'package_details' => [
+                'title' => ['id' => 'PAKET KAMI', 'en' => 'OUR PACKAGE'],
+                'heading' => [
+                    'id' => "Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda",
+                    'en' => "Choose the Best Umrah Package\nFor Your Worship Journey",
+                ],
+                'description' => [
+                    'id' => 'Direct flight, hotel strategis, mutawif berpengalaman, dan dokumentasi profesional - semua sudah termasuk.',
+                    'en' => 'Direct flight, strategic hotels, experienced guides, and professional documentation - all included.',
+                ],
+                'items' => [
+                    ['icon' => 'plane', 'title' => ['id' => 'Maskapai', 'en' => 'Airline'], 'description' => ['id' => "Lion Air / Saudia\nDirect Flight", 'en' => "Lion Air / Saudia\nDirect Flight"]],
+                    ['icon' => 'hotel', 'title' => ['id' => 'Hotel Makkah', 'en' => 'Makkah Hotel'], 'description' => ['id' => "Maysan Al Maqom\nBintang 4", 'en' => "Maysan Al Maqom\n4 Star"]],
+                    ['icon' => 'hotel', 'title' => ['id' => 'Hotel Madinah', 'en' => 'Madinah Hotel'], 'description' => ['id' => "Arkan Al Manar\nBintang 3", 'en' => "Arkan Al Manar\n3 Star"]],
+                    ['icon' => 'cal', 'title' => ['id' => 'Durasi', 'en' => 'Duration'], 'description' => ['id' => "9 Hari\n7 Malam", 'en' => "9 Days\n7 Nights"]],
+                    ['icon' => 'food', 'title' => ['id' => 'Makan', 'en' => 'Meals'], 'description' => ['id' => "Makan 3x\nSehari", 'en' => "Meals 3x\nDaily"]],
+                    ['icon' => 'user', 'title' => ['id' => 'Mutawif', 'en' => 'Guide'], 'description' => ['id' => "Tour Leader & Mutawif\nBerpengalaman", 'en' => "Tour Leader & Guide\nExperienced"]],
+                    ['icon' => 'doc', 'title' => ['id' => 'Visa', 'en' => 'Visa'], 'description' => ['id' => "Visa Umroh\nResmi", 'en' => "Official Umrah\nVisa"]],
+                    ['icon' => 'bottle', 'title' => ['id' => 'Zam-zam', 'en' => 'Zamzam'], 'description' => ['id' => "Air Zam-zam\n5 Liter", 'en' => "Zamzam Water\n5 Liters"]],
+                    ['icon' => 'cam', 'title' => ['id' => 'Dokumentasi', 'en' => 'Documentation'], 'description' => ['id' => "Dokumentasi\nProfesional", 'en' => "Professional\nDocumentation"]],
+                ],
+            ],
+            'included' => [
+                'section_badge' => ['id' => 'DETAIL PAKET', 'en' => 'PACKAGE DETAILS'],
+                'section_heading' => ['id' => "Yang Termasuk\ndalam Paket", 'en' => "What Is Included\nin the Package"],
+                'title' => ['id' => 'TERMASUK DALAM PAKET', 'en' => 'INCLUDED IN THE PACKAGE'],
+                'image_url' => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=85',
+                'items' => [
+                    ['id' => 'Tiket Pesawat PP Direct Flight', 'en' => 'Return Direct Flight Tickets'],
+                    ['id' => 'Air Zam-zam 5 Liter', 'en' => '5 Liters of Zamzam Water'],
+                    ['id' => 'Hotel Sesuai Paket', 'en' => 'Hotel According to Package'],
+                    ['id' => 'TL & Mutawif', 'en' => 'Tour Leader & Guide'],
+                    ['id' => 'Visa Umroh Resmi', 'en' => 'Official Umrah Visa'],
+                    ['id' => 'Handling', 'en' => 'Handling'],
+                    ['id' => 'Makan 3x Sehari', 'en' => 'Meals 3x Daily'],
+                    ['id' => 'Dokumentasi', 'en' => 'Documentation'],
+                ],
+            ],
+            'excluded' => [
+                'title' => ['id' => 'TIDAK TERMASUK DALAM PAKET', 'en' => 'NOT INCLUDED IN THE PACKAGE'],
+                'image_url' => 'https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1000&q=85',
+                'items' => [
+                    ['id' => 'Pembuatan Paspor', 'en' => 'Passport Creation'],
+                    ['id' => 'Vaksin Meningitis', 'en' => 'Meningitis Vaccine'],
+                    ['id' => 'Pengeluaran Pribadi', 'en' => 'Personal Expenses'],
+                    ['id' => 'Kelebihan Bagasi', 'en' => 'Excess Baggage'],
+                    ['id' => 'Biaya Perubahan Jadwal (jika ada)', 'en' => 'Schedule Change Fee (if any)'],
+                ],
+            ],
+            'reasons' => [
+                'title' => ['id' => 'KENAPA PILIH KAMI', 'en' => 'WHY CHOOSE US'],
+                'heading' => ['id' => "Lebih dari Sekadar Perjalanan,\nIni Pengalaman Berharga", 'en' => "More Than Just a Journey,\nThis Is a Meaningful Experience"],
+                'items' => [
+                    ['icon' => 'users', 'title' => ['id' => 'Pembimbing Berpengalaman', 'en' => 'Experienced Guides'], 'description' => ['id' => 'Tim mutawif ramah & profesional mendampingi setiap langkah ibadah Anda di Tanah Suci.', 'en' => 'Friendly and professional mutawif team accompanies each step of your worship.']],
+                    ['icon' => 'hotel', 'title' => ['id' => 'Hotel Nyaman & Strategis', 'en' => 'Comfortable Strategic Hotels'], 'description' => ['id' => 'Maysan Al Maqom (550m dari Haram) & Arkan Al Manar (200m dari Nabawi).', 'en' => 'Maysan Al Maqom (550m from Haram) & Arkan Al Manar (200m from Nabawi).']],
+                    ['icon' => 'plane', 'title' => ['id' => 'Direct Flight', 'en' => 'Direct Flight'], 'description' => ['id' => 'Penerbangan langsung tanpa transit - lebih nyaman dan efisien waktu untuk jamaah.', 'en' => 'Direct flight without transit for greater comfort and time efficiency.']],
+                    ['icon' => 'cam', 'title' => ['id' => 'Dokumentasi Profesional', 'en' => 'Professional Documentation'], 'description' => ['id' => 'Setiap momen ibadah diabadikan secara profesional sebagai kenangan seumur hidup.', 'en' => 'Each worship moment is captured professionally as a lifelong memory.']],
+                    ['icon' => 'pin', 'title' => ['id' => 'Izin Resmi Kemenag RI', 'en' => 'Official Ministry License'], 'description' => ['id' => 'Travel resmi berizin PPIU dari Kementerian Agama RI. Aman, legal, dan terpercaya.', 'en' => 'Official PPIU-licensed travel from the Ministry. Safe, legal, and trusted.']],
+                    ['icon' => 'headset', 'title' => ['id' => 'Support 24/7', 'en' => '24/7 Support'], 'description' => ['id' => 'Tim kami siap membantu sebelum, selama, dan setelah perjalanan ibadah Anda.', 'en' => 'Our team is ready to help before, during, and after your worship journey.']],
+                ],
+                'stats' => [
+                    ['value' => '10+', 'label' => ['id' => 'Tahun Pengalaman', 'en' => 'Years of Experience'], 'note' => ['id' => 'Sejak 2015', 'en' => 'Since 2015']],
+                    ['value' => '2.500+', 'label' => ['id' => 'Jamaah Telah Berangkat', 'en' => 'Pilgrims Departed'], 'note' => ['id' => 'Dari seluruh Indonesia', 'en' => 'From across Indonesia']],
+                    ['value' => '98%', 'label' => ['id' => 'Kepuasan Jamaah', 'en' => 'Pilgrim Satisfaction'], 'note' => ['id' => 'Rating rata-rata 4.9', 'en' => 'Average rating 4.9']],
+                ],
+            ],
+            'stats' => [
+                ['value' => '10+', 'label' => ['id' => 'Tahun Pengalaman', 'en' => 'Years of Experience']],
+                ['value' => '2.500+', 'label' => ['id' => 'Jamaah Telah Berangkat', 'en' => 'Pilgrims Departed']],
+                ['value' => '98%', 'label' => ['id' => 'Kepuasan Jamaah', 'en' => 'Pilgrim Satisfaction']],
+            ],
+            'services' => [
+                'items' => [
+                    ['icon' => 'users', 'title' => ['id' => 'Pembimbing Berpengalaman', 'en' => 'Experienced Guides'], 'description' => ['id' => 'Tim mutawif ramah & profesional mendampingi setiap langkah ibadah Anda di Tanah Suci.', 'en' => 'Friendly and professional mutawif team accompanies each step of your worship.']],
+                    ['icon' => 'hotel', 'title' => ['id' => 'Hotel Nyaman & Strategis', 'en' => 'Comfortable Strategic Hotels'], 'description' => ['id' => 'Maysan Al Maqom (550m dari Haram) & Arkan Al Manar (200m dari Nabawi).', 'en' => 'Maysan Al Maqom (550m from Haram) & Arkan Al Manar (200m from Nabawi).']],
+                    ['icon' => 'plane', 'title' => ['id' => 'Direct Flight', 'en' => 'Direct Flight'], 'description' => ['id' => 'Penerbangan langsung tanpa transit - lebih nyaman dan efisien waktu untuk jamaah.', 'en' => 'Direct flight without transit for greater comfort and time efficiency.']],
+                    ['icon' => 'cam', 'title' => ['id' => 'Dokumentasi Profesional', 'en' => 'Professional Documentation'], 'description' => ['id' => 'Setiap momen ibadah diabadikan secara profesional sebagai kenangan seumur hidup.', 'en' => 'Each worship moment is captured professionally as a lifelong memory.']],
+                    ['icon' => 'pin', 'title' => ['id' => 'Izin Resmi Kemenag RI', 'en' => 'Official Ministry License'], 'description' => ['id' => 'Travel resmi berizin PPIU dari Kementerian Agama RI. Aman, legal, dan terpercaya.', 'en' => 'Official PPIU-licensed travel from the Ministry. Safe, legal, and trusted.']],
+                    ['icon' => 'headset', 'title' => ['id' => 'Support 24/7', 'en' => '24/7 Support'], 'description' => ['id' => 'Tim kami siap membantu sebelum, selama, dan setelah perjalanan ibadah Anda.', 'en' => 'Our team is ready to help before, during, and after your worship journey.']],
+                ],
+            ],
+            'packages' => [
+                'title' => ['id' => 'PAKET KAMI', 'en' => 'OUR PACKAGE'],
+                'heading' => ['id' => "Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda", 'en' => "Choose the Best Umrah Package\nFor Your Worship Journey"],
+                'description' => [
+                    'id' => 'Direct flight, hotel strategis, mutawif berpengalaman, dan dokumentasi profesional - semua sudah termasuk.',
+                    'en' => 'Direct flight, strategic hotels, experienced guides, and professional documentation - all included.',
+                ],
+                'cta_label' => ['id' => 'Lihat Semua Paket', 'en' => 'View All Packages'],
+                'detail_label' => ['id' => 'Tanya Paket Ini', 'en' => 'Ask About This Package'],
+                'price_prefix' => ['id' => 'Mulai', 'en' => 'From'],
+                'duration_suffix' => ['id' => 'Hari', 'en' => 'Days'],
+                'fallback_name' => ['id' => 'Paket Umroh', 'en' => 'Umrah Package'],
+                'fallback_summary' => ['id' => 'Detail paket akan tampil di sini.', 'en' => 'Package details will appear here.'],
+                'discount_badge_label' => ['id' => 'UNGGULAN', 'en' => 'FEATURED'],
+                'selected_package_ids' => [],
+            ],
+            'gallery' => [
+                'title' => ['id' => 'DOKUMENTASI JAMAAH', 'en' => 'PILGRIM DOCUMENTATION'],
+                'heading' => ['id' => "Momen Berharga\nBersama Asfar Tour", 'en' => "Precious Moments\nWith Asfar Tour"],
+                'description' => [
+                    'id' => 'Setiap momen ibadah diabadikan secara profesional - kenangan yang akan selalu diingat.',
+                    'en' => 'Each worship moment is captured professionally - a memory worth keeping.',
+                ],
+                'cta_label' => ['id' => 'Lihat Semua Dokumentasi', 'en' => 'View All Documentation'],
+            ],
+            'testimonials' => [
+                'title' => ['id' => 'TESTIMONI JAMAAH', 'en' => 'PILGRIM TESTIMONIALS'],
+                'heading' => ['id' => 'Apa Kata Mereka?', 'en' => 'What Do They Say?'],
+                'description' => [
+                    'id' => 'Ribuan jamaah telah mempercayakan perjalanan ibadahnya bersama Asfar Tour.',
+                    'en' => 'Thousands of pilgrims have trusted their worship journey with Asfar Tour.',
+                ],
+                'more_label' => ['id' => 'Lihat Semua Testimoni', 'en' => 'View All Testimonials'],
+            ],
+            'faq' => [
+                'title' => ['id' => 'PERTANYAAN YANG SERING DIAJUKAN', 'en' => 'FREQUENTLY ASKED QUESTIONS'],
+                'description' => [
+                    'id' => 'Temukan jawaban untuk pertanyaan yang paling sering ditanyakan calon jamaah.',
+                    'en' => 'Find answers to the questions prospective pilgrims ask most often.',
+                ],
+            ],
+            'location' => [
+                'title' => ['id' => 'Kunjungi Kantor Kami', 'en' => 'Visit Our Office'],
+                'description' => [
+                    'id' => 'Kami siap melayani konsultasi umroh secara langsung maupun online.',
+                    'en' => 'We are ready to serve umrah consultations both in person and online.',
+                ],
+                'office_hours_title' => ['id' => 'Jam Operasional', 'en' => 'Office Hours'],
+                'visit_points' => [
+                    ['id' => 'Kantor Dapat Dikunjungi', 'en' => 'Office Available to Visit'],
+                    ['id' => 'Konsultasi Langsung', 'en' => 'Direct Consultation'],
+                    ['id' => 'Tim Siap Membantu', 'en' => 'Team Ready to Help'],
+                    ['id' => 'Lokasi Mudah Diakses', 'en' => 'Easy to Reach Location'],
+                ],
+                'whatsapp_label' => ['id' => 'Konsultasi via WhatsApp', 'en' => 'Consult via WhatsApp'],
+                'maps_label' => ['id' => 'Buka Google Maps', 'en' => 'Open Google Maps'],
+                'maps_cta_label' => ['id' => 'Lihat Lokasi di Google Maps', 'en' => 'View Location on Google Maps'],
+            ],
+            'cta' => [
+                'badge' => ['id' => 'JANGAN TUNDA NIAT BAIK ANDA', 'en' => 'DO NOT DELAY YOUR GOOD INTENTION'],
+                'title' => ['id' => "Jangan Tunda Niat\nBaik Anda", 'en' => "Do Not Delay Your\nGood Intention"],
+                'description' => [
+                    'id' => 'Konsultasikan perjalanan ibadah Anda sekarang bersama tim Asfar Tour. Gratis, tanpa syarat, tanpa tekanan.',
+                    'en' => 'Consult your worship journey now with the Asfar Tour team. Free, with no pressure.',
+                ],
+                'button_label' => ['id' => 'Konsultasi via WhatsApp', 'en' => 'Consult via WhatsApp'],
+                'badges' => [
+                    ['id' => 'Resmi Kemenag', 'en' => 'Official Ministry License'],
+                    ['id' => 'Fast Response', 'en' => 'Fast Response'],
+                    ['id' => 'Amanah', 'en' => 'Trustworthy'],
+                    ['id' => 'Support 24 Jam', 'en' => '24 Hour Support'],
+                ],
+            ],
+            'footer' => [
+                'brand' => ['id' => 'ASFAR TOUR', 'en' => 'ASFAR TOUR'],
+                'subtitle' => ['id' => 'HAJI & UMRAH', 'en' => 'HAJJ & UMRAH'],
+                'description' => [
+                    'id' => 'Jelas Rencananya, Terjamin Amanahnya. Melayani perjalanan umroh dengan sistem transparan & amanah sejak 2015.',
+                    'en' => 'Clear in planning, trusted in delivery. Serving umrah journeys with a transparent and trustworthy system since 2015.',
+                ],
+                'package_links' => [
+                    ['id' => 'Umroh Quad', 'en' => 'Umrah Quad'],
+                    ['id' => 'Umroh Triple', 'en' => 'Umrah Triple'],
+                    ['id' => 'Umroh Double', 'en' => 'Umrah Double'],
+                    ['id' => 'Custom/Private', 'en' => 'Custom/Private'],
+                ],
+                'company_links' => [
+                    ['id' => 'Tentang Kami', 'en' => 'About Us'],
+                    ['id' => 'Legalitas', 'en' => 'Legality'],
+                    ['id' => 'Kantor', 'en' => 'Office'],
+                    ['id' => 'Galeri', 'en' => 'Gallery'],
+                ],
+                'legal_links' => [
+                    ['id' => 'Syarat & Ketentuan', 'en' => 'Terms & Conditions'],
+                    ['id' => 'Kebijakan Privasi', 'en' => 'Privacy Policy'],
+                    ['id' => 'Kebijakan Refund', 'en' => 'Refund Policy'],
+                    ['id' => 'Disclaimer', 'en' => 'Disclaimer'],
+                ],
+                'bottom_links' => [
+                    ['id' => 'Privasi', 'en' => 'Privacy'],
+                    ['id' => 'Syarat', 'en' => 'Terms'],
+                    ['id' => 'Refund', 'en' => 'Refund'],
+                ],
+                'whatsapp_float_label' => [
+                    'id' => 'Konsultasi Gratis',
+                    'en' => 'Free Consultation',
+                ],
+                'copyright' => [
+                    'id' => '© 2026 Asfar Tour · Terdaftar Kemenag RI · PPIU-2026-001 · Jakarta Selatan',
+                    'en' => '© 2026 Asfar Tour · Officially Registered · South Jakarta',
+                ],
+            ],
+        ];
+    }
+
+    /**
      * @return array<int, array{slug: string, title: array{id: string, en: string}, excerpt: array{id: string, en: string}, content: array<string, mixed>}>
      */
     private function landingPageDefinitions(): array
@@ -686,6 +953,12 @@ class ContentController extends Controller
                         ],
                     ],
                 ],
+            ],
+            [
+                'slug' => 'home_landing_mockup',
+                'title' => ['id' => 'Landing Promo', 'en' => 'Promo Landing'],
+                'excerpt' => ['id' => 'Konten landing promo untuk halaman /landing.', 'en' => 'Promo landing content for the /landing page.'],
+                'content' => $this->defaultLandingMockupContentDefinition(),
             ],
             [
                 'slug' => 'tentang-kami',
