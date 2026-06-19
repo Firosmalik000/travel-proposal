@@ -188,4 +188,78 @@ class PublicLandingPageTest extends TestCase
                 ->component('public/landing/index')
                 ->has('publicData.pages.home_landing_mockup.content.services.items', 0));
     }
+
+    public function test_landing_page_exposes_editable_heading_parts_from_payload(): void
+    {
+        PageContent::query()->updateOrCreate(
+            ['slug' => 'home_landing_mockup'],
+            [
+                'category' => 'page',
+                'title' => 'Landing',
+                'excerpt' => 'Landing',
+                'content' => [
+                    'included' => [
+                        'section_heading_prefix' => 'Yang',
+                        'section_heading_highlight' => 'Termasuk',
+                        'section_heading_suffix' => 'dalam Paket',
+                        'status_label' => 'SUDAH TERMASUK',
+                    ],
+                    'excluded' => [
+                        'status_label' => 'BELUM TERMASUK',
+                    ],
+                    'testimonials' => [
+                        'heading_prefix' => 'Apa Kata',
+                        'heading_highlight' => 'Mereka',
+                        'heading_suffix' => '?',
+                    ],
+                    'faq' => [
+                        'heading_prefix' => 'Pertanyaan yang',
+                        'heading_highlight' => 'Sering Ditanyakan',
+                        'heading_suffix' => '',
+                    ],
+                    'location' => [
+                        'heading_prefix' => 'Kunjungi',
+                        'heading_highlight' => 'Kantor Kami',
+                        'heading_suffix' => '',
+                        'address_label' => 'Alamat Kantor',
+                        'contact_label' => 'Hubungi Kami',
+                    ],
+                ],
+                'is_active' => true,
+            ],
+        );
+
+        $this->get(route('public.landing'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/index')
+                ->where(
+                    'publicData.pages.home_landing_mockup.content.included.section_heading_prefix',
+                    'Yang',
+                )
+                ->where(
+                    'publicData.pages.home_landing_mockup.content.testimonials.heading_highlight',
+                    'Mereka',
+                )
+                ->where(
+                    'publicData.pages.home_landing_mockup.content.faq.heading_highlight',
+                    'Sering Ditanyakan',
+                )
+                ->where(
+                    'publicData.pages.home_landing_mockup.content.location.heading_highlight',
+                    'Kantor Kami',
+                )
+                ->where(
+                    'publicData.pages.home_landing_mockup.content.included.status_label',
+                    'SUDAH TERMASUK',
+                )
+                ->where(
+                    'publicData.pages.home_landing_mockup.content.excluded.status_label',
+                    'BELUM TERMASUK',
+                )
+                ->where(
+                    'publicData.pages.home_landing_mockup.content.location.address_label',
+                    'Alamat Kantor',
+                ));
+    }
 }

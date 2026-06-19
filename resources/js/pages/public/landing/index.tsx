@@ -1,10 +1,11 @@
-﻿import GlobalFaviconHead from '@/components/global-favicon-head';
+import GlobalFaviconHead from '@/components/global-favicon-head';
 import PublicSeoHead from '@/components/public/seo-head';
 import {
     formatPrice,
     getPublicAddress,
     getPublicEmail,
     getPublicPhoneNumber,
+    getPublicSocialAccounts,
     localize,
     usePublicData,
     usePublicPageContent,
@@ -15,11 +16,9 @@ import { Head, usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import {
     Bolt,
-    Building2,
     CalendarDays,
     Camera,
     Check,
-    ChevronDown,
     Clock3,
     Droplets,
     FileText,
@@ -40,6 +39,36 @@ import {
 import { useMemo, useState } from 'react';
 
 type CmsRecord = Record<string, unknown>;
+
+const LANDING_NAV_ITEMS = [
+    { label: 'Paket Umroh', href: '#detail' },
+    { label: 'Fasilitas', href: '#why' },
+    { label: 'Testimoni', href: '#testi' },
+    { label: 'FAQ', href: '#faq' },
+] as const;
+
+const LANDING_FOOTER_PACKAGE_LINKS = [
+    'Umroh Quad',
+    'Umroh Triple',
+    'Umroh Double',
+    'Custom/Private',
+] as const;
+
+const LANDING_FOOTER_COMPANY_LINKS = [
+    'Tentang Kami',
+    'Legalitas',
+    'Kantor',
+    'Galeri',
+] as const;
+
+const LANDING_FOOTER_LEGAL_LINKS = [
+    'Syarat & Ketentuan',
+    'Kebijakan Privasi',
+    'Kebijakan Refund',
+    'Disclaimer',
+] as const;
+
+const LANDING_FOOTER_BOTTOM_LINKS = ['Privasi', 'Syarat', 'Refund'] as const;
 
 function text(value: unknown, fallback = ''): string {
     return String(value ?? fallback).trim();
@@ -87,6 +116,24 @@ function iconFor(name: unknown) {
     }
 }
 
+function heroFeatureIconFor(name: unknown) {
+    const normalized = text(name).toLowerCase();
+
+    switch (normalized) {
+        case 'plane':
+            return Plane;
+        case 'hotel':
+            return Hotel;
+        case 'images':
+        case 'cam':
+            return Camera;
+        case 'food':
+            return Soup;
+        default:
+            return MapPin;
+    }
+}
+
 function normalizeItems(
     items: unknown,
     defaults: Array<Record<string, string>>,
@@ -121,16 +168,8 @@ function normalizeContent(content: CmsRecord): CmsRecord {
             title: text(hero.title, 'SPECIAL 9 HARI\nAgustus'),
             duration_value: text(hero.duration_value, '9'),
             duration_suffix: text(hero.duration_suffix, 'HARI'),
-            nav_items: Array.isArray(hero.nav_items)
-                ? hero.nav_items
-                : ['Paket Umroh', 'Fasilitas', 'Testimoni', 'FAQ'],
-            nav_active_label: text(hero.nav_active_label, 'Paket Umroh'),
             subtitle: text(hero.subtitle, 'Berangkat Agustus 2026'),
             subtitle_badge: text(hero.subtitle_badge, '9 Hari Program'),
-            description: text(
-                hero.description,
-                'Bersama Asfar Tour, setiap langkah ibadah Anda kami jaga dengan sepenuh hati. Didampingi mutawif berpengalaman, fasilitas premium, dan layanan tulus.',
-            ),
             checklist_items: Array.isArray(hero.checklist_items)
                 ? hero.checklist_items
                 : [
@@ -140,7 +179,6 @@ function normalizeContent(content: CmsRecord): CmsRecord {
                   ],
             cta_label: text(hero.cta_label, 'Konsultasi Gratis'),
             secondary_cta_label: text(hero.secondary_cta_label, 'Lihat Paket'),
-            navbar_cta_label: text(hero.navbar_cta_label, 'Konsultasi Gratis'),
             pricing_cards: normalizeItems(hero.pricing_cards, [
                 { label: 'QUAD', price: 'Rp 33.500.000', note: '/Pax' },
                 { label: 'TRIPLE', price: 'Rp 35.000.000', note: '/Pax' },
@@ -179,7 +217,11 @@ function normalizeContent(content: CmsRecord): CmsRecord {
             ),
             heading: text(
                 (content.package_details as CmsRecord)?.heading,
-                'Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda',
+                'Pilih Paket Umroh Terbaik',
+            ),
+            heading2: text(
+                (content.package_details as CmsRecord)?.heading2,
+                'Untuk Perjalanan Ibadah Anda',
             ),
             description: text(
                 (content.package_details as CmsRecord)?.description,
@@ -241,7 +283,11 @@ function normalizeContent(content: CmsRecord): CmsRecord {
             title: text((content.packages as CmsRecord)?.title, 'PAKET KAMI'),
             heading: text(
                 (content.packages as CmsRecord)?.heading,
-                'Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda',
+                'Pilih Paket Umroh Terbaik',
+            ),
+            heading2: text(
+                (content.packages as CmsRecord)?.heading2,
+                'Untuk Perjalanan Ibadah Anda',
             ),
             description: text(
                 (content.packages as CmsRecord)?.description,
@@ -250,6 +296,34 @@ function normalizeContent(content: CmsRecord): CmsRecord {
             more_packages_label: text(
                 (content.packages as CmsRecord)?.more_packages_label,
                 'Lihat Semua Paket',
+            ),
+            detail_label: text(
+                (content.packages as CmsRecord)?.detail_label,
+                'Tanya Paket Ini',
+            ),
+            price_unit_label: text(
+                (content.packages as CmsRecord)?.price_unit_label,
+                '/pax',
+            ),
+            duration_suffix: text(
+                (content.packages as CmsRecord)?.duration_suffix,
+                'Hari',
+            ),
+            fallback_name: text(
+                (content.packages as CmsRecord)?.fallback_name,
+                'Paket Umrah',
+            ),
+            fallback_airline: text(
+                (content.packages as CmsRecord)?.fallback_airline,
+                'Maskapai menyesuaikan',
+            ),
+            fallback_hotel: text(
+                (content.packages as CmsRecord)?.fallback_hotel,
+                'Hotel sesuai paket',
+            ),
+            disclaimer: text(
+                (content.packages as CmsRecord)?.disclaimer,
+                '* Harga dapat berubah sewaktu-waktu. Syarat & ketentuan berlaku.',
             ),
             selected_package_ids: Array.isArray(
                 (content.packages as CmsRecord)?.selected_package_ids,
@@ -268,6 +342,18 @@ function normalizeContent(content: CmsRecord): CmsRecord {
                 (content.included as CmsRecord)?.section_badge,
                 'DETAIL PAKET',
             ),
+            section_heading_prefix: text(
+                (content.included as CmsRecord)?.section_heading_prefix,
+                'Yang',
+            ),
+            section_heading_highlight: text(
+                (content.included as CmsRecord)?.section_heading_highlight,
+                'Termasuk',
+            ),
+            section_heading_suffix: text(
+                (content.included as CmsRecord)?.section_heading_suffix,
+                'dalam Paket',
+            ),
             section_heading: text(
                 (content.included as CmsRecord)?.section_heading,
                 'Yang Termasuk\ndalam Paket',
@@ -275,6 +361,10 @@ function normalizeContent(content: CmsRecord): CmsRecord {
             title: text(
                 (content.included as CmsRecord)?.title,
                 'TERMASUK DALAM PAKET',
+            ),
+            status_label: text(
+                (content.included as CmsRecord)?.status_label,
+                'INCLUDED',
             ),
             image_url: text(
                 (content.included as CmsRecord)?.image_url,
@@ -297,6 +387,10 @@ function normalizeContent(content: CmsRecord): CmsRecord {
             title: text(
                 (content.excluded as CmsRecord)?.title,
                 'TIDAK TERMASUK DALAM PAKET',
+            ),
+            status_label: text(
+                (content.excluded as CmsRecord)?.status_label,
+                'EXCLUDED',
             ),
             image_url: text(
                 (content.excluded as CmsRecord)?.image_url,
@@ -406,6 +500,18 @@ function normalizeContent(content: CmsRecord): CmsRecord {
                 (content.testimonials as CmsRecord)?.title,
                 'TESTIMONI JAMAAH',
             ),
+            heading_prefix: text(
+                (content.testimonials as CmsRecord)?.heading_prefix,
+                'Apa Kata',
+            ),
+            heading_highlight: text(
+                (content.testimonials as CmsRecord)?.heading_highlight,
+                'Mereka',
+            ),
+            heading_suffix: text(
+                (content.testimonials as CmsRecord)?.heading_suffix,
+                '?',
+            ),
             heading: text(
                 (content.testimonials as CmsRecord)?.heading,
                 'Apa Kata Mereka?',
@@ -420,19 +526,36 @@ function normalizeContent(content: CmsRecord): CmsRecord {
             ),
         },
         faq: {
-            title: text(
-                (content.faq as CmsRecord)?.title,
-                'PERTANYAAN YANG SERING DIAJUKAN',
+            title: text((content.faq as CmsRecord)?.title, 'FAQ'),
+            heading_prefix: text(
+                (content.faq as CmsRecord)?.heading_prefix,
+                'Pertanyaan yang',
             ),
-            description: text(
-                (content.faq as CmsRecord)?.description,
-                'Temukan jawaban untuk pertanyaan yang paling sering ditanyakan calon jamaah.',
+            heading_highlight: text(
+                (content.faq as CmsRecord)?.heading_highlight,
+                'Sering Ditanyakan',
+            ),
+            heading_suffix: text(
+                (content.faq as CmsRecord)?.heading_suffix,
+                '',
             ),
         },
         location: {
             title: text(
                 (content.location as CmsRecord)?.title,
                 'Kunjungi Kantor Kami',
+            ),
+            heading_prefix: text(
+                (content.location as CmsRecord)?.heading_prefix,
+                'Kunjungi',
+            ),
+            heading_highlight: text(
+                (content.location as CmsRecord)?.heading_highlight,
+                'Kantor Kami',
+            ),
+            heading_suffix: text(
+                (content.location as CmsRecord)?.heading_suffix,
+                '',
             ),
             description: text(
                 (content.location as CmsRecord)?.description,
@@ -441,6 +564,18 @@ function normalizeContent(content: CmsRecord): CmsRecord {
             office_hours_title: text(
                 (content.location as CmsRecord)?.office_hours_title,
                 'Jam Operasional',
+            ),
+            address_label: text(
+                (content.location as CmsRecord)?.address_label,
+                'Alamat',
+            ),
+            address_empty_label: text(
+                (content.location as CmsRecord)?.address_empty_label,
+                'Alamat belum diatur',
+            ),
+            contact_label: text(
+                (content.location as CmsRecord)?.contact_label,
+                'Kontak',
             ),
             visit_points: Array.isArray(
                 (content.location as CmsRecord)?.visit_points,
@@ -491,63 +626,14 @@ function normalizeContent(content: CmsRecord): CmsRecord {
                       'Support 24 Jam',
                   ],
         },
-        footer: {
-            brand: text((content.footer as CmsRecord)?.brand, 'ASFAR TOUR'),
-            subtitle: text(
-                (content.footer as CmsRecord)?.subtitle,
-                'HAJI & UMRAH',
-            ),
-            description: text(
-                (content.footer as CmsRecord)?.description,
-                'Jelas Rencananya, Terjamin Amanahnya. Melayani perjalanan umroh dengan sistem transparan & amanah sejak 2015.',
-            ),
-            package_links: Array.isArray(
-                (content.footer as CmsRecord)?.package_links,
-            )
-                ? (content.footer as CmsRecord).package_links
-                : [
-                      'Umroh Quad',
-                      'Umroh Triple',
-                      'Umroh Double',
-                      'Custom/Private',
-                  ],
-            company_links: Array.isArray(
-                (content.footer as CmsRecord)?.company_links,
-            )
-                ? (content.footer as CmsRecord).company_links
-                : ['Tentang Kami', 'Legalitas', 'Kantor', 'Galeri'],
-            legal_links: Array.isArray(
-                (content.footer as CmsRecord)?.legal_links,
-            )
-                ? (content.footer as CmsRecord).legal_links
-                : [
-                      'Syarat & Ketentuan',
-                      'Kebijakan Privasi',
-                      'Kebijakan Refund',
-                      'Disclaimer',
-                  ],
-            bottom_links: Array.isArray(
-                (content.footer as CmsRecord)?.bottom_links,
-            )
-                ? (content.footer as CmsRecord).bottom_links
-                : ['Privasi', 'Syarat', 'Refund'],
-            whatsapp_float_label: text(
-                (content.footer as CmsRecord)?.whatsapp_float_label,
-                'Konsultasi Gratis',
-            ),
-            copyright: text(
-                (content.footer as CmsRecord)?.copyright,
-                '© 2026 Asfar Tour · Terdaftar Kemenag RI · PPIU-2026-001 · Jakarta Selatan',
-            ),
-        },
     };
 }
 
 const sectionMotion = {
-    initial: { opacity: 0, y: 36 },
-    whileInView: { opacity: 1, y: 0 },
-    viewport: { once: false, amount: 0.2 },
-    transition: { duration: 0.45 },
+    initial: { y: 24 },
+    whileInView: { y: 0 },
+    viewport: { once: true, amount: 0.18 },
+    transition: { duration: 0.5, ease: 'easeOut' },
 } as const;
 
 export default function PublicLandingPage() {
@@ -570,6 +656,7 @@ export default function PublicLandingPage() {
     const address = text(getPublicAddress(seoSettings ?? {}));
     const phone = text(getPublicPhoneNumber(seoSettings ?? {}));
     const email = text(getPublicEmail(seoSettings ?? {}));
+    const socialAccounts = getPublicSocialAccounts(seoSettings ?? {});
     const seoContact = ((seoSettings as CmsRecord).contact as CmsRecord) ?? {};
     const operatingHours = ((seoContact.operatingHours as CmsRecord) ??
         {}) as CmsRecord;
@@ -582,33 +669,106 @@ export default function PublicLandingPage() {
     const heroTitleLines = splitLines(hero.title);
     const heroPrimaryTitle = heroTitleLines[0] ?? '';
     const heroHighlightTitle = heroTitleLines[1] ?? '';
-    const navItems = Array.isArray(hero.nav_items)
-        ? (hero.nav_items as Array<unknown>)
-        : [];
     const pricingCards = (hero.pricing_cards as Array<CmsRecord>) ?? [];
     const heroFeatureCards = (hero.feature_cards as Array<CmsRecord>) ?? [];
     const packageDetails = (content.package_details as CmsRecord) ?? {};
     const packagesContent = (content.packages as CmsRecord) ?? {};
     const included = (content.included as CmsRecord) ?? {};
     const excluded = (content.excluded as CmsRecord) ?? {};
+    const includedHeadingPrefix = text(included.section_heading_prefix, 'Yang');
+    const includedHeadingHighlight = text(
+        included.section_heading_highlight,
+        'Termasuk',
+    );
+    const includedHeadingSuffix = text(
+        included.section_heading_suffix,
+        'dalam Paket',
+    );
     const reasons = (content.reasons as CmsRecord) ?? {};
     const reasonItems = (reasons.items as Array<CmsRecord>) ?? [];
     const reasonStats = (reasons.stats as Array<CmsRecord>) ?? [];
-    const galleryImages = Array.isArray(publicData.gallery)
-        ? (publicData.gallery as Array<CmsRecord>)
-              .map((item) => text(item.image_path))
-              .filter(Boolean)
-              .slice(0, 7)
-        : [];
+    const reasonHeadingLines = splitLines(text(reasons.heading));
+    const reasonCardStyles = [
+        {
+            iconWrap: 'bg-[#fff7ee] text-[#d59a3d] border-[#e6c691]',
+            title: 'text-[#8c0a16]',
+        },
+        {
+            iconWrap: 'bg-[#fff5ea] text-[#ff8f7a] border-[#e6c691]',
+            title: 'text-[#8c0a16]',
+        },
+        {
+            iconWrap: 'bg-[#f4f1ff] text-[#7390e8] border-[#dcd5ff]',
+            title: 'text-[#8c0a16]',
+        },
+        {
+            iconWrap: 'bg-[#fff5f6] text-[#c97f8a] border-[#e6c691]',
+            title: 'text-[#8c0a16]',
+        },
+        {
+            iconWrap: 'bg-[#f5f3ff] text-[#8b7fd6] border-[#ddd7ff]',
+            title: 'text-[#8c0a16]',
+        },
+        {
+            iconWrap: 'bg-[#fff4ee] text-[#ee8a58] border-[#e6c691]',
+            title: 'text-[#8c0a16]',
+        },
+    ];
+    const packageHeadingLines = splitLines(
+        text(packageDetails.heading, text(packagesContent.heading)),
+    );
+    const packageHeadingMain =
+        packageHeadingLines[0] ?? text(packagesContent.heading);
+    const packageHeadingSecondarySource = text(
+        packageDetails.heading2,
+        text(packagesContent.heading2),
+    );
+    const packageHeadingSecondary =
+        packageHeadingSecondarySource &&
+        packageHeadingSecondarySource !== packageHeadingMain
+            ? packageHeadingSecondarySource
+            : (packageHeadingLines[1] ?? '');
+    const testimonialHeading = {
+        prefix: text(
+            (content.testimonials as CmsRecord)?.heading_prefix,
+            'Apa Kata',
+        ),
+        highlight: text(
+            (content.testimonials as CmsRecord)?.heading_highlight,
+            'Mereka',
+        ),
+        suffix: text((content.testimonials as CmsRecord)?.heading_suffix, '?'),
+    };
+    const faqHeading = {
+        prefix: text(
+            (content.faq as CmsRecord)?.heading_prefix,
+            'Pertanyaan yang',
+        ),
+        highlight: text(
+            (content.faq as CmsRecord)?.heading_highlight,
+            'Sering Ditanyakan',
+        ),
+        suffix: text((content.faq as CmsRecord)?.heading_suffix, ''),
+    };
+    const locationHeading = {
+        prefix: text(
+            (content.location as CmsRecord)?.heading_prefix,
+            'Kunjungi',
+        ),
+        highlight: text(
+            (content.location as CmsRecord)?.heading_highlight,
+            'Kantor Kami',
+        ),
+        suffix: text((content.location as CmsRecord)?.heading_suffix, ''),
+    };
     const testimonials = Array.isArray(publicData.testimonials)
-        ? (publicData.testimonials as Array<CmsRecord>).slice(0, 4)
+        ? (publicData.testimonials as Array<CmsRecord>).slice(0, 3)
         : [];
     const faqs = Array.isArray(publicData.faqs)
         ? (publicData.faqs as Array<CmsRecord>).slice(0, 6)
         : [];
     const location = (content.location as CmsRecord) ?? {};
     const cta = (content.cta as CmsRecord) ?? {};
-    const footer = (content.footer as CmsRecord) ?? {};
     const [activeFaq, setActiveFaq] = useState<number | null>(0);
     const allPackages = Array.isArray(publicData.packages)
         ? (publicData.packages as Array<CmsRecord>)
@@ -641,36 +801,6 @@ export default function PublicLandingPage() {
                     selectedPackages[2] ?? null,
                 ];
 
-    const navHrefFor = (item: unknown, index: number): string => {
-        const label = text(item).toLowerCase();
-
-        if (label.includes('paket')) {
-            return '#detail';
-        }
-
-        if (label.includes('fasilitas') || label.includes('keunggulan')) {
-            return '#why';
-        }
-
-        if (label.includes('testi')) {
-            return '#testi';
-        }
-
-        if (label.includes('faq')) {
-            return '#faq';
-        }
-
-        if (
-            label.includes('lokasi') ||
-            label.includes('kantor') ||
-            label.includes('kontak')
-        ) {
-            return '#alamat';
-        }
-
-        return index === 0 ? '#landing-top' : '#landing-top';
-    };
-
     return (
         <>
             <GlobalFaviconHead />
@@ -681,135 +811,194 @@ export default function PublicLandingPage() {
                 html{scroll-behavior:smooth}
                 body{background:#f6e7c6;color:#40241d;overflow-x:hidden}
                 .font-display{font-family:'Playfair Display',serif}
-                .wrap{width:100%;max-width:1240px;margin:0 auto;padding-left:16px;padding-right:16px}
-                .hero-bleed{position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;width:100vw}
+                .wrap{width:100%;max-width:1140px;margin:0 auto;padding-left:20px;padding-right:20px}
+                .hero-bleed{position:relative;left:50%;transform:translateX(-50%);width:100vw;max-width:100vw}
+                .full-bleed{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}
                 .landing-shell{border:1px solid rgba(113,2,20,.08);background:rgba(255,252,247,.98);box-shadow:0 16px 40px rgba(113,2,20,.055)}
-                @media(min-width:640px){.wrap{padding-left:22px;padding-right:22px}}
-                @media(min-width:1024px){.wrap{padding-left:28px;padding-right:28px}}
+                .wave-divider{line-height:0;overflow:hidden}
+                .wave-divider svg{display:block;width:100%;height:50px}
+                @media(min-width:640px){.wrap{padding-left:28px;padding-right:28px}}
+                @media(min-width:1024px){.wrap{padding-left:40px;padding-right:40px}}
             `}</style>
 
-            <header className="sticky top-0 z-40 border-b border-[#710214]/10 bg-[#fdf3e3]/95 backdrop-blur">
-                <div className="wrap flex h-[55px] items-center justify-between gap-3">
-                    <a href="#landing-top" className="flex items-center gap-2">
+            <header className="fixed top-0 right-0 left-0 z-40 border-b border-[#e0c9a0] bg-[#f6e7c6]/95 backdrop-blur-[16px]">
+                <div className="wrap flex h-[68px] items-center justify-between gap-3">
+                    <a
+                        href="#landing-top"
+                        className="flex items-center gap-[10px]"
+                    >
                         <img
                             src={resolvedLogoPath}
                             alt={companyName}
-                            className="h-10 w-10 object-contain"
+                            className="h-10 w-auto object-contain"
                         />
                         <div>
-                            <div className="font-display text-[18px] leading-none font-black text-[#710214]">
-                                {text(footer.brand, companyName).toUpperCase()}
+                            <div className="font-display text-[16px] leading-none font-bold text-[#8c0a16]">
+                                {companyName.toUpperCase()}
                             </div>
-                            <div className="mt-[2px] text-[7px] font-black tracking-[.28em] text-[#c88b2d] uppercase">
-                                {text(footer.subtitle, companySubtitle)}
+                            <div className="mt-[2px] text-[9px] font-bold tracking-[2px] text-[#ff9200] uppercase">
+                                {companySubtitle}
                             </div>
                         </div>
                     </a>
-                    <nav className="hidden gap-7 text-[9px] font-black md:flex">
-                        {navItems.map((item, index) => {
-                            const label = text(item);
-                            const href = navHrefFor(item, index);
-
-                            return (
-                                <a
-                                    key={`nav-${index}`}
-                                    href={href}
-                                    className={
-                                        label ===
-                                        text(
-                                            hero.nav_active_label,
-                                            'Paket Umroh',
-                                        )
-                                            ? 'border-b-2 border-[#710214] pb-2 text-[#710214]'
-                                            : 'text-[#40241d]'
-                                    }
-                                >
-                                    {label}
-                                </a>
-                            );
-                        })}
+                    <nav className="hidden items-center gap-6 md:flex">
+                        {LANDING_NAV_ITEMS.map((item) => (
+                            <a
+                                key={item.href}
+                                href={item.href}
+                                className={
+                                    item.href === '#detail'
+                                        ? 'text-[13px] font-medium text-[#8c0a16]'
+                                        : 'text-[13px] font-medium text-[#7a5c50] transition hover:text-[#8c0a16]'
+                                }
+                            >
+                                {item.label}
+                            </a>
+                        ))}
                     </nav>
                     <a
-                        href={whatsappHref}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-2 rounded-md bg-[#710214] px-3 py-2 text-[10px] font-black text-white sm:px-5 sm:py-2.5"
+                        href="#cta"
+                        className="inline-flex items-center gap-[7px] rounded-[22px] bg-[linear-gradient(135deg,#8c0a16,#c80012)] px-5 py-2.5 text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(200,0,18,.25)] transition hover:-translate-y-[1px] hover:shadow-[0_8px_22px_rgba(200,0,18,.35)]"
                     >
                         <MessageCircle className="h-3.5 w-3.5" />
-                        {text(hero.navbar_cta_label, 'Konsultasi Gratis')}
+                        Konsultasi Gratis
                     </a>
                 </div>
             </header>
 
-            <main className="wrap pb-10">
+            <main className="pb-0">
                 <div id="landing-top" />
-
-                <section className="hero-bleed overflow-hidden rounded-b-[46px] bg-[linear-gradient(90deg,rgba(255,247,240,.98)_0%,rgba(255,243,232,.95)_34%,rgba(255,241,230,.62)_55%,rgba(255,241,230,.18)_100%),url('https://images.unsplash.com/photo-1564769625905-50e93615e769?auto=format&fit=crop&w=1800&q=85')] bg-cover bg-[center_right] shadow-[0_24px_60px_rgba(113,2,20,.10)]">
-                    <div className="wrap grid min-h-[720px] items-center lg:grid-cols-[.56fr_.44fr]">
-                        <motion.div
-                            className="px-4 py-12 sm:px-6 sm:py-14 lg:px-8 lg:py-18"
-                            {...sectionMotion}
-                        >
-                            <span className="inline-flex rounded-full border border-[#c88b2d]/30 bg-white/90 px-4 py-2 text-[10px] font-black tracking-[.2em] text-[#a46a16] uppercase shadow-sm">
+                {/* hero */}
+                <section className="hero-bleed relative overflow-hidden bg-[linear-gradient(160deg,#fff8f0_0%,#fdf3e3_48%,#f6e7c6_100%)] pt-[68px]">
+                    <div className="absolute inset-0 z-[1] bg-[linear-gradient(120deg,rgba(246,231,198,.96)_0%,rgba(253,243,227,.92)_42%,rgba(246,231,198,.82)_100%)]" />
+                    <div
+                        className="absolute inset-0 z-[1] opacity-[.04]"
+                        style={{
+                            backgroundImage:
+                                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 6L74 24v32L40 74 6 56V24Z' fill='none' stroke='%238c0a16' stroke-width='1'/%3E%3C/svg%3E\")",
+                            backgroundSize: '80px',
+                        }}
+                    />
+                    <div className="wrap relative z-[2] grid items-center gap-8 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-10 lg:py-12">
+                        <motion.div className="px-0 py-0" {...sectionMotion}>
+                            <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#c80012]/25 bg-[#c80012]/10 px-[13px] py-[5px] text-[11px] font-bold tracking-[1.5px] text-[#c80012] uppercase">
                                 {text(hero.promo_pill)}
                             </span>
-                            <span className="inline-block rounded-full border border-[#c88b2d]/45 bg-white/95 px-4 py-2 text-[10px] font-black tracking-[.24em] text-[#c88b2d] uppercase">
+                            <span className="mb-1.5 block text-[12px] font-bold tracking-[2.4px] text-[#8c0a16] uppercase">
                                 {text(hero.badge)}
                             </span>
-                            <h1 className="font-display mt-5 text-[48px] leading-[.84] font-black tracking-tight text-[#710214] sm:text-[64px] lg:text-[88px]">
+                            <h1 className="font-display mb-1.5 max-w-[500px] text-[clamp(32px,5vw,56px)] leading-[.98] font-extrabold tracking-normal text-[#8c0a16]">
                                 <span className="block">
+                                    {' '}
                                     {heroPrimaryTitle || 'SPECIAL UMROH'}
                                 </span>
-                                <span className="block text-[#c88b2d]">
+                                <span className="block text-[#ff9200] italic">
                                     {heroHighlightTitle || 'AGUSTUS'}
                                 </span>
-                                <span className="mt-3 inline-flex translate-y-[-2px] items-center rounded-[18px] bg-[#710214] px-4 py-2 font-sans text-[28px] text-white shadow-[0_10px_24px_rgba(113,2,20,.18)] sm:text-[34px] lg:text-[40px]">
-                                    {text(hero.duration_value)}
-                                    <small className="ml-1 text-[10px]">
-                                        {text(hero.duration_suffix)}
-                                    </small>
-                                </span>
                             </h1>
-                            <p className="mt-5 flex flex-wrap items-center gap-3 text-[17px] leading-snug font-black text-[#2c1712] sm:text-[18px]">
+                            <p className="mb-5 flex max-w-[500px] flex-wrap items-center gap-2 text-[14px] leading-[1.7] font-medium text-[#7a5c50]">
                                 <span>{text(hero.subtitle)}</span>
-                                <span className="rounded-full bg-white/95 px-3 py-1 text-[10px] font-black text-[#710214] shadow-sm">
-                                    {text(hero.subtitle_badge)}
+                                <span className="rounded-lg bg-[#ff9200] px-2.5 py-1 text-[11px] font-bold text-white">
+                                    {text(
+                                        hero.subtitle_badge,
+                                        `${text(hero.duration_value)} ${text(hero.duration_suffix)} Program`,
+                                    )}
                                 </span>
                             </p>
-                            <p className="mt-5 max-w-[560px] text-[14px] leading-[1.9] text-[#40241d]/80">
-                                {text(hero.description)}
-                            </p>
+                            <div className="max-w-[600px] rounded-[18px] border-[1.5px] border-[#e0c9a0] bg-white p-[18px] shadow-[0_8px_32px_rgba(140,10,22,.09)]">
+                                <div className="mb-3 flex items-center gap-2 text-[10px] font-bold tracking-[2px] text-[#7a5c50] uppercase">
+                                    <span>MULAI DARI</span>
+                                    <span className="h-px flex-1 bg-[#e0c9a0]" />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {pricingCards.map((card, index) => (
+                                        <motion.div
+                                            key={`pricing-${index}`}
+                                            className={`flex cursor-default items-center justify-between rounded-xl border-[1.5px] px-[12px] py-[8px] transition ${
+                                                index === 0
+                                                    ? 'border-[#c80012] bg-[#c80012]/[.05]'
+                                                    : 'border-[#e0c9a0] bg-[#fdf3e3]'
+                                            }`}
+                                            whileHover={{ y: -2 }}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <span
+                                                    className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold tracking-[.04em] ${
+                                                        index === 0
+                                                            ? 'bg-[#c80012] text-white'
+                                                            : 'bg-[#c80012]/10 text-[#c80012]'
+                                                    }`}
+                                                >
+                                                    {text(card.label)}
+                                                </span>
+                                                <span className="text-[12px] text-[#7a5c50]">
+                                                    {index === 0
+                                                        ? 'Kamar Berempat'
+                                                        : index === 1
+                                                          ? 'Kamar Bertiga'
+                                                          : 'Kamar Berdua'}
+                                                </span>
+                                            </div>
+                                            <div className="font-display text-[18px] font-bold text-[#8c0a16]">
+                                                {text(card.price)}
+                                                <sub className="ml-1 font-sans text-[11px] font-normal text-[#7a5c50]">
+                                                    {text(card.note)}
+                                                </sub>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="mt-3 grid max-w-[600px] grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-[8px]">
+                                {heroFeatureCards.map((item, index) => {
+                                    const Icon = heroFeatureIconFor(item.icon);
 
-                            <div className="mt-8 grid w-full max-w-[540px] grid-cols-1 gap-4 sm:grid-cols-3">
-                                {pricingCards.map((card, index) => (
-                                    <motion.div
-                                        key={`pricing-${index}`}
-                                        className="mb-3 rounded-[18px] border border-[#710214]/10 bg-white/95 p-4 shadow-[0_8px_24px_rgba(113,2,20,.09)] sm:p-5"
-                                        whileHover={{ y: -6 }}
-                                    >
-                                        <div className="flex items-center gap-1 text-[12px] font-black text-[#710214]">
-                                            <Users className="h-4 w-4" />
-                                            {text(card.label)}
+                                    return (
+                                        <div
+                                            key={`hero-mini-feature-${index}`}
+                                            className="min-w-0 rounded-xl border border-[#e0c9a0] bg-white px-[7px] py-[9px] text-center transition hover:border-[#ff9200]"
+                                        >
+                                            <div className="mb-1 flex justify-center">
+                                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c80012]/10 text-[#8c0a16]">
+                                                    <Icon className="h-4 w-4" />
+                                                </span>
+                                            </div>
+                                            <div className="text-[10px] leading-tight font-bold text-[#8c0a16]">
+                                                {text(item.title)}
+                                            </div>
+                                            <div className="mt-0.5 text-[9px] leading-tight text-[#7a5c50]">
+                                                {text(item.description)
+                                                    .replace(
+                                                        'Lion Air / Saudia',
+                                                        'Langsung',
+                                                    )
+                                                    .replace(
+                                                        'Maysan Al Maqom',
+                                                        '★★★★ 550m',
+                                                    )
+                                                    .replace(
+                                                        'Arkan Al Manar',
+                                                        '★★★ 200m',
+                                                    )
+                                                    .replace(
+                                                        'Makan 3x Sehari',
+                                                        'Free',
+                                                    )}
+                                            </div>
                                         </div>
-                                        <p className="mt-4 text-[20px] font-black text-[#40241d]">
-                                            {text(card.price)}
-                                        </p>
-                                        <p className="mt-2 mb-1 text-[9px] font-bold text-[#40241d]/60">
-                                            {text(card.note)}
-                                        </p>
-                                    </motion.div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
-                            <div className="mt-7 flex flex-wrap gap-3">
+                            <div className="mt-5 mb-4 flex max-w-[600px] flex-col gap-[9px]">
                                 <a
                                     href={whatsappHref}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex items-center gap-2 rounded-xl bg-[#710214] px-5 py-3 text-[12px] font-black text-white shadow-[0_10px_24px_rgba(113,2,20,.18)]"
+                                    className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[14px] bg-[linear-gradient(135deg,#25d366,#1a9e4e)] px-[26px] py-[13px] text-[14px] font-extrabold text-white shadow-[0_8px_24px_rgba(37,211,102,.3)] transition hover:-translate-y-[2px] hover:shadow-[0_14px_32px_rgba(37,211,102,.45)]"
                                 >
                                     <MessageCircle className="h-4 w-4" />
-                                    {text(hero.cta_label)}
+                                    {text(hero.cta_label, 'Konsultasi Gratis')}
                                 </a>
                                 <a
                                     href={
@@ -818,41 +1007,108 @@ export default function PublicLandingPage() {
                                             '/paket-umroh',
                                         ) || '#detail'
                                     }
-                                    className="inline-flex items-center rounded-xl border border-[#710214]/20 bg-white px-5 py-3 text-[12px] font-black text-[#710214]"
+                                    className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-[14px] border border-[#f0c9c2] bg-transparent px-[24px] py-[11px] text-[13px] font-bold text-[#8c0a16] transition hover:border-[#c80012] hover:bg-[#8c0a16]/[.04]"
                                 >
-                                    {text(hero.secondary_cta_label)}
+                                    {text(
+                                        hero.secondary_cta_label,
+                                        'Lihat Paket',
+                                    )}
                                 </a>
                             </div>
 
-                            <div className="mt-7 flex flex-wrap gap-3 text-[12px] font-bold text-[#40241d]">
+                            <div className="flex max-w-[600px] flex-wrap gap-x-[12px] gap-y-2 text-[11px] font-semibold text-[#7a5c50]">
                                 {(
                                     (hero.checklist_items as Array<unknown>) ??
                                     []
-                                ).map((item, index) => (
-                                    <span
-                                        key={`hero-trust-${index}`}
-                                        className="inline-flex items-center gap-2 rounded-full bg-white/92 px-4 py-2 shadow-sm"
-                                    >
-                                        <Check className="h-4 w-4 text-[#710214]" />
-                                        {text(item)}
-                                    </span>
-                                ))}
+                                )
+                                    .map((item) => text(item).trim())
+                                    .filter(Boolean)
+                                    .map((item, index) => (
+                                        <span
+                                            key={`hero-trust-${index}`}
+                                            className="inline-flex items-center gap-2"
+                                        >
+                                            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[#c80012]/10">
+                                                <Check className="h-3 w-3 text-[#8c0a16]" />
+                                            </span>
+                                            {item}
+                                        </span>
+                                    ))}
                             </div>
                         </motion.div>
 
                         <div className="relative hidden lg:block">
                             <motion.div
-                                className="absolute right-[18px] bottom-[62px] grid h-[132px] w-[132px] place-items-center rounded-[28px] bg-[#710214] text-center text-white shadow-[0_16px_34px_rgba(113,2,20,.2)]"
+                                className="relative flex h-[360px] items-center justify-center overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,#69000f_0%,#8c0a16_48%,#69000f_100%)] shadow-[0_24px_60px_rgba(140,10,22,.25)]"
                                 {...sectionMotion}
                             >
-                                <div>
-                                    <p className="text-[31px] leading-none font-black text-[#c88b2d]">
+                                <div
+                                    className="absolute inset-0 opacity-[.06]"
+                                    style={{
+                                        backgroundImage:
+                                            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cpath d='M36 10 58 20v22L36 62 14 42V20Z' fill='none' stroke='%23ffbf73' stroke-width='1.25'/%3E%3C/svg%3E\")",
+                                        backgroundSize: '72px',
+                                    }}
+                                />
+                                <div className="relative z-[1] flex h-[88px] w-[88px] items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#2f2a3e,#5c4868)] text-[#ffbe52] shadow-[0_10px_28px_rgba(0,0,0,.18)]">
+                                    <svg
+                                        viewBox="0 0 64 64"
+                                        className="h-[44px] w-[44px]"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M12 18L32 10l20 8v28l-20 8-20-8V18Z"
+                                            fill="#3c3a48"
+                                        />
+                                        <path
+                                            d="M14 21l18-7 18 7v5l-18 7-18-7v-5Z"
+                                            fill="#201d28"
+                                        />
+                                        <path
+                                            d="M32 14v42"
+                                            stroke="#ffbe52"
+                                            strokeWidth="2"
+                                        />
+                                        <circle
+                                            cx="20"
+                                            cy="30"
+                                            r="1.8"
+                                            fill="#ffbe52"
+                                        />
+                                        <circle
+                                            cx="26"
+                                            cy="32"
+                                            r="1.8"
+                                            fill="#ffbe52"
+                                        />
+                                        <circle
+                                            cx="32"
+                                            cy="30"
+                                            r="1.8"
+                                            fill="#ffbe52"
+                                        />
+                                        <circle
+                                            cx="38"
+                                            cy="32"
+                                            r="1.8"
+                                            fill="#ffbe52"
+                                        />
+                                        <circle
+                                            cx="44"
+                                            cy="30"
+                                            r="1.8"
+                                            fill="#ffbe52"
+                                        />
+                                    </svg>
+                                </div>
+                                <div className="absolute right-[16px] bottom-[16px] flex h-[96px] w-[96px] flex-col items-center justify-center rounded-full bg-[linear-gradient(135deg,#ff9200,#d97700)] text-center text-white shadow-[0_8px_24px_rgba(255,146,0,.4)]">
+                                    <p className="text-[10px] leading-none font-extrabold">
                                         {text(hero.free_badge_title)}
                                     </p>
                                     <p className="text-[13px] leading-none font-black">
                                         {text(hero.free_badge_label)}
                                     </p>
-                                    <p className="mt-1 text-[7px] font-black">
+                                    <p className="mt-1 text-[9px] font-bold text-white/85">
                                         {text(hero.free_badge_note)}
                                     </p>
                                 </div>
@@ -860,29 +1116,44 @@ export default function PublicLandingPage() {
                         </div>
                     </div>
 
-                    <div className="wrap -mt-6">
-                        <div className="grid overflow-hidden rounded-[28px] bg-[#710214] text-white shadow-[0_16px_34px_rgba(113,2,20,.16)] sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="relative z-[2] bg-[linear-gradient(135deg,#8c0a16,#3d0508)] px-5 py-4 sm:px-10">
+                        <div className="wrap flex overflow-x-auto text-white">
                             {heroFeatureCards.map((item, index) => {
-                                const Icon = iconFor(item.icon);
-
                                 return (
                                     <motion.div
                                         key={`hero-feature-${index}`}
-                                        className={`flex items-center gap-4 px-4 py-4 sm:px-5 sm:py-5 lg:px-7 ${
+                                        className={`flex min-w-[130px] flex-1 items-center gap-[10px] px-[18px] ${
                                             index < heroFeatureCards.length - 1
-                                                ? 'border-white/20 md:border-r'
+                                                ? 'border-r border-white/12'
                                                 : ''
                                         }`}
-                                        whileHover={{ y: -4 }}
+                                        whileHover={{ y: -2 }}
                                     >
-                                        <Icon className="h-8 w-8" />
+                                        <span className="shrink-0 text-[22px]">
+                                            {item.icon === 'plane'
+                                                ? '✈️'
+                                                : item.icon === 'hotel'
+                                                  ? index === 2
+                                                      ? '🕌'
+                                                      : '🏨'
+                                                  : '🍽️'}
+                                        </span>
                                         <div>
-                                            <b className="block text-[11px]">
+                                            <div className="text-[10px] tracking-[.05em] text-white/55 uppercase">
                                                 {text(item.title)}
-                                            </b>
-                                            <span className="text-[9px] text-white/80">
+                                            </div>
+                                            <div className="text-[13px] leading-tight font-bold text-white">
                                                 {text(item.description)}
-                                            </span>
+                                            </div>
+                                            <div className="text-[10px] text-[#ffc578]">
+                                                {item.icon === 'plane'
+                                                    ? 'Penerbangan Langsung'
+                                                    : item.icon === 'hotel'
+                                                      ? index === 2
+                                                          ? 'Bintang 3 · 200 Meter'
+                                                          : 'Bintang 4 · 550 Meter'
+                                                      : 'Menu Enak & Variatif'}
+                                            </div>
                                         </div>
                                     </motion.div>
                                 );
@@ -893,23 +1164,26 @@ export default function PublicLandingPage() {
 
                 <motion.section
                     id="detail"
-                    className="landing-shell mt-6 rounded-[28px] p-4 sm:p-5 lg:p-7"
+                    className="mt-0 bg-white px-4 py-[80px] sm:px-6 lg:px-8"
                     {...sectionMotion}
                 >
-                    <div className="text-center">
+                    <div className="wrap text-center">
+                        {' '}
                         <span className="rounded border border-[#c88b2d]/40 bg-white px-3 py-1 text-[9px] font-black text-[#c88b2d]">
                             {text(
                                 packageDetails.title,
                                 text(packagesContent.title),
                             )}
                         </span>
-                        <h2 className="font-display mt-3 text-[22px] font-black whitespace-pre-line text-[#710214]">
-                            {text(
-                                packageDetails.heading,
-                                text(packagesContent.heading),
-                            )}
+                        <h2 className="font-display mt-3 text-[22px] leading-tight font-black text-[#a60f24] lg:text-[32px]">
+                            {packageHeadingMain}
                         </h2>
-                        <p className="mx-auto mt-3 max-w-[560px] text-[11px] leading-[1.8] text-[#40241d]/70">
+                        {packageHeadingSecondary ? (
+                            <h2 className="font-display mt-1 text-[22px] leading-tight font-black text-[#ff9200] lg:text-[32px]">
+                                {packageHeadingSecondary}
+                            </h2>
+                        ) : null}
+                        <p className="mx-auto mt-3 max-w-[360px] text-[11px] leading-[1.8] text-[#40241d]/70">
                             {text(
                                 packageDetails.description,
                                 text(packagesContent.description),
@@ -917,7 +1191,7 @@ export default function PublicLandingPage() {
                         </p>
                     </div>
 
-                    <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                    <div className="mt-12 grid gap-5 lg:grid-cols-3">
                         {packageSlots.map((pkg, index) => {
                             if (!pkg) {
                                 return (
@@ -931,7 +1205,10 @@ export default function PublicLandingPage() {
                             const packageName = localize(
                                 pkg.name,
                                 'id',
-                                text(pkg.name, 'Paket Umrah'),
+                                text(
+                                    pkg.name,
+                                    text(packagesContent.fallback_name),
+                                ),
                             );
                             const packageType = text(
                                 pkg.package_type,
@@ -966,17 +1243,17 @@ export default function PublicLandingPage() {
                                 : [];
                             const packageFeatures = [
                                 packageDuration > 0
-                                    ? `${packageDuration} Hari`
+                                    ? `${packageDuration} ${text(packagesContent.duration_suffix)}`
                                     : '',
                                 localize(
                                     (pkg.content as CmsRecord)?.airline,
                                     'id',
-                                    'Maskapai menyesuaikan',
+                                    text(packagesContent.fallback_airline),
                                 ),
                                 localize(
                                     (pkg.content as CmsRecord)?.hotel,
                                     'id',
-                                    'Hotel sesuai paket',
+                                    text(packagesContent.fallback_hotel),
                                 ),
                                 ...packageProducts,
                             ]
@@ -986,7 +1263,7 @@ export default function PublicLandingPage() {
                             return (
                                 <motion.article
                                     key={`landing-package-${pkg.id ?? index}`}
-                                    className="overflow-hidden rounded-[28px] border border-[#d9c8b3] bg-white shadow-[0_16px_38px_rgba(113,2,20,.09)]"
+                                    className="overflow-hidden rounded-[18px] border border-[#d9c8b3] bg-white shadow-[0_16px_38px_rgba(113,2,20,.09)]"
                                     whileHover={{ y: -6 }}
                                 >
                                     <div className="relative h-[170px] overflow-hidden">
@@ -1014,20 +1291,23 @@ export default function PublicLandingPage() {
                                             {packageType}
                                         </div>
                                     </div>
-                                    <div className="relative px-6 pb-6">
-                                        <p className="mt-6 text-[10px] font-black tracking-[.32em] text-[#c88b2d] uppercase">
-                                            {text(
-                                                packagesContent.title,
-                                                'Paket',
-                                            )}
-                                        </p>
-                                        <h3 className="font-display mt-4 min-h-[52px] text-[22px] leading-tight font-black text-[#2c1712]">
+                                    <div className="relative px-6">
+                                        <h3 className="font-display mt-4 text-[22px] leading-tight font-black text-[#2c1712]">
                                             {packageName}
                                         </h3>
                                         <div className="mt-5">
-                                            <p className="font-display text-[30px] leading-none font-black text-[#a60f24]">
-                                                {packagePrice}
-                                            </p>
+                                            <div className="flex items-end">
+                                                <p className="font-display text-[30px] leading-none font-black text-[#a60f24]">
+                                                    {packagePrice}
+                                                </p>
+
+                                                <p className="font-display text-[12px] leading-none font-black text-[#8d7d74]">
+                                                    {text(
+                                                        packagesContent.price_unit_label,
+                                                    )}
+                                                </p>
+                                            </div>
+
                                             {packageOriginalPrice ? (
                                                 <p className="mt-3 text-[12px] font-semibold text-[#8d7d74] line-through">
                                                     {packageOriginalPrice}
@@ -1035,15 +1315,15 @@ export default function PublicLandingPage() {
                                             ) : null}
                                         </div>
                                     </div>
-                                    <div className="border-t border-[#efe1d2] px-6 py-6">
-                                        <ul className="space-y-3">
+                                    <div className="px-6 py-4">
+                                        <ul className="mb-4 space-y-2">
                                             {packageFeatures.map(
                                                 (feature, featureIndex) => (
                                                     <li
                                                         key={`landing-package-feature-${index}-${featureIndex}`}
                                                         className="flex items-start gap-3 text-[12px] font-medium text-[#5b4b43]"
                                                     >
-                                                        <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#fff1ee] text-[#a60f24]">
+                                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#fff1ee] text-[#a60f24]">
                                                             <Check className="h-3 w-3" />
                                                         </span>
                                                         <span>{feature}</span>
@@ -1053,9 +1333,9 @@ export default function PublicLandingPage() {
                                         </ul>
                                         <a
                                             href={`/paket-umroh/${text(pkg.slug)}`}
-                                            className="mt-6 block rounded-[14px] bg-[#a60f24] px-4 py-3 text-center text-[12px] font-black text-white shadow-[0_12px_24px_rgba(166,15,36,.18)]"
+                                            className="my-2 block rounded-[14px] bg-[#a60f24] px-4 py-3 text-center text-[12px] font-black text-white shadow-[0_12px_24px_rgba(166,15,36,.18)]"
                                         >
-                                            Tanya Paket Ini
+                                            {text(packagesContent.detail_label)}
                                         </a>
                                     </div>
                                 </motion.article>
@@ -1064,6 +1344,11 @@ export default function PublicLandingPage() {
                     </div>
 
                     <div className="mt-5 text-center">
+                        <p className="px-5 py-3 text-[11px] font-black text-[#836e66]">
+                            {text(packagesContent.disclaimer)}
+                        </p>
+                    </div>
+                    <div className="mt-2 text-center">
                         <a
                             href="/paket-umroh"
                             className="inline-flex rounded-md border border-[#710214]/15 bg-white px-5 py-3 text-[11px] font-black text-[#710214]"
@@ -1074,482 +1359,762 @@ export default function PublicLandingPage() {
                             )}
                         </a>
                     </div>
-                </motion.section>
-
-                <motion.section
-                    className="landing-shell mt-4 rounded-[28px] p-4 sm:p-5 lg:p-7"
-                    {...sectionMotion}
-                >
-                    <div className="text-center">
-                        <span className="rounded border border-[#c88b2d]/40 bg-white px-3 py-1 text-[9px] font-black text-[#c88b2d]">
-                            {text(included.section_badge)}
-                        </span>
-                        <h2 className="font-display mt-3 text-[22px] font-black whitespace-pre-line text-[#710214]">
-                            {text(included.section_heading)}
-                        </h2>
+                    <div className="full-bleed wave-divider bg-white">
+                        <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+                            <path
+                                d="M0,0 C480,46 960,46 1440,0 L1440,50 L0,50Z"
+                                fill="#f6e7c6"
+                            />
+                        </svg>
                     </div>
 
-                    <div className="mt-5 grid gap-4 lg:grid-cols-[1.05fr_.95fr]">
-                        {[
-                            {
-                                key: 'included',
-                                data: included,
-                                isOutline: false,
-                            },
-                            {
-                                key: 'excluded',
-                                data: excluded,
-                                isOutline: true,
-                            },
-                        ].map(({ key, data, isOutline }) => (
-                            <motion.section
-                                key={key}
-                                className="relative min-h-[178px] overflow-hidden rounded-[28px] border border-[#710214]/10 bg-[#fff7f2] p-4 shadow-[0_8px_24px_rgba(113,2,20,.08)] sm:p-5 lg:p-6"
-                                {...sectionMotion}
-                            >
-                                <div
-                                    className="absolute inset-0 bg-cover bg-[center_right]"
-                                    style={{
-                                        backgroundImage: `linear-gradient(90deg,rgba(255,247,242,.98)_0%,rgba(255,247,242,.90)_48%,rgba(255,247,242,.58)_70%,rgba(255,247,242,.18)_100%),url('${text(data.image_url)}')`,
-                                    }}
-                                />
-                                <div className="relative z-10">
-                                    <span
-                                        className={`rounded px-3 py-1.5 text-[9px] font-black ${
-                                            isOutline
-                                                ? 'border border-[#c88b2d]/40 bg-white text-[#c88b2d]'
-                                                : 'bg-[#710214] text-white'
-                                        }`}
-                                    >
-                                        {text(data.title)}
-                                    </span>
-                                    <ul
-                                        className={`mt-4 grid gap-2 text-[12px] font-bold ${
-                                            isOutline
-                                                ? 'grid-cols-1'
-                                                : 'grid-cols-2 gap-x-8'
-                                        }`}
-                                    >
-                                        {(
-                                            (data.items as Array<unknown>) ?? []
-                                        ).map((item, index) => (
-                                            <li key={`${key}-${index}`}>
-                                                {isOutline ? (
-                                                    <X className="mr-1 inline h-3.5 w-3.5 text-[#710214]" />
-                                                ) : (
-                                                    <Check className="mr-1 inline h-3.5 w-3.5 text-[#710214]" />
-                                                )}
-                                                {text(item)}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </motion.section>
-                        ))}
-                    </div>
-                </motion.section>
-
-                <motion.section
-                    id="why"
-                    className="landing-shell mt-6 rounded-[28px] p-4 sm:p-5 lg:p-7"
-                    {...sectionMotion}
-                >
-                    <div className="text-center">
-                        <h2 className="text-[13px] font-black tracking-[.24em] text-[#710214] uppercase">
-                            {text(reasons.title)}
-                        </h2>
-                        <p className="font-display mt-3 text-[24px] leading-tight font-black whitespace-pre-line text-[#2c1712] lg:text-[32px]">
-                            {text(reasons.heading)}
-                        </p>
-                    </div>
-                    <div className="mt-5 grid items-center gap-5 lg:grid-cols-[1fr_220px]">
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                            {reasonItems.map((item, index) => {
-                                const Icon = iconFor(item.icon);
-
-                                return (
-                                    <div
-                                        key={`reason-${index}`}
-                                        className="rounded-[20px] border border-[#710214]/8 bg-white px-4 py-4 shadow-[0_8px_20px_rgba(113,2,20,.06)]"
-                                    >
-                                        <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#fff1ee] text-[#710214]">
-                                            <Icon className="h-5 w-5" />
-                                        </div>
-                                        <p>
-                                            <b className="block text-[10px] text-[#710214]">
-                                                {text(item.title)}
-                                            </b>
-                                            <span className="mt-1 block text-[10px] leading-[1.7] font-medium text-[#5b4b43]">
-                                                {text(item.description)}
-                                            </span>
-                                        </p>
-                                    </div>
-                                );
-                            })}
+                    <section className="full-bleed bg-[#f6e7c6] px-0 py-[96px] sm:py-[112px]">
+                        <div className="wrap text-center">
+                            <span className="inline-flex rounded-full border border-[#deb579] bg-[#fff8ed] px-3 py-1 text-[9px] font-black tracking-[.18em] text-[#c8871f]">
+                                {text(included.section_badge)}
+                            </span>
+                            <h2 className="font-display my-4 text-[24px] leading-[1.12] font-black text-[#8c0a16] lg:text-[36px]">
+                                <span>{includedHeadingPrefix} </span>
+                                <em className="font-display text-[#ff9200] italic">
+                                    {includedHeadingHighlight}
+                                </em>{' '}
+                                <span>{includedHeadingSuffix}</span>
+                            </h2>
                         </div>
-                        <div className="grid grid-cols-3 gap-3 lg:grid-cols-1">
-                            {reasonStats.map((item, index) => (
+
+                        <div className="wrap mt-14 grid gap-5 lg:grid-cols-2">
+                            {[
+                                {
+                                    key: 'included',
+                                    data: included,
+                                    isOutline: false,
+                                },
+                                {
+                                    key: 'excluded',
+                                    data: excluded,
+                                    isOutline: true,
+                                },
+                            ].map(({ key, data, isOutline }) => (
                                 <div
-                                    key={`reason-stat-${index}`}
-                                    className="rounded-[20px] border border-[#710214]/8 bg-[#710214] px-4 py-4 text-center shadow-[0_10px_24px_rgba(113,2,20,.14)]"
+                                    key={key}
+                                    className={`relative overflow-hidden rounded-[24px] border px-6 py-7 sm:px-7 sm:py-8 ${
+                                        isOutline
+                                            ? 'border-[#e2c78f] bg-[#fbf1dd]'
+                                            : 'border-[#efd6df] bg-white'
+                                    }`}
                                 >
-                                    <b className="text-[22px] font-black text-[#f4c577]">
-                                        {text(item.value)}
-                                    </b>
-                                    <p className="mt-1 text-[10px] font-bold text-white/90">
-                                        {text(item.label)}
-                                    </p>
-                                    {text(item.note) ? (
-                                        <p className="mt-1 text-[9px] text-white/65">
-                                            {text(item.note)}
-                                        </p>
-                                    ) : null}
+                                    <div className="relative z-10">
+                                        <div className="mb-5 flex items-center gap-2.5">
+                                            <h3
+                                                className={`font-display text-[15px] font-semibold tracking-[.01em] uppercase lg:text-[16px] ${
+                                                    isOutline
+                                                        ? 'text-[#8a776d]'
+                                                        : 'text-[#8d0917]'
+                                                }`}
+                                            >
+                                                {text(data.title)}
+                                            </h3>
+                                            <span
+                                                className={`rounded-md px-2.5 py-1 text-[9px] font-black tracking-[.08em] ${
+                                                    isOutline
+                                                        ? 'bg-[#ece2d2] text-[#8a776d]'
+                                                        : 'bg-[#f8dfe0] text-[#d11c2d]'
+                                                }`}
+                                            >
+                                                {text(
+                                                    isOutline
+                                                        ? excluded.status_label
+                                                        : included.status_label,
+                                                )}
+                                            </span>
+                                        </div>
+                                        <ul
+                                            className={`grid gap-y-3 text-[14px] font-medium ${
+                                                isOutline
+                                                    ? 'grid-cols-1'
+                                                    : 'grid-cols-1 lg:grid-cols-2 lg:gap-x-10'
+                                            }`}
+                                        >
+                                            {(
+                                                (data.items as Array<unknown>) ??
+                                                []
+                                            ).map((item, index) => (
+                                                <li
+                                                    key={`${key}-${index}`}
+                                                    className="flex items-start gap-3"
+                                                >
+                                                    {isOutline ? (
+                                                        <span className="mt-0.5 inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#e9e0cf] text-[#999]">
+                                                            <X className="h-3 w-3" />
+                                                        </span>
+                                                    ) : (
+                                                        <span className="mt-0.5 inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full bg-[#f8dfe0] text-[#d11c2d]">
+                                                            <Check className="h-3 w-3" />
+                                                        </span>
+                                                    )}
+                                                    <span className="leading-[1.7] text-[#3f342f]">
+                                                        {text(item)}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
-                </motion.section>
+                    </section>
 
-                <motion.section
-                    className="landing-shell mt-6 rounded-[28px] p-4 sm:p-5 lg:p-7"
-                    {...sectionMotion}
-                >
-                    <div className="text-center">
-                        <h2 className="text-[13px] font-black text-[#710214]">
-                            {text((content.gallery as CmsRecord).title)}
-                        </h2>
-                        <p className="font-display mt-3 text-[24px] leading-tight font-black whitespace-pre-line text-[#2c1712] lg:text-[32px]">
-                            {text((content.gallery as CmsRecord).heading)}
-                        </p>
-                        <p className="mx-auto mt-3 max-w-[560px] text-[11px] leading-[1.8] text-[#40241d]/70">
-                            {text((content.gallery as CmsRecord).description)}
-                        </p>
+                    <div className="full-bleed wave-divider bg-[#f6e7c6]">
+                        <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+                            <path
+                                d="M0,50 C480,0 960,0 1440,50 L1440,50 L0,50Z"
+                                fill="#ffffff"
+                            />
+                        </svg>
                     </div>
-                    <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:grid-rows-2 lg:grid-cols-[2fr_1fr_1fr] lg:grid-rows-2">
-                        {(galleryImages.length > 0
-                            ? galleryImages
-                            : [
-                                  'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?auto=format&fit=crop&w=500&q=80',
-                                  'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=500&q=80',
-                                  'https://images.unsplash.com/photo-1575101261474-5cb5653bb416?auto=format&fit=crop&w=500&q=80',
-                                  'https://images.unsplash.com/photo-1564769625905-50e93615e769?auto=format&fit=crop&w=500&q=80',
-                                  'https://images.unsplash.com/photo-1591276425709-b3a4a3a73c96?auto=format&fit=crop&w=500&q=80',
-                                  'https://images.unsplash.com/photo-1512632578888-169bbbc64f33?auto=format&fit=crop&w=500&q=80',
-                                  'https://images.unsplash.com/photo-1580418827493-f2b22c0a76cb?auto=format&fit=crop&w=500&q=80',
-                              ]
-                        ).map((image, index) => (
-                            <div
-                                key={`gallery-${index}`}
-                                className={`overflow-hidden rounded-[20px] ${
-                                    index === 0
-                                        ? 'lg:row-span-2 lg:h-[370px]'
-                                        : 'h-[180px]'
-                                } ${index > 4 ? 'hidden lg:block' : ''}`}
-                            >
-                                <img
-                                    className="h-full w-full object-cover transition duration-500 hover:scale-105"
-                                    src={image}
-                                    alt={`Dokumentasi ${index + 1}`}
-                                />
+
+                    <motion.section
+                        id="why"
+                        className="bg-white px-4 py-[96px] sm:px-6 lg:px-8 lg:py-[116px]"
+                        {...sectionMotion}
+                    >
+                        <div className="wrap mx-auto max-w-[980px] text-center">
+                            <h2 className="inline-flex rounded-full border border-[#e7c79b] bg-[#fff8ed] px-[14px] py-[5px] text-[11px] font-bold tracking-[.16em] text-[#a10a16] uppercase">
+                                {text(reasons.title)}
+                            </h2>
+                            <div className="mt-5">
+                                <p className="font-display text-[28px] leading-[1.05] font-bold text-[#8c0a16] lg:text-[44px]">
+                                    {reasonHeadingLines[0] ??
+                                        text(reasons.heading)}
+                                </p>
+                                {reasonHeadingLines.length > 1 ? (
+                                    <p className="font-display mt-[2px] text-[28px] leading-[1.05] font-bold text-[#ff9200] italic lg:text-[44px]">
+                                        {reasonHeadingLines.slice(1).join(' ')}
+                                    </p>
+                                ) : null}
                             </div>
-                        ))}
-                    </div>
-                    <div className="mt-5 text-center">
-                        <a
-                            href={whatsappHref}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex rounded-md bg-[#710214] px-5 py-3 text-[11px] font-black text-white"
-                        >
-                            {text((content.gallery as CmsRecord).cta_label)}
-                        </a>
-                    </div>
-                </motion.section>
+                        </div>
+                        <div className="mt-12 grid items-start gap-6">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                {reasonItems.map((item, index) => {
+                                    const Icon = iconFor(item.icon);
+                                    const cardStyle =
+                                        reasonCardStyles[
+                                            index % reasonCardStyles.length
+                                        ];
 
-                <motion.section
-                    id="testi"
-                    className="landing-shell mt-6 overflow-hidden rounded-[30px] p-4 shadow-[0_18px_42px_rgba(17,4,6,.10)] sm:p-5 lg:p-7"
-                    {...sectionMotion}
-                >
-                    <div className="relative text-center">
-                        <h2 className="text-[13px] font-black tracking-[.24em] text-[#c88b2d] uppercase">
-                            {text((content.testimonials as CmsRecord).title)}
-                        </h2>
-                        <p className="font-display mt-3 text-[24px] leading-tight font-black text-[#2c1712] lg:text-[30px]">
-                            {text((content.testimonials as CmsRecord).heading)}
-                        </p>
-                        <p className="mx-auto mt-3 max-w-[560px] text-[11px] leading-[1.8] text-[#40241d]/70">
-                            {text(
-                                (content.testimonials as CmsRecord).description,
-                            )}
-                        </p>
-                        <a
-                            href="/testimoni"
-                            className="absolute top-0 right-0 text-[9px] font-black text-[#710214] underline"
-                        >
-                            {text(
-                                (content.testimonials as CmsRecord).more_label,
-                            )}
-                        </a>
-                    </div>
-                    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {(testimonials.length > 0 ? testimonials : []).map(
-                            (item, index) => (
-                                <motion.div
-                                    key={`testimonial-${index + 1}`}
-                                    className={`rounded-[22px] border p-5 shadow-[0_12px_28px_rgba(113,2,20,.08)] ${
-                                        index === 0
-                                            ? 'border-[#c88b2d]/35 bg-white'
-                                            : 'border-[#ead9ce] bg-[#fdf3e3]'
-                                    }`}
-                                    whileHover={{ y: -4 }}
-                                >
-                                    <p className="font-display text-[46px] leading-none text-[#c80012]/35">
-                                        "
-                                    </p>
-                                    <p className="mt-1 text-[11px] tracking-[.22em] text-[#c88b2d]">
-                                        ★★★★★
-                                    </p>
-                                    <p className="mt-3 min-h-[110px] text-[12px] leading-[1.9] font-medium text-[#5b4b43] italic">
-                                        {text(item.quote)}
-                                    </p>
-                                    <div className="mt-4 border-t border-[#ead9ce] pt-4">
-                                        <b className="block text-[10px] text-[#2c1712]">
-                                            {text(item.name)}
-                                        </b>
-                                        <span className="text-[9px] text-[#8d7d74]">
-                                            {text(item.origin_city)}
-                                        </span>
-                                    </div>
-                                </motion.div>
-                            ),
-                        )}
-                    </div>
-                </motion.section>
-
-                <motion.section
-                    id="faq"
-                    className="landing-shell mt-6 rounded-[28px] p-4 sm:p-5 lg:p-7"
-                    {...sectionMotion}
-                >
-                    <div className="text-center">
-                        <h2 className="text-[13px] font-black text-[#710214]">
-                            {text((content.faq as CmsRecord).title)}
-                        </h2>
-                        <p className="mx-auto mt-3 max-w-[560px] text-[11px] leading-[1.8] text-[#40241d]/70">
-                            {text((content.faq as CmsRecord).description)}
-                        </p>
-                    </div>
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                        {faqs.map((faq, index) => {
-                            const isOpen = activeFaq === index;
-
-                            return (
-                                <div
-                                    key={`faq-${index}`}
-                                    className="rounded border border-[#710214]/10 bg-white px-4 py-2 text-[12px] font-bold"
-                                >
-                                    <button
-                                        type="button"
-                                        className="flex w-full items-center justify-between gap-3 text-left"
-                                        onClick={() =>
-                                            setActiveFaq(isOpen ? null : index)
-                                        }
+                                    return (
+                                        <div
+                                            key={`reason-${index}`}
+                                            className="relative overflow-hidden rounded-[18px] border border-[#e0c9a0] bg-[#fbf1dd] px-5 py-6 transition hover:-translate-y-1 hover:border-[rgba(200,0,18,.2)] hover:shadow-[0_14px_36px_rgba(140,10,22,.1)]"
+                                        >
+                                            <div
+                                                className={`mb-4 inline-flex h-[40px] w-[40px] items-center justify-center rounded-[12px] border ${cardStyle.iconWrap}`}
+                                            >
+                                                <Icon className="h-[18px] w-[18px]" />
+                                            </div>
+                                            <p>
+                                                <b
+                                                    className={`block text-[16px] leading-[1.25] ${cardStyle.title}`}
+                                                >
+                                                    {text(item.title)}
+                                                </b>
+                                                <span className="mt-2 block text-[13px] leading-[1.7] font-normal text-[#a77d69]">
+                                                    {text(item.description)}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-12 grid rounded-[20px] bg-[linear-gradient(135deg,#8c0a16,#3d0508)] px-8 py-7 sm:grid-cols-3">
+                                {reasonStats.map((item, index) => (
+                                    <div
+                                        key={`reason-stat-${index}`}
+                                        className={`px-4 text-center ${index < reasonStats.length - 1 ? 'border-b border-white/10 pb-4 sm:border-r sm:border-b-0' : ''}`}
                                     >
-                                        <span>{text(faq.question)}</span>
-                                        <ChevronDown
-                                            className={`h-4 w-4 transition ${
-                                                isOpen ? 'rotate-180' : ''
-                                            }`}
-                                        />
-                                    </button>
-                                    {isOpen ? (
-                                        <p className="mt-3 text-[11px] leading-[1.7] font-normal text-[#40241d]/70">
-                                            {text(faq.answer)}
-                                        </p>
-                                    ) : null}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </motion.section>
-
-                <motion.section
-                    id="alamat"
-                    className="landing-shell mt-6 rounded-[28px] p-4 sm:p-5 lg:p-7"
-                    {...sectionMotion}
-                >
-                    <div className="text-center">
-                        <h2 className="text-[13px] font-black text-[#710214]">
-                            {text(location.title)}
-                        </h2>
-                        <p className="mx-auto mt-3 max-w-[560px] text-[11px] leading-[1.8] text-[#40241d]/70">
-                            {text(location.description)}
-                        </p>
-                    </div>
-                    <div className="mt-4 grid gap-5 lg:grid-cols-[1fr_1.35fr]">
-                        <div>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                <div className="flex gap-2">
-                                    <MapPin className="h-6 w-6 shrink-0 text-[#710214]" />
-                                    <p className="text-[9px] leading-snug font-bold whitespace-pre-line">
-                                        {address || 'Alamat belum diatur'}
-                                    </p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Clock3 className="h-6 w-6 shrink-0 text-[#710214]" />
-                                    <p className="text-[9px] leading-snug font-bold">
-                                        <b>
-                                            {text(location.office_hours_title)}
+                                        <b className="font-display text-[36px] leading-none font-bold text-white">
+                                            {text(item.value)}
                                         </b>
-                                        <br />
-                                        {officeHours.join('\n')}
-                                    </p>
-                                </div>
-                                <div className="space-y-2 text-[9px] font-bold">
-                                    {(
-                                        (location.visit_points as Array<unknown>) ??
-                                        []
-                                    ).map((item, index) => (
-                                        <p key={`visit-${index}`}>
-                                            <Check className="mr-1 inline h-3.5 w-3.5 text-[#710214]" />{' '}
-                                            {text(item)}
+                                        <p className="mt-1 text-[12px] text-white/60">
+                                            {text(item.label)}
                                         </p>
-                                    ))}
-                                </div>
+                                        {text(item.note) ? (
+                                            <p className="mt-1 text-[10px] font-semibold text-[#ffc578]">
+                                                {text(item.note)}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                ))}
                             </div>
-                            <div className="mt-4 grid grid-cols-2 gap-3">
+                        </div>
+                    </motion.section>
+
+                    <div className="wave-divider -mb-px bg-white">
+                        <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+                            <path
+                                d="M0,50 C360,0 1080,0 1440,50 L1440,50 L0,50Z"
+                                fill="#f6e7c6"
+                            />
+                        </svg>
+                    </div>
+
+                    <motion.section
+                        className="full-bleed relative -mt-px bg-[#f6e7c6] px-4 pt-[68px] pb-[110px] sm:px-6 lg:px-8 lg:pt-[78px] lg:pb-[120px]"
+                        {...sectionMotion}
+                    >
+                        <div className="wrap">
+                            <div className="text-center">
+                                <h2 className="inline-flex rounded-full border border-[#e7c79b] bg-[#fff8ed] px-[14px] py-[5px] text-[11px] font-bold tracking-[.16em] text-[#a10a16] uppercase">
+                                    {text((content.gallery as CmsRecord).title)}
+                                </h2>
+                                <p className="font-display mt-5 text-[28px] leading-[1.08] font-bold text-[#8c0a16] lg:text-[42px]">
+                                    {text(
+                                        (content.gallery as CmsRecord).heading,
+                                    )}
+                                </p>
+                                <p className="mx-auto mt-3 max-w-[620px] text-[12px] leading-[1.8] text-[#7a5c50]">
+                                    {text(
+                                        (content.gallery as CmsRecord)
+                                            .description,
+                                    )}
+                                </p>
+                            </div>
+                            <div className="mt-8 grid grid-cols-1 gap-3 lg:grid-cols-[2fr_1fr_1fr] lg:grid-rows-[170px_170px]">
+                                {[
+                                    {
+                                        icon: '🕋',
+                                        title: "Jamaah di Ka'bah",
+                                        label: 'Momen di Masjidil Haram',
+                                        className:
+                                            'bg-[linear-gradient(135deg,#5f0710_0%,#840a16_55%,#a60d18_100%)] text-white lg:row-span-2',
+                                    },
+                                    {
+                                        icon: '🏨',
+                                        title: 'Hotel Makkah',
+                                        label: 'Maysan Al Maqom',
+                                        className:
+                                            'bg-[linear-gradient(135deg,#9b5a00_0%,#d27a00_100%)] text-white',
+                                    },
+                                    {
+                                        icon: '🕌',
+                                        title: 'Hotel Madinah',
+                                        label: 'Arkan Al Manar',
+                                        className:
+                                            'bg-[linear-gradient(135deg,#b70014_0%,#cf0b18_100%)] text-white',
+                                    },
+                                    {
+                                        icon: '🤲',
+                                        title: 'Momen Ibadah',
+                                        label: 'Kekhusyukan Ibadah',
+                                        className:
+                                            'bg-[linear-gradient(135deg,#00785e_0%,#00906f_100%)] text-white',
+                                    },
+                                    {
+                                        icon: '✈️',
+                                        title: 'Keberangkatan',
+                                        label: 'Momen menuju Tanah Suci',
+                                        className:
+                                            'bg-[linear-gradient(135deg,#0a4f8d_0%,#0864c7_100%)] text-white',
+                                    },
+                                ].map((item, index) => (
+                                    <div
+                                        key={`gallery-${index}`}
+                                        className={`relative flex min-h-[170px] items-center justify-center overflow-hidden rounded-[20px] px-5 py-6 text-center shadow-[0_10px_24px_rgba(140,10,22,.06)] ${
+                                            index === 0
+                                                ? 'lg:col-span-1 lg:h-full'
+                                                : 'lg:h-full'
+                                        } ${item.className}`}
+                                    >
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="text-[34px] leading-none">
+                                                {item.icon}
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-[11px] font-black tracking-[.18em] text-white/70 uppercase">
+                                                    {item.title}
+                                                </p>
+                                                <p className="text-[10px] leading-[1.5] font-semibold text-white/85">
+                                                    {item.label}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-5 text-center">
                                 <a
                                     href={whatsappHref}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="rounded-md bg-[#710214] py-2.5 text-center text-[10px] font-black text-white"
+                                    className="inline-flex rounded-[12px] bg-[linear-gradient(135deg,#8c0a16,#c80012)] px-5 py-3 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(140,10,22,.18)]"
                                 >
-                                    {text(location.whatsapp_label)}
+                                    {text(
+                                        (content.gallery as CmsRecord)
+                                            .cta_label,
+                                    )}
                                 </a>
-                                <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="rounded-md border border-[#c88b2d] bg-white py-2.5 text-center text-[10px] font-black text-[#710214]"
-                                >
-                                    {text(location.maps_label)}
-                                </a>
-                            </div>
-                            <div className="mt-4 grid gap-1 text-[10px] text-[#40241d]/70">
-                                <span>{phone}</span>
-                                <span>{email}</span>
                             </div>
                         </div>
-                        <div>
-                            <iframe
-                                className="h-[180px] w-full rounded-md border border-[#710214]/10"
-                                src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+                    </motion.section>
+
+                    <div className="wave-divider bg-[#f6e7c6]">
+                        <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+                            <path
+                                d="M0,0 C480,50 960,50 1440,0 L1440,50 L0,50Z"
+                                fill="#ffffff"
                             />
+                        </svg>
+                    </div>
+
+                    <motion.section
+                        id="testi"
+                        className="bg-white px-4 py-[92px] sm:px-6 lg:px-8 lg:py-[112px]"
+                        {...sectionMotion}
+                    >
+                        <div className="wrap relative text-center">
+                            <h2 className="inline-flex rounded-full border border-[#e7c79b] bg-[#fff8ed] px-[14px] py-[5px] text-[11px] font-bold tracking-[.16em] text-[#a10a16] uppercase">
+                                {text(
+                                    (content.testimonials as CmsRecord).title,
+                                )}
+                            </h2>
+                            <div className="font-display mt-3 text-[clamp(26px,4vw,42px)] leading-[1.05] font-bold whitespace-nowrap text-[#8c0a16]">
+                                <span>{testimonialHeading.prefix} </span>
+                                <span className="text-[#ff9200] italic">
+                                    {testimonialHeading.highlight}
+                                </span>
+                                <span>{testimonialHeading.suffix}</span>
+                            </div>
+                            <p className="mx-auto mt-3 max-w-[580px] text-[12px] leading-[1.8] text-[#7a5c50]">
+                                {text(
+                                    (content.testimonials as CmsRecord)
+                                        .description,
+                                )}
+                            </p>
                             <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-3 block rounded-md bg-[#710214] py-2.5 text-center text-[10px] font-black text-white"
+                                href="/testimoni"
+                                className="absolute top-0 right-0 text-[10px] font-bold text-[#8c0a16] underline decoration-[#8c0a16]/25 underline-offset-4"
                             >
-                                {text(location.maps_cta_label)}
+                                {text(
+                                    (content.testimonials as CmsRecord)
+                                        .more_label,
+                                )}
                             </a>
+                        </div>
+                        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                            {(testimonials.length > 0 ? testimonials : []).map(
+                                (item, index) => (
+                                    <motion.div
+                                        key={`testimonial-${index + 1}`}
+                                        className={`rounded-[18px] border px-6 py-6 transition hover:-translate-y-[3px] hover:shadow-[0_10px_24px_rgba(140,10,22,.08)] ${
+                                            index === 0
+                                                ? 'border-[rgba(200,0,18,.2)] bg-white'
+                                                : 'border-[#ead9ce] bg-[#fdf3e3]'
+                                        }`}
+                                        whileHover={{ y: -4 }}
+                                    >
+                                        <p className="font-display text-[52px] leading-none text-[#c80012]/35">
+                                            "
+                                        </p>
+                                        <p className="mt-2 text-[11px] tracking-[.22em] text-[#ff9200]">
+                                            ★★★★★
+                                        </p>
+                                        <p className="mt-4 min-h-[112px] text-[12.5px] leading-[1.95] font-normal text-[#806d64] italic">
+                                            {text(item.quote)}
+                                        </p>
+                                        <div className="mt-4 border-t border-[#e3ccb3] pt-4">
+                                            <div className="flex items-start gap-3">
+                                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c80012] text-[12px] font-black text-white">
+                                                    {text(item.name)
+                                                        .split(/\s+/)
+                                                        .filter(Boolean)
+                                                        .slice(0, 2)
+                                                        .map((part) => part[0])
+                                                        .join('')
+                                                        .toUpperCase()}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <b className="block text-[12px] leading-none text-[#a10a16]">
+                                                        {text(item.name)}
+                                                    </b>
+                                                    <span className="mt-1 block text-[10px] leading-none text-[#a67f6d]">
+                                                        {text(item.origin_city)}
+                                                    </span>
+                                                    <span className="mt-2 inline-flex rounded-full bg-[#f6dca9] px-2.5 py-1 text-[9px] font-semibold text-[#7f5b22]">
+                                                        {text(
+                                                            item.package_name,
+                                                            'Paket Umrah',
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ),
+                            )}
+                        </div>
+                    </motion.section>
+                </motion.section>
+
+                <div className="wave-divider bg-white">
+                    <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+                        <path
+                            d="M0,50 C360,0 1080,0 1440,50 L1440,50 L0,50Z"
+                            fill="#f6e7c6"
+                        />
+                    </svg>
+                </div>
+
+                <motion.section
+                    id="faq"
+                    className="relative -mt-px overflow-hidden bg-[#f6e7c6] px-4 pt-[68px] pb-[110px] sm:px-6 lg:px-8 lg:pt-[78px] lg:pb-[120px]"
+                    {...sectionMotion}
+                >
+                    <div className="absolute inset-0 -z-10 bg-[#f6e7c6]" />
+                    <div className="wrap relative z-[1]">
+                        <div className="text-center">
+                            <h2 className="inline-flex rounded-full border border-[#e7c79b] bg-[#fff8ed] px-[14px] py-[5px] text-[11px] font-bold tracking-[.16em] text-[#a10a16] uppercase">
+                                {text((content.faq as CmsRecord).title)}
+                            </h2>
+                            <p className="font-display mt-5 text-[28px] leading-[1.1] font-bold text-[#8c0a16] lg:text-[42px]">
+                                {faqHeading.prefix}{' '}
+                                <span className="text-[#ff9200] italic">
+                                    {faqHeading.highlight}
+                                </span>
+                                {faqHeading.suffix}
+                            </p>
+                            <p className="mx-auto mt-3 max-w-[620px] text-[12px] leading-[1.8] text-[#7a5c50]">
+                                {text((content.faq as CmsRecord).description)}
+                            </p>
+                        </div>
+                        <div className="mx-auto mt-12 max-w-[760px]">
+                            {faqs.map((faq, index) => {
+                                const isOpen = activeFaq === index;
+
+                                return (
+                                    <div
+                                        key={`faq-${index}`}
+                                        className={`mb-3 overflow-hidden rounded-[14px] border bg-white transition ${
+                                            isOpen
+                                                ? 'border-[rgba(200,0,18,.2)] shadow-[0_6px_20px_rgba(140,10,22,.09)]'
+                                                : 'border-[#e0c9a0]'
+                                        }`}
+                                    >
+                                        <button
+                                            type="button"
+                                            className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-[15px] font-semibold text-[#8c0a16]"
+                                            onClick={() =>
+                                                setActiveFaq(
+                                                    isOpen ? null : index,
+                                                )
+                                            }
+                                        >
+                                            <span>{text(faq.question)}</span>
+                                            <span
+                                                className={`flex h-7 w-7 items-center justify-center rounded-full border text-[17px] transition ${
+                                                    isOpen
+                                                        ? 'rotate-45 border-[#c80012] bg-[#c80012] text-white'
+                                                        : 'border-[#e0c9a0] bg-white text-[#c80012]'
+                                                }`}
+                                            >
+                                                +
+                                            </span>
+                                        </button>
+                                        {isOpen ? (
+                                            <p className="px-5 pb-4 text-[14px] leading-[1.8] font-light text-[#7a5c50]">
+                                                {text(faq.answer)}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </motion.section>
+                <div className="wave-divider bg-[#f6e7c6]">
+                    <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+                        <path
+                            d="M0,0 C480,50 960,50 1440,0 L1440,50 L0,50Z"
+                            fill="#ffffff"
+                        />
+                    </svg>
+                </div>
+                <motion.section
+                    id="alamat"
+                    className="bg-white px-4 py-[92px] sm:px-6 lg:px-8 lg:py-[110px]"
+                    {...sectionMotion}
+                >
+                    <div className="wrap">
+                        <div className="text-center">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-[#e7c79b] bg-[#fff8ed] px-[14px] py-[5px] text-[11px] font-bold tracking-[.16em] text-[#a10a16] uppercase">
+                                {text(location.title)}
+                            </span>
+                            <h2 className="font-display mt-5 text-[28px] font-bold text-[#8c0a16] lg:text-[42px]">
+                                {locationHeading.prefix}{' '}
+                                <span className="text-[#ff9200] italic">
+                                    {locationHeading.highlight}
+                                </span>
+                                {locationHeading.suffix}
+                            </h2>
+                            <p className="mx-auto mt-3 max-w-[620px] text-[12px] leading-[1.8] text-[#7a5c50]">
+                                {text(location.description)}
+                            </p>
+                        </div>
+
+                        <div className="mt-12 grid items-start gap-8 lg:grid-cols-[1.02fr_.98fr] lg:gap-10">
+                            <div>
+                                <div className="mb-5 flex flex-col gap-3">
+                                    <div className="flex items-start gap-3 rounded-[14px] border border-[#e0c9a0] bg-[#fdf3e3] px-4 py-4 shadow-[0_6px_18px_rgba(140,10,22,.05)] transition hover:border-[#c80012]/20">
+                                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[#c80012]/10 text-[#c80012]">
+                                            <MapPin className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="mb-1 text-[10px] font-bold tracking-[.05em] text-[#7a5c50] uppercase">
+                                                {text(location.address_label)}
+                                            </p>
+                                            <p className="text-[14px] leading-[1.6] font-semibold whitespace-pre-line text-[#8c0a16]">
+                                                {address ||
+                                                    text(
+                                                        location.address_empty_label,
+                                                    )}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 rounded-[14px] border border-[#e0c9a0] bg-[#fdf3e3] px-4 py-4 shadow-[0_6px_18px_rgba(140,10,22,.05)] transition hover:border-[#c80012]/20">
+                                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[#c80012]/10 text-[#c80012]">
+                                            <Clock3 className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="mb-1 text-[10px] font-bold tracking-[.05em] text-[#7a5c50] uppercase">
+                                                {text(
+                                                    location.office_hours_title,
+                                                )}
+                                            </p>
+                                            <p className="text-[14px] leading-[1.6] font-semibold whitespace-pre-line text-[#8c0a16]">
+                                                {officeHours.join('\n')}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3 rounded-[14px] border border-[#e0c9a0] bg-[#fdf3e3] px-4 py-4 shadow-[0_6px_18px_rgba(140,10,22,.05)] transition hover:border-[#c80012]/20">
+                                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[#c80012]/10 text-[#c80012]">
+                                            <MessageCircle className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="mb-1 text-[10px] font-bold tracking-[.05em] text-[#7a5c50] uppercase">
+                                                {text(location.contact_label)}
+                                            </p>
+                                            <p className="text-[14px] leading-[1.6] font-semibold text-[#8c0a16]">
+                                                {phone}
+                                            </p>
+                                            <p className="text-[13px] leading-[1.6] text-[#7a5c50]">
+                                                {email}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mb-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    {(
+                                        (location.visit_points as Array<unknown>) ??
+                                        []
+                                    ).map((item, index) => (
+                                        <div
+                                            key={`visit-${index}`}
+                                            className="flex items-center gap-2 rounded-[12px] border border-[#e0c9a0] bg-[#fdf3e3] px-3 py-3 text-[13px] font-semibold text-[#8c0a16]"
+                                        >
+                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#c80012]/10 text-[#c80012]">
+                                                <Check className="h-3 w-3" />
+                                            </span>
+                                            {text(item)}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${mapQuery}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#8c0a16] px-5 py-3 text-[14px] font-bold text-white transition hover:bg-[#3d0508] hover:shadow-[0_8px_20px_rgba(140,10,22,.25)]"
+                                    >
+                                        <MapPin className="h-4 w-4" />
+                                        {text(location.maps_cta_label)}
+                                    </a>
+                                    <a
+                                        href={whatsappHref}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-[linear-gradient(135deg,#25d366,#1a9e4e)] px-5 py-3 text-[14px] font-bold text-white transition hover:shadow-[0_8px_20px_rgba(37,211,102,.3)]"
+                                    >
+                                        <MessageCircle className="h-4 w-4" />
+                                        {text(location.whatsapp_label)}
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div className="overflow-hidden rounded-[20px] border border-[#e0c9a0] shadow-[0_12px_36px_rgba(140,10,22,.1)]">
+                                <iframe
+                                    className="block h-[420px] w-full border-0"
+                                    src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+                                />
+                                <div className="bg-[#8c0a16] px-5 py-3 text-center text-[12px] font-semibold text-white">
+                                    {text(location.maps_label)}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </motion.section>
             </main>
+            <div className="full-bleed wave-divider bg-white">
+                <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+                    <path
+                        d="M0,0 C480,46 960,46 1440,0 L1440,50 L0,50Z"
+                        fill="#8c0a16"
+                    />
+                </svg>
+            </div>
+            {/* <div className="wave-divider bg-white">
+                <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
+                    <path
+                        d="M0,50 C360,0 1080,0 1440,50 L1440,50 L0,50Z"
+                        fill="#8c0a16"
+                    />
+                </svg>
+            </div> */}
 
             <motion.section
-                className="mt-6 rounded-t-[30px] bg-[linear-gradient(180deg,#9f0f1f_0%,#710214_100%)] px-4 py-8 text-white shadow-[0_18px_42px_rgba(113,2,20,.18)] sm:px-5 lg:px-6 lg:py-10"
+                id="cta"
+                className="relative overflow-hidden bg-[linear-gradient(135deg,#8c0a16_0%,#b70714_55%,#7b0710_100%)] px-4 py-[104px] text-center text-white sm:px-6 lg:px-8 lg:py-[124px]"
                 {...sectionMotion}
             >
-                <div className="wrap grid items-center gap-4 lg:grid-cols-[1fr_420px]">
-                    <div className="flex items-center gap-4">
-                        <div className="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full border border-[#f4c577]/40 bg-white/8 text-[#f4c577]">
-                            <Building2 className="h-10 w-10" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-black tracking-[.22em] text-[#f4c577] uppercase">
-                                {text(cta.badge)}
-                            </p>
-                            <h2 className="font-display text-[28px] leading-none font-black whitespace-pre-line lg:text-[36px]">
-                                {text(cta.title)}
-                            </h2>
-                            <p className="mt-3 max-w-[520px] text-[12px] leading-[1.9] font-medium text-white/82">
-                                {text(cta.description)}
-                            </p>
-                        </div>
-                    </div>
-                    <div>
-                        <a
-                            href={whatsappHref}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="block rounded-[16px] bg-[#ffe4bd] py-3 text-center text-[12px] font-black text-[#710214] shadow-[0_10px_24px_rgba(0,0,0,.18)]"
-                        >
-                            {text(cta.button_label)}
-                        </a>
-                        <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[9px] font-bold text-white/85">
-                            {((cta.badges as Array<unknown>) ?? []).map(
-                                (badge, index) => (
-                                    <span key={`cta-badge-${index}`}>
-                                        <Check className="mr-1 inline h-3.5 w-3.5 text-[#c88b2d]" />{' '}
-                                        {text(badge)}
+                <div
+                    className="absolute inset-0 opacity-[.06]"
+                    style={{
+                        backgroundImage:
+                            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 5L75 22.5v35L40 75 5 57.5v-35Z' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E\")",
+                        backgroundSize: '80px',
+                    }}
+                />
+                <div className="wrap relative z-[1] mx-auto max-w-[640px]">
+                    <p className="mb-[18px] inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-[14px] py-[5px] text-[11px] font-bold tracking-[.2em] text-[#ffc578] uppercase">
+                        <span className="text-[12px]">🕌</span>
+                        {text(cta.badge)}
+                    </p>
+                    <h2 className="font-display text-[34px] leading-[1.12] font-bold whitespace-pre-line text-white lg:text-[48px]">
+                        {text(cta.title)}
+                    </h2>
+                    <p className="mt-4 text-[15px] leading-[1.8] font-light text-white/72">
+                        {text(cta.description)}
+                    </p>
+                    <a
+                        href={whatsappHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-8 inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#25d366,#1a9e4e)] px-10 py-[16px] text-[15px] font-extrabold text-white shadow-[0_8px_28px_rgba(37,211,102,.3)] transition hover:-translate-y-[3px] hover:shadow-[0_16px_40px_rgba(37,211,102,.5)]"
+                    >
+                        <MessageCircle className="h-5 w-5" />
+                        {text(cta.button_label)}
+                    </a>
+                    <div className="mt-8 flex flex-wrap justify-center gap-[14px] sm:gap-[18px]">
+                        {(
+                            [
+                                {
+                                    icon: ShieldCheck,
+                                    label: text(
+                                        (cta.badges as Array<unknown>)?.[0] ??
+                                            'Resmi Kemenag',
+                                    ),
+                                },
+                                {
+                                    icon: Bolt,
+                                    label: text(
+                                        (cta.badges as Array<unknown>)?.[1] ??
+                                            'Fast Response',
+                                    ),
+                                },
+                                {
+                                    icon: Users,
+                                    label: text(
+                                        (cta.badges as Array<unknown>)?.[2] ??
+                                            'Amanah',
+                                    ),
+                                },
+                                {
+                                    icon: Clock3,
+                                    label: text(
+                                        (cta.badges as Array<unknown>)?.[3] ??
+                                            'Support 24 Jam',
+                                    ),
+                                },
+                            ] as Array<{
+                                icon: typeof ShieldCheck;
+                                label: string;
+                            }>
+                        ).map((badge, index) => {
+                            const Icon = badge.icon;
+
+                            return (
+                                <span
+                                    key={`cta-badge-${index}`}
+                                    className="flex items-center gap-1.5 text-[13px] font-semibold text-white/82"
+                                >
+                                    <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-white/15 text-[11px]">
+                                        <Icon className="h-3.5 w-3.5" />
                                     </span>
-                                ),
-                            )}
-                        </div>
+                                    {badge.label}
+                                </span>
+                            );
+                        })}
                     </div>
                 </div>
             </motion.section>
 
-            <footer className="bg-[#21080a] px-4 py-10 text-white sm:px-6 lg:px-8">
+            <footer className="bg-[#3d0508] px-4 pt-12 pb-6 text-white sm:px-6 lg:px-8">
                 <div className="wrap">
-                    <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-[1.7fr_1fr_1fr_1fr]">
+                    <div className="mb-10 grid gap-9 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
                         <div>
                             <div className="flex items-center gap-3">
                                 <img
                                     src={resolvedLogoPath}
                                     alt={companyName}
-                                    className="h-10 w-10 object-contain"
+                                    className="h-10 w-auto object-contain"
                                 />
                                 <div>
-                                    <div className="font-display text-[18px] font-black">
-                                        {text(footer.brand, companyName)}
+                                    <div className="font-display text-[18px] font-bold tracking-[.01em]">
+                                        {companyName}
                                     </div>
-                                    <div className="text-[9px] font-black tracking-[.28em] text-[#c88b2d] uppercase">
-                                        {text(footer.subtitle, companySubtitle)}
+                                    <div className="text-[9px] tracking-[.28em] text-[#ff9200] uppercase">
+                                        {companySubtitle}
                                     </div>
                                 </div>
                             </div>
-                            <p className="mt-4 max-w-[280px] text-[12px] leading-[1.8] text-white/55">
-                                {text(footer.description)}
+                            <p className="mt-4 max-w-[240px] text-[13px] leading-[1.75] font-light text-white/35">
+                                Jelas Rencananya, Terjamin Amanahnya. Melayani
+                                perjalanan umroh dengan sistem transparan &
+                                amanah sejak 2015.
                             </p>
-                            <div className="mt-4 flex gap-2">
-                                {[
-                                    {
-                                        icon: Instagram,
-                                        href: 'https://instagram.com',
-                                    },
-                                    {
-                                        icon: Music2,
-                                        href: 'https://tiktok.com',
-                                    },
-                                    {
-                                        icon: PlayCircle,
-                                        href: 'https://youtube.com',
-                                    },
-                                    { icon: MessageCircle, href: whatsappHref },
-                                ].map((item, index) => {
-                                    const Icon = item.icon;
+                            <div className="mt-5 flex gap-2">
+                                {socialAccounts.map((item, index) => {
+                                    const platform =
+                                        item.platform.toLowerCase();
+                                    const Icon = platform.includes('instagram')
+                                        ? Instagram
+                                        : platform.includes('tiktok')
+                                          ? Music2
+                                          : platform.includes('youtube')
+                                            ? PlayCircle
+                                            : MessageCircle;
 
                                     return (
                                         <a
                                             key={`footer-social-${index}`}
-                                            href={item.href}
+                                            href={item.url}
+                                            aria-label={item.label}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80 transition hover:border-[#710214] hover:bg-[#710214]"
+                                            className="inline-flex h-[36px] w-[36px] items-center justify-center rounded-[10px] border border-white/10 bg-white/5 text-white/80 transition hover:border-[#c80012] hover:bg-[#c80012]"
                                         >
                                             <Icon className="h-4 w-4" />
                                         </a>
@@ -1558,68 +2123,67 @@ export default function PublicLandingPage() {
                             </div>
                         </div>
                         <div>
-                            <h3 className="text-[11px] font-black tracking-[.2em] text-white/55 uppercase">
+                            <h3 className="text-[11px] font-bold tracking-[.12em] text-white/50 uppercase">
                                 Paket
                             </h3>
-                            <div className="mt-4 space-y-2 text-[12px] text-white/55">
-                                {(
-                                    (footer.package_links as Array<unknown>) ??
-                                    []
-                                ).map((item, index) => (
-                                    <a
-                                        key={`footer-package-${index}`}
-                                        href="/paket-umroh"
-                                        className="block transition hover:text-[#c88b2d]"
-                                    >
-                                        {text(item)}
-                                    </a>
-                                ))}
+                            <div className="mt-4 space-y-2 text-[13px] font-light text-white/35">
+                                {LANDING_FOOTER_PACKAGE_LINKS.map(
+                                    (item, index) => (
+                                        <a
+                                            key={`footer-package-${index}`}
+                                            href="/paket-umroh"
+                                            className="block transition hover:text-[#c88b2d]"
+                                        >
+                                            {text(item)}
+                                        </a>
+                                    ),
+                                )}
                             </div>
                         </div>
                         <div>
-                            <h3 className="text-[11px] font-black tracking-[.2em] text-white/55 uppercase">
+                            <h3 className="text-[11px] font-bold tracking-[.12em] text-white/50 uppercase">
                                 Perusahaan
                             </h3>
-                            <div className="mt-4 space-y-2 text-[12px] text-white/55">
-                                {(
-                                    (footer.company_links as Array<unknown>) ??
-                                    []
-                                ).map((item, index) => (
-                                    <a
-                                        key={`footer-company-${index}`}
-                                        href="#landing-top"
-                                        className="block transition hover:text-[#c88b2d]"
-                                    >
-                                        {text(item)}
-                                    </a>
-                                ))}
+                            <div className="mt-4 space-y-2 text-[13px] font-light text-white/35">
+                                {LANDING_FOOTER_COMPANY_LINKS.map(
+                                    (item, index) => (
+                                        <a
+                                            key={`footer-company-${index}`}
+                                            href="#landing-top"
+                                            className="block transition hover:text-[#c88b2d]"
+                                        >
+                                            {text(item)}
+                                        </a>
+                                    ),
+                                )}
                             </div>
                         </div>
                         <div>
-                            <h3 className="text-[11px] font-black tracking-[.2em] text-white/55 uppercase">
+                            <h3 className="text-[11px] font-bold tracking-[.12em] text-white/50 uppercase">
                                 Legal
                             </h3>
-                            <div className="mt-4 space-y-2 text-[12px] text-white/55">
-                                {(
-                                    (footer.legal_links as Array<unknown>) ?? []
-                                ).map((item, index) => (
-                                    <a
-                                        key={`footer-legal-${index}`}
-                                        href="#landing-top"
-                                        className="block transition hover:text-[#c88b2d]"
-                                    >
-                                        {text(item)}
-                                    </a>
-                                ))}
+                            <div className="mt-4 space-y-2 text-[13px] font-light text-white/35">
+                                {LANDING_FOOTER_LEGAL_LINKS.map(
+                                    (item, index) => (
+                                        <a
+                                            key={`footer-legal-${index}`}
+                                            href="#landing-top"
+                                            className="block transition hover:text-[#c88b2d]"
+                                        >
+                                            {text(item)}
+                                        </a>
+                                    ),
+                                )}
                             </div>
                         </div>
                     </div>
-                    <div className="mt-8 flex flex-col gap-3 border-t border-white/8 pt-5 text-[11px] text-white/35 md:flex-row md:items-center md:justify-between">
-                        <p>{text(footer.copyright)}</p>
+                    <div className="flex flex-col gap-3 border-t border-white/7 pt-5 text-[12px] text-white/20 md:flex-row md:items-center md:justify-between">
+                        <p>
+                            (c) 2026 Asfar Tour. Terdaftar Kemenag RI.
+                            PPIU-2026-001. Jakarta Selatan.
+                        </p>
                         <div className="flex flex-wrap gap-4">
-                            {(
-                                (footer.bottom_links as Array<unknown>) ?? []
-                            ).map((item, index) => (
+                            {LANDING_FOOTER_BOTTOM_LINKS.map((item, index) => (
                                 <a
                                     key={`footer-bottom-${index}`}
                                     href="#landing-top"
@@ -1637,12 +2201,10 @@ export default function PublicLandingPage() {
                 href={whatsappHref}
                 target="_blank"
                 rel="noreferrer"
-                className="fixed right-4 bottom-4 z-50 flex items-center gap-2 rounded-xl bg-green-500 px-4 py-3 text-[12px] font-black text-white shadow-[0_4px_16px_rgba(113,2,20,.09)] ring-4 ring-white/70"
+                aria-label="Konsultasi Gratis"
+                className="fixed right-5 bottom-5 z-50 inline-flex h-[58px] w-[58px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#25d366,#1a9e4e)] text-white shadow-[0_10px_28px_rgba(37,211,102,.45)] transition hover:scale-[1.04]"
             >
                 <MessageCircle className="h-7 w-7" />
-                <span>
-                    {text(footer.whatsapp_float_label, 'Konsultasi Gratis')}
-                </span>
             </a>
         </>
     );

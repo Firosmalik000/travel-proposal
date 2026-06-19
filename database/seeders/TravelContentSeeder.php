@@ -47,13 +47,6 @@ class TravelContentSeeder extends Seeder
                 'title' => $this->localize("SPECIAL 9 HARI\nAgustus", "SPECIAL 9 DAYS\nAugust"),
                 'duration_value' => '9',
                 'duration_suffix' => $this->localize('HARI', 'DAYS'),
-                'nav_items' => [
-                    $this->localize('Paket Umroh', 'Umrah Packages'),
-                    $this->localize('Fasilitas', 'Facilities'),
-                    $this->localize('Testimoni', 'Testimonials'),
-                    $this->localize('FAQ', 'FAQ'),
-                ],
-                'nav_active_label' => $this->localize('Paket Umroh', 'Umrah Packages'),
                 'subtitle' => $this->localize(
                     'Berangkat Agustus 2026',
                     'Departing August 2026',
@@ -71,7 +64,6 @@ class TravelContentSeeder extends Seeder
                 'cta_label' => $this->localize('Konsultasi Gratis', 'Free Consultation'),
                 'secondary_cta_label' => $this->localize('Lihat Paket', 'View Packages'),
                 'secondary_cta_href' => '/paket-umroh',
-                'navbar_cta_label' => $this->localize('Konsultasi Gratis', 'Free Consultation'),
                 'pricing_cards' => [
                     ['label' => 'QUAD', 'price' => 'Rp 33.500.000', 'note' => '/Pax'],
                     ['label' => 'TRIPLE', 'price' => 'Rp 35.000.000', 'note' => '/Pax'],
@@ -106,8 +98,12 @@ class TravelContentSeeder extends Seeder
             'package_details' => [
                 'title' => $this->localize('PAKET KAMI', 'OUR PACKAGE'),
                 'heading' => $this->localize(
-                    "Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda",
-                    "Choose the Best Umrah Package\nFor Your Worship Journey",
+                    'Pilih Paket Umroh Terbaik',
+                    'Choose the Best Umrah Package',
+                ),
+                'heading2' => $this->localize(
+                    'Untuk Perjalanan Ibadah Anda',
+                    'For Your Worship Journey',
                 ),
                 'description' => $this->localize(
                     'Direct flight, hotel strategis, mutawif berpengalaman, dan dokumentasi profesional - semua sudah termasuk.',
@@ -127,11 +123,15 @@ class TravelContentSeeder extends Seeder
             ],
             'included' => [
                 'section_badge' => $this->localize('DETAIL PAKET', 'PACKAGE DETAILS'),
+                'section_heading_prefix' => $this->localize('Yang', 'What'),
+                'section_heading_highlight' => $this->localize('Termasuk', 'Included'),
+                'section_heading_suffix' => $this->localize('dalam Paket', 'in the Package'),
                 'section_heading' => $this->localize(
                     "Yang Termasuk\ndalam Paket",
                     "What Is Included\nin the Package",
                 ),
                 'title' => $this->localize('TERMASUK DALAM PAKET', 'INCLUDED IN THE PACKAGE'),
+                'status_label' => $this->localize('INCLUDED', 'INCLUDED'),
                 'image_url' => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=85',
                 'items' => [
                     $this->localize('Tiket Pesawat PP Direct Flight', 'Return Direct Flight Tickets'),
@@ -146,6 +146,7 @@ class TravelContentSeeder extends Seeder
             ],
             'excluded' => [
                 'title' => $this->localize('TIDAK TERMASUK DALAM PAKET', 'NOT INCLUDED IN THE PACKAGE'),
+                'status_label' => $this->localize('EXCLUDED', 'EXCLUDED'),
                 'image_url' => 'https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1000&q=85',
                 'items' => [
                     $this->localize('Pembuatan Paspor', 'Passport Creation'),
@@ -193,8 +194,12 @@ class TravelContentSeeder extends Seeder
             'packages' => [
                 'title' => $this->localize('PAKET KAMI', 'OUR PACKAGE'),
                 'heading' => $this->localize(
-                    "Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda",
-                    "Choose the Best Umrah Package\nFor Your Worship Journey",
+                    'Pilih Paket Umroh Terbaik',
+                    'Choose the Best Umrah Package',
+                ),
+                'heading2' => $this->localize(
+                    'Untuk Perjalanan Ibadah Anda',
+                    'For Your Worship Journey',
                 ),
                 'description' => $this->localize(
                     'Direct flight, hotel strategis, mutawif berpengalaman, dan dokumentasi profesional - semua sudah termasuk.',
@@ -202,11 +207,18 @@ class TravelContentSeeder extends Seeder
                 ),
                 'cta_label' => $this->localize('Lihat Semua Paket', 'View All Packages'),
                 'detail_label' => $this->localize('Tanya Paket Ini', 'Ask About This Package'),
+                'price_unit_label' => $this->localize('/pax', '/person'),
                 'price_prefix' => $this->localize('Mulai', 'From'),
                 'duration_suffix' => $this->localize('Hari', 'Days'),
                 'fallback_name' => $this->localize('Paket Umroh', 'Umrah Package'),
+                'fallback_airline' => $this->localize('Maskapai menyesuaikan', 'Airline subject to schedule'),
+                'fallback_hotel' => $this->localize('Hotel sesuai paket', 'Hotel according to package'),
                 'fallback_summary' => $this->localize('Detail paket akan tampil di sini.', 'Package details will appear here.'),
                 'discount_badge_label' => $this->localize('UNGGULAN', 'FEATURED'),
+                'disclaimer' => $this->localize(
+                    '* Harga dapat berubah sewaktu-waktu. Syarat & ketentuan berlaku.',
+                    '* Prices may change at any time. Terms and conditions apply.',
+                ),
                 'selected_package_ids' => [],
             ],
             'gallery' => [
@@ -223,6 +235,9 @@ class TravelContentSeeder extends Seeder
             ],
             'testimonials' => [
                 'title' => $this->localize('TESTIMONI JAMAAH', 'PILGRIM TESTIMONIALS'),
+                'heading_prefix' => $this->localize('Apa Kata', 'What'),
+                'heading_highlight' => $this->localize('Mereka', 'They Say'),
+                'heading_suffix' => $this->localize('?', '?'),
                 'heading' => $this->localize('Apa Kata Mereka?', 'What Do They Say?'),
                 'description' => $this->localize(
                     'Ribuan jamaah telah mempercayakan perjalanan ibadahnya bersama Asfar Tour.',
@@ -232,6 +247,9 @@ class TravelContentSeeder extends Seeder
             ],
             'faq' => [
                 'title' => $this->localize('PERTANYAAN YANG SERING DIAJUKAN', 'FREQUENTLY ASKED QUESTIONS'),
+                'heading_prefix' => $this->localize('Pertanyaan yang', 'Frequently'),
+                'heading_highlight' => $this->localize('Sering Ditanyakan', 'Asked Questions'),
+                'heading_suffix' => $this->localize('', ''),
                 'description' => $this->localize(
                     'Temukan jawaban untuk pertanyaan yang paling sering ditanyakan calon jamaah.',
                     'Find answers to the questions prospective pilgrims ask most often.',
@@ -239,11 +257,17 @@ class TravelContentSeeder extends Seeder
             ],
             'location' => [
                 'title' => $this->localize('Kunjungi Kantor Kami', 'Visit Our Office'),
+                'heading_prefix' => $this->localize('Kunjungi', 'Visit'),
+                'heading_highlight' => $this->localize('Kantor Kami', 'Our Office'),
+                'heading_suffix' => $this->localize('', ''),
                 'description' => $this->localize(
                     'Kami siap melayani konsultasi umroh secara langsung maupun online.',
                     'We are ready to serve umrah consultations both in person and online.',
                 ),
                 'office_hours_title' => $this->localize('Jam Operasional', 'Office Hours'),
+                'address_label' => $this->localize('Alamat', 'Address'),
+                'address_empty_label' => $this->localize('Alamat belum diatur', 'Address is not configured'),
+                'contact_label' => $this->localize('Kontak', 'Contact'),
                 'visit_points' => [
                     $this->localize('Kantor Dapat Dikunjungi', 'Office Available to Visit'),
                     $this->localize('Konsultasi Langsung', 'Direct Consultation'),
@@ -271,42 +295,6 @@ class TravelContentSeeder extends Seeder
                     $this->localize('Amanah', 'Trustworthy'),
                     $this->localize('Support 24 Jam', '24 Hour Support'),
                 ],
-            ],
-            'footer' => [
-                'brand' => $this->localize('ASFAR TOUR'),
-                'subtitle' => $this->localize('HAJI & UMRAH', 'HAJJ & UMRAH'),
-                'description' => $this->localize(
-                    'Jelas Rencananya, Terjamin Amanahnya. Melayani perjalanan umroh dengan sistem transparan & amanah sejak 2015.',
-                    'Clear in planning, trusted in delivery. Serving umrah journeys with a transparent and trustworthy system since 2015.',
-                ),
-                'package_links' => [
-                    $this->localize('Umroh Quad', 'Umrah Quad'),
-                    $this->localize('Umroh Triple', 'Umrah Triple'),
-                    $this->localize('Umroh Double', 'Umrah Double'),
-                    $this->localize('Custom/Private'),
-                ],
-                'company_links' => [
-                    $this->localize('Tentang Kami', 'About Us'),
-                    $this->localize('Legalitas', 'Legality'),
-                    $this->localize('Kantor', 'Office'),
-                    $this->localize('Galeri', 'Gallery'),
-                ],
-                'legal_links' => [
-                    $this->localize('Syarat & Ketentuan', 'Terms & Conditions'),
-                    $this->localize('Kebijakan Privasi', 'Privacy Policy'),
-                    $this->localize('Kebijakan Refund', 'Refund Policy'),
-                    $this->localize('Disclaimer'),
-                ],
-                'bottom_links' => [
-                    $this->localize('Privasi', 'Privacy'),
-                    $this->localize('Syarat', 'Terms'),
-                    $this->localize('Refund'),
-                ],
-                'whatsapp_float_label' => $this->localize(
-                    'Konsultasi Gratis',
-                    'Free Consultation',
-                ),
-                'copyright' => $this->localize('© 2026 Asfar Tour · Terdaftar Kemenag RI · PPIU-2026-001 · Jakarta Selatan'),
             ],
         ];
     }

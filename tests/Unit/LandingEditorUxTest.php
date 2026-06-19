@@ -25,6 +25,8 @@ class LandingEditorUxTest extends TestCase
         $this->assertStringContainsString('Paket Pilihan Landing', $contents);
         $this->assertStringContainsString('Termasuk / Tidak Termasuk', $contents);
         $this->assertStringContainsString('Preview', $contents);
+        $this->assertStringNotContainsString('Navigasi Landing', $contents);
+        $this->assertStringNotContainsString('Footer Landing', $contents);
     }
 
     public function test_landing_keunggulan_last_item_is_not_locked_from_deletion(): void
@@ -53,11 +55,16 @@ class LandingEditorUxTest extends TestCase
         $this->assertStringContainsString('Tambah Kartu Harga', $contents);
         $this->assertStringContainsString('Lokasi Kantor', $contents);
         $this->assertStringContainsString('CTA Penutup', $contents);
-        $this->assertStringContainsString('Footer Landing', $contents);
         $this->assertStringContainsString('Belum ada paket dipilih.', $contents);
-        $this->assertStringContainsString('Judul Besar Testimoni', $contents);
+        $this->assertStringContainsString('Judul Kecil Testimoni', $contents);
+        $this->assertStringContainsString('Judul Tengah', $contents);
         $this->assertStringContainsString('Badge Kecil CTA', $contents);
         $this->assertStringContainsString('Pill Promo Atas', $contents);
+        $this->assertStringContainsString('Poin Kepercayaan Hero', $contents);
+        $this->assertStringContainsString('Tambah Poin', $contents);
+        $this->assertStringContainsString('Belum ada poin kepercayaan.', $contents);
+        $this->assertStringContainsString('hero.checklist_items', $contents);
+        $this->assertStringNotContainsString("content.hero.checklist_items.join('\\n')", $contents);
         $this->assertStringContainsString('Badge Kecil Sub Judul', $contents);
         $this->assertStringContainsString('Badge Kecil Section', $contents);
         $this->assertStringContainsString('Judul Besar Section', $contents);

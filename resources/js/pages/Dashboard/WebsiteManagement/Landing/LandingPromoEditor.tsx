@@ -105,24 +105,6 @@ function splitTextareaLines(value: unknown): string[] {
         .filter((line) => line !== '');
 }
 
-function summarizeItems(values: Array<unknown>, fallback: string): string {
-    const items = values.map((item) => text(item)).filter(Boolean);
-
-    if (items.length === 0) {
-        return fallback;
-    }
-
-    if (items.length === 1) {
-        return items[0];
-    }
-
-    if (items.length === 2) {
-        return `${items[0]}, ${items[1]}`;
-    }
-
-    return `${items[0]}, ${items[1]}, +${items.length - 2} lainnya`;
-}
-
 function defaultPromoPricingCards(): Array<Record<string, string>> {
     return [
         { label: 'QUAD', price: 'Rp 33.500.000', note: '/Pax' },
@@ -258,10 +240,6 @@ export function normalizeLandingPromoContent(
         duration_suffix: text(next.hero?.duration_suffix, 'HARI'),
         subtitle: text(next.hero?.subtitle, 'Berangkat Agustus 2026'),
         subtitle_badge: text(next.hero?.subtitle_badge, '9 Hari Program'),
-        nav_items: Array.isArray(next.hero?.nav_items)
-            ? next.hero.nav_items
-            : ['Paket Umroh', 'Fasilitas', 'Testimoni', 'FAQ'],
-        nav_active_label: text(next.hero?.nav_active_label, 'Paket Umroh'),
         description: text(
             next.hero?.description,
             'Bersama Asfar Tour, setiap langkah ibadah Anda kami jaga dengan sepenuh hati. Didampingi mutawif berpengalaman, fasilitas premium, dan layanan tulus.',
@@ -279,10 +257,6 @@ export function normalizeLandingPromoContent(
             'Lihat Paket',
         ),
         secondary_cta_href: text(next.hero?.secondary_cta_href, '/paket-umroh'),
-        navbar_cta_label: text(
-            next.hero?.navbar_cta_label,
-            'Konsultasi Gratis',
-        ),
         pricing_cards: normalizeItems(
             next.hero?.pricing_cards,
             defaultPromoPricingCards(),
@@ -318,7 +292,11 @@ export function normalizeLandingPromoContent(
         title: text(next.package_details?.title, 'PAKET KAMI'),
         heading: text(
             next.package_details?.heading,
-            'Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda',
+            'Pilih Paket Umroh Terbaik',
+        ),
+        heading2: text(
+            next.package_details?.heading2,
+            'Untuk Perjalanan Ibadah Anda',
         ),
         description: text(
             next.package_details?.description,
@@ -333,10 +311,8 @@ export function normalizeLandingPromoContent(
     next.packages = {
         ...next.packages,
         title: text(next.packages?.title, 'PAKET KAMI'),
-        heading: text(
-            next.packages?.heading,
-            'Pilih Paket Umroh Terbaik\nUntuk Perjalanan Ibadah Anda',
-        ),
+        heading: text(next.packages?.heading, 'Pilih Paket Umroh Terbaik'),
+        heading2: text(next.packages?.heading2, 'Untuk Perjalanan Ibadah Anda'),
         description: text(
             next.packages?.description,
             'Direct flight, hotel strategis, mutawif berpengalaman, dan dokumentasi profesional - semua sudah termasuk.',
@@ -344,6 +320,22 @@ export function normalizeLandingPromoContent(
         more_packages_label: text(
             next.packages?.more_packages_label,
             'Lihat Semua Paket',
+        ),
+        detail_label: text(next.packages?.detail_label, 'Tanya Paket Ini'),
+        price_unit_label: text(next.packages?.price_unit_label, '/pax'),
+        duration_suffix: text(next.packages?.duration_suffix, 'Hari'),
+        fallback_name: text(next.packages?.fallback_name, 'Paket Umrah'),
+        fallback_airline: text(
+            next.packages?.fallback_airline,
+            'Maskapai menyesuaikan',
+        ),
+        fallback_hotel: text(
+            next.packages?.fallback_hotel,
+            'Hotel sesuai paket',
+        ),
+        disclaimer: text(
+            next.packages?.disclaimer,
+            '* Harga dapat berubah sewaktu-waktu. Syarat & ketentuan berlaku.',
         ),
         selected_package_ids: Array.isArray(next.packages?.selected_package_ids)
             ? next.packages.selected_package_ids
@@ -355,11 +347,24 @@ export function normalizeLandingPromoContent(
 
     next.included = {
         section_badge: text(next.included?.section_badge, 'DETAIL PAKET'),
+        section_heading_prefix: text(
+            next.included?.section_heading_prefix,
+            'Yang',
+        ),
+        section_heading_highlight: text(
+            next.included?.section_heading_highlight,
+            'Termasuk',
+        ),
+        section_heading_suffix: text(
+            next.included?.section_heading_suffix,
+            'dalam Paket',
+        ),
         section_heading: text(
             next.included?.section_heading,
             'Yang Termasuk\ndalam Paket',
         ),
         title: text(next.included?.title, 'TERMASUK DALAM PAKET'),
+        status_label: text(next.included?.status_label, 'INCLUDED'),
         image_url: text(
             next.included?.image_url,
             'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1000&q=85',
@@ -380,6 +385,7 @@ export function normalizeLandingPromoContent(
 
     next.excluded = {
         title: text(next.excluded?.title, 'TIDAK TERMASUK DALAM PAKET'),
+        status_label: text(next.excluded?.status_label, 'EXCLUDED'),
         image_url: text(
             next.excluded?.image_url,
             'https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1000&q=85',
@@ -435,6 +441,9 @@ export function normalizeLandingPromoContent(
     next.testimonials = {
         ...next.testimonials,
         title: text(next.testimonials?.title, 'TESTIMONI JAMAAH'),
+        heading_prefix: text(next.testimonials?.heading_prefix, 'Apa Kata'),
+        heading_highlight: text(next.testimonials?.heading_highlight, 'Mereka'),
+        heading_suffix: text(next.testimonials?.heading_suffix, '?'),
         heading: text(next.testimonials?.heading, 'Apa Kata Mereka?'),
         description: text(
             next.testimonials?.description,
@@ -449,6 +458,12 @@ export function normalizeLandingPromoContent(
     next.faq = {
         ...next.faq,
         title: text(next.faq?.title, 'PERTANYAAN YANG SERING DIAJUKAN'),
+        heading_prefix: text(next.faq?.heading_prefix, 'Pertanyaan yang'),
+        heading_highlight: text(
+            next.faq?.heading_highlight,
+            'Sering Ditanyakan',
+        ),
+        heading_suffix: text(next.faq?.heading_suffix, ''),
         description: text(
             next.faq?.description,
             'Temukan jawaban untuk pertanyaan yang paling sering ditanyakan calon jamaah.',
@@ -457,6 +472,12 @@ export function normalizeLandingPromoContent(
 
     next.location = {
         title: text(next.location?.title, 'Kunjungi Kantor Kami'),
+        heading_prefix: text(next.location?.heading_prefix, 'Kunjungi'),
+        heading_highlight: text(
+            next.location?.heading_highlight,
+            'Kantor Kami',
+        ),
+        heading_suffix: text(next.location?.heading_suffix, ''),
         description: text(
             next.location?.description,
             'Kami siap melayani konsultasi umroh secara langsung maupun online.',
@@ -465,6 +486,12 @@ export function normalizeLandingPromoContent(
             next.location?.office_hours_title,
             'Jam Operasional',
         ),
+        address_label: text(next.location?.address_label, 'Alamat'),
+        address_empty_label: text(
+            next.location?.address_empty_label,
+            'Alamat belum diatur',
+        ),
+        contact_label: text(next.location?.contact_label, 'Kontak'),
         visit_points: Array.isArray(next.location?.visit_points)
             ? next.location.visit_points
             : [
@@ -495,40 +522,6 @@ export function normalizeLandingPromoContent(
         badges: Array.isArray(next.cta?.badges)
             ? next.cta.badges
             : ['Resmi Kemenag', 'Fast Response', 'Amanah', 'Support 24 Jam'],
-    };
-
-    next.footer = {
-        brand: text(next.footer?.brand, 'ASFAR TOUR'),
-        subtitle: text(next.footer?.subtitle, 'HAJI & UMRAH'),
-        description: text(
-            next.footer?.description,
-            'Jelas Rencananya, Terjamin Amanahnya. Melayani perjalanan umroh dengan sistem transparan & amanah sejak 2015.',
-        ),
-        package_links: Array.isArray(next.footer?.package_links)
-            ? next.footer.package_links
-            : ['Umroh Quad', 'Umroh Triple', 'Umroh Double', 'Custom/Private'],
-        company_links: Array.isArray(next.footer?.company_links)
-            ? next.footer.company_links
-            : ['Tentang Kami', 'Legalitas', 'Kantor', 'Galeri'],
-        legal_links: Array.isArray(next.footer?.legal_links)
-            ? next.footer.legal_links
-            : [
-                  'Syarat & Ketentuan',
-                  'Kebijakan Privasi',
-                  'Kebijakan Refund',
-                  'Disclaimer',
-              ],
-        bottom_links: Array.isArray(next.footer?.bottom_links)
-            ? next.footer.bottom_links
-            : ['Privasi', 'Syarat', 'Refund'],
-        whatsapp_float_label: text(
-            next.footer?.whatsapp_float_label,
-            'Konsultasi Gratis',
-        ),
-        copyright: text(
-            next.footer?.copyright,
-            '© 2026 Asfar Tour · Terdaftar Kemenag RI · PPIU-2026-001 · Jakarta Selatan',
-        ),
     };
 
     next.stats = next.reasons.stats;
@@ -802,6 +795,96 @@ function RepeaterCard({
     );
 }
 
+function TextListEditor({
+    title,
+    description,
+    values,
+    emptyLabel,
+    addLabel,
+    placeholder,
+    onChange,
+}: {
+    title: string;
+    description: string;
+    values: string[];
+    emptyLabel: string;
+    addLabel: string;
+    placeholder: string;
+    onChange: (values: string[]) => void;
+}) {
+    const editableValues = values.map((value) => text(value));
+
+    return (
+        <div className="rounded-2xl border border-[#ead9ce] bg-[#fff8f2] p-4">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p className="text-sm font-semibold text-[#31140f]">
+                        {title}
+                    </p>
+                    <p className="text-xs leading-5 text-[#8a6d63]">
+                        {description}
+                    </p>
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => onChange([...editableValues, ''])}
+                >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {addLabel}
+                </Button>
+            </div>
+
+            {editableValues.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[#e4cfc4] bg-white px-4 py-5 text-center text-sm text-[#8a6d63]">
+                    {emptyLabel}
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {editableValues.map((value, index) => (
+                        <div
+                            key={`trust-point-${index}`}
+                            className="flex items-center gap-3 rounded-2xl border border-[#ead9ce] bg-white p-3"
+                        >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff0e4] text-xs font-black text-[#8c0a16]">
+                                {index + 1}
+                            </span>
+                            <Input
+                                value={value}
+                                placeholder={placeholder}
+                                onChange={(event) => {
+                                    const nextValues = [...editableValues];
+                                    nextValues[index] = event.target.value;
+                                    onChange(nextValues);
+                                }}
+                            />
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 text-destructive hover:text-destructive"
+                                onClick={() =>
+                                    onChange(
+                                        editableValues.filter(
+                                            (_item, itemIndex) =>
+                                                itemIndex !== index,
+                                        ),
+                                    )
+                                }
+                                aria-label={`Hapus poin ${index + 1}`}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function LandingPromoEditor({
     page,
     data,
@@ -834,6 +917,9 @@ export default function LandingPromoEditor({
     const featureCards = Array.isArray(content.hero?.feature_cards)
         ? content.hero.feature_cards
         : [];
+    const heroChecklistItems = Array.isArray(content.hero?.checklist_items)
+        ? content.hero.checklist_items.map((item: unknown) => text(item))
+        : [];
     const reasonItems = Array.isArray(content.reasons?.items)
         ? content.reasons.items
         : [];
@@ -845,9 +931,6 @@ export default function LandingPromoEditor({
         : [];
     const ctaBadges = Array.isArray(content.cta?.badges)
         ? content.cta.badges
-        : [];
-    const navItems = Array.isArray(content.hero?.nav_items)
-        ? content.hero.nav_items
         : [];
     const selectedPackageIds = Array.isArray(
         content.packages?.selected_package_ids,
@@ -867,7 +950,6 @@ export default function LandingPromoEditor({
         { id: 'landing-editor-faq', label: 'FAQ' },
         { id: 'landing-editor-location', label: 'Lokasi' },
         { id: 'landing-editor-cta', label: 'CTA' },
-        { id: 'landing-editor-footer', label: 'Footer' },
     ];
     const selectedPackageLabels = selectedPackageIds
         .map((selectedId: number) =>
@@ -877,15 +959,6 @@ export default function LandingPromoEditor({
             Boolean(item),
         )
         .map((item: PackageOption) => item.name);
-    const footerPackageLinks = Array.isArray(content.footer?.package_links)
-        ? content.footer.package_links
-        : [];
-    const footerCompanyLinks = Array.isArray(content.footer?.company_links)
-        ? content.footer.company_links
-        : [];
-    const footerLegalLinks = Array.isArray(content.footer?.legal_links)
-        ? content.footer.legal_links
-        : [];
 
     void page;
 
@@ -936,7 +1009,7 @@ export default function LandingPromoEditor({
                 sectionId="landing-editor-hero"
                 sectionLabel="Section 01"
                 title="Hero Promo"
-                description="Atur navbar landing, pill promo, judul utama, CTA, harga kamar, dan bar fasilitas hero."
+                description="Atur pill promo, judul utama, CTA, harga kamar, dan bar fasilitas hero."
                 icon={Sparkles}
                 defaultOpen
                 summary={
@@ -946,7 +1019,7 @@ export default function LandingPromoEditor({
                             {heroTitleLines.join(' / ')}
                         </p>
                         <p className="text-xs text-[#8a6d63]">
-                            CTA: {text(content.hero?.cta_label)} | Harga:{' '}
+                            CTA utama: {text(content.hero?.cta_label)} | Harga:{' '}
                             {pricingCards.length} kartu | Benefit hero:{' '}
                             {featureCards.length} item
                         </p>
@@ -954,43 +1027,6 @@ export default function LandingPromoEditor({
                 }
             >
                 <Grid>
-                    <Field
-                        label="Menu Navbar Landing"
-                        hint="Satu baris per menu. Urutan akan tampil dari kiri ke kanan."
-                    >
-                        <Textarea
-                            rows={6}
-                            value={navItems.join('\n')}
-                            onChange={(event) =>
-                                onSetData(
-                                    'hero.nav_items',
-                                    splitTextareaLines(event.target.value),
-                                )
-                            }
-                        />
-                    </Field>
-                    <Field label="Menu Navbar yang Aktif">
-                        <Input
-                            value={text(content.hero?.nav_active_label)}
-                            onChange={(event) =>
-                                onSetData(
-                                    'hero.nav_active_label',
-                                    event.target.value,
-                                )
-                            }
-                        />
-                    </Field>
-                    <Field label="Label Tombol Navbar">
-                        <Input
-                            value={text(content.hero?.navbar_cta_label)}
-                            onChange={(event) =>
-                                onSetData(
-                                    'hero.navbar_cta_label',
-                                    event.target.value,
-                                )
-                            }
-                        />
-                    </Field>
                     <Field label="Badge Hero">
                         <Input
                             value={text(content.hero?.badge)}
@@ -1155,26 +1191,22 @@ export default function LandingPromoEditor({
                             }
                         />
                     </Field>
-                    <Field
-                        label="Poin Kepercayaan Hero"
-                        hint="Satu baris per poin. Contoh: Izin Resmi Kemenag RI"
-                    >
-                        <Textarea
-                            rows={5}
-                            value={
-                                Array.isArray(content.hero?.checklist_items)
-                                    ? content.hero.checklist_items.join('\n')
-                                    : ''
-                            }
-                            onChange={(event) =>
-                                onSetData(
-                                    'hero.checklist_items',
-                                    splitTextareaLines(event.target.value),
-                                )
-                            }
-                        />
-                    </Field>
                 </Grid>
+
+                <TextListEditor
+                    title="Poin Kepercayaan Hero"
+                    description="Poin kecil di bawah tombol hero. Tambah, ubah, atau hapus sesuai kebutuhan landing."
+                    values={heroChecklistItems}
+                    emptyLabel="Belum ada poin kepercayaan. Klik Tambah Poin untuk mulai mengisi."
+                    addLabel="Tambah Poin"
+                    placeholder="Contoh: Izin Resmi Kemenag RI"
+                    onChange={(values) =>
+                        onSetData(
+                            'hero.checklist_items',
+                            values.map((value) => value.trim()),
+                        )
+                    }
+                />
 
                 <ArrayToolbar
                     label="Kartu harga promo di area hero."
@@ -1215,7 +1247,7 @@ export default function LandingPromoEditor({
                 </div>
 
                 <ArrayToolbar
-                    label="Strip benefit di bawah hero."
+                    label="Benefit hero di bawah kartu harga."
                     buttonLabel="Tambah Benefit Hero"
                     onClick={() =>
                         onSetData('hero.feature_cards', [
@@ -1256,9 +1288,10 @@ export default function LandingPromoEditor({
                     <div className="flex items-start gap-2">
                         <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#7a0d17]" />
                         <p>
-                            Urutan hero mengikuti mockup: navbar, badge hero,
-                            judul besar, subtitle, checklist, 3 kartu harga,
-                            badge FREE, lalu strip benefit merah di bawah hero.
+                            Urutan hero mengikuti mockup: navbar internal, badge
+                            hero, judul besar, subtitle, checklist, 3 kartu
+                            harga, badge FREE, lalu strip benefit merah di bawah
+                            hero.
                         </p>
                     </div>
                 </div>
@@ -1308,6 +1341,20 @@ export default function LandingPromoEditor({
                         />
                     </Field>
                     <Field
+                        label="Judul Besar Berwarna"
+                        hint="Bagian judul kedua yang tampil dengan warna oranye."
+                    >
+                        <Input
+                            value={text(content.package_details?.heading2)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'package_details.heading2',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field
                         label="Deskripsi Section Paket"
                         hint="Teks kecil di bawah judul paket."
                     >
@@ -1328,6 +1375,83 @@ export default function LandingPromoEditor({
                             onChange={(event) =>
                                 onSetData(
                                     'packages.more_packages_label',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Label Tombol Tiap Paket">
+                        <Input
+                            value={text(content.packages?.detail_label)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'packages.detail_label',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Satuan Harga">
+                        <Input
+                            value={text(content.packages?.price_unit_label)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'packages.price_unit_label',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Akhiran Durasi">
+                        <Input
+                            value={text(content.packages?.duration_suffix)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'packages.duration_suffix',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Fallback Nama Paket">
+                        <Input
+                            value={text(content.packages?.fallback_name)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'packages.fallback_name',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Fallback Maskapai">
+                        <Input
+                            value={text(content.packages?.fallback_airline)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'packages.fallback_airline',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Fallback Hotel">
+                        <Input
+                            value={text(content.packages?.fallback_hotel)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'packages.fallback_hotel',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Catatan Harga">
+                        <Input
+                            value={text(content.packages?.disclaimer)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'packages.disclaimer',
                                     event.target.value,
                                 )
                             }
@@ -1509,26 +1633,67 @@ export default function LandingPromoEditor({
                                     }
                                 />
                             </Field>
-                            <Field label="Judul Besar Section">
-                                <Textarea
-                                    rows={3}
-                                    value={text(
-                                        content.included?.section_heading,
-                                    )}
-                                    onChange={(event) =>
-                                        onSetData(
-                                            'included.section_heading',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                            </Field>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                <Field label="Judul Kiri">
+                                    <Input
+                                        value={text(
+                                            content.included
+                                                ?.section_heading_prefix,
+                                        )}
+                                        onChange={(event) =>
+                                            onSetData(
+                                                'included.section_heading_prefix',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </Field>
+                                <Field label="Judul Tengah">
+                                    <Input
+                                        value={text(
+                                            content.included
+                                                ?.section_heading_highlight,
+                                        )}
+                                        onChange={(event) =>
+                                            onSetData(
+                                                'included.section_heading_highlight',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </Field>
+                                <Field label="Judul Kanan">
+                                    <Input
+                                        value={text(
+                                            content.included
+                                                ?.section_heading_suffix,
+                                        )}
+                                        onChange={(event) =>
+                                            onSetData(
+                                                'included.section_heading_suffix',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </Field>
+                            </div>
                             <Field label="Judul">
                                 <Input
                                     value={text(content.included?.title)}
                                     onChange={(event) =>
                                         onSetData(
                                             'included.title',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field label="Label Status Kartu">
+                                <Input
+                                    value={text(content.included?.status_label)}
+                                    onChange={(event) =>
+                                        onSetData(
+                                            'included.status_label',
                                             event.target.value,
                                         )
                                     }
@@ -1579,6 +1744,17 @@ export default function LandingPromoEditor({
                                     onChange={(event) =>
                                         onSetData(
                                             'excluded.title',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field label="Label Status Kartu">
+                                <Input
+                                    value={text(content.excluded?.status_label)}
+                                    onChange={(event) =>
+                                        onSetData(
+                                            'excluded.status_label',
                                             event.target.value,
                                         )
                                     }
@@ -1819,7 +1995,13 @@ export default function LandingPromoEditor({
                 summary={
                     <div className="space-y-2">
                         <p className="font-semibold text-[#31140f]">
-                            {text(content.testimonials?.heading)}
+                            {[
+                                text(content.testimonials?.heading_prefix),
+                                text(content.testimonials?.heading_highlight),
+                                text(content.testimonials?.heading_suffix),
+                            ]
+                                .filter(Boolean)
+                                .join(' ')}
                         </p>
                         <p className="text-xs text-[#8a6d63]">
                             Link semua testimoni:{' '}
@@ -1851,17 +2033,47 @@ export default function LandingPromoEditor({
                             }
                         />
                     </Field>
-                    <Field label="Judul Besar Testimoni">
-                        <Input
-                            value={text(content.testimonials?.heading)}
-                            onChange={(event) =>
-                                onSetData(
-                                    'testimonials.heading',
-                                    event.target.value,
-                                )
-                            }
-                        />
-                    </Field>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        <Field label="Judul Kiri">
+                            <Input
+                                value={text(
+                                    content.testimonials?.heading_prefix,
+                                )}
+                                onChange={(event) =>
+                                    onSetData(
+                                        'testimonials.heading_prefix',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field label="Judul Tengah">
+                            <Input
+                                value={text(
+                                    content.testimonials?.heading_highlight,
+                                )}
+                                onChange={(event) =>
+                                    onSetData(
+                                        'testimonials.heading_highlight',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field label="Judul Kanan">
+                            <Input
+                                value={text(
+                                    content.testimonials?.heading_suffix,
+                                )}
+                                onChange={(event) =>
+                                    onSetData(
+                                        'testimonials.heading_suffix',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                    </div>
                     <Field label="Deskripsi Testimoni">
                         <Textarea
                             rows={3}
@@ -1935,6 +2147,41 @@ export default function LandingPromoEditor({
                         }
                     />
                 </Field>
+                <div className="grid gap-3 sm:grid-cols-3">
+                    <Field label="Judul Kiri">
+                        <Input
+                            value={text(content.faq?.heading_prefix)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'faq.heading_prefix',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Judul Tengah">
+                        <Input
+                            value={text(content.faq?.heading_highlight)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'faq.heading_highlight',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Judul Kanan">
+                        <Input
+                            value={text(content.faq?.heading_suffix)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'faq.heading_suffix',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                </div>
             </SectionCard>
 
             <SectionCard
@@ -1976,12 +2223,82 @@ export default function LandingPromoEditor({
                             }
                         />
                     </Field>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                        <Field label="Judul Kiri">
+                            <Input
+                                value={text(content.location?.heading_prefix)}
+                                onChange={(event) =>
+                                    onSetData(
+                                        'location.heading_prefix',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field label="Judul Tengah">
+                            <Input
+                                value={text(
+                                    content.location?.heading_highlight,
+                                )}
+                                onChange={(event) =>
+                                    onSetData(
+                                        'location.heading_highlight',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                        <Field label="Judul Kanan">
+                            <Input
+                                value={text(content.location?.heading_suffix)}
+                                onChange={(event) =>
+                                    onSetData(
+                                        'location.heading_suffix',
+                                        event.target.value,
+                                    )
+                                }
+                            />
+                        </Field>
+                    </div>
                     <Field label="Judul Jam Operasional">
                         <Input
                             value={text(content.location?.office_hours_title)}
                             onChange={(event) =>
                                 onSetData(
                                     'location.office_hours_title',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Label Alamat">
+                        <Input
+                            value={text(content.location?.address_label)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'location.address_label',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Teks Jika Alamat Kosong">
+                        <Input
+                            value={text(content.location?.address_empty_label)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'location.address_empty_label',
+                                    event.target.value,
+                                )
+                            }
+                        />
+                    </Field>
+                    <Field label="Label Kontak">
+                        <Input
+                            value={text(content.location?.contact_label)}
+                            onChange={(event) =>
+                                onSetData(
+                                    'location.contact_label',
                                     event.target.value,
                                 )
                             }
@@ -2098,163 +2415,6 @@ export default function LandingPromoEditor({
                             onChange={(event) =>
                                 onSetData(
                                     'cta.badges',
-                                    splitTextareaLines(event.target.value),
-                                )
-                            }
-                        />
-                    </Field>
-                </Grid>
-            </SectionCard>
-
-            <SectionCard
-                sectionId="landing-editor-footer"
-                sectionLabel="Section 10"
-                title="Footer Landing"
-                description="Footer khusus landing promo."
-                icon={FileText}
-                defaultOpen={false}
-                summary={
-                    <div className="space-y-2">
-                        <p className="font-semibold text-[#31140f]">
-                            {text(content.footer?.brand)} •{' '}
-                            {text(content.footer?.subtitle)}
-                        </p>
-                        <p className="text-xs text-[#8a6d63]">
-                            Paket:{' '}
-                            {summarizeItems(
-                                footerPackageLinks,
-                                'Belum ada link paket',
-                            )}{' '}
-                            | Perusahaan:{' '}
-                            {summarizeItems(
-                                footerCompanyLinks,
-                                'Belum ada link perusahaan',
-                            )}{' '}
-                            | Legal:{' '}
-                            {summarizeItems(
-                                footerLegalLinks,
-                                'Belum ada link legal',
-                            )}
-                        </p>
-                    </div>
-                }
-            >
-                <Grid>
-                    <Field label="Brand Footer">
-                        <Input
-                            value={text(content.footer?.brand)}
-                            onChange={(event) =>
-                                onSetData('footer.brand', event.target.value)
-                            }
-                        />
-                    </Field>
-                    <Field label="Subtitle Footer">
-                        <Input
-                            value={text(content.footer?.subtitle)}
-                            onChange={(event) =>
-                                onSetData('footer.subtitle', event.target.value)
-                            }
-                        />
-                    </Field>
-                    <Field label="Deskripsi Footer">
-                        <Textarea
-                            rows={3}
-                            value={text(content.footer?.description)}
-                            onChange={(event) =>
-                                onSetData(
-                                    'footer.description',
-                                    event.target.value,
-                                )
-                            }
-                        />
-                    </Field>
-                    <Field label="Label Floating WhatsApp">
-                        <Input
-                            value={text(content.footer?.whatsapp_float_label)}
-                            onChange={(event) =>
-                                onSetData(
-                                    'footer.whatsapp_float_label',
-                                    event.target.value,
-                                )
-                            }
-                        />
-                    </Field>
-                    <Field label="Copyright Footer">
-                        <Input
-                            value={text(content.footer?.copyright)}
-                            onChange={(event) =>
-                                onSetData(
-                                    'footer.copyright',
-                                    event.target.value,
-                                )
-                            }
-                        />
-                    </Field>
-                    <Field label="Link Kolom Paket" hint="Satu baris per link.">
-                        <Textarea
-                            rows={5}
-                            value={
-                                Array.isArray(content.footer?.package_links)
-                                    ? content.footer.package_links.join('\n')
-                                    : ''
-                            }
-                            onChange={(event) =>
-                                onSetData(
-                                    'footer.package_links',
-                                    splitTextareaLines(event.target.value),
-                                )
-                            }
-                        />
-                    </Field>
-                    <Field
-                        label="Link Kolom Perusahaan"
-                        hint="Satu baris per link."
-                    >
-                        <Textarea
-                            rows={5}
-                            value={
-                                Array.isArray(content.footer?.company_links)
-                                    ? content.footer.company_links.join('\n')
-                                    : ''
-                            }
-                            onChange={(event) =>
-                                onSetData(
-                                    'footer.company_links',
-                                    splitTextareaLines(event.target.value),
-                                )
-                            }
-                        />
-                    </Field>
-                    <Field label="Link Kolom Legal" hint="Satu baris per link.">
-                        <Textarea
-                            rows={5}
-                            value={
-                                Array.isArray(content.footer?.legal_links)
-                                    ? content.footer.legal_links.join('\n')
-                                    : ''
-                            }
-                            onChange={(event) =>
-                                onSetData(
-                                    'footer.legal_links',
-                                    splitTextareaLines(event.target.value),
-                                )
-                            }
-                        />
-                    </Field>
-                    <Field
-                        label="Link Footer Bawah"
-                        hint="Satu baris per link."
-                    >
-                        <Textarea
-                            rows={4}
-                            value={
-                                Array.isArray(content.footer?.bottom_links)
-                                    ? content.footer.bottom_links.join('\n')
-                                    : ''
-                            }
-                            onChange={(event) =>
-                                onSetData(
-                                    'footer.bottom_links',
                                     splitTextareaLines(event.target.value),
                                 )
                             }
