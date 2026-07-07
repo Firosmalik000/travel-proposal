@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Administrator;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Services\PackageRoomConfigurationService;
 use App\Services\PdfBrandingService;
 use App\Services\PdfRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,6 +19,7 @@ class FinancialReportController extends Controller
     public function __construct(
         private readonly PdfRenderer $pdfRenderer,
         private readonly PdfBrandingService $pdfBrandingService,
+        private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
     ) {}
 
     public function index(Request $request): Response
@@ -91,23 +94,27 @@ class FinancialReportController extends Controller
         $regularByCurrency = $bookingType === 'custom'
             ? []
             : Booking::query()
-                ->join('packages', 'bookings.package_id', '=', 'packages.id')
+                ->with('package:id,price,currency,content')
                 ->where('bookings.booking_type', 'regular')
                 ->when($status !== 'all', fn ($query) => $query->where('bookings.status', $status))
-                ->selectRaw('packages.currency as currency')
-                ->selectRaw('COUNT(bookings.id) as bookings')
-                ->selectRaw('COALESCE(SUM(bookings.passenger_count), 0) as pax')
-                ->selectRaw('COALESCE(SUM(bookings.passenger_count * packages.price), 0) as amount')
-                ->groupBy('packages.currency')
-                ->orderByDesc(DB::raw('amount'))
                 ->get()
-                ->map(fn ($row): array => [
-                    'currency' => (string) ($row->currency ?: 'IDR'),
-                    'amount' => (float) ($row->amount ?? 0),
-                    'pax' => (int) ($row->pax ?? 0),
-                    'bookings' => (int) ($row->bookings ?? 0),
-                    'booking_type' => 'regular',
-                ])
+                ->groupBy(fn (Booking $booking): string => (string) ($booking->package?->currency ?: 'IDR'))
+                ->map(function ($bookings, string $currency): array {
+                    $bookingCollection = $bookings instanceof Collection
+                        ? $bookings
+                        : collect($bookings);
+
+                    return [
+                        'currency' => $currency,
+                        'amount' => (float) $bookingCollection->sum(
+                            fn (Booking $booking): float => $this->packageRoomConfigurationService->calculateBookingAmount($booking),
+                        ),
+                        'pax' => (int) $bookingCollection->sum('passenger_count'),
+                        'bookings' => $bookingCollection->count(),
+                        'booking_type' => 'regular',
+                    ];
+                })
+                ->sortByDesc('amount')
                 ->values()
                 ->all();
 

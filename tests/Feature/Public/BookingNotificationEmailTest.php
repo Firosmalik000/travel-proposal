@@ -39,6 +39,12 @@ class BookingNotificationEmailTest extends TestCase
             'email' => 'customer@example.com',
             'origin_city' => 'Bandung',
             'passenger_count' => 2,
+            'room_configuration' => [
+                'single' => 0,
+                'double' => 1,
+                'triple' => 0,
+                'quad' => 0,
+            ],
             'notes' => 'Catatan',
         ])->assertRedirect();
 

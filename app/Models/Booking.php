@@ -28,6 +28,7 @@ class Booking extends Model
         'email',
         'origin_city',
         'passenger_count',
+        'room_configuration',
         'notes',
         'status',
     ];
@@ -36,6 +37,7 @@ class Booking extends Model
     {
         return [
             'passenger_count' => 'integer',
+            'room_configuration' => 'array',
             'custom_departure_date' => 'date',
             'custom_return_date' => 'date',
             'custom_unit_price' => 'integer',

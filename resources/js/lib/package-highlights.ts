@@ -154,8 +154,58 @@ export function normalizePackageHighlights(
 export function normalizePackageContent(
     content: Record<string, any>,
 ): Record<string, any> {
+    const roomPrices =
+        typeof content.room_prices === 'object' && content.room_prices !== null
+            ? content.room_prices
+            : {};
+    const roomOriginalPrices =
+        typeof content.room_original_prices === 'object' &&
+        content.room_original_prices !== null
+            ? content.room_original_prices
+            : {};
+
     return {
         ...content,
         highlights: normalizePackageHighlights(content),
+        room_prices: {
+            dbl:
+                roomPrices.dbl !== null &&
+                roomPrices.dbl !== undefined &&
+                roomPrices.dbl !== ''
+                    ? Number(roomPrices.dbl)
+                    : null,
+            trpl:
+                roomPrices.trpl !== null &&
+                roomPrices.trpl !== undefined &&
+                roomPrices.trpl !== ''
+                    ? Number(roomPrices.trpl)
+                    : null,
+            quad:
+                roomPrices.quad !== null &&
+                roomPrices.quad !== undefined &&
+                roomPrices.quad !== ''
+                    ? Number(roomPrices.quad)
+                    : null,
+        },
+        room_original_prices: {
+            dbl:
+                roomOriginalPrices.dbl !== null &&
+                roomOriginalPrices.dbl !== undefined &&
+                roomOriginalPrices.dbl !== ''
+                    ? Number(roomOriginalPrices.dbl)
+                    : null,
+            trpl:
+                roomOriginalPrices.trpl !== null &&
+                roomOriginalPrices.trpl !== undefined &&
+                roomOriginalPrices.trpl !== ''
+                    ? Number(roomOriginalPrices.trpl)
+                    : null,
+            quad:
+                roomOriginalPrices.quad !== null &&
+                roomOriginalPrices.quad !== undefined &&
+                roomOriginalPrices.quad !== ''
+                    ? Number(roomOriginalPrices.quad)
+                    : null,
+        },
     };
 }

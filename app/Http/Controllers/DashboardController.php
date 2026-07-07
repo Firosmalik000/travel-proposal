@@ -8,6 +8,7 @@ use App\Models\DepartureSchedule;
 use App\Models\PageContent;
 use App\Models\Testimonial;
 use App\Models\TravelPackage;
+use App\Services\PackageRoomConfigurationService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,10 @@ use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
+    ) {}
+
     public function index(): Response
     {
         return Inertia::render('dashboard');
@@ -39,10 +44,11 @@ class DashboardController extends Controller
             ->whereNotNull('packages.currency')
             ->value('packages.currency') ?? 'IDR';
 
-        $estimatedRevenue = (float) (Booking::query()
-            ->join('packages', 'bookings.package_id', '=', 'packages.id')
+        $estimatedRevenue = (float) Booking::query()
+            ->with('package:id,price,currency,content')
             ->where('bookings.status', 'registered')
-            ->sum(DB::raw('bookings.passenger_count * packages.price')) ?? 0);
+            ->get()
+            ->sum(fn (Booking $booking): float => $this->packageRoomConfigurationService->calculateBookingAmount($booking));
 
         $todayKey = Carbon::today()->toDateString();
         $dailyPublicVisits = (int) Cache::get('analytics.public.daily_visits.'.$todayKey, 0);

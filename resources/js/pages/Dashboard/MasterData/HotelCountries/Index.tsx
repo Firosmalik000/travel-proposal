@@ -225,7 +225,7 @@ export default function HotelCountriesIndex({
                                                                     onClick={() => {
                                                                         if (
                                                                             window.confirm(
-                                                                                `Hapus negara \"${item.name}\"?`,
+                                                                                `Hapus negara "${item.name}"?`,
                                                                             )
                                                                         ) {
                                                                             router.delete(

@@ -44,6 +44,13 @@ type PackageTestimonial = {
     [key: string]: any;
 };
 
+type RoomTypePriceRow = {
+    type: 'single' | 'double' | 'triple' | 'quad';
+    label: string;
+    sellingPrice: number;
+    originalPrice: number | null;
+};
+
 const typeConfig: Record<string, { label: string; color: string }> = {
     reguler: { label: 'Reguler', color: 'bg-blue-100 text-blue-700' },
     vip: { label: 'VIP', color: 'bg-amber-100 text-amber-700' },
@@ -62,6 +69,20 @@ function toStringArray(val: unknown): string[] {
     if (Array.isArray(val)) return val.filter(Boolean);
     if (typeof val === 'string') return val.split('\n').filter(Boolean);
     return [];
+}
+
+function normalizeNumericValue(value: unknown): number | null {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string' && value.trim() !== '') {
+        const parsedValue = Number(value);
+
+        return Number.isFinite(parsedValue) ? parsedValue : null;
+    }
+
+    return null;
 }
 
 export default function PaketDetail() {
@@ -140,6 +161,76 @@ export default function PaketDetail() {
             : content.excluded,
     );
     const policy = localize(content.policy, locale);
+    const roomPrices = {
+        single: normalizeNumericValue(safePackage.price) ?? 0,
+        double:
+            normalizeNumericValue(content?.room_prices?.dbl) ??
+            normalizeNumericValue(safePackage.price) ??
+            0,
+        triple:
+            normalizeNumericValue(content?.room_prices?.trpl) ??
+            normalizeNumericValue(safePackage.price) ??
+            0,
+        quad:
+            normalizeNumericValue(content?.room_prices?.quad) ??
+            normalizeNumericValue(safePackage.price) ??
+            0,
+    };
+    const roomOriginalPrices = {
+        single:
+            normalizeNumericValue(safePackage.original_price) ??
+            normalizeNumericValue(safePackage.price),
+        double:
+            normalizeNumericValue(content?.room_original_prices?.dbl) ??
+            normalizeNumericValue(safePackage.original_price) ??
+            normalizeNumericValue(safePackage.price),
+        triple:
+            normalizeNumericValue(content?.room_original_prices?.trpl) ??
+            normalizeNumericValue(safePackage.original_price) ??
+            normalizeNumericValue(safePackage.price),
+        quad:
+            normalizeNumericValue(content?.room_original_prices?.quad) ??
+            normalizeNumericValue(safePackage.original_price) ??
+            normalizeNumericValue(safePackage.price),
+    };
+    const roomTypePrices: RoomTypePriceRow[] = [
+        {
+            type: 'single',
+            label: 'Single',
+            sellingPrice: roomPrices.single,
+            originalPrice:
+                roomOriginalPrices.single !== roomPrices.single
+                    ? roomOriginalPrices.single
+                    : null,
+        },
+        {
+            type: 'double',
+            label: 'Double',
+            sellingPrice: roomPrices.double,
+            originalPrice:
+                roomOriginalPrices.double !== roomPrices.double
+                    ? roomOriginalPrices.double
+                    : null,
+        },
+        {
+            type: 'triple',
+            label: 'Triple',
+            sellingPrice: roomPrices.triple,
+            originalPrice:
+                roomOriginalPrices.triple !== roomPrices.triple
+                    ? roomOriginalPrices.triple
+                    : null,
+        },
+        {
+            type: 'quad',
+            label: 'Quad',
+            sellingPrice: roomPrices.quad,
+            originalPrice:
+                roomOriginalPrices.quad !== roomPrices.quad
+                    ? roomOriginalPrices.quad
+                    : null,
+        },
+    ];
     const packageHighlights = normalizePackageHighlights(content);
     const CalendarDaysIcon = packageHighlightIconMap.CalendarDays;
     const MapPinIcon = packageHighlightIconMap.MapPin;
@@ -186,7 +277,10 @@ export default function PaketDetail() {
             });
     })();
 
-    const openSchedules = (safePackage.schedules ?? []).filter(
+    const upcomingSchedules = Array.isArray(safePackage.schedules)
+        ? safePackage.schedules
+        : [];
+    const openSchedules = upcomingSchedules.filter(
         (s: PackageSchedule) => s.status === 'open',
     );
     const nextSchedule = openSchedules[0] ?? null;
@@ -262,9 +356,9 @@ export default function PaketDetail() {
             {/* Hero */}
             <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-6 sm:px-6">
                 <MotionCard className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-                    <div className="grid lg:grid-cols-2">
+                    <div className="grid lg:grid-cols-2 lg:items-stretch">
                         {/* Image */}
-                        <div className="relative h-64 overflow-hidden lg:h-auto lg:min-h-[420px]">
+                        <div className="relative aspect-[4/3] overflow-hidden sm:aspect-[16/10] lg:aspect-auto lg:h-[520px]">
                             <img
                                 src={
                                     packageImages[activeImageIndex] ||
@@ -272,7 +366,7 @@ export default function PaketDetail() {
                                     '/images/dummy.jpg'
                                 }
                                 alt={name}
-                                className="h-full w-full object-cover"
+                                className="block h-full w-full object-cover object-center"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent lg:bg-gradient-to-r" />
                             {/* Discount ribbon */}
@@ -294,7 +388,7 @@ export default function PaketDetail() {
                                                     setActiveImageIndex(index)
                                                 }
                                                 aria-label={`Lihat foto ${index + 1}`}
-                                                className={`h-12 w-16 shrink-0 overflow-hidden rounded-xl ring-2 transition ${index === activeImageIndex ? 'ring-white' : 'ring-white/20 hover:ring-white/40'}`}
+                                                className={`aspect-[4/3] h-12 w-16 shrink-0 overflow-hidden rounded-xl ring-2 transition ${index === activeImageIndex ? 'ring-white' : 'ring-white/20 hover:ring-white/40'}`}
                                             >
                                                 <img
                                                     src={
@@ -302,7 +396,7 @@ export default function PaketDetail() {
                                                         '/images/dummy.jpg'
                                                     }
                                                     alt=""
-                                                    className="h-full w-full object-cover"
+                                                    className="block h-full w-full object-cover object-center"
                                                     loading="lazy"
                                                 />
                                             </button>
@@ -501,6 +595,43 @@ export default function PaketDetail() {
                                     per jamaah
                                 </p>
 
+                                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                                    {roomTypePrices.map((roomType) => (
+                                        <div
+                                            key={roomType.type}
+                                            className="rounded-xl bg-muted/30 px-3 py-2.5"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                                                        {roomType.label}
+                                                    </p>
+                                                    <p className="mt-1 text-sm font-bold text-foreground sm:text-base">
+                                                        {formatPrice(
+                                                            roomType.sellingPrice,
+                                                            locale,
+                                                            pkg.currency,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                {roomType.originalPrice ? (
+                                                    <span className="text-xs text-muted-foreground line-through">
+                                                        {formatPrice(
+                                                            roomType.originalPrice,
+                                                            locale,
+                                                            pkg.currency,
+                                                        )}
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                            <p className="mt-1 text-[11px] text-muted-foreground">
+                                                Harga per jamaah untuk kamar{' '}
+                                                {roomType.label.toLowerCase()}.
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+
                                 {nextSchedule && (
                                     <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
                                         <CalendarDaysIcon className="h-4 w-4" />
@@ -539,75 +670,80 @@ export default function PaketDetail() {
             </MotionSection>
 
             {/* Jadwal */}
-            {pkg.schedules?.length > 0 && (
+            {upcomingSchedules.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
                     <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
                         <CalendarDaysIcon className="h-5 w-5 text-primary" />
                         Jadwal Keberangkatan
                     </h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {pkg.schedules.map((s: PackageSchedule, i: number) => {
-                            const statusColor =
-                                s.status === 'open'
-                                    ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30'
-                                    : s.status === 'full'
-                                      ? 'text-amber-600 bg-amber-50'
-                                      : 'text-red-600 bg-red-50';
-                            const seatPct =
-                                s.seats_total > 0
-                                    ? Math.round(
-                                          (s.seats_available / s.seats_total) *
-                                              100,
-                                      )
-                                    : 0;
-                            return (
-                                <div
-                                    key={i}
-                                    className="rounded-xl border border-border bg-card p-4"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <span className="font-semibold text-foreground">
-                                            {s.departure_date}
-                                        </span>
-                                        <span
-                                            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}
-                                        >
-                                            {s.status === 'open'
-                                                ? 'Open'
-                                                : s.status === 'full'
-                                                  ? 'Full'
-                                                  : 'Closed'}
-                                        </span>
-                                    </div>
-                                    {s.return_date && (
-                                        <p className="mt-0.5 text-xs text-muted-foreground">
-                                            Pulang: {s.return_date}
-                                        </p>
-                                    )}
-                                    <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                                        <MapPinIcon className="h-3.5 w-3.5" />
-                                        {s.departure_city}
-                                    </p>
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                            <div
-                                                className={`h-full rounded-full ${seatPct > 50 ? 'bg-emerald-500' : seatPct > 20 ? 'bg-amber-500' : 'bg-red-500'}`}
-                                                style={{ width: `${seatPct}%` }}
-                                            />
+                        {upcomingSchedules.map(
+                            (s: PackageSchedule, i: number) => {
+                                const statusColor =
+                                    s.status === 'open'
+                                        ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30'
+                                        : s.status === 'full'
+                                          ? 'text-amber-600 bg-amber-50'
+                                          : 'text-red-600 bg-red-50';
+                                const seatPct =
+                                    s.seats_total > 0
+                                        ? Math.round(
+                                              (s.seats_available /
+                                                  s.seats_total) *
+                                                  100,
+                                          )
+                                        : 0;
+                                return (
+                                    <div
+                                        key={i}
+                                        className="rounded-xl border border-border bg-card p-4"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-semibold text-foreground">
+                                                {s.departure_date}
+                                            </span>
+                                            <span
+                                                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}
+                                            >
+                                                {s.status === 'open'
+                                                    ? 'Open'
+                                                    : s.status === 'full'
+                                                      ? 'Full'
+                                                      : 'Closed'}
+                                            </span>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">
-                                            {s.seats_available}/{s.seats_total}{' '}
-                                            seat
-                                        </span>
-                                    </div>
-                                    {s.notes && (
-                                        <p className="mt-1.5 text-xs text-muted-foreground italic">
-                                            {s.notes}
+                                        {s.return_date && (
+                                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                                Pulang: {s.return_date}
+                                            </p>
+                                        )}
+                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                                            <MapPinIcon className="h-3.5 w-3.5" />
+                                            {s.departure_city}
                                         </p>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                                                <div
+                                                    className={`h-full rounded-full ${seatPct > 50 ? 'bg-emerald-500' : seatPct > 20 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                    style={{
+                                                        width: `${seatPct}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                            <span className="text-xs text-muted-foreground">
+                                                {s.seats_available}/
+                                                {s.seats_total} seat
+                                            </span>
+                                        </div>
+                                        {s.notes && (
+                                            <p className="mt-1.5 text-xs text-muted-foreground italic">
+                                                {s.notes}
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            },
+                        )}
                     </div>
                 </section>
             )}
@@ -979,26 +1115,46 @@ export default function PaketDetail() {
 
                                     {Array.isArray(t.photos) &&
                                         t.photos.length > 0 && (
-                                            <div className="mt-4 grid grid-cols-3 gap-2">
+                                            <div className="mt-4 flex h-28 gap-2 overflow-hidden sm:h-32">
                                                 {t.photos
-                                                    .slice(0, 6)
+                                                    .slice(0, 3)
                                                     .map(
                                                         (
                                                             src: string,
                                                             index: number,
-                                                        ) => (
-                                                            <div
-                                                                key={`${src}-${index}`}
-                                                                className="aspect-square overflow-hidden rounded-xl border border-border bg-muted"
-                                                            >
-                                                                <img
-                                                                    src={src}
-                                                                    alt={`Foto testimoni ${t.name}`}
-                                                                    className="h-full w-full object-cover"
-                                                                    loading="lazy"
-                                                                />
-                                                            </div>
-                                                        ),
+                                                        ) => {
+                                                            const remainingPhotos =
+                                                                t.photos
+                                                                    .length - 3;
+                                                            const showOverlay =
+                                                                index === 2 &&
+                                                                remainingPhotos >
+                                                                    0;
+
+                                                            return (
+                                                                <div
+                                                                    key={`${src}-${index}`}
+                                                                    className="relative min-w-0 flex-1 overflow-hidden rounded-xl border border-border bg-muted"
+                                                                >
+                                                                    <img
+                                                                        src={
+                                                                            src
+                                                                        }
+                                                                        alt={`Foto testimoni ${t.name}`}
+                                                                        className="h-full w-full object-cover"
+                                                                        loading="lazy"
+                                                                    />
+                                                                    {showOverlay ? (
+                                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-base font-bold text-white">
+                                                                            +
+                                                                            {
+                                                                                remainingPhotos
+                                                                            }
+                                                                        </div>
+                                                                    ) : null}
+                                                                </div>
+                                                            );
+                                                        },
                                                     )}
                                             </div>
                                         )}

@@ -88,6 +88,14 @@ class StorePackageRequest extends FormRequest
 
             $this->merge(['itineraries' => $normalizedItineraries]);
         }
+
+        $productMultipliers = $this->input('product_multipliers');
+        if (is_string($productMultipliers)) {
+            $decoded = json_decode($productMultipliers, true);
+            $this->merge([
+                'product_multipliers' => is_array($decoded) ? $decoded : [],
+            ]);
+        }
     }
 
     public function rules(): array
@@ -113,6 +121,14 @@ class StorePackageRequest extends FormRequest
             'existing_images.*' => ['string'],
             'summary' => ['nullable', 'string'],
             'content' => ['nullable', 'array'],
+            'content.room_original_prices' => ['nullable', 'array'],
+            'content.room_original_prices.dbl' => ['nullable', 'numeric', 'min:0'],
+            'content.room_original_prices.trpl' => ['nullable', 'numeric', 'min:0'],
+            'content.room_original_prices.quad' => ['nullable', 'numeric', 'min:0'],
+            'content.room_prices' => ['nullable', 'array'],
+            'content.room_prices.dbl' => ['nullable', 'numeric', 'min:0'],
+            'content.room_prices.trpl' => ['nullable', 'numeric', 'min:0'],
+            'content.room_prices.quad' => ['nullable', 'numeric', 'min:0'],
             'itineraries' => ['nullable', 'array'],
             'itineraries.*.activity_id' => ['nullable', 'integer', 'exists:activities,id'],
             'itineraries.*.activity_ids' => ['nullable', 'array'],
@@ -125,6 +141,8 @@ class StorePackageRequest extends FormRequest
             'itineraries.*.product_ids.*' => ['integer', 'exists:products,id'],
             'product_ids' => ['nullable', 'array'],
             'product_ids.*' => ['integer', 'exists:products,id'],
+            'product_multipliers' => ['nullable', 'array'],
+            'product_multipliers.*' => ['integer', 'min:1'],
             'is_featured' => ['boolean'],
             'is_active' => ['boolean'],
         ];

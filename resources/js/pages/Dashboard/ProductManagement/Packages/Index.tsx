@@ -23,11 +23,17 @@ import { toast } from 'sonner';
 import { PackageCard } from './PackageCard';
 import { PackageForm } from './PackageForm';
 import { SchedulePanel } from './SchedulePanel';
-import type { ActivityOption, Package, ProductOption } from './types';
+import type {
+    ActivityOption,
+    CurrencyOption,
+    Package,
+    ProductOption,
+} from './types';
 
 type Props = {
     packages: Package[];
     productOptions: ProductOption[];
+    currencies: CurrencyOption[];
     activityOptions: ActivityOption[];
     packageImageUploadMaxKilobytes: number;
 };
@@ -35,6 +41,7 @@ type Props = {
 export default function PackagesIndex({
     packages: packageList,
     productOptions,
+    currencies,
     activityOptions,
     packageImageUploadMaxKilobytes,
 }: Props) {
@@ -47,6 +54,7 @@ export default function PackagesIndex({
     const safeProductOptions = Array.isArray(productOptions)
         ? productOptions
         : [];
+    const safeCurrencies = Array.isArray(currencies) ? currencies : [];
     const safeActivityOptions = Array.isArray(activityOptions)
         ? activityOptions
         : [];
@@ -289,6 +297,7 @@ export default function PackagesIndex({
                         <PackageForm
                             pkg={editingPackage}
                             productOptions={safeProductOptions}
+                            currencies={safeCurrencies}
                             activityOptions={safeActivityOptions}
                             packageImageUploadMaxKilobytes={
                                 packageImageUploadMaxKilobytes

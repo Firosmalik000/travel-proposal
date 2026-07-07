@@ -16,6 +16,7 @@ class StorePackageCostCalculationRequest extends FormRequest
     {
         return [
             'travel_package_id' => ['required', 'integer', 'exists:packages,id'],
+            'calculation_mode' => ['nullable', 'string', Rule::in(['legacy_assignment', 'per_pax_multiplier'])],
             'departure_schedule_id' => [
                 'nullable',
                 'integer',

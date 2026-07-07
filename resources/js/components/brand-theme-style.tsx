@@ -14,52 +14,51 @@ export default function BrandThemeStyle() {
                 --brand-surface: ${branding.palette.surface};
                 
                 /* Main Layout */
-                --background: color-mix(in srgb, ${branding.palette.surface} 96%, ${branding.palette.secondary} 4%);
-                --foreground: #2d1810;
-                
+                --background: #f5f7fb;
+                --foreground: #0f172a;
+
                 --card: #ffffff;
-                --card-foreground: #2d1810;
-                
+                --card-foreground: #0f172a;
+
                 --popover: #ffffff;
-                --popover-foreground: #2d1810;
-                
-                /* Mapping Primary & Secondary */
-                --primary: ${branding.palette.primary};
+                --popover-foreground: #0f172a;
+
+                /* Admin Control Colors */
+                --primary: #0f172a;
                 --primary-foreground: #ffffff;
-                
-                --secondary: ${branding.palette.secondary};
+
+                --secondary: #0f172a;
                 --secondary-foreground: #ffffff;
-                
-                --muted: color-mix(in srgb, ${branding.palette.secondary} 10%, white);
-                --muted-foreground: ${branding.palette.secondary}d9;
-                
-                /* Mapping Accents */
-                --accent: ${branding.palette.accent};
+
+                --muted: #eef2f7;
+                --muted-foreground: #64748b;
+
+                --accent: ${branding.palette.primary};
                 --accent-foreground: #ffffff;
-                
-                --border: ${branding.palette.secondary}33;
-                --input: ${branding.palette.secondary}40;
-                --ring: ${branding.palette.secondary};
-                
+
+                --border: #dbe3ee;
+                --input: #dbe3ee;
+                --ring: #0f172a;
+
                 --radius: 1rem;
 
-                /* Sidebar - Using Secondary & Accents */
-                --sidebar: color-mix(in srgb, ${branding.palette.secondary} 8%, #ffffff);
-                --sidebar-foreground: #1f2937;
-                --sidebar-primary: ${branding.palette.secondary};
+                /* Sidebar */
+                --sidebar: #121826;
+                --sidebar-foreground: #f8fafc;
+                --sidebar-primary: #f8fafc;
                 --sidebar-primary-foreground: #ffffff;
-                --sidebar-accent: color-mix(in srgb, ${branding.palette.secondary} 12%, #ffffff);
-                --sidebar-accent-foreground: #1f2937;
-                --sidebar-border: color-mix(in srgb, ${branding.palette.secondary} 18%, #d1d5db);
-                --sidebar-ring: ${branding.palette.secondary};
+                --sidebar-accent: rgba(255, 255, 255, 0.08);
+                --sidebar-accent-foreground: #f8fafc;
+                --sidebar-border: rgba(255, 255, 255, 0.1);
+                --sidebar-ring: #f8fafc;
 
                 /* Admin Specific Elements */
-                --admin-header-bg: color-mix(in srgb, ${branding.palette.surface} 98%, ${branding.palette.secondary} 2%);
-                --admin-card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
-                
+                --admin-header-bg: #171d27;
+                --admin-card-shadow: 0 12px 30px -22px rgba(15, 23, 42, 0.22);
+
                 /* Interactive Colors */
-                --active-item-bg: ${branding.palette.secondary}2e;
-                --hover-item-bg: ${branding.palette.secondary}20;
+                --active-item-bg: rgba(15, 23, 42, 0.08);
+                --hover-item-bg: rgba(15, 23, 42, 0.05);
             }
 
             .dark {
@@ -72,32 +71,32 @@ export default function BrandThemeStyle() {
                 --popover: #171d27;
                 --popover-foreground: #eef2f8;
 
-                --primary: ${branding.palette.secondary};
-                --primary-foreground: #ffffff;
+                --primary: #f8fafc;
+                --primary-foreground: #0f172a;
 
-                --secondary: color-mix(in srgb, ${branding.palette.secondary} 62%, #111827);
+                --secondary: #242c3a;
                 --secondary-foreground: #e5e7eb;
 
                 --muted: #202836;
                 --muted-foreground: #a9b3c4;
 
-                --accent: ${branding.palette.accent};
+                --accent: ${branding.palette.primary};
                 --accent-foreground: #111826;
 
                 --border: #2c3648;
                 --input: #2c3648;
-                --ring: ${branding.palette.secondary};
+                --ring: #eef2f8;
 
-                --sidebar: color-mix(in srgb, ${branding.palette.secondary} 26%, #0f172a);
-                --sidebar-foreground: #fff7f5;
-                --sidebar-primary: ${branding.palette.secondary};
-                --sidebar-primary-foreground: #ffffff;
-                --sidebar-accent: color-mix(in srgb, ${branding.palette.secondary} 24%, #111827);
-                --sidebar-accent-foreground: #fff7f5;
-                --sidebar-border: color-mix(in srgb, ${branding.palette.secondary} 30%, #111827);
-                --sidebar-ring: ${branding.palette.secondary};
+                --sidebar: #121826;
+                --sidebar-foreground: #e8edf7;
+                --sidebar-primary: #f8fafc;
+                --sidebar-primary-foreground: #0f172a;
+                --sidebar-accent: #1c2433;
+                --sidebar-accent-foreground: #e8edf7;
+                --sidebar-border: #2c3648;
+                --sidebar-ring: #f8fafc;
 
-                --admin-header-bg: color-mix(in srgb, ${branding.palette.secondary} 26%, #111827);
+                --admin-header-bg: #171d27;
             }
             
             /* Apply custom backgrounds to specific elements */

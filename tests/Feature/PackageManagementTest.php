@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Activity;
 use App\Models\Booking;
+use App\Models\Currency;
 use App\Models\DepartureSchedule;
 use App\Models\PackageItinerary;
 use App\Models\TravelPackage;
@@ -82,6 +83,71 @@ class PackageManagementTest extends TestCase
             );
     }
 
+    public function test_it_serializes_product_option_prices_and_hotel_pricing(): void
+    {
+        $user = User::factory()->create();
+        $this->makePackage();
+        Currency::factory()->create([
+            'code' => 'IDR',
+            'conversion_rate' => 1,
+            'is_active' => true,
+        ]);
+        Currency::factory()->create([
+            'code' => 'SAR',
+            'conversion_rate' => 4300,
+            'is_active' => true,
+        ]);
+
+        TravelProduct::query()->create([
+            'code' => 'PRD-VISA',
+            'slug' => 'visa-umroh',
+            'name' => ['id' => 'Visa Umroh', 'en' => 'Umrah Visa'],
+            'product_type' => 'perlengkapan',
+            'description' => ['id' => 'Visa resmi', 'en' => 'Official visa'],
+            'content' => ['price' => 2500000, 'currency' => 'IDR'],
+            'is_active' => true,
+        ]);
+
+        TravelProduct::query()->create([
+            'code' => 'HTL-MASSA',
+            'slug' => 'al-massa-grand',
+            'name' => ['id' => 'Al Massa Grand', 'en' => 'Al Massa Grand'],
+            'product_type' => 'hotel',
+            'description' => ['id' => 'Hotel Makkah', 'en' => 'Makkah Hotel'],
+            'content' => [
+                'city' => 'Makkah',
+                'country' => 'Saudi Arabia',
+                'currency' => 'SAR',
+                'pricing' => [
+                    [
+                        'broker_name' => 'Broker A',
+                        'room_type' => 'Quad',
+                        'period_start' => '2026-08-01',
+                        'period_end' => '2026-08-15',
+                        'price' => 1450,
+                    ],
+                ],
+            ],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('packages.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('productOptions', 2)
+                ->where('productOptions.0.price', 2500000)
+                ->where('productOptions.0.currency', 'IDR')
+                ->where('productOptions.1.hotel_info.city', 'Makkah')
+                ->where('productOptions.1.currency', 'SAR')
+                ->where('productOptions.1.hotel_info.pricing.0.broker_name', 'Broker A')
+                ->where('productOptions.1.hotel_info.pricing.0.price', 1450.0)
+                ->where('currencies.0.code', 'IDR')
+                ->where('currencies.1.code', 'SAR')
+                ->where('currencies.1.conversion_rate', 4300.0)
+            );
+    }
+
     public function test_it_stores_a_new_package(): void
     {
         $user = User::factory()->create();
@@ -101,6 +167,109 @@ class PackageManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertTrue(TravelPackage::query()->where('code', 'ASF-UMROH-BARU-10')->exists());
+    }
+
+    public function test_it_stores_selected_hotel_brokers_in_package_content(): void
+    {
+        $user = User::factory()->create();
+        $hotelProduct = TravelProduct::query()->create([
+            'code' => 'HTL-ZAMZAM',
+            'slug' => 'zamzam-hotel',
+            'name' => ['id' => 'Pullman Zamzam', 'en' => 'Pullman Zamzam'],
+            'product_type' => 'hotel',
+            'description' => ['id' => 'Hotel dekat haram', 'en' => 'Hotel near haram'],
+            'content' => [
+                'city' => 'Makkah',
+                'pricing' => [
+                    [
+                        'broker_name' => 'Broker 1',
+                        'room_type' => 'Double',
+                        'period_start' => '2026-08-01',
+                        'period_end' => '2026-08-31',
+                        'price' => 1700,
+                    ],
+                ],
+            ],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'umroh-broker-10',
+                'name' => ['id' => 'Umroh Broker', 'en' => 'Broker Umrah'],
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'duration_days' => 10,
+                'price' => 35000000,
+                'currency' => 'IDR',
+                'product_ids' => [$hotelProduct->id],
+                'content' => [
+                    'hotel_product_brokers' => [
+                        (string) $hotelProduct->id => 'Broker 1',
+                    ],
+                ],
+                'is_active' => true,
+            ])
+            ->assertRedirect();
+
+        $package = TravelPackage::query()->where('slug', 'umroh-broker-10')->first();
+
+        $this->assertNotNull($package);
+        $this->assertSame(
+            'Broker 1',
+            data_get($package->content, 'hotel_product_brokers.'.$hotelProduct->id),
+        );
+    }
+
+    public function test_it_stores_product_multipliers_for_package_products(): void
+    {
+        $user = User::factory()->create();
+        $hotelProduct = TravelProduct::query()->create([
+            'code' => 'HTL-QTY',
+            'slug' => 'hotel-qty',
+            'name' => ['id' => 'Hotel Qty', 'en' => 'Hotel Qty'],
+            'product_type' => 'hotel',
+            'description' => ['id' => 'Hotel Qty', 'en' => 'Hotel Qty'],
+            'is_active' => true,
+        ]);
+        $equipmentProduct = TravelProduct::query()->create([
+            'code' => 'PRD-QTY',
+            'slug' => 'produk-qty',
+            'name' => ['id' => 'Perlengkapan Qty', 'en' => 'Equipment Qty'],
+            'product_type' => 'perlengkapan',
+            'description' => ['id' => 'Perlengkapan Qty', 'en' => 'Equipment Qty'],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'umroh-qty-10',
+                'name' => ['id' => 'Umroh Qty', 'en' => 'Umrah Qty'],
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'duration_days' => 10,
+                'price' => 35000000,
+                'currency' => 'IDR',
+                'product_ids' => [$hotelProduct->id, $equipmentProduct->id],
+                'product_multipliers' => [
+                    (string) $hotelProduct->id => 3,
+                    (string) $equipmentProduct->id => 2,
+                ],
+                'is_active' => true,
+            ])
+            ->assertRedirect();
+
+        $package = TravelPackage::query()->where('slug', 'umroh-qty-10')->first();
+
+        $this->assertNotNull($package);
+        $this->assertSame(
+            3,
+            (int) $package->products()->whereKey($hotelProduct->id)->firstOrFail()->pivot->multiplier_per_pax,
+        );
+        $this->assertSame(
+            2,
+            (int) $package->products()->whereKey($equipmentProduct->id)->firstOrFail()->pivot->multiplier_per_pax,
+        );
     }
 
     public function test_it_stores_package_with_discount_fields(): void
@@ -167,6 +336,47 @@ class PackageManagementTest extends TestCase
         $this->assertEquals('Plane', data_get($package->content, 'highlights.0.icon'));
         $this->assertEquals('Maskapai', data_get($package->content, 'highlights.0.label.id'));
         $this->assertEquals('Hilton Convention', data_get($package->content, 'highlights.1.value.id'));
+    }
+
+    public function test_it_stores_package_room_prices_in_content_with_discount_applied(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'umroh-room-price-10',
+                'name' => ['id' => 'Umroh Room Price', 'en' => 'Umrah Room Price'],
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'duration_days' => 10,
+                'price' => 33000000,
+                'original_price' => 36000000,
+                'currency' => 'IDR',
+                'content' => [
+                    'room_original_prices' => [
+                        'dbl' => 34500000,
+                        'trpl' => 33800000,
+                        'quad' => 33000000,
+                    ],
+                    'room_prices' => [
+                        'dbl' => 31625000,
+                        'trpl' => 30983333,
+                        'quad' => 30250000,
+                    ],
+                ],
+                'is_active' => true,
+            ])
+            ->assertRedirect();
+
+        $package = TravelPackage::query()->where('slug', 'umroh-room-price-10')->first();
+
+        $this->assertNotNull($package);
+        $this->assertSame(34500000, data_get($package->content, 'room_original_prices.dbl'));
+        $this->assertSame(33800000, data_get($package->content, 'room_original_prices.trpl'));
+        $this->assertSame(33000000, data_get($package->content, 'room_original_prices.quad'));
+        $this->assertSame(31625000, data_get($package->content, 'room_prices.dbl'));
+        $this->assertSame(30983333, data_get($package->content, 'room_prices.trpl'));
+        $this->assertSame(30250000, data_get($package->content, 'room_prices.quad'));
     }
 
     public function test_it_rejects_original_price_less_than_price(): void
@@ -406,11 +616,18 @@ class PackageManagementTest extends TestCase
                 'price' => $pkg->price,
                 'currency' => $pkg->currency,
                 'product_ids' => [$product->id],
+                'product_multipliers' => [
+                    (string) $product->id => 4,
+                ],
                 'is_active' => true,
             ])
             ->assertRedirect();
 
         $this->assertEquals(1, $pkg->fresh()->products()->count());
+        $this->assertSame(
+            4,
+            (int) $pkg->fresh()->products()->firstOrFail()->pivot->multiplier_per_pax,
+        );
     }
 
     public function test_it_deletes_a_package(): void

@@ -156,16 +156,8 @@ function buildGradientBackgroundStyle(
     const darkMixWeight = isDefault
         ? 0.05 + intensity * 0.024
         : 0.28 + intensity * 0.08;
-    const lighterTone = mixHexColors(
-        color,
-        '#ffffff',
-        lightMixWeight,
-    );
-    const darkerTone = mixHexColors(
-        color,
-        '#09090b',
-        darkMixWeight,
-    );
+    const lighterTone = mixHexColors(color, '#ffffff', lightMixWeight);
+    const darkerTone = mixHexColors(color, '#09090b', darkMixWeight);
 
     return {
         backgroundColor: color,

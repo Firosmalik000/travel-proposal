@@ -23,6 +23,8 @@ class BulkStoreHotelRequest extends FormRequest
             'hotels.*.currency' => ['required', 'string', 'size:3'],
             'hotels.*.is_active' => ['boolean'],
             'hotels.*.prices' => ['required', 'array', 'min:1'],
+            'hotels.*.prices.*.broker_key' => ['nullable', 'string', 'max:255'],
+            'hotels.*.prices.*.broker_name' => ['nullable', 'string', 'max:255'],
             'hotels.*.prices.*.room_type_id' => ['required', 'integer', 'exists:hotel_room_types,id'],
             'hotels.*.prices.*.period_start' => ['required', 'date'],
             'hotels.*.prices.*.period_end' => ['required', 'date'],

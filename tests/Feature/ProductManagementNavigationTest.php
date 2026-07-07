@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Currency;
 use App\Models\Menu;
 use App\Models\User;
 use App\Support\MenuPermissionService;
@@ -22,6 +23,74 @@ class ProductManagementNavigationTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/ProductManagement/Products/Index')
+                ->where('filters.product_type', 'hotel')
+                ->has('hotel_master.hotels')
+                ->has('hotel_master.cityOptions')
+                ->has('hotel_country_options')
+                ->has('hotel_city_options')
+                ->has('hotel_room_type_options')
+                ->has('hotel_currency_options')
+            );
+    }
+
+    public function test_product_management_uses_badge_filter_query_parameters(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('products.index', ['product_type' => 'layanan']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filters.product_type', 'layanan')
+            );
+    }
+
+    public function test_product_management_currency_options_come_from_active_master_currency_data(): void
+    {
+        $user = User::factory()->create();
+
+        Currency::query()->updateOrCreate(
+            ['code' => 'USD'],
+            [
+                'name' => 'US Dollar',
+                'conversion_rate' => 16000,
+                'notes' => null,
+                'is_active' => true,
+            ],
+        );
+
+        Currency::query()->updateOrCreate(
+            ['code' => 'IDR'],
+            [
+                'name' => 'Indonesian Rupiah',
+                'conversion_rate' => 1,
+                'notes' => null,
+                'is_active' => true,
+            ],
+        );
+
+        Currency::query()->updateOrCreate(
+            ['code' => 'SAR'],
+            [
+                'name' => 'Saudi Riyal',
+                'conversion_rate' => 4300,
+                'notes' => null,
+                'is_active' => false,
+            ],
+        );
+
+        $this->actingAs($user)
+            ->get(route('products.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('hotel_currency_options')
+                ->where(
+                    'hotel_currency_options',
+                    fn ($options): bool => collect($options)
+                        ->pluck('code')
+                        ->contains('IDR')
+                    && collect($options)->pluck('code')->contains('USD'),
+                )
             );
     }
 

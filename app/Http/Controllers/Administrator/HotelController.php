@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\BulkStoreHotelRequest;
 use App\Http\Requests\Administrator\StoreHotelRequest;
 use App\Http\Requests\Administrator\UpdateHotelRequest;
+use App\Models\Booking;
 use App\Models\Hotel;
 use App\Models\HotelCity;
 use App\Models\HotelCountry;
 use App\Models\HotelRoomType;
+use App\Models\TravelPackage;
 use App\Services\HotelProductSyncService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
@@ -63,6 +65,8 @@ class HotelController extends Controller
                     'product_code' => $hotel->product?->code,
                     'prices' => $hotel->prices->map(fn ($price): array => [
                         'id' => $price->id,
+                        'broker_key' => $price->broker_key,
+                        'broker_name' => $price->broker_name,
                         'room_type_id' => $price->room_type_id,
                         'room_type_name' => $price->roomType?->name,
                         'period_start' => $price->period_start?->toDateString(),
@@ -121,6 +125,30 @@ class HotelController extends Controller
                     'name' => $roomType->name,
                 ])
                 ->values()
+                ->all(),
+            'currencyOptions' => Hotel::query()
+                ->selectRaw('UPPER(currency) as code')
+                ->whereNotNull('currency')
+                ->pluck('code')
+                ->merge(
+                    TravelPackage::query()
+                        ->selectRaw('UPPER(currency) as code')
+                        ->whereNotNull('currency')
+                        ->pluck('code')
+                )
+                ->merge(
+                    Booking::query()
+                        ->selectRaw('UPPER(custom_currency) as code')
+                        ->whereNotNull('custom_currency')
+                        ->pluck('code')
+                )
+                ->filter(fn (?string $code): bool => is_string($code) && $code !== '')
+                ->unique()
+                ->sort()
+                ->values()
+                ->map(fn (string $code): array => [
+                    'code' => $code,
+                ])
                 ->all(),
         ]);
     }
@@ -343,6 +371,8 @@ class HotelController extends Controller
     {
         return collect($prices)
             ->map(fn (array $item): array => [
+                'broker_key' => $this->normalizeBrokerKey($item['broker_key'] ?? null, $item['broker_name'] ?? null),
+                'broker_name' => $this->normalizeBrokerName($item['broker_name'] ?? null),
                 'room_type_id' => (int) $item['room_type_id'],
                 'period_start' => (string) $item['period_start'],
                 'period_end' => (string) $item['period_end'],
@@ -351,5 +381,23 @@ class HotelController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    private function normalizeBrokerName(mixed $value): string
+    {
+        $brokerName = trim((string) ($value ?? ''));
+
+        return $brokerName !== '' ? $brokerName : 'Broker 1';
+    }
+
+    private function normalizeBrokerKey(mixed $value, mixed $brokerName = null): string
+    {
+        $brokerKey = trim((string) ($value ?? ''));
+
+        if ($brokerKey !== '') {
+            return $brokerKey;
+        }
+
+        return 'broker-'.Str::slug($this->normalizeBrokerName($brokerName));
     }
 }

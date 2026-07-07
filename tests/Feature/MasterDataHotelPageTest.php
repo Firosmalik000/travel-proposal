@@ -103,6 +103,7 @@ class MasterDataHotelPageTest extends TestCase
                 'is_active' => true,
                 'prices' => [
                     [
+                        'broker_name' => 'Broker A',
                         'room_type_id' => $roomType->id,
                         'period_start' => '2026-06-01',
                         'period_end' => '2026-06-30',
@@ -127,6 +128,7 @@ class MasterDataHotelPageTest extends TestCase
         $this->assertSame('hotel', $product?->category?->key);
         $this->assertSame('Arab Saudi', data_get($product?->content, 'country'));
         $this->assertSame('Mekkah', data_get($product?->content, 'city'));
+        $this->assertSame('Broker A', data_get($product?->content, 'pricing.0.broker_name'));
         $this->assertSame('Quad', data_get($product?->content, 'pricing.0.room_type'));
         $this->assertSame(3500000, data_get($product?->content, 'pricing.0.price'));
     }
@@ -166,18 +168,21 @@ class MasterDataHotelPageTest extends TestCase
                         'is_active' => true,
                         'prices' => [
                             [
+                                'broker_name' => 'Broker A',
                                 'room_type_id' => $dbl->id,
                                 'period_start' => '2026-06-01',
                                 'period_end' => '2026-06-30',
                                 'price' => 400000,
                             ],
                             [
+                                'broker_name' => 'Broker A',
                                 'room_type_id' => $trpl->id,
                                 'period_start' => '2026-06-01',
                                 'period_end' => '2026-06-30',
                                 'price' => 500000,
                             ],
                             [
+                                'broker_name' => 'Broker A',
                                 'room_type_id' => $quad->id,
                                 'period_start' => '2026-06-01',
                                 'period_end' => '2026-06-30',
@@ -194,6 +199,7 @@ class MasterDataHotelPageTest extends TestCase
                         'is_active' => true,
                         'prices' => [
                             [
+                                'broker_name' => 'Broker B',
                                 'room_type_id' => $dbl->id,
                                 'period_start' => '2026-07-01',
                                 'period_end' => '2026-07-31',

@@ -4,28 +4,54 @@ namespace App\Services;
 
 use App\Models\Booking;
 use App\Models\DepartureSchedule;
-use App\Models\HotelAssignment;
-use App\Models\HotelPrice;
 use App\Models\PackageCostCalculation;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class PackageCostCalculationService
 {
+    public function __construct(
+        private readonly CurrencyConversionService $currencyConversionService,
+    ) {}
+
+    public const MODE_LEGACY_ASSIGNMENT = 'legacy_assignment';
+
+    public const MODE_PER_PAX_MULTIPLIER = 'per_pax_multiplier';
+
     /**
      * @return array<string, mixed>
      */
-    public function preview(int $packageId, ?int $departureScheduleId, int $manualAdjustment = 0): array
-    {
-        return $this->calculatePayload($packageId, $departureScheduleId, $manualAdjustment);
+    public function preview(
+        int $packageId,
+        ?int $departureScheduleId,
+        int $manualAdjustment = 0,
+        string $calculationMode = self::MODE_LEGACY_ASSIGNMENT,
+    ): array {
+        return $this->calculatePayload(
+            $packageId,
+            $departureScheduleId,
+            $manualAdjustment,
+            $calculationMode,
+        );
     }
 
-    public function generate(int $packageId, ?int $departureScheduleId, int $manualAdjustment = 0, ?string $notes = null): PackageCostCalculation
-    {
-        return DB::transaction(function () use ($packageId, $departureScheduleId, $manualAdjustment, $notes): PackageCostCalculation {
-            $payload = $this->calculatePayload($packageId, $departureScheduleId, $manualAdjustment);
+    public function generate(
+        int $packageId,
+        ?int $departureScheduleId,
+        int $manualAdjustment = 0,
+        ?string $notes = null,
+        string $calculationMode = self::MODE_PER_PAX_MULTIPLIER,
+    ): PackageCostCalculation {
+        return DB::transaction(function () use ($packageId, $departureScheduleId, $manualAdjustment, $notes, $calculationMode): PackageCostCalculation {
+            $payload = $this->calculatePayload(
+                $packageId,
+                $departureScheduleId,
+                $manualAdjustment,
+                $calculationMode,
+            );
 
             $calculation = PackageCostCalculation::query()->create([
                 ...$payload,
@@ -45,6 +71,7 @@ class PackageCostCalculationService
                 packageId: (int) $calculation->package_id,
                 departureScheduleId: $calculation->departure_schedule_id ? (int) $calculation->departure_schedule_id : null,
                 manualAdjustment: (int) $calculation->manual_adjustment,
+                calculationMode: (string) ($calculation->calculation_mode ?: self::MODE_LEGACY_ASSIGNMENT),
             );
 
             $calculation->update([
@@ -80,8 +107,12 @@ class PackageCostCalculationService
     /**
      * @return array<string, mixed>
      */
-    private function calculatePayload(int $packageId, ?int $departureScheduleId, int $manualAdjustment): array
-    {
+    private function calculatePayload(
+        int $packageId,
+        ?int $departureScheduleId,
+        int $manualAdjustment,
+        string $calculationMode,
+    ): array {
         $package = TravelPackage::query()
             ->with(['products:id,code,name,product_type,content'])
             ->findOrFail($packageId);
@@ -97,73 +128,196 @@ class PackageCostCalculationService
 
         $bookingCount = (int) (clone $bookingBaseQuery)->count();
         $customerCount = (int) (clone $bookingBaseQuery)->sum('passenger_count');
+        $bookings = (clone $bookingBaseQuery)->get([
+            'id',
+            'passenger_count',
+            'room_configuration',
+        ]);
 
+        $hotelPayload = $this->buildHotelBreakdown(
+            $package,
+            $bookings,
+            $schedule?->departure_date?->toDateString(),
+        );
+
+        $productPayload = $this->buildProductBreakdown(
+            $package,
+            $customerCount,
+            $calculationMode,
+        );
+
+        $warnings = [
+            ...$hotelPayload['warnings'],
+            ...$productPayload['warnings'],
+        ];
+
+        $grandTotal = max(
+            $hotelPayload['total'] + $productPayload['total'] + $manualAdjustment,
+            0,
+        );
+
+        return [
+            'package_id' => $packageId,
+            'departure_schedule_id' => $departureScheduleId,
+            'calculation_mode' => $calculationMode,
+            'calculation_date' => Carbon::today()->toDateString(),
+            'booking_count' => $bookingCount,
+            'customer_count' => $customerCount,
+            'hotel_total' => $hotelPayload['total'],
+            'product_total' => $productPayload['total'],
+            'manual_adjustment' => $manualAdjustment,
+            'grand_total' => $grandTotal,
+            'hpp_per_customer' => $customerCount > 0 ? (int) floor($grandTotal / $customerCount) : null,
+            'currency' => 'IDR',
+            'warnings' => array_values(array_unique($warnings)),
+            'calculated_at' => now(),
+            'items' => [
+                ...$hotelPayload['items'],
+                ...$productPayload['items'],
+            ],
+        ];
+    }
+
+    /**
+     * @return array{items: array<int, array<string, mixed>>, total: int, warnings: array<int, string>}
+     */
+    private function buildHotelBreakdown(
+        TravelPackage $package,
+        Collection $bookings,
+        ?string $periodDate,
+    ): array {
         $items = [];
         $warnings = [];
         $hotelTotal = 0;
 
-        $hotelAssignments = HotelAssignment::query()
-            ->with(['hotel:id,name', 'rooms.roomType:id,name'])
-            ->where('package_id', $packageId)
-            ->when($departureScheduleId !== null, fn ($query) => $query->where('departure_schedule_id', $departureScheduleId))
-            ->get();
+        $hotelProducts = $package->products->filter(
+            fn (TravelProduct $product): bool => $product->product_type === 'hotel',
+        );
+        $roomTotals = $this->aggregateRoomConfigurationTotals($bookings);
+        $selectedBrokers = data_get($package->content, 'hotel_product_brokers', []);
+        $hasMissingRoomConfigurations = $bookings->contains(function (Booking $booking): bool {
+            $configuration = $this->normalizeRoomConfiguration(
+                is_array($booking->room_configuration) ? $booking->room_configuration : null,
+            );
 
-        foreach ($hotelAssignments as $assignment) {
-            foreach ($assignment->rooms as $room) {
-                $periodDate = $schedule?->departure_date?->toDateString();
-                $priceQuery = HotelPrice::query()
-                    ->where('hotel_id', $assignment->hotel_id)
-                    ->where('room_type_id', $room->room_type_id)
-                    ->where('is_active', true);
+            return array_sum($configuration) === 0 && (int) $booking->passenger_count > 0;
+        });
 
-                if ($periodDate) {
-                    $priceQuery
-                        ->whereDate('period_start', '<=', $periodDate)
-                        ->whereDate('period_end', '>=', $periodDate);
+        if ($hasMissingRoomConfigurations) {
+            $warnings[] = 'Ada booking yang belum memiliki komposisi kamar, sehingga HPP hotel bisa belum lengkap.';
+        }
+
+        foreach ($hotelProducts as $product) {
+            $pricingRows = collect(data_get($product->content, 'pricing', []))
+                ->filter(fn ($row): bool => is_array($row))
+                ->values();
+            $multiplierPerPax = max((int) ($product->pivot->multiplier_per_pax ?? 1), 1);
+            $selectedBroker = is_array($selectedBrokers)
+                ? ($selectedBrokers[(string) $product->id] ?? $selectedBrokers[$product->id] ?? null)
+                : null;
+            $productCurrency = strtoupper((string) data_get($product->content, 'currency', 'IDR'));
+
+            foreach ($roomTotals as $roomType => $roomCount) {
+                if ($roomCount < 1) {
+                    continue;
                 }
 
-                $price = $priceQuery->orderByDesc('period_start')->first();
+                $matchedPrice = $this->matchHotelProductPrice(
+                    $pricingRows,
+                    $roomType,
+                    is_string($selectedBroker) ? $selectedBroker : null,
+                    $periodDate,
+                );
 
-                if (! $price) {
+                if ($matchedPrice === null) {
                     $warnings[] = sprintf(
-                        'Harga hotel belum tersedia untuk %s (%s).',
-                        (string) ($assignment->hotel?->name ?? 'Hotel'),
-                        (string) ($room->roomType?->name ?? 'Room Type'),
+                        'Harga hotel belum tersedia untuk %s (%s%s).',
+                        (string) ($product->name ?? $product->code),
+                        $this->hotelRoomLabel($roomType),
+                        is_string($selectedBroker) && $selectedBroker !== '' ? ' - '.$selectedBroker : '',
                     );
                 }
 
-                $unitPrice = (int) ($price?->price ?? 0);
-                $quantity = (int) $room->room_count;
+                $originalUnitPrice = (int) data_get($matchedPrice, 'price', 0);
+                $unitPrice = $this->currencyConversionService->convertToIdr(
+                    $originalUnitPrice,
+                    $productCurrency,
+                );
+
+                if ($unitPrice === null) {
+                    $warnings[] = sprintf(
+                        'Currency %s untuk hotel %s belum punya converter aktif ke IDR.',
+                        $productCurrency,
+                        (string) ($product->name ?? $product->code),
+                    );
+                    $unitPrice = 0;
+                }
+
+                $quantity = $roomCount * $multiplierPerPax;
                 $totalPrice = $unitPrice * $quantity;
                 $hotelTotal += $totalPrice;
 
                 $items[] = [
                     'cost_type' => 'hotel',
-                    'reference_type' => 'hotel_assignment_room',
-                    'reference_id' => $room->id,
+                    'reference_type' => 'product',
+                    'reference_id' => $product->id,
                     'label' => sprintf(
                         '%s - %s',
-                        (string) ($assignment->hotel?->name ?? 'Hotel'),
-                        (string) ($room->roomType?->name ?? 'Room Type'),
+                        (string) ($product->name ?? $product->code),
+                        $this->hotelRoomLabel($roomType),
                     ),
-                    'description' => $periodDate ? 'Periode keberangkatan '.$periodDate : 'Harga hotel aktif terbaru',
+                    'description' => $periodDate ? 'Periode keberangkatan '.$periodDate : 'Harga hotel product aktif',
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'total_price' => $totalPrice,
                     'meta' => [
-                        'hotel_assignment_id' => $assignment->id,
-                        'room_capacity' => $room->room_capacity,
-                        'period_start' => $price?->period_start?->toDateString(),
-                        'period_end' => $price?->period_end?->toDateString(),
+                        'product_code' => $product->code,
+                        'product_type' => $product->product_type,
+                        'original_currency' => $productCurrency,
+                        'original_unit_price' => $originalUnitPrice,
+                        'conversion_rate_to_idr' => $this->currencyConversionService->rateFor($productCurrency),
+                        'room_type' => $roomType,
+                        'room_count' => $roomCount,
+                        'multiplier_per_pax' => $multiplierPerPax,
+                        'broker_name' => data_get($matchedPrice, 'broker_name'),
+                        'broker_key' => data_get($matchedPrice, 'broker_key'),
+                        'period_start' => data_get($matchedPrice, 'period_start'),
+                        'period_end' => data_get($matchedPrice, 'period_end'),
+                        'calculation_source' => 'hotel_product_pricing',
                     ],
                 ];
             }
         }
 
-        if ($hotelAssignments->isEmpty()) {
-            $warnings[] = 'Hotel assignment belum tersedia untuk package/jadwal ini.';
+        if ($hotelProducts->isEmpty()) {
+            return [
+                'items' => $items,
+                'total' => $hotelTotal,
+                'warnings' => $warnings,
+            ];
         }
 
+        if (array_sum($roomTotals) === 0) {
+            $warnings[] = 'Belum ada komposisi kamar customer untuk menghitung HPP hotel.';
+        }
+
+        return [
+            'items' => $items,
+            'total' => $hotelTotal,
+            'warnings' => $warnings,
+        ];
+    }
+
+    /**
+     * @return array{items: array<int, array<string, mixed>>, total: int, warnings: array<int, string>}
+     */
+    private function buildProductBreakdown(
+        TravelPackage $package,
+        int $customerCount,
+        string $calculationMode,
+    ): array {
+        $items = [];
+        $warnings = [];
         $productTotal = 0;
 
         /** @var TravelProduct $product */
@@ -172,12 +326,30 @@ class PackageCostCalculationService
                 continue;
             }
 
-            $price = (int) data_get($product->content, 'price', 0);
-            if ($price <= 0) {
+            $originalPrice = (int) data_get($product->content, 'price', 0);
+            $productCurrency = strtoupper((string) data_get($product->content, 'currency', 'IDR'));
+            if ($originalPrice <= 0) {
                 $warnings[] = sprintf('Harga product belum lengkap: %s', (string) ($product->name ?? $product->code));
             }
 
-            $quantity = max($customerCount, 0);
+            $price = $this->currencyConversionService->convertToIdr(
+                $originalPrice,
+                $productCurrency,
+            );
+
+            if ($price === null) {
+                $warnings[] = sprintf(
+                    'Currency %s untuk product %s belum punya converter aktif ke IDR.',
+                    $productCurrency,
+                    (string) ($product->name ?? $product->code),
+                );
+                $price = 0;
+            }
+
+            $multiplierPerPax = max((int) ($product->pivot->multiplier_per_pax ?? 1), 1);
+            $quantity = $calculationMode === self::MODE_PER_PAX_MULTIPLIER
+                ? max($customerCount, 0) * $multiplierPerPax
+                : max($customerCount, 0);
             $lineTotal = max($price, 0) * $quantity;
             $productTotal += $lineTotal;
 
@@ -193,27 +365,136 @@ class PackageCostCalculationService
                 'meta' => [
                     'product_code' => $product->code,
                     'product_type' => $product->product_type,
+                    'original_currency' => $productCurrency,
+                    'original_unit_price' => $originalPrice,
+                    'conversion_rate_to_idr' => $this->currencyConversionService->rateFor($productCurrency),
+                    'customer_count' => $customerCount,
+                    'multiplier_per_pax' => $multiplierPerPax,
+                    'calculation_mode' => $calculationMode,
                 ],
             ];
         }
 
-        $grandTotal = max($hotelTotal + $productTotal + $manualAdjustment, 0);
-
         return [
-            'package_id' => $packageId,
-            'departure_schedule_id' => $departureScheduleId,
-            'calculation_date' => Carbon::today()->toDateString(),
-            'booking_count' => $bookingCount,
-            'customer_count' => $customerCount,
-            'hotel_total' => $hotelTotal,
-            'product_total' => $productTotal,
-            'manual_adjustment' => $manualAdjustment,
-            'grand_total' => $grandTotal,
-            'hpp_per_customer' => $customerCount > 0 ? (int) floor($grandTotal / $customerCount) : null,
-            'currency' => 'IDR',
-            'warnings' => array_values(array_unique($warnings)),
-            'calculated_at' => now(),
             'items' => $items,
+            'total' => $productTotal,
+            'warnings' => $warnings,
         ];
+    }
+
+    /**
+     * @return array{single:int,double:int,triple:int,quad:int}
+     */
+    private function aggregateRoomConfigurationTotals(Collection $bookings): array
+    {
+        return $bookings->reduce(
+            function (array $carry, Booking $booking): array {
+                $configuration = $this->normalizeRoomConfiguration(
+                    is_array($booking->room_configuration) ? $booking->room_configuration : null,
+                );
+
+                foreach ($configuration as $roomType => $roomCount) {
+                    $carry[$roomType] += $roomCount;
+                }
+
+                return $carry;
+            },
+            [
+                'single' => 0,
+                'double' => 0,
+                'triple' => 0,
+                'quad' => 0,
+            ],
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $configuration
+     * @return array{single:int,double:int,triple:int,quad:int}
+     */
+    private function normalizeRoomConfiguration(?array $configuration): array
+    {
+        return [
+            'single' => max(0, (int) data_get($configuration, 'single', 0)),
+            'double' => max(0, (int) data_get($configuration, 'double', 0)),
+            'triple' => max(0, (int) data_get($configuration, 'triple', 0)),
+            'quad' => max(0, (int) data_get($configuration, 'quad', 0)),
+        ];
+    }
+
+    private function hotelRoomLabel(string $roomType): string
+    {
+        return match ($roomType) {
+            'single' => 'Single',
+            'double' => 'Double',
+            'triple' => 'Triple',
+            'quad' => 'Quad',
+            default => ucfirst($roomType),
+        };
+    }
+
+    /**
+     * @param  Collection<int, array<string, mixed>>  $pricingRows
+     * @return array<string, mixed>|null
+     */
+    private function matchHotelProductPrice(
+        Collection $pricingRows,
+        string $roomType,
+        ?string $selectedBroker,
+        ?string $periodDate,
+    ): ?array {
+        $normalizedRoomType = $this->normalizeHotelRoomTypeName($roomType);
+        $normalizedBroker = $selectedBroker !== null ? $this->normalizeHotelBrokerName($selectedBroker) : null;
+
+        return $pricingRows
+            ->filter(function (array $row) use ($normalizedRoomType, $normalizedBroker, $periodDate): bool {
+                $rowRoomType = $this->normalizeHotelRoomTypeName((string) ($row['room_type'] ?? ''));
+                if ($rowRoomType !== $normalizedRoomType) {
+                    return false;
+                }
+
+                if ($normalizedBroker !== null) {
+                    $rowBrokerName = $this->normalizeHotelBrokerName((string) ($row['broker_name'] ?? ''));
+                    $rowBrokerKey = $this->normalizeHotelBrokerName((string) ($row['broker_key'] ?? ''));
+
+                    if ($rowBrokerName !== $normalizedBroker && $rowBrokerKey !== $normalizedBroker) {
+                        return false;
+                    }
+                }
+
+                if ($periodDate === null) {
+                    return true;
+                }
+
+                $periodStart = data_get($row, 'period_start');
+                $periodEnd = data_get($row, 'period_end');
+
+                if (! is_string($periodStart) || ! is_string($periodEnd)) {
+                    return false;
+                }
+
+                return $periodStart <= $periodDate && $periodEnd >= $periodDate;
+            })
+            ->sortByDesc(fn (array $row): string => (string) ($row['period_start'] ?? ''))
+            ->map(fn (array $row): array => $row)
+            ->first();
+    }
+
+    private function normalizeHotelRoomTypeName(string $value): string
+    {
+        $normalized = strtolower(trim($value));
+
+        return match ($normalized) {
+            'sgl', 'single' => 'single',
+            'dbl', 'double' => 'double',
+            'trpl', 'triple' => 'triple',
+            'quad', 'quadruple' => 'quad',
+            default => $normalized,
+        };
+    }
+
+    private function normalizeHotelBrokerName(string $value): string
+    {
+        return strtolower(trim($value));
     }
 }

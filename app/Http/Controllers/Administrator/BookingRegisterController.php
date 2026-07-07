@@ -14,6 +14,7 @@ use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
 use App\Services\BookingParticipantImportService;
 use App\Services\InventoryStockService;
+use App\Services\PackageRoomConfigurationService;
 use App\Services\PdfBrandingService;
 use App\Services\PdfRenderer;
 use App\Support\ParticipantUploadLimit;
@@ -22,6 +23,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -36,6 +38,7 @@ class BookingRegisterController extends Controller
         private readonly PdfBrandingService $pdfBrandingService,
         private readonly InventoryStockService $inventoryStockService,
         private readonly BookingParticipantImportService $bookingParticipantImportService,
+        private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
     ) {}
 
     public function index(): Response
@@ -106,7 +109,7 @@ class BookingRegisterController extends Controller
 
         $rows = Booking::query()
             ->with([
-                'package:id,code,name,price,currency',
+                'package:id,code,name,price,currency,content',
                 'departureSchedule:id,departure_date,departure_city',
             ])
             ->when(in_array($bookingType, ['regular', 'custom'], true), function ($query) use ($bookingType): void {
@@ -150,7 +153,7 @@ class BookingRegisterController extends Controller
 
                 $amount = $booking->booking_type === 'custom'
                     ? (float) (($booking->custom_total_amount ?? null) ?? ((int) ($booking->custom_unit_price ?? 0) * (int) $booking->passenger_count))
-                    : (float) ($booking->passenger_count * (float) ($booking->package?->price ?? 0));
+                    : $this->packageRoomConfigurationService->calculateBookingAmount($booking);
 
                 return [
                     'booking_code' => $booking->booking_code,
@@ -407,7 +410,7 @@ class BookingRegisterController extends Controller
         $seo = $this->pdfBrandingService->seo();
 
         $registration->loadMissing([
-            'package:id,code,name,package_type,departure_city,duration_days,price,currency',
+            'package:id,code,name,package_type,departure_city,duration_days,price,currency,content',
             'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
         ]);
 
@@ -440,14 +443,46 @@ class BookingRegisterController extends Controller
             $totalAmount = $registration->custom_total_amount !== null
                 ? (float) $registration->custom_total_amount
                 : (float) ($unitPrice * $paxCount);
-        } else {
-            $rawPrice = $registration->package?->price ?? 0;
-            $numericPrice = is_numeric($rawPrice)
-                ? (float) $rawPrice
-                : (float) preg_replace('/[^0-9.]/', '', (string) $rawPrice);
 
-            $unitPrice = $numericPrice;
-            $totalAmount = (float) ($paxCount * $numericPrice);
+            $lineItems = [
+                [
+                    'label' => 'Custom booking',
+                    'qty' => $paxCount,
+                    'unit_price' => $unitPrice,
+                    'amount' => $totalAmount,
+                ],
+            ];
+        } else {
+            $lineItems = collect($this->packageRoomConfigurationService->buildLineItems(
+                $registration->package,
+                is_array($registration->room_configuration) ? $registration->room_configuration : null,
+            ))
+                ->map(fn (array $item): array => [
+                    'label' => sprintf('%s x %d kamar (%d pax)', $item['label'], $item['rooms'], $item['pax']),
+                    'qty' => $item['pax'],
+                    'unit_price' => $item['unit_price'],
+                    'amount' => $item['amount'],
+                ])
+                ->values()
+                ->all();
+
+            $totalAmount = $this->packageRoomConfigurationService->calculateTotalAmount(
+                $registration->package,
+                is_array($registration->room_configuration) ? $registration->room_configuration : null,
+                $paxCount,
+            );
+            $unitPrice = $paxCount > 0 ? ($totalAmount / $paxCount) : 0.0;
+
+            if (count($lineItems) === 0) {
+                $lineItems = [
+                    [
+                        'label' => 'Booking paket',
+                        'qty' => $paxCount,
+                        'unit_price' => $unitPrice,
+                        'amount' => $totalAmount,
+                    ],
+                ];
+            }
         }
 
         $metaRows = [
@@ -465,15 +500,6 @@ class BookingRegisterController extends Controller
                 $departureDate
                     ? sprintf('%s - %s (%s)', $departureDate, $returnDate ?: '-', $departureCity)
                     : '-',
-            ],
-        ];
-
-        $lineItems = [
-            [
-                'label' => $registration->booking_type === 'custom' ? 'Custom booking' : 'Booking paket',
-                'qty' => $paxCount,
-                'unit_price' => $unitPrice,
-                'amount' => $totalAmount,
             ],
         ];
 
@@ -531,6 +557,7 @@ class BookingRegisterController extends Controller
                     'email' => $registration->email,
                     'origin_city' => $registration->origin_city,
                     'passenger_count' => $registration->passenger_count,
+                    'room_configuration' => $registration->room_configuration,
                     'notes' => $registration->notes,
                     'status' => 'registered',
                     'created_at' => $registration->created_at,
@@ -576,6 +603,9 @@ class BookingRegisterController extends Controller
                     'email' => $request->filled('email') ? $request->string('email')->value() : null,
                     'origin_city' => $request->string('origin_city')->value(),
                     'passenger_count' => $request->integer('passenger_count'),
+                    'room_configuration' => $request->filled('room_configuration')
+                        ? $this->packageRoomConfigurationService->normalizeConfiguration((array) $request->input('room_configuration', []))
+                        : null,
                     'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
                     'status' => $request->string('status')->value(),
                 ]);
@@ -613,6 +643,9 @@ class BookingRegisterController extends Controller
             'email' => $request->filled('email') ? $request->string('email')->value() : null,
             'origin_city' => $request->string('origin_city')->value(),
             'passenger_count' => $request->integer('passenger_count'),
+            'room_configuration' => $request->filled('room_configuration')
+                ? $this->packageRoomConfigurationService->normalizeConfiguration((array) $request->input('room_configuration', []))
+                : $registration->room_configuration,
             'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
             'status' => $request->string('status')->value(),
         ];
@@ -743,6 +776,10 @@ class BookingRegisterController extends Controller
                 'email' => $registration->email,
                 'origin_city' => $registration->origin_city,
                 'passenger_count' => $registration->passenger_count,
+                'room_configuration' => $registration->room_configuration,
+                'room_summary' => $this->packageRoomConfigurationService->summarize(
+                    is_array($registration->room_configuration) ? $registration->room_configuration : null,
+                ),
                 'notes' => $registration->notes,
                 'status' => $registration->status,
                 'created_at' => $registration->created_at?->toDateTimeString(),
@@ -776,7 +813,7 @@ class BookingRegisterController extends Controller
 
         return Booking::query()
             ->with([
-                'package:id,code,slug,name,package_type,price,currency',
+                'package:id,code,slug,name,package_type,price,currency,content',
                 'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
             ])
             ->withCount('participants')
@@ -817,7 +854,7 @@ class BookingRegisterController extends Controller
 
                 $amount = $booking->booking_type === 'custom'
                     ? (float) ($booking->custom_total_amount ?? 0)
-                    : (float) ($booking->passenger_count * (float) ($booking->package?->price ?? 0));
+                    : $this->packageRoomConfigurationService->calculateBookingAmount($booking);
 
                 $departureDate = $booking->booking_type === 'custom'
                     ? $booking->custom_departure_date?->toDateString()
@@ -840,6 +877,10 @@ class BookingRegisterController extends Controller
                     'email' => $booking->email,
                     'origin_city' => $booking->origin_city,
                     'passenger_count' => $booking->passenger_count,
+                    'room_configuration' => $booking->room_configuration,
+                    'room_summary' => $this->packageRoomConfigurationService->summarize(
+                        is_array($booking->room_configuration) ? $booking->room_configuration : null,
+                    ),
                     'participants_count' => (int) ($booking->participants_count ?? 0),
                     'custom_unit_price' => $booking->booking_type === 'custom'
                         ? (int) ($booking->custom_unit_price ?? 0)
@@ -965,43 +1006,55 @@ class BookingRegisterController extends Controller
             ];
         }
 
-        $query = Booking::query()
-            ->leftJoin('packages', 'bookings.package_id', '=', 'packages.id')
-            ->leftJoin('departure_schedules', 'bookings.departure_schedule_id', '=', 'departure_schedules.id')
-            ->where('bookings.booking_type', 'regular')
-            ->when($travelPackageId > 0, function ($builder) use ($travelPackageId): void {
-                $builder->where('bookings.package_id', $travelPackageId);
+        $rows = Booking::query()
+            ->with([
+                'package:id,price,currency,content',
+                'departureSchedule:id,departure_city',
+            ])
+            ->where('booking_type', 'regular')
+            ->when($travelPackageId > 0, function ($query) use ($travelPackageId): void {
+                $query->where('package_id', $travelPackageId);
             })
-            ->when($search !== '', function ($builder) use ($search): void {
-                $builder->where(function ($registrationQuery) use ($search): void {
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($registrationQuery) use ($search): void {
                     $registrationQuery
-                        ->where('bookings.full_name', 'like', "%{$search}%")
-                        ->orWhere('bookings.phone', 'like', "%{$search}%")
-                        ->orWhere('bookings.email', 'like', "%{$search}%")
-                        ->orWhere('bookings.origin_city', 'like', "%{$search}%")
-                        ->orWhere('packages.code', 'like', "%{$search}%")
-                        ->orWhere('packages.name', 'like', "%{$search}%")
-                        ->orWhere('departure_schedules.departure_city', 'like', "%{$search}%");
+                        ->where('booking_code', 'like', "%{$search}%")
+                        ->orWhere('full_name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('origin_city', 'like', "%{$search}%")
+                        ->orWhereHas('package', function ($packageQuery) use ($search): void {
+                            $packageQuery
+                                ->where('code', 'like', "%{$search}%")
+                                ->orWhere('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('departureSchedule', function ($scheduleQuery) use ($search): void {
+                            $scheduleQuery->where('departure_city', 'like', "%{$search}%");
+                        });
                 });
             })
-            ->when(in_array($status, ['pending', 'registered', 'cancelled'], true), function ($builder) use ($status): void {
-                $builder->where('bookings.status', $status);
-            });
+            ->when(in_array($status, ['pending', 'registered', 'cancelled'], true), function ($query) use ($status): void {
+                $query->where('status', $status);
+            })
+            ->get();
 
-        $byCurrency = (clone $query)
-            ->selectRaw('packages.currency as currency')
-            ->selectRaw('COUNT(bookings.id) as bookings')
-            ->selectRaw('COALESCE(SUM(bookings.passenger_count), 0) as pax')
-            ->selectRaw('COALESCE(SUM(bookings.passenger_count * packages.price), 0) as amount')
-            ->groupBy('packages.currency')
-            ->orderByDesc(DB::raw('amount'))
-            ->get()
-            ->map(fn ($row): array => [
-                'currency' => (string) ($row->currency ?: 'IDR'),
-                'amount' => (float) ($row->amount ?? 0),
-                'pax' => (int) ($row->pax ?? 0),
-                'bookings' => (int) ($row->bookings ?? 0),
-            ])
+        $byCurrency = $rows
+            ->groupBy(fn (Booking $booking): string => (string) ($booking->package?->currency ?: 'IDR'))
+            ->map(function ($bookings, string $currency): array {
+                $bookingCollection = $bookings instanceof Collection
+                    ? $bookings
+                    : collect($bookings);
+
+                return [
+                    'currency' => $currency,
+                    'amount' => (float) $bookingCollection->sum(
+                        fn (Booking $booking): float => $this->packageRoomConfigurationService->calculateBookingAmount($booking),
+                    ),
+                    'pax' => (int) $bookingCollection->sum('passenger_count'),
+                    'bookings' => $bookingCollection->count(),
+                ];
+            })
+            ->sortByDesc('amount')
             ->values()
             ->all();
 
@@ -1015,15 +1068,8 @@ class BookingRegisterController extends Controller
      */
     private function packages(array $filters = []): array
     {
-        $status = (string) ($filters['status'] ?? 'registered');
-
         return TravelPackage::query()
             ->where('is_active', true)
-            ->when(in_array($status, ['pending', 'registered', 'cancelled'], true), function ($query) use ($status): void {
-                $query->whereHas('registrations', function ($registrationQuery) use ($status): void {
-                    $registrationQuery->where('status', $status);
-                });
-            })
             ->orderBy('code')
             ->get(['id', 'code', 'name', 'package_type'])
             ->map(fn (TravelPackage $travelPackage): array => [

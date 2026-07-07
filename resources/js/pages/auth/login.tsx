@@ -23,12 +23,12 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     return (
         <AuthSimpleLayout
             title="Portal Admin"
-            description="Login khusus tim internal untuk mengelola operasional."
+            description="Akses aman untuk tim internal mengelola operasional harian."
         >
             <Head title="Masuk" />
 
             {status && (
-                <div className="mb-6 animate-in rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] duration-300 fade-in slide-in-from-top-2 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-medium text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-200">
                     {status}
                 </div>
             )}
@@ -37,13 +37,18 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                 action={store.url()}
                 method="post"
                 resetOnSuccess={['password']}
-                className="flex flex-col gap-6"
+                className="space-y-6"
             >
                 {({ processing, errors }) => (
                     <>
-                        <div className="grid gap-5">
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email</Label>
+                        <div className="space-y-5">
+                            <div className="space-y-2.5">
+                                <Label
+                                    htmlFor="email"
+                                    className="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                                >
+                                    Email
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -53,18 +58,23 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     tabIndex={1}
                                     autoComplete="email"
                                     placeholder="nama@email.com"
-                                    className="h-11 rounded-xl"
+                                    className="h-11 rounded-xl border-slate-200 bg-white shadow-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-900"
                                 />
                                 <InputError message={errors.email} />
                             </div>
 
-                            <div className="grid gap-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="password">Kata sandi</Label>
+                            <div className="space-y-2.5">
+                                <div className="flex items-center justify-between gap-3">
+                                    <Label
+                                        htmlFor="password"
+                                        className="text-sm font-semibold text-slate-800 dark:text-slate-100"
+                                    >
+                                        Kata sandi
+                                    </Label>
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="text-xs font-medium"
+                                            className="text-xs font-medium text-slate-500 transition hover:text-primary dark:text-slate-400"
                                             tabIndex={5}
                                         >
                                             Lupa kata sandi?
@@ -82,11 +92,11 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                         tabIndex={2}
                                         autoComplete="current-password"
                                         placeholder="Masukkan kata sandi"
-                                        className="h-11 rounded-xl pr-11"
+                                        className="h-11 rounded-xl border-slate-200 bg-white pr-11 shadow-none transition focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-slate-700 dark:bg-slate-900"
                                     />
                                     <button
                                         type="button"
-                                        className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                                        className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 transition hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
                                         onClick={() =>
                                             setShowPassword((value) => !value)
                                         }
@@ -102,10 +112,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                             <Eye className="h-4 w-4" />
                                         )}
                                     </button>
-                                    <InputError message={errors.password} />
                                 </div>
+                                <InputError message={errors.password} />
 
-                                <div className="flex items-center space-x-3 py-1">
+                                <div className="flex items-center gap-3 pt-1">
                                     <Checkbox
                                         id="remember"
                                         name="remember"
@@ -113,7 +123,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     />
                                     <Label
                                         htmlFor="remember"
-                                        className="cursor-pointer text-sm text-muted-foreground"
+                                        className="cursor-pointer text-sm text-slate-600 dark:text-slate-400"
                                     >
                                         Ingat saya
                                     </Label>
@@ -122,7 +132,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 <div className="pt-2">
                                     <Button
                                         type="submit"
-                                        className="h-11 w-full rounded-xl"
+                                        className="h-11 w-full rounded-xl bg-slate-900 text-white shadow-none transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                                         tabIndex={4}
                                         disabled={processing}
                                         data-test="login-button"

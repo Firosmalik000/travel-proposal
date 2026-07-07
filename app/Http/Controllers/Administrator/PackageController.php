@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\StorePackageRequest;
 use App\Http\Requests\Administrator\StoreScheduleRequest;
 use App\Models\Activity;
+use App\Models\Currency;
 use App\Models\DepartureSchedule;
 use App\Models\PackageItinerary;
 use App\Models\TravelPackage;
@@ -40,6 +41,7 @@ class PackageController extends Controller
         return Inertia::render('Dashboard/ProductManagement/Packages/Index', [
             'packages' => $packages,
             'productOptions' => $this->productOptions(),
+            'currencies' => $this->currencyOptions(),
             'activityOptions' => $this->activityOptions(),
             'packageImageUploadMaxKilobytes' => ParticipantUploadLimit::kilobytes(4096),
         ]);
@@ -51,7 +53,11 @@ class PackageController extends Controller
             $this->packagePayload($request)
         );
 
-        $this->syncProducts($package, $request->input('product_ids', []));
+        $this->syncProducts(
+            $package,
+            $request->input('product_ids', []),
+            $request->input('product_multipliers', []),
+        );
         $this->syncItineraries($package, $request->validated('itineraries', []));
 
         return back()->with('success', 'Package berhasil ditambahkan.');
@@ -60,7 +66,11 @@ class PackageController extends Controller
     public function update(StorePackageRequest $request, TravelPackage $package): RedirectResponse
     {
         $package->update($this->packagePayload($request, $package));
-        $this->syncProducts($package, $request->input('product_ids', []));
+        $this->syncProducts(
+            $package,
+            $request->input('product_ids', []),
+            $request->input('product_multipliers', []),
+        );
         $this->syncItineraries($package, $request->validated('itineraries', []));
 
         return back()->with('success', 'Package berhasil diperbarui.');
@@ -248,6 +258,16 @@ class PackageController extends Controller
             ? $request->input('content')
             : (json_decode($request->input('content', '{}'), true) ?? []);
 
+        $originalPrice = $request->filled('original_price')
+            ? $request->float('original_price')
+            : null;
+        $sellingPrice = $request->float('price');
+        $content = $this->applyDiscountToRoomPrices(
+            $content,
+            $originalPrice,
+            $sellingPrice,
+        );
+
         // Add gallery to content
         $content['gallery'] = $gallery;
 
@@ -262,8 +282,8 @@ class PackageController extends Controller
             'package_type' => $request->string('package_type')->value(),
             'departure_city' => $request->string('departure_city')->value(),
             'duration_days' => $request->integer('duration_days'),
-            'price' => $request->float('price'),
-            'original_price' => $request->filled('original_price') ? $request->float('original_price') : null,
+            'price' => $sellingPrice,
+            'original_price' => $originalPrice,
             'discount_label' => $request->filled('discount_label') ? $request->string('discount_label')->value() : null,
             'discount_ends_at' => $request->filled('discount_ends_at') ? $request->input('discount_ends_at') : null,
             'currency' => $request->string('currency', 'IDR')->value(),
@@ -275,13 +295,25 @@ class PackageController extends Controller
         ];
     }
 
-    /** @param array<int> $productIds */
-    private function syncProducts(TravelPackage $package, array $productIds): void
+    /**
+     * @param  array<int>  $productIds
+     * @param  array<string|int, mixed>  $productMultipliers
+     */
+    private function syncProducts(TravelPackage $package, array $productIds, array $productMultipliers = []): void
     {
         $syncData = collect($productIds)
             ->filter(fn ($id) => is_numeric($id))
             ->values()
-            ->mapWithKeys(fn ($id, $index) => [(int) $id => ['sort_order' => $index + 1]])
+            ->mapWithKeys(function ($id, $index) use ($productMultipliers): array {
+                $multiplier = $productMultipliers[(string) $id] ?? $productMultipliers[(int) $id] ?? 1;
+
+                return [
+                    (int) $id => [
+                        'sort_order' => $index + 1,
+                        'multiplier_per_pax' => max(1, (int) $multiplier),
+                    ],
+                ];
+            })
             ->all();
 
         $package->products()->sync($syncData);
@@ -368,12 +400,54 @@ class PackageController extends Controller
         return TravelProduct::query()
             ->where('is_active', true)
             ->orderBy('code')
-            ->get(['id', 'code', 'name', 'product_type'])
-            ->map(fn (TravelProduct $p) => [
-                'id' => $p->id,
-                'code' => $p->code,
-                'name' => $p->name,
-                'product_type' => $p->product_type,
+            ->get(['id', 'code', 'name', 'product_type', 'content'])
+            ->map(function (TravelProduct $product): array {
+                $pricing = collect(data_get($product->content, 'pricing', []))
+                    ->filter(fn ($item) => is_array($item))
+                    ->map(fn (array $item): array => [
+                        'broker_name' => $item['broker_name'] ?? null,
+                        'room_type' => $item['room_type'] ?? null,
+                        'period_start' => $item['period_start'] ?? null,
+                        'period_end' => $item['period_end'] ?? null,
+                        'price' => isset($item['price']) && is_numeric($item['price']) ? (float) $item['price'] : null,
+                    ])
+                    ->values()
+                    ->all();
+
+                return [
+                    'id' => $product->id,
+                    'code' => $product->code,
+                    'name' => $product->name,
+                    'product_type' => $product->product_type,
+                    'currency' => data_get($product->content, 'currency', 'IDR'),
+                    'price' => data_get($product->content, 'price') !== null && is_numeric(data_get($product->content, 'price'))
+                        ? (float) data_get($product->content, 'price')
+                        : null,
+                    'hotel_info' => $product->product_type === 'hotel'
+                        ? [
+                            'city' => data_get($product->content, 'city'),
+                            'country' => data_get($product->content, 'country'),
+                            'currency' => data_get($product->content, 'currency'),
+                            'pricing' => $pricing,
+                        ]
+                        : null,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /** @return array<int, array{code:string,name:string,conversion_rate:float}> */
+    private function currencyOptions(): array
+    {
+        return Currency::query()
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->get(['code', 'name', 'conversion_rate'])
+            ->map(fn (Currency $currency): array => [
+                'code' => $currency->code,
+                'name' => $currency->name,
+                'conversion_rate' => (float) $currency->conversion_rate,
             ])
             ->values()
             ->all();
@@ -425,6 +499,11 @@ class PackageController extends Controller
             'is_featured' => $pkg->is_featured,
             'is_active' => $pkg->is_active,
             'product_ids' => $pkg->products->pluck('id')->values()->all(),
+            'product_multipliers' => $pkg->products
+                ->mapWithKeys(fn (TravelProduct $product) => [
+                    (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
+                ])
+                ->all(),
             'schedules' => $pkg->schedules->map(fn (DepartureSchedule $s) => [
                 'id' => $s->id,
                 'departure_date' => $s->departure_date->toDateString(),
@@ -473,6 +552,44 @@ class PackageController extends Controller
                 ];
             })->values()->all(),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<string, mixed>
+     */
+    private function applyDiscountToRoomPrices(array $content, ?float $originalPrice, float $sellingPrice): array
+    {
+        $roomOriginalPrices = data_get($content, 'room_original_prices', []);
+        if (! is_array($roomOriginalPrices)) {
+            return $content;
+        }
+
+        $discountRatio = 1.0;
+        if ($originalPrice !== null && $originalPrice > 0 && $sellingPrice > 0 && $sellingPrice < $originalPrice) {
+            $discountRatio = $sellingPrice / $originalPrice;
+        }
+
+        $roomPrices = [];
+        foreach (['dbl', 'trpl', 'quad'] as $roomType) {
+            $originalRoomPrice = data_get($roomOriginalPrices, $roomType);
+
+            if (! is_numeric($originalRoomPrice)) {
+                $originalRoomPrice = $originalPrice;
+            }
+
+            if (! is_numeric($originalRoomPrice)) {
+                $roomPrices[$roomType] = null;
+
+                continue;
+            }
+
+            $roomPrices[$roomType] = (int) round(((float) $originalRoomPrice) * $discountRatio);
+        }
+
+        $content['room_prices'] = $roomPrices;
+
+        return $content;
     }
 
     /** @param array<string, mixed> $data

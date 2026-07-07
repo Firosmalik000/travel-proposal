@@ -37,6 +37,7 @@ class PackageCostCalculationController extends Controller
                 'id' => $calculation->id,
                 'travel_package_id' => (int) $calculation->package_id,
                 'departure_schedule_id' => $calculation->departure_schedule_id ? (int) $calculation->departure_schedule_id : null,
+                'calculation_mode' => (string) $calculation->calculation_mode,
                 'calculation_date' => $calculation->calculation_date?->toDateString(),
                 'package_name' => (string) (data_get($calculation->package?->name, 'id') ?? $calculation->package?->code ?? '-'),
                 'package_code' => (string) ($calculation->package?->code ?? '-'),
@@ -109,6 +110,7 @@ class PackageCostCalculationController extends Controller
                 return [
                     $key => [
                         'id' => (int) $calculation->id,
+                        'calculation_mode' => (string) $calculation->calculation_mode,
                         'calculated_at' => $calculation->calculated_at?->toDateTimeString(),
                         'hotel_total' => (int) $calculation->hotel_total,
                         'product_total' => (int) $calculation->product_total,
@@ -159,6 +161,7 @@ class PackageCostCalculationController extends Controller
 
                     $preview = [
                         'id' => 0,
+                        'calculation_mode' => PackageCostCalculationService::MODE_LEGACY_ASSIGNMENT,
                         'calculated_at' => now()->toDateTimeString(),
                         'hotel_total' => (int) ($payload['hotel_total'] ?? 0),
                         'product_total' => (int) ($payload['product_total'] ?? 0),
@@ -221,6 +224,16 @@ class PackageCostCalculationController extends Controller
                     'departure_city' => $schedule->departure_city,
                 ])->values()->all(),
             'filters' => $filters,
+            'calculationModes' => [
+                [
+                    'value' => PackageCostCalculationService::MODE_PER_PAX_MULTIPLIER,
+                    'label' => 'Per Pax Multiplier',
+                ],
+                [
+                    'value' => PackageCostCalculationService::MODE_LEGACY_ASSIGNMENT,
+                    'label' => 'Legacy Assignment',
+                ],
+            ],
         ]);
     }
 
@@ -231,6 +244,7 @@ class PackageCostCalculationController extends Controller
             departureScheduleId: $request->filled('departure_schedule_id') ? $request->integer('departure_schedule_id') : null,
             manualAdjustment: $request->integer('manual_adjustment'),
             notes: $request->filled('notes') ? trim((string) $request->string('notes')->value()) : null,
+            calculationMode: (string) $request->input('calculation_mode', PackageCostCalculationService::MODE_PER_PAX_MULTIPLIER),
         );
 
         return back()->with('success', 'Cost calculation berhasil dibuat.');

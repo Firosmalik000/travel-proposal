@@ -4,7 +4,7 @@ import GlobalFaviconHead from '@/components/global-favicon-head';
 import { home } from '@/routes';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { type PropsWithChildren } from 'react';
+import { type CSSProperties, type PropsWithChildren } from 'react';
 
 interface AuthLayoutProps {
     name?: string;
@@ -19,62 +19,101 @@ export default function AuthSimpleLayout({
 }: PropsWithChildren<AuthLayoutProps>) {
     const { branding } = usePage<SharedData>().props;
 
+    const authTheme = {
+        '--auth-shell': '#f3f6fb',
+        '--auth-shell-dark': '#0b1220',
+        '--auth-card-bg': '#ffffff',
+        '--auth-card-border': 'rgba(15, 23, 42, 0.08)',
+        '--auth-card-foreground': '#0f172a',
+        '--auth-card-muted': '#64748b',
+        '--auth-panel': '#0f172a',
+    } as CSSProperties;
+
     return (
-        <div className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-[var(--auth-shell)] px-6 py-10 font-[var(--font-auth-sans)] text-[var(--auth-card-foreground)] dark:bg-[var(--auth-shell-dark)]">
+        <div
+            style={authTheme}
+            className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-[var(--auth-shell)] px-4 py-8 font-[var(--font-auth-sans)] text-[var(--auth-card-foreground)] sm:px-6 dark:bg-[var(--auth-shell-dark)]"
+        >
             <GlobalFaviconHead />
             <BrandThemeStyle />
-            <div className="pointer-events-none absolute inset-0">
-                <div className="absolute -top-56 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-primary)_26%,transparent)_0%,color-mix(in_srgb,var(--brand-primary)_12%,transparent)_45%,transparent_70%)] opacity-80 blur-3xl dark:opacity-35" />
-                <div className="absolute -right-32 -bottom-52 h-[420px] w-[420px] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-accent)_22%,transparent)_0%,color-mix(in_srgb,var(--brand-accent)_10%,transparent)_45%,transparent_70%)] opacity-70 blur-3xl dark:opacity-30" />
-                <div className="absolute top-24 -left-32 h-[340px] w-[340px] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-secondary)_16%,transparent)_0%,color-mix(in_srgb,var(--brand-secondary)_6%,transparent)_50%,transparent_75%)] opacity-70 blur-2xl dark:opacity-35" />
-            </div>
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.05),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.78),rgba(248,250,252,0.96))] dark:bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.10),transparent_36%),linear-gradient(180deg,rgba(2,6,23,0.78),rgba(2,6,23,0.96))]" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#0f172a,#c80012,#0f172a)] opacity-90" />
 
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,_rgba(15,23,42,0.08)_1px,_transparent_0)] [mask-image:radial-gradient(ellipse_at_center,_rgba(0,0,0,0.7)_0%,_transparent_68%)] [background-size:22px_22px] opacity-60 dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(255,255,255,0.06)_1px,_transparent_0)]" />
-
-            <div className="relative z-10 w-full max-w-[460px]">
-                <div className="flex animate-in flex-col gap-8 duration-700 fade-in slide-in-from-bottom-4">
-                    <div className="flex flex-col items-center gap-6">
+            <div className="relative z-10 w-full max-w-[1080px]">
+                <div className="grid animate-in overflow-hidden rounded-[28px] border border-[var(--auth-card-border)] bg-[var(--auth-card-bg)] shadow-[0_24px_70px_-48px_rgba(15,23,42,0.35)] duration-700 fade-in slide-in-from-bottom-4 lg:grid-cols-[0.95fr_1.05fr]">
+                    <div className="flex flex-col justify-between gap-10 bg-[var(--auth-panel)] p-8 text-white sm:p-10">
                         <Link
                             href={home()}
-                            className="group flex flex-col items-center gap-3 font-medium transition-transform duration-300 hover:scale-[1.03]"
+                            className="inline-flex items-center gap-3 font-medium transition-opacity hover:opacity-90"
                         >
-                            <div className="relative flex h-16 w-16 items-center justify-center">
-                                <div className="absolute -inset-4 rounded-3xl bg-[radial-gradient(circle,color-mix(in_srgb,var(--brand-primary)_28%,transparent)_0%,_transparent_70%)] opacity-80 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
-                                <div className="relative flex h-full w-full items-center justify-center rounded-2xl bg-[var(--auth-card-bg)] ring-1 ring-[var(--auth-card-border)] backdrop-blur">
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--auth-panel)] p-2 shadow-[0_18px_40px_-20px_rgba(140,10,22,0.5)]">
-                                        <AppLogoIcon className="h-7 w-auto text-white drop-shadow-sm" />
-                                    </div>
-                                </div>
+                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
+                                <AppLogoIcon className="h-7 w-auto text-white" />
                             </div>
-                            <div className="text-center">
-                                <span className="sr-only">{title}</span>
-                                <p className="text-sm font-semibold text-[var(--auth-card-foreground)]">
+                            <div>
+                                <p className="text-sm font-semibold text-white">
                                     {branding.company_name}
                                 </p>
-                                <p className="text-[0.68rem] tracking-[0.24em] text-[var(--auth-card-muted)] uppercase">
+                                <p className="text-[0.7rem] tracking-[0.22em] text-slate-300 uppercase">
                                     {branding.company_subtitle}
                                 </p>
                             </div>
                         </Link>
 
-                        <div className="space-y-3 text-center">
-                            <h1 className="text-3xl font-[var(--font-auth-display)] font-semibold tracking-tight text-[var(--auth-card-foreground)] md:text-4xl">
-                                {title}
-                            </h1>
-                            <p className="max-w-sm text-sm text-[var(--auth-card-muted)]">
-                                {description}
-                            </p>
+                        <div className="space-y-4">
+                            <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-white uppercase">
+                                Admin Access
+                            </div>
+                            <div className="space-y-3">
+                                <h1 className="text-3xl font-[var(--font-auth-display)] font-semibold tracking-tight text-white md:text-4xl">
+                                    {title}
+                                </h1>
+                                <p className="max-w-md text-sm leading-relaxed text-slate-300">
+                                    {description}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 text-sm text-slate-200">
+                            <div className="flex items-start gap-3">
+                                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-white/70" />
+                                <div>
+                                    <p className="font-medium text-white">
+                                        Stabil untuk operasional harian
+                                    </p>
+                                    <p className="mt-0.5 text-slate-300">
+                                        Desain ringkas untuk akses kerja yang
+                                        cepat.
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-white/70" />
+                                <div>
+                                    <p className="font-medium text-white">
+                                        Fokus ke data penting
+                                    </p>
+                                    <p className="mt-0.5 text-slate-300">
+                                        Tanpa elemen visual yang mengganggu.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="group/card relative">
-                        <div className="absolute -inset-1 rounded-[32px] bg-gradient-to-r from-primary/20 via-amber-200/30 to-primary/10 opacity-70 blur-2xl transition-opacity duration-300 group-hover/card:opacity-90 dark:from-primary/25 dark:via-amber-500/10 dark:to-primary/20" />
-
-                        <div className="relative rounded-[32px] border border-[var(--auth-card-border)] bg-[var(--auth-card-bg)] p-8 text-[var(--auth-card-foreground)] shadow-[0_30px_90px_-60px_rgba(15,23,42,0.6)] backdrop-blur-2xl">
-                            <div className="absolute top-0 right-8 left-8 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-
-                            {children}
+                    <div className="bg-white p-6 sm:p-8 lg:p-10 dark:bg-slate-950">
+                        <div className="mb-8 flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                                    Login Panel
+                                </p>
+                                <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                                    Masuk menggunakan akun internal yang sudah
+                                    terdaftar.
+                                </p>
+                            </div>
                         </div>
+
+                        <div className="relative">{children}</div>
                     </div>
                 </div>
             </div>

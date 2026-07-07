@@ -19,6 +19,7 @@ use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Inertia\Middleware;
+use Spatie\Permission\Models\Permission;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -59,9 +60,15 @@ class HandleInertiaRequests extends Middleware
         $isImpersonating = false;
 
         if ($user) {
-            $userPermissions = $user
-                ->getAllPermissions()
-                ->pluck('name')
+            $permissionNames = $user->isSuperAdmin()
+                ? Permission::query()
+                    ->where('name', 'like', 'menu.%')
+                    ->pluck('name')
+                : $user
+                    ->getAllPermissions()
+                    ->pluck('name');
+
+            $userPermissions = $permissionNames
                 ->filter(fn (string $name): bool => str_starts_with($name, 'menu.'))
                 ->reduce(function (array $carry, string $name): array {
                     $parts = explode('.', $name, 3);

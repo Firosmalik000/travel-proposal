@@ -29,7 +29,6 @@ import { Head, router, useForm } from '@inertiajs/react';
 import {
     Eye,
     MoreHorizontal,
-    Package,
     Plus,
     Search,
     SquarePen,
@@ -37,6 +36,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import HotelIndexLocal from './HotelIndexLocal';
 
 type ProductItem = {
     id: number;
@@ -46,6 +46,7 @@ type ProductItem = {
     product_type: string;
     description: string | null;
     price: number | null;
+    currency: string | null;
     hotel_info?: {
         hotel_id: number;
         city: string;
@@ -71,27 +72,89 @@ type Props = {
         search: string;
         product_type: string;
     };
-    stats: {
-        total: number;
-        active: number;
-        inactive: number;
-    };
     product_type_options: Array<{ value: string; label: string }>;
+    hotel_master: {
+        hotels: {
+            data: Array<{
+                id: number;
+                code: string;
+                name: string;
+                description: string | null;
+                currency: string;
+                is_active: boolean;
+                country_id: number;
+                city_id: number;
+                country_name: string;
+                city_name: string;
+                product_code: string | null;
+                prices: Array<
+                    {
+                        room_type_id: number;
+                        period_start: string;
+                        period_end: string;
+                        price: number;
+                        broker_key?: string;
+                        broker_name?: string;
+                    } & { room_type_name: string }
+                >;
+            }>;
+            total?: number;
+            links: Array<{
+                url: string | null;
+                label: string;
+                active: boolean;
+            }>;
+            from?: number | null;
+        };
+        filters: { search: string; city_id: string; status: string };
+        cityStats: Array<{
+            city_id: number;
+            city_name: string;
+            total_hotels: number;
+        }>;
+        countryOptions: Array<{ id: number; name: string }>;
+        cityOptions: Array<{
+            id: number;
+            country_id: number;
+            name: string;
+            country_name: string;
+        }>;
+        roomTypeOptions: Array<{ id: number; name: string }>;
+        currencyOptions: Array<{ code: string; name: string }>;
+    };
     hotel_options: Array<{
         id: number;
         product_id: number;
         name: string;
+        code: string | null;
+        description: string | null;
         product_code: string | null;
+        country_id: number;
+        city_id: number;
         country: string | null;
         city: string | null;
         currency: string | null;
+        is_active: boolean;
         pricing: Array<{
+            id: number;
+            broker_key: string | null;
+            broker_name: string | null;
+            room_type_id: number;
             room_type: string;
             period_start: string | null;
             period_end: string | null;
             price: number | string | null;
         }>;
     }>;
+    hotel_country_options: Array<{ id: number; name: string }>;
+    hotel_city_options: Array<{
+        id: number;
+        country_id: number;
+        name: string;
+        country_name: string;
+    }>;
+    hotel_room_type_options: Array<{ id: number; name: string }>;
+    hotel_currency_options: Array<{ code: string; name: string }>;
 };
 
 type ProductFormData = {
@@ -99,11 +162,15 @@ type ProductFormData = {
     product_type: string;
     description: string;
     price: string;
+    currency: string;
     source_hotel_id: string;
     is_active: boolean;
 };
 
-function buildFormData(product: ProductItem | null): ProductFormData {
+function buildFormData(
+    product: ProductItem | null,
+    defaultCurrency: string,
+): ProductFormData {
     return {
         name: product?.name ?? '',
         product_type: product?.product_type ?? '',
@@ -112,6 +179,10 @@ function buildFormData(product: ProductItem | null): ProductFormData {
             product?.price !== null && product?.price !== undefined
                 ? String(product.price)
                 : '',
+        currency:
+            product?.currency ??
+            product?.hotel_info?.currency ??
+            defaultCurrency,
         source_hotel_id:
             product?.hotel_info?.hotel_id && product.hotel_info.hotel_id > 0
                 ? String(product.hotel_info.hotel_id)
@@ -139,16 +210,27 @@ function generateProductCode(value: string): string {
     return `PRD-${normalized || 'ITEM'}`;
 }
 
-function formatCurrencyIDR(value: number | null): string {
+function formatCurrencyAmount(
+    value: number | null,
+    currency: string | null = 'IDR',
+): string {
     if (value === null || Number.isNaN(value)) {
         return '-';
     }
 
     return new Intl.NumberFormat('id-ID', {
         style: 'currency',
-        currency: 'IDR',
+        currency: currency || 'IDR',
         maximumFractionDigits: 0,
     }).format(value);
+}
+
+function resolveProductCurrency(product: ProductItem | null): string {
+    if (!product) {
+        return 'IDR';
+    }
+
+    return product.currency ?? product.hotel_info?.currency ?? 'IDR';
 }
 
 function isHotelProductType(productType: string): boolean {
@@ -159,42 +241,6 @@ function isHotelProductType(productType: string): boolean {
         normalized.includes('akomodasi') ||
         normalized.includes('accommodation')
     );
-}
-
-function buildHotelContent(
-    sourceHotelId: string,
-    hotelOptions: Props['hotel_options'],
-    editingProduct: ProductItem | null | 'new',
-): Record<string, unknown> {
-    const selectedHotel = hotelOptions.find(
-        (hotel) => String(hotel.id) === sourceHotelId,
-    );
-
-    if (selectedHotel) {
-        return {
-            hotel_id: selectedHotel.id,
-            country: selectedHotel.country ?? '',
-            city: selectedHotel.city ?? '',
-            currency: selectedHotel.currency ?? 'IDR',
-            pricing: selectedHotel.pricing ?? [],
-        };
-    }
-
-    if (
-        editingProduct &&
-        editingProduct !== 'new' &&
-        editingProduct.hotel_info
-    ) {
-        return {
-            hotel_id: editingProduct.hotel_info.hotel_id,
-            country: editingProduct.hotel_info.country,
-            city: editingProduct.hotel_info.city,
-            currency: editingProduct.hotel_info.currency,
-            pricing: editingProduct.hotel_info.pricing ?? [],
-        };
-    }
-
-    return {};
 }
 
 function resolveHotelOption(
@@ -297,6 +343,9 @@ function ProductTableRow({
     canView,
     canEdit,
     canDelete,
+    hotelCanView,
+    hotelCanEdit,
+    hotelCanDelete,
 }: {
     index: number;
     product: ProductItem;
@@ -306,8 +355,19 @@ function ProductTableRow({
     canView: boolean;
     canEdit: boolean;
     canDelete: boolean;
+    hotelCanView: boolean;
+    hotelCanEdit: boolean;
+    hotelCanDelete: boolean;
 }) {
-    const showActions = canView || canEdit || canDelete;
+    const isHotelProduct = isHotelProductType(product.product_type);
+    const showActions = isHotelProduct
+        ? canView ||
+          canEdit ||
+          canDelete ||
+          hotelCanView ||
+          hotelCanEdit ||
+          hotelCanDelete
+        : canView || canEdit || canDelete;
 
     return (
         <tr
@@ -331,7 +391,7 @@ function ProductTableRow({
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            {canView ? (
+                            {canView || (isHotelProduct && hotelCanView) ? (
                                 <DropdownMenuItem
                                     onClick={() => onView(product)}
                                 >
@@ -339,7 +399,7 @@ function ProductTableRow({
                                     Detail
                                 </DropdownMenuItem>
                             ) : null}
-                            {canEdit ? (
+                            {canEdit || (isHotelProduct && hotelCanEdit) ? (
                                 <DropdownMenuItem
                                     onClick={() => onEdit(product)}
                                 >
@@ -347,7 +407,7 @@ function ProductTableRow({
                                     Edit
                                 </DropdownMenuItem>
                             ) : null}
-                            {canDelete ? (
+                            {canDelete || (isHotelProduct && hotelCanDelete) ? (
                                 <DropdownMenuItem
                                     variant="destructive"
                                     onClick={() => onDelete(product)}
@@ -380,7 +440,10 @@ function ProductTableRow({
                 </span>
             </td>
             <td className="px-4 py-4 text-sm font-medium text-foreground">
-                {formatCurrencyIDR(product.price)}
+                {formatCurrencyAmount(
+                    product.price,
+                    resolveProductCurrency(product),
+                )}
             </td>
             <td className="px-4 py-4">
                 <span
@@ -400,17 +463,24 @@ function ProductTableRow({
 export default function ProductsIndex({
     products,
     filters,
-    stats,
     product_type_options: productTypeOptions,
+    hotel_master: hotelMaster,
     hotel_options: hotelOptions,
+    hotel_currency_options: hotelCurrencyOptions,
 }: Props) {
-    const { can } = usePermission('product');
-    const canCreate = can('create');
-    const canView = can('view');
-    const canEdit = can('edit');
-    const canDelete = can('delete');
+    const { can: canProduct } = usePermission('product');
+    const { can: canHotel } = usePermission('hotel');
+    const canCreate = canProduct('create');
+    const canView = canProduct('view');
+    const canEdit = canProduct('edit');
+    const canDelete = canProduct('delete');
+    const canViewHotel = canHotel('view');
+    const canEditHotel = canHotel('edit');
+    const canDeleteHotel = canHotel('delete');
     const [search, setSearch] = useState(filters.search);
-    const [productType, setProductType] = useState(filters.product_type);
+    const [productType, setProductType] = useState(
+        filters.product_type || 'hotel',
+    );
     const [editingProduct, setEditingProduct] = useState<
         ProductItem | null | 'new'
     >(null);
@@ -418,8 +488,12 @@ export default function ProductsIndex({
         null,
     );
     const [activeFormTab, setActiveFormTab] = useState('general');
+    const defaultHotelCurrency = hotelCurrencyOptions[0]?.code ?? 'IDR';
+    const formProductTypeOptions = productTypeOptions;
 
-    const form = useForm<ProductFormData>(buildFormData(null));
+    const form = useForm<ProductFormData>(
+        buildFormData(null, defaultHotelCurrency),
+    );
     const generatedSlug = useMemo(
         () => generateSlug(form.data.name),
         [form.data.name],
@@ -428,10 +502,7 @@ export default function ProductsIndex({
         () => generateProductCode(form.data.name),
         [form.data.name],
     );
-    const isEditingExistingHotelProduct =
-        editingProduct !== null &&
-        editingProduct !== 'new' &&
-        isHotelProductType(editingProduct.product_type);
+    const isEditingExistingHotelProduct = false;
     const selectedHotelForDetail = useMemo(
         () => resolveHotelOption(viewingProduct, hotelOptions),
         [viewingProduct, hotelOptions],
@@ -441,23 +512,32 @@ export default function ProductsIndex({
             buildHotelPricingMatrix(viewingProduct?.hotel_info?.pricing ?? []),
         [viewingProduct],
     );
+    const activeProductType = productType || 'hotel';
+    const canShowCreateButton = activeProductType !== 'hotel' && canCreate;
+
+    function navigateToFilters(nextFilters: {
+        search: string;
+        product_type: string;
+    }) {
+        router.get('/admin/product-management/products', nextFilters, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    }
 
     function submitFilters() {
-        router.get(
-            '/admin/product-management/products',
-            { search, product_type: productType },
-            { preserveState: true, preserveScroll: true },
-        );
+        navigateToFilters({ search, product_type: activeProductType });
     }
 
     function resetFilters() {
         setSearch('');
-        setProductType('all');
-        router.get(
-            '/admin/product-management/products',
-            {},
-            { preserveState: true, preserveScroll: true },
-        );
+        setProductType('hotel');
+        navigateToFilters({ search: '', product_type: 'hotel' });
+    }
+
+    function selectProductType(nextProductType: string) {
+        setProductType(nextProductType);
+        navigateToFilters({ search, product_type: nextProductType });
     }
 
     function openCreateSheet() {
@@ -465,7 +545,10 @@ export default function ProductsIndex({
             return;
         }
 
-        form.setData(buildFormData(null));
+        form.setData({
+            ...buildFormData(null, defaultHotelCurrency),
+            product_type: activeProductType,
+        });
         form.clearErrors();
         setActiveFormTab('general');
         setEditingProduct('new');
@@ -476,7 +559,7 @@ export default function ProductsIndex({
             return;
         }
 
-        const baseForm = buildFormData(product);
+        const baseForm = buildFormData(product, defaultHotelCurrency);
         const sourceHotel = resolveHotelOption(product, hotelOptions);
         form.setData({
             ...baseForm,
@@ -490,7 +573,11 @@ export default function ProductsIndex({
     }
 
     function openDetailSheet(product: ProductItem) {
-        if (!canView) {
+        if (isHotelProductType(product.product_type)) {
+            if (!canViewHotel) {
+                return;
+            }
+        } else if (!canView) {
             return;
         }
 
@@ -510,13 +597,6 @@ export default function ProductsIndex({
 
     function submit(event: React.FormEvent) {
         event.preventDefault();
-
-        if (isEditingExistingHotelProduct) {
-            toast.error(
-                'Produk hotel dikelola dari menu Master Data Hotel. Silakan edit di sana.',
-            );
-            return;
-        }
 
         const parsedPrice = Number(form.data.price);
 
@@ -544,13 +624,7 @@ export default function ProductsIndex({
                 description: form.data.description,
                 content: {
                     price: parsedPrice,
-                    ...(isHotelProductType(form.data.product_type)
-                        ? buildHotelContent(
-                              form.data.source_hotel_id,
-                              hotelOptions,
-                              editingProduct,
-                          )
-                        : {}),
+                    currency: form.data.currency || defaultHotelCurrency,
                 },
                 is_active: form.data.is_active,
             },
@@ -618,74 +692,29 @@ export default function ProductsIndex({
         >
             <Head title="Products" />
 
-            <div className="space-y-4 p-4 md:p-5">
-                <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-2 px-2 py-2 md:px-3 md:py-3">
+                <div className="flex flex-col gap-3 rounded-2xl border border-border/40 bg-card p-2 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                     <div className="space-y-1">
                         <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                             Products
                         </h1>
                     </div>
-                    {canCreate ? (
+                    {canShowCreateButton ? (
                         <Button
+                            type="button"
                             onClick={openCreateSheet}
                             className="h-10 shrink-0 rounded-xl px-4"
                         >
                             <Plus className="mr-2 h-4 w-4" />
-                            Tambah Produk
+                            {activeProductType === 'hotel'
+                                ? 'Tambah Hotel'
+                                : 'Tambah Produk'}
                         </Button>
                     ) : null}
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-3">
-                    <div className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                                    Total Produk
-                                </p>
-                                <p className="mt-1 text-2xl font-semibold">
-                                    {stats.total}
-                                </p>
-                            </div>
-                            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-                                <Package className="h-4.5 w-4.5" />
-                            </div>
-                        </div>
-                    </div>
-                    <div className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                                    Active
-                                </p>
-                                <p className="mt-1 text-2xl font-semibold">
-                                    {stats.active}
-                                </p>
-                            </div>
-                            <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-700">
-                                <Eye className="h-4.5 w-4.5" />
-                            </div>
-                        </div>
-                    </div>
-                    <div className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                                    Inactive
-                                </p>
-                                <p className="mt-1 text-2xl font-semibold">
-                                    {stats.inactive}
-                                </p>
-                            </div>
-                            <div className="rounded-xl bg-slate-100 p-2.5 text-slate-700">
-                                <Eye className="h-4.5 w-4.5" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
-                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_240px_auto] lg:items-end">
+                <div className="rounded-xl border border-border/40 bg-card p-2 shadow-sm">
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                         <div>
                             <Label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
                                 Cari Produk
@@ -699,32 +728,6 @@ export default function ProductsIndex({
                                     className="h-10 rounded-lg pl-10"
                                 />
                             </div>
-                        </div>
-                        <div>
-                            <Label className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                                Kategori
-                            </Label>
-                            <Select
-                                value={productType || 'all'}
-                                onValueChange={setProductType}
-                            >
-                                <SelectTrigger className="h-10 w-full rounded-lg">
-                                    <SelectValue placeholder="Semua kategori" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        Semua kategori
-                                    </SelectItem>
-                                    {productTypeOptions.map((opt) => (
-                                        <SelectItem
-                                            key={opt.value}
-                                            value={opt.value}
-                                        >
-                                            {opt.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-2">
                             <Button
@@ -746,91 +749,149 @@ export default function ProductsIndex({
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-                    <div className="border-b border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-                        <span>Total data: {products.total}</span>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-border text-left text-sm">
-                            <thead className="bg-muted/35 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                                <tr>
-                                    <th className="w-16 px-4 py-3 text-center">
-                                        No
-                                    </th>
-                                    <th className="w-20 px-4 py-3 text-right">
-                                        Aksi
-                                    </th>
-                                    <th className="px-4 py-3">Produk</th>
-                                    <th className="px-4 py-3">Kategori</th>
-                                    <th className="px-4 py-3">Harga</th>
-                                    <th className="px-4 py-3">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {products.data.length > 0 ? (
-                                    products.data.map((product, index) => (
-                                        <ProductTableRow
-                                            key={product.id}
-                                            index={index + 1}
-                                            product={product}
-                                            onView={openDetailSheet}
-                                            onEdit={openEditSheet}
-                                            onDelete={destroyProduct}
-                                            canView={canView}
-                                            canEdit={canEdit}
-                                            canDelete={canDelete}
-                                        />
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td
-                                            colSpan={6}
-                                            className="px-4 py-10 text-center text-sm text-muted-foreground"
-                                        >
-                                            {filters.search ||
-                                            (filters.product_type &&
-                                                filters.product_type !== 'all')
-                                                ? 'Produk tidak ditemukan.'
-                                                : 'Belum ada produk.'}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                <div className="rounded-2xl border border-border/40 bg-card p-2 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1">
+                            <Label className="block text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                                Kategori
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                                Pilih kategori untuk memfilter data produk.
+                            </p>
+                        </div>
+                        <div className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-medium text-muted-foreground">
+                            Default: Hotel
+                        </div>
                     </div>
 
-                    {products.links.length > 3 ? (
-                        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-4 py-4">
-                            {products.links.map((link, index) =>
-                                link.url ? (
-                                    <Button
-                                        key={`${link.label}-${index}`}
+                    <div className="mt-4 overflow-x-auto pb-1">
+                        <div className="flex min-w-max flex-nowrap gap-2">
+                            {productTypeOptions.map((opt) => {
+                                const isActive =
+                                    activeProductType === opt.value;
+
+                                return (
+                                    <button
+                                        key={opt.value}
                                         type="button"
-                                        variant={
-                                            link.active ? 'default' : 'outline'
+                                        onClick={() =>
+                                            selectProductType(opt.value)
                                         }
-                                        size="sm"
-                                        onClick={() => router.visit(link.url!)}
-                                        dangerouslySetInnerHTML={{
-                                            __html: link.label,
-                                        }}
-                                    />
-                                ) : (
-                                    <Button
-                                        key={`${link.label}-${index}`}
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled
-                                        dangerouslySetInnerHTML={{
-                                            __html: link.label,
-                                        }}
-                                    />
-                                ),
-                            )}
+                                        className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium transition-all ${
+                                            isActive
+                                                ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                                                : 'border-border bg-background text-foreground hover:border-primary/50 hover:bg-accent'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                );
+                            })}
                         </div>
-                    ) : null}
+                    </div>
                 </div>
+
+                {activeProductType === 'hotel' ? (
+                    <HotelIndexLocal
+                        embedded
+                        {...hotelMaster}
+                        currencyOptions={hotelCurrencyOptions}
+                    />
+                ) : (
+                    <div className="overflow-hidden rounded-2xl border border-border/40 bg-card shadow-sm">
+                        <div className="border-b border-border/40 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
+                            <span>Total data: {products.total}</span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-border text-left text-sm">
+                                <thead className="bg-muted/35 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                    <tr>
+                                        <th className="w-16 px-4 py-3 text-center">
+                                            No
+                                        </th>
+                                        <th className="w-20 px-4 py-3 text-right">
+                                            Aksi
+                                        </th>
+                                        <th className="px-4 py-3">Produk</th>
+                                        <th className="px-4 py-3">Kategori</th>
+                                        <th className="px-4 py-3">Harga</th>
+                                        <th className="px-4 py-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {products.data.length > 0 ? (
+                                        products.data.map((product, index) => (
+                                            <ProductTableRow
+                                                key={product.id}
+                                                index={index + 1}
+                                                product={product}
+                                                onView={openDetailSheet}
+                                                onEdit={openEditSheet}
+                                                onDelete={destroyProduct}
+                                                canView={canView}
+                                                canEdit={canEdit}
+                                                canDelete={canDelete}
+                                                hotelCanView={canViewHotel}
+                                                hotelCanEdit={canEditHotel}
+                                                hotelCanDelete={canDeleteHotel}
+                                            />
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td
+                                                colSpan={6}
+                                                className="px-4 py-10 text-center text-sm text-muted-foreground"
+                                            >
+                                                {filters.search ||
+                                                (filters.product_type &&
+                                                    filters.product_type !==
+                                                        'hotel')
+                                                    ? 'Produk tidak ditemukan.'
+                                                    : 'Belum ada produk.'}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {products.links.length > 3 ? (
+                            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/40 px-3 py-3">
+                                {products.links.map((link, index) =>
+                                    link.url ? (
+                                        <Button
+                                            key={`${link.label}-${index}`}
+                                            type="button"
+                                            variant={
+                                                link.active
+                                                    ? 'default'
+                                                    : 'outline'
+                                            }
+                                            size="sm"
+                                            onClick={() =>
+                                                router.visit(link.url!)
+                                            }
+                                            dangerouslySetInnerHTML={{
+                                                __html: link.label,
+                                            }}
+                                        />
+                                    ) : (
+                                        <Button
+                                            key={`${link.label}-${index}`}
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled
+                                            dangerouslySetInnerHTML={{
+                                                __html: link.label,
+                                            }}
+                                        />
+                                    ),
+                                )}
+                            </div>
+                        ) : null}
+                    </div>
+                )}
             </div>
 
             <Sheet
@@ -850,7 +911,7 @@ export default function ProductsIndex({
                     </SheetHeader>
 
                     <form onSubmit={submit} className="mt-6 space-y-5">
-                        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                        <div className="rounded-2xl border border-border/40 bg-card p-3 shadow-sm">
                             <div className="mb-4">
                                 <p className="text-sm font-semibold text-foreground">
                                     Detail Produk
@@ -899,7 +960,7 @@ export default function ProductsIndex({
                                                 <SelectValue placeholder="Pilih tipe" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {productTypeOptions.map(
+                                                {formProductTypeOptions.map(
                                                     (opt) => (
                                                         <SelectItem
                                                             key={opt.value}
@@ -983,6 +1044,53 @@ export default function ProductsIndex({
                                                 required
                                             />
                                         </div>
+                                        <div>
+                                            <Label className="mb-1.5 block">
+                                                Mata Uang
+                                            </Label>
+                                            <Select
+                                                value={
+                                                    form.data.currency || 'none'
+                                                }
+                                                onValueChange={(value) =>
+                                                    form.setData(
+                                                        'currency',
+                                                        value === 'none'
+                                                            ? defaultHotelCurrency
+                                                            : value,
+                                                    )
+                                                }
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue placeholder="Pilih kurs dari master" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">
+                                                        Pilih kurs
+                                                    </SelectItem>
+                                                    {hotelCurrencyOptions.map(
+                                                        (currency) => (
+                                                            <SelectItem
+                                                                key={
+                                                                    currency.code
+                                                                }
+                                                                value={
+                                                                    currency.code
+                                                                }
+                                                            >
+                                                                {currency.code}{' '}
+                                                                -{' '}
+                                                                {currency.name}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                            <p className="mt-1.5 text-xs text-muted-foreground">
+                                                Dipakai untuk perhitungan HPP
+                                                dan mengikuti Master Kurs.
+                                            </p>
+                                        </div>
                                     </div>
 
                                     <div className="grid gap-4 sm:grid-cols-2">
@@ -1036,7 +1144,7 @@ export default function ProductsIndex({
                                             }
                                         >
                                             <SelectTrigger className="w-full">
-                                                <SelectValue placeholder="Pilih hotel dari master data" />
+                                                <SelectValue placeholder="Pilih hotel" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="none">
@@ -1047,10 +1155,7 @@ export default function ProductsIndex({
                                                         key={hotel.id}
                                                         value={String(hotel.id)}
                                                     >
-                                                        {hotel.name} (
-                                                        {hotel.product_code ??
-                                                            '-'}
-                                                        )
+                                                        {hotel.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -1058,15 +1163,15 @@ export default function ProductsIndex({
                                     </div>
 
                                     <p className="text-xs text-muted-foreground">
-                                        Informasi hotel akan diambil dari menu
-                                        Master Data Hotel dan payload produk
-                                        akan mengikuti struktur sinkron hotel.
+                                        Informasi hotel mengikuti data hotel
+                                        yang dipilih dan payload produk akan
+                                        menyesuaikan struktur hotel.
                                     </p>
                                     {isEditingExistingHotelProduct ? (
                                         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                                             Produk kategori hotel tidak bisa
-                                            diedit di sini. Silakan edit dari
-                                            menu Master Data / Hotel.
+                                            diedit di sini. Silakan edit di
+                                            bagian hotel.
                                         </p>
                                     ) : null}
                                 </TabsContent>
@@ -1095,7 +1200,6 @@ export default function ProductsIndex({
                     </form>
                 </SheetContent>
             </Sheet>
-
             <Sheet
                 open={viewingProduct !== null}
                 onOpenChange={(open) => !open && closeDetailSheet()}
@@ -1110,7 +1214,7 @@ export default function ProductsIndex({
 
                     {viewingProduct ? (
                         <div className="mt-6 space-y-5">
-                            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                            <div className="rounded-2xl border border-border/40 bg-card p-3 shadow-sm">
                                 {isHotelProductType(
                                     viewingProduct.product_type,
                                 ) ? (
@@ -1139,9 +1243,24 @@ export default function ProductsIndex({
                                             ) ? (
                                                 <DetailField
                                                     label="Harga"
-                                                    value={formatCurrencyIDR(
+                                                    value={formatCurrencyAmount(
                                                         viewingProduct.price,
+                                                        resolveProductCurrency(
+                                                            viewingProduct,
+                                                        ),
                                                     )}
+                                                />
+                                            ) : null}
+                                            {!isHotelProductType(
+                                                viewingProduct.product_type,
+                                            ) ? (
+                                                <DetailField
+                                                    label="Mata Uang"
+                                                    value={
+                                                        resolveProductCurrency(
+                                                            viewingProduct,
+                                                        ) || '-'
+                                                    }
                                                 />
                                             ) : null}
                                             <DetailField
@@ -1173,7 +1292,7 @@ export default function ProductsIndex({
                                                 label="Sumber Hotel"
                                                 value={
                                                     selectedHotelForDetail
-                                                        ? `${selectedHotelForDetail.name} (${selectedHotelForDetail.product_code ?? '-'})`
+                                                        ? selectedHotelForDetail.name
                                                         : '-'
                                                 }
                                             />
@@ -1271,8 +1390,12 @@ export default function ProductsIndex({
                                                                                     >
                                                                                         {typeof price ===
                                                                                         'number'
-                                                                                            ? formatCurrencyIDR(
+                                                                                            ? formatCurrencyAmount(
                                                                                                   price,
+                                                                                                  viewingProduct
+                                                                                                      .hotel_info
+                                                                                                      ?.currency ??
+                                                                                                      'IDR',
                                                                                               )
                                                                                             : price ||
                                                                                               '-'}
@@ -1322,8 +1445,11 @@ export default function ProductsIndex({
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <DetailField
                                                 label="Harga"
-                                                value={formatCurrencyIDR(
+                                                value={formatCurrencyAmount(
                                                     viewingProduct.price,
+                                                    resolveProductCurrency(
+                                                        viewingProduct,
+                                                    ),
                                                 )}
                                             />
                                             <DetailField

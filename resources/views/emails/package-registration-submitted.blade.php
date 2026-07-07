@@ -67,6 +67,26 @@
         </tr>
         <tr>
             <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-weight: bold;">
+                Komposisi Kamar
+            </td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+                @php
+                    $roomConfiguration = is_array($registration->room_configuration) ? $registration->room_configuration : [];
+                    $segments = [];
+
+                    foreach (['single', 'double', 'triple', 'quad'] as $type) {
+                        $count = max(0, (int) data_get($roomConfiguration, $type, 0));
+                        if ($count > 0) {
+                            $segments[] = $count.' '.$type;
+                        }
+                    }
+                @endphp
+
+                {{ count($segments) > 0 ? implode(' + ', $segments) : '-' }}
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-weight: bold;">
                 Paket
             </td>
             <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">

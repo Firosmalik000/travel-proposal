@@ -45,9 +45,13 @@ class HotelProductSyncService
                 'city' => $hotel->city?->name,
                 'currency' => $hotel->currency,
                 'pricing' => $hotel->prices
-                    ->sortBy(fn ($price) => $price->period_start?->format('Y-m-d'))
+                    ->sortBy(function ($price): string {
+                        return ($price->broker_key ?? $price->broker_name ?? 'Broker 1').'|'.($price->period_start?->format('Y-m-d') ?? '');
+                    })
                     ->values()
                     ->map(fn ($price): array => [
+                        'broker_key' => $price->broker_key ?? null,
+                        'broker_name' => $price->broker_name ?? 'Broker 1',
                         'room_type' => $price->roomType?->name,
                         'period_start' => $price->period_start?->toDateString(),
                         'period_end' => $price->period_end?->toDateString(),

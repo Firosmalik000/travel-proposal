@@ -38,6 +38,7 @@ import { toast } from 'sonner';
 import { ProductSelector } from './ProductSelector';
 import type {
     ActivityOption,
+    CurrencyOption,
     Itinerary,
     ItineraryInput,
     Package,
@@ -49,6 +50,7 @@ import { packageImageMimeTypes } from './types';
 type Props = {
     pkg: Package | null;
     productOptions: ProductOption[];
+    currencies: CurrencyOption[];
     activityOptions: ActivityOption[];
     packageImageUploadMaxKilobytes: number;
     locale: 'id' | 'en';
@@ -220,6 +222,7 @@ function buildFormData(pkg: Package | null): PackageFormData {
         content: normalizePackageContent(pkg?.content ?? {}),
         itineraries: normalizeItineraries(durationDays, pkg?.itineraries ?? []),
         product_ids: pkg?.product_ids ?? [],
+        product_multipliers: pkg?.product_multipliers ?? {},
         is_featured: pkg?.is_featured ?? false,
         is_active: pkg?.is_active ?? true,
     };
@@ -294,6 +297,37 @@ function setContentField(
     return nextContent;
 }
 
+function getHotelBrokerSelections(
+    content: Record<string, unknown>,
+): Record<string, string> {
+    const value = content.hotel_product_brokers;
+
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return {};
+    }
+
+    return Object.entries(value).reduce(
+        (carry, [productId, brokerName]) => {
+            if (typeof brokerName === 'string' && brokerName.trim() !== '') {
+                carry[productId] = brokerName;
+            }
+
+            return carry;
+        },
+        {} as Record<string, string>,
+    );
+}
+
+function setHotelBrokerSelections(
+    content: Record<string, unknown>,
+    selections: Record<string, string>,
+): Record<string, unknown> {
+    return {
+        ...content,
+        hotel_product_brokers: selections,
+    };
+}
+
 function toLines(value: unknown): string {
     if (Array.isArray(value)) {
         return value.join('\n');
@@ -304,6 +338,64 @@ function toLines(value: unknown): string {
     }
 
     return '';
+}
+
+function normalizeRoomPriceValue(value: string): number | null {
+    if (value.trim() === '') {
+        return null;
+    }
+
+    const parsedValue = Number(value);
+
+    if (Number.isNaN(parsedValue) || parsedValue < 0) {
+        return null;
+    }
+
+    return parsedValue;
+}
+
+function calculateDiscountedPrice(
+    originalPrice: number | null,
+    discountPercent: number,
+): number | null {
+    if (originalPrice === null || originalPrice <= 0) {
+        return null;
+    }
+
+    if (discountPercent <= 0) {
+        return Math.round(originalPrice);
+    }
+
+    return Math.round(originalPrice * (1 - discountPercent / 100));
+}
+
+function inferOriginalRoomPrice(
+    sellingPrice: number | null,
+    discountPercent: number,
+): number | null {
+    if (sellingPrice === null || sellingPrice <= 0) {
+        return null;
+    }
+
+    if (discountPercent <= 0) {
+        return Math.round(sellingPrice);
+    }
+
+    const divisor = 1 - discountPercent / 100;
+
+    if (divisor <= 0) {
+        return null;
+    }
+
+    return Math.round(sellingPrice / divisor);
+}
+
+function formatCurrencyInputPreview(value: number | null): string {
+    if (value === null || value <= 0) {
+        return '-';
+    }
+
+    return `Rp ${value.toLocaleString('id-ID')}`;
 }
 
 function SectionHeader({
@@ -400,6 +492,7 @@ function createPresetHighlight(
 export function PackageForm({
     pkg,
     productOptions,
+    currencies,
     activityOptions,
     packageImageUploadMaxKilobytes,
     locale,
@@ -682,6 +775,22 @@ export function PackageForm({
         );
     }
 
+    function updateSelectedProducts(
+        productIds: number[],
+        hotelBrokerSelections: Record<string, string>,
+        productMultipliers: Record<string, number>,
+    ) {
+        form.setData((currentData) => ({
+            ...currentData,
+            product_ids: productIds,
+            product_multipliers: productMultipliers,
+            content: setHotelBrokerSelections(
+                currentData.content,
+                hotelBrokerSelections,
+            ),
+        }));
+    }
+
     function submit(event: React.FormEvent) {
         event.preventDefault();
 
@@ -694,6 +803,67 @@ export function PackageForm({
         const calculatedSellingPrice = hasDiscount
             ? Math.round(basePrice * (1 - discountPercentValue / 100))
             : basePrice;
+        const resolvedContent = normalizePackageContent({
+            ...form.data.content,
+            room_original_prices: {
+                dbl:
+                    normalizeRoomPriceValue(
+                        String(
+                            roomOriginalPrices.dbl ??
+                                effectiveRoomOriginalPrices.dbl ??
+                                '',
+                        ),
+                    ) ?? null,
+                trpl:
+                    normalizeRoomPriceValue(
+                        String(
+                            roomOriginalPrices.trpl ??
+                                effectiveRoomOriginalPrices.trpl ??
+                                '',
+                        ),
+                    ) ?? null,
+                quad:
+                    normalizeRoomPriceValue(
+                        String(
+                            roomOriginalPrices.quad ??
+                                effectiveRoomOriginalPrices.quad ??
+                                '',
+                        ),
+                    ) ?? null,
+            },
+            room_prices: {
+                dbl: calculateDiscountedPrice(
+                    normalizeRoomPriceValue(
+                        String(
+                            roomOriginalPrices.dbl ??
+                                effectiveRoomOriginalPrices.dbl ??
+                                '',
+                        ),
+                    ),
+                    discountPercentValue,
+                ),
+                trpl: calculateDiscountedPrice(
+                    normalizeRoomPriceValue(
+                        String(
+                            roomOriginalPrices.trpl ??
+                                effectiveRoomOriginalPrices.trpl ??
+                                '',
+                        ),
+                    ),
+                    discountPercentValue,
+                ),
+                quad: calculateDiscountedPrice(
+                    normalizeRoomPriceValue(
+                        String(
+                            roomOriginalPrices.quad ??
+                                effectiveRoomOriginalPrices.quad ??
+                                '',
+                        ),
+                    ),
+                    discountPercentValue,
+                ),
+            },
+        });
 
         const formData = new FormData();
         formData.append('_method', 'POST');
@@ -713,8 +883,12 @@ export function PackageForm({
         formData.append('currency', form.data.currency);
         formData.append('summary[id]', form.data['summary.id']);
         formData.append('summary[en]', form.data['summary.en']);
-        formData.append('content', JSON.stringify(form.data.content));
+        formData.append('content', JSON.stringify(resolvedContent));
         formData.append('itineraries', JSON.stringify(form.data.itineraries));
+        formData.append(
+            'product_multipliers',
+            JSON.stringify(form.data.product_multipliers ?? {}),
+        );
         formData.append('is_featured', form.data.is_featured ? '1' : '0');
         formData.append('is_active', form.data.is_active ? '1' : '0');
         (form.data.product_ids ?? []).forEach((productId: number) =>
@@ -780,6 +954,47 @@ export function PackageForm({
         form.data.content && typeof form.data.content === 'object'
             ? (form.data.content as Record<string, unknown>)
             : {};
+    const roomPrices =
+        typeof contentObject.room_prices === 'object' &&
+        contentObject.room_prices !== null
+            ? (contentObject.room_prices as Record<string, number | null>)
+            : {};
+    const roomOriginalPrices =
+        typeof contentObject.room_original_prices === 'object' &&
+        contentObject.room_original_prices !== null
+            ? (contentObject.room_original_prices as Record<
+                  string,
+                  number | null
+              >)
+            : {};
+    const effectiveRoomOriginalPrices = {
+        dbl:
+            roomOriginalPrices.dbl ??
+            inferOriginalRoomPrice(roomPrices.dbl ?? null, discountPercent) ??
+            (basePrice > 0 ? basePrice : null),
+        trpl:
+            roomOriginalPrices.trpl ??
+            inferOriginalRoomPrice(roomPrices.trpl ?? null, discountPercent) ??
+            (basePrice > 0 ? basePrice : null),
+        quad:
+            roomOriginalPrices.quad ??
+            inferOriginalRoomPrice(roomPrices.quad ?? null, discountPercent) ??
+            (basePrice > 0 ? basePrice : null),
+    };
+    const effectiveRoomSellingPrices = {
+        dbl: calculateDiscountedPrice(
+            effectiveRoomOriginalPrices.dbl ?? null,
+            discountPercent,
+        ),
+        trpl: calculateDiscountedPrice(
+            effectiveRoomOriginalPrices.trpl ?? null,
+            discountPercent,
+        ),
+        quad: calculateDiscountedPrice(
+            effectiveRoomOriginalPrices.quad ?? null,
+            discountPercent,
+        ),
+    };
     const packageHighlights = Array.isArray(contentObject.highlights)
         ? (contentObject.highlights as PackageHighlightItem[])
         : [];
@@ -794,6 +1009,29 @@ export function PackageForm({
 
     function addPackageHighlight() {
         updatePackageHighlights([...packageHighlights, createEmptyHighlight()]);
+    }
+
+    function updateRoomOriginalPrice(
+        roomType: 'dbl' | 'trpl' | 'quad',
+        value: string,
+    ) {
+        const nextOriginalValue = normalizeRoomPriceValue(value);
+        const nextSellingValue = calculateDiscountedPrice(
+            nextOriginalValue,
+            discountPercent,
+        );
+
+        form.setData('content', {
+            ...contentObject,
+            room_original_prices: {
+                ...roomOriginalPrices,
+                [roomType]: nextOriginalValue,
+            },
+            room_prices: {
+                ...roomPrices,
+                [roomType]: nextSellingValue,
+            },
+        });
     }
 
     function addPresetPackageHighlight(label: string, icon: string) {
@@ -1255,7 +1493,7 @@ export function PackageForm({
                     <FieldGroup>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                             <Field
-                                label="Harga Asli (IDR) *"
+                                label="Harga Base / Single (IDR) *"
                                 error={errors.original_price || errors.price}
                             >
                                 <div className="relative">
@@ -1325,6 +1563,109 @@ export function PackageForm({
                             </Field>
                         </div>
 
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <Field label="Harga Asli Double (DBL)">
+                                <div className="relative">
+                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                        Rp
+                                    </span>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        step={100000}
+                                        value={
+                                            effectiveRoomOriginalPrices.dbl ??
+                                            ''
+                                        }
+                                        onChange={(event) =>
+                                            updateRoomOriginalPrice(
+                                                'dbl',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="pl-8"
+                                        placeholder="Kosongkan jika ikut harga base"
+                                    />
+                                </div>
+                            </Field>
+                            <Field label="Harga Asli Triple (TRPL)">
+                                <div className="relative">
+                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                        Rp
+                                    </span>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        step={100000}
+                                        value={
+                                            effectiveRoomOriginalPrices.trpl ??
+                                            ''
+                                        }
+                                        onChange={(event) =>
+                                            updateRoomOriginalPrice(
+                                                'trpl',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="pl-8"
+                                        placeholder="Kosongkan jika ikut harga base"
+                                    />
+                                </div>
+                            </Field>
+                            <Field label="Harga Asli Quad (QUAD)">
+                                <div className="relative">
+                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                        Rp
+                                    </span>
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        step={100000}
+                                        value={
+                                            effectiveRoomOriginalPrices.quad ??
+                                            ''
+                                        }
+                                        onChange={(event) =>
+                                            updateRoomOriginalPrice(
+                                                'quad',
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="pl-8"
+                                        placeholder="Kosongkan jika ikut harga base"
+                                    />
+                                </div>
+                            </Field>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <Field label="Harga Jual Double (DBL)">
+                                <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
+                                    {formatCurrencyInputPreview(
+                                        effectiveRoomSellingPrices.dbl ?? null,
+                                    )}
+                                </div>
+                            </Field>
+                            <Field label="Harga Jual Triple (TRPL)">
+                                <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
+                                    {formatCurrencyInputPreview(
+                                        effectiveRoomSellingPrices.trpl ?? null,
+                                    )}
+                                </div>
+                            </Field>
+                            <Field label="Harga Jual Quad (QUAD)">
+                                <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
+                                    {formatCurrencyInputPreview(
+                                        effectiveRoomSellingPrices.quad ?? null,
+                                    )}
+                                </div>
+                            </Field>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Harga jual `DBL / TRPL / QUAD` otomatis mengikuti
+                            persentase diskon package yang diisi di atas.
+                        </p>
+
                         <div className="rounded-2xl border border-border bg-muted/20 p-4">
                             <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
                                 Harga Jual Otomatis
@@ -1342,7 +1683,7 @@ export function PackageForm({
                             <p className="mt-2 text-xs text-muted-foreground">
                                 {hasDiscount
                                     ? `Diskon ${discountPercent}% aktif. Hemat Rp ${savingsAmount.toLocaleString('id-ID')}.`
-                                    : 'Tidak ada diskon. Harga asli dipakai sebagai harga jual utama.'}
+                                    : 'Tidak ada diskon. Harga base/single dipakai sebagai harga jual utama.'}
                             </p>
                         </div>
 
@@ -2056,13 +2397,16 @@ export function PackageForm({
 
                 <TabsContent value="produk" className="mt-4">
                     <SectionHeader icon={Layers} title="Produk dalam Package" />
-                    <ProductSelector
-                        options={productOptions}
-                        selected={form.data.product_ids}
+                        <ProductSelector
+                            options={productOptions}
+                            currencies={currencies}
+                            selected={form.data.product_ids}
+                            productMultipliers={form.data.product_multipliers}
+                            hotelBrokerSelections={getHotelBrokerSelections(
+                            form.data.content,
+                        )}
                         locale={locale}
-                        onChange={(productIds) =>
-                            form.setData('product_ids', productIds)
-                        }
+                        onChange={updateSelectedProducts}
                     />
                 </TabsContent>
             </Tabs>

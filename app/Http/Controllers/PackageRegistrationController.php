@@ -6,13 +6,18 @@ use App\Http\Requests\StorePackageRegistrationRequest;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
 use App\Services\BookingRegistrationNotifier;
+use App\Services\PackageRoomConfigurationService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PackageRegistrationController extends Controller
 {
-    public function __construct(private BookingRegistrationNotifier $bookingRegistrationNotifier) {}
+    public function __construct(
+        private BookingRegistrationNotifier $bookingRegistrationNotifier,
+        private PackageRoomConfigurationService $packageRoomConfigurationService,
+    ) {}
 
     public function create(TravelPackage $travelPackage): Response
     {
@@ -24,6 +29,7 @@ class PackageRegistrationController extends Controller
                 )
                 ->where('is_active', true)
                 ->where('status', 'open')
+                ->whereDate('departure_date', '>=', Carbon::today())
                 ->orderBy('departure_date'),
         ]);
 
@@ -39,6 +45,8 @@ class PackageRegistrationController extends Controller
                 'departure_city' => $travelPackage->departure_city,
                 'duration_days' => $travelPackage->duration_days,
                 'image_path' => $travelPackage->image_path,
+                'room_prices' => $this->packageRoomConfigurationService->roomPrices($travelPackage),
+                'recommended_room_configuration' => $this->packageRoomConfigurationService->recommendedConfiguration(1),
                 'schedules' => $travelPackage->schedules->map(fn ($schedule): array => [
                     'id' => $schedule->id,
                     'departure_date' => $schedule->departure_date?->toDateString(),
@@ -58,6 +66,7 @@ class PackageRegistrationController extends Controller
             $schedule->package_id !== $travelPackage->id
             || ! $schedule->is_active
             || $schedule->status !== 'open'
+            || $schedule->departure_date?->lt(Carbon::today())
         )) {
             return back()->withErrors([
                 'departure_schedule_id' => 'Jadwal keberangkatan yang dipilih tidak valid.',
@@ -72,6 +81,9 @@ class PackageRegistrationController extends Controller
             'email' => $request->filled('email') ? $request->string('email')->value() : null,
             'origin_city' => $request->string('origin_city')->value(),
             'passenger_count' => $request->integer('passenger_count'),
+            'room_configuration' => $this->packageRoomConfigurationService->normalizeConfiguration(
+                (array) $request->input('room_configuration', []),
+            ),
             'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
             'status' => 'pending',
         ]);

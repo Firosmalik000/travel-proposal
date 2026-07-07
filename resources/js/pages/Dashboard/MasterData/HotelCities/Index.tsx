@@ -236,7 +236,7 @@ export default function HotelCitiesIndex({
                                                                     onClick={() => {
                                                                         if (
                                                                             window.confirm(
-                                                                                `Hapus kota \"${item.name}\"?`,
+                                                                                `Hapus kota "${item.name}"?`,
                                                                             )
                                                                         ) {
                                                                             router.delete(

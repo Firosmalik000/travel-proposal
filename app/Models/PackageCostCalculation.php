@@ -16,6 +16,7 @@ class PackageCostCalculation extends Model
     protected $fillable = [
         'package_id',
         'departure_schedule_id',
+        'calculation_mode',
         'calculation_date',
         'booking_count',
         'customer_count',

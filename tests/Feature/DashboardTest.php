@@ -55,6 +55,13 @@ class DashboardTest extends TestCase
             'duration_days' => 10,
             'price' => 35000000,
             'currency' => 'IDR',
+            'content' => [
+                'room_prices' => [
+                    'dbl' => 32000000,
+                    'trpl' => 30000000,
+                    'quad' => 28000000,
+                ],
+            ],
             'is_active' => true,
         ]);
 
@@ -76,6 +83,12 @@ class DashboardTest extends TestCase
             'email' => null,
             'origin_city' => 'Jakarta',
             'passenger_count' => 2,
+            'room_configuration' => [
+                'single' => 0,
+                'double' => 1,
+                'triple' => 0,
+                'quad' => 0,
+            ],
             'notes' => null,
             'status' => 'registered',
         ]);
@@ -104,7 +117,7 @@ class DashboardTest extends TestCase
             ->assertJsonPath('landingVisitors.description', 'Total 18 kunjungan landing');
 
         $this->assertGreaterThanOrEqual(2, (int) $response->json('publishedContent.value'));
-        $this->assertSame(70000000.0, (float) $response->json('estimatedRevenue.value'));
+        $this->assertSame(64000000.0, (float) $response->json('estimatedRevenue.value'));
     }
 
     public function test_dashboard_monthly_growth_and_weekly_activity_have_expected_shape(): void

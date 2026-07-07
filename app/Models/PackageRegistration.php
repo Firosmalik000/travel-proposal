@@ -19,6 +19,7 @@ class PackageRegistration extends Model
         'email',
         'origin_city',
         'passenger_count',
+        'room_configuration',
         'notes',
         'status',
     ];
@@ -27,6 +28,7 @@ class PackageRegistration extends Model
     {
         return [
             'passenger_count' => 'integer',
+            'room_configuration' => 'array',
         ];
     }
 

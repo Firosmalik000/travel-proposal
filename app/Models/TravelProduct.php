@@ -48,7 +48,7 @@ class TravelProduct extends Model
     public function packages(): BelongsToMany
     {
         return $this->belongsToMany(TravelPackage::class, 'package_product', 'product_id', 'package_id')
-            ->withPivot('sort_order')
+            ->withPivot('sort_order', 'multiplier_per_pax')
             ->withTimestamps()
             ->orderByPivot('sort_order');
     }

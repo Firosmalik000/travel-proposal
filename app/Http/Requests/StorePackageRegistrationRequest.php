@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\DepartureSchedule;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePackageRegistrationRequest extends FormRequest
@@ -21,6 +22,11 @@ class StorePackageRegistrationRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:150'],
             'origin_city' => ['required', 'string', 'max:100'],
             'passenger_count' => ['required', 'integer', 'min:1'],
+            'room_configuration' => ['required', 'array'],
+            'room_configuration.single' => ['nullable', 'integer', 'min:0'],
+            'room_configuration.double' => ['nullable', 'integer', 'min:0'],
+            'room_configuration.triple' => ['nullable', 'integer', 'min:0'],
+            'room_configuration.quad' => ['nullable', 'integer', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -34,6 +40,7 @@ class StorePackageRegistrationRequest extends FormRequest
             'origin_city.required' => 'Kota asal wajib diisi.',
             'passenger_count.required' => 'Jumlah jamaah wajib diisi.',
             'passenger_count.min' => 'Jumlah jamaah minimal 1 orang.',
+            'room_configuration.required' => 'Komposisi kamar wajib dipilih.',
         ];
     }
 
@@ -42,21 +49,37 @@ class StorePackageRegistrationRequest extends FormRequest
         $validator->after(function ($validator): void {
             $schedule = $this->selectedSchedule();
 
-            if ($schedule === null) {
-                return;
+            if ($schedule !== null) {
+                if (
+                    ! $schedule->is_active
+                    || $schedule->status !== 'open'
+                    || $schedule->departure_date?->lt(Carbon::today())
+                ) {
+                    $validator->errors()->add(
+                        'departure_schedule_id',
+                        'Jadwal keberangkatan yang dipilih tidak tersedia.',
+                    );
+                }
+
+                if ($schedule->availableSeatsCount() < $this->integer('passenger_count')) {
+                    $validator->errors()->add(
+                        'departure_schedule_id',
+                        'Seat tersedia pada jadwal ini tidak mencukupi untuk jumlah jamaah yang dipilih.',
+                    );
+                }
             }
 
-            if (! $schedule->is_active || $schedule->status !== 'open') {
-                $validator->errors()->add(
-                    'departure_schedule_id',
-                    'Jadwal keberangkatan yang dipilih tidak tersedia.',
-                );
-            }
+            $roomConfiguration = (array) $this->input('room_configuration', []);
+            $occupiedPax =
+                max(0, (int) data_get($roomConfiguration, 'single', 0)) +
+                (max(0, (int) data_get($roomConfiguration, 'double', 0)) * 2) +
+                (max(0, (int) data_get($roomConfiguration, 'triple', 0)) * 3) +
+                (max(0, (int) data_get($roomConfiguration, 'quad', 0)) * 4);
 
-            if ($schedule->availableSeatsCount() < $this->integer('passenger_count')) {
+            if ($occupiedPax !== $this->integer('passenger_count')) {
                 $validator->errors()->add(
-                    'departure_schedule_id',
-                    'Seat tersedia pada jadwal ini tidak mencukupi untuk jumlah jamaah yang dipilih.',
+                    'room_configuration',
+                    'Komposisi kamar harus sama dengan jumlah jamaah yang dipilih.',
                 );
             }
         });

@@ -12,12 +12,12 @@ return new class extends Migration
             return;
         }
 
-        DB::statement("
-            UPDATE menus
-            SET children = REPLACE(children, '\"name\": \"Portal Content\"', '\"name\": \"Policy & Help\"'),
-                updated_at = NOW()
-            WHERE menu_key = 'website_management'
-        ");
+        DB::table('menus')
+            ->where('menu_key', 'website_management')
+            ->update([
+                'children' => DB::raw("REPLACE(children, '\"name\": \"Portal Content\"', '\"name\": \"Policy & Help\"')"),
+                'updated_at' => now(),
+            ]);
     }
 
     public function down(): void
@@ -26,11 +26,11 @@ return new class extends Migration
             return;
         }
 
-        DB::statement("
-            UPDATE menus
-            SET children = REPLACE(children, '\"name\": \"Policy & Help\"', '\"name\": \"Portal Content\"'),
-                updated_at = NOW()
-            WHERE menu_key = 'website_management'
-        ");
+        DB::table('menus')
+            ->where('menu_key', 'website_management')
+            ->update([
+                'children' => DB::raw("REPLACE(children, '\"name\": \"Policy & Help\"', '\"name\": \"Portal Content\"')"),
+                'updated_at' => now(),
+            ]);
     }
 };

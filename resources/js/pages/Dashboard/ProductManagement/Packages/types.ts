@@ -1,10 +1,25 @@
 import type { PackageHighlightItem } from '@/lib/package-highlights';
 
+export type PackageRoomPrices = {
+    dbl?: number | null;
+    trpl?: number | null;
+    quad?: number | null;
+};
+
+export type PackageRoomOriginalPrices = {
+    dbl?: number | null;
+    trpl?: number | null;
+    quad?: number | null;
+};
+
 export type PackageContent = {
     highlights?: PackageHighlightItem[];
     included?: { id?: string[]; en?: string[] };
     excluded?: { id?: string[]; en?: string[] };
     policy?: { id?: string; en?: string };
+    hotel_product_brokers?: Record<string, string>;
+    room_prices?: PackageRoomPrices;
+    room_original_prices?: PackageRoomOriginalPrices;
 };
 
 export type Schedule = {
@@ -54,6 +69,7 @@ export type Package = {
     is_featured: boolean;
     is_active: boolean;
     product_ids: number[];
+    product_multipliers: Record<string, number>;
     schedules: Schedule[];
     itineraries: Itinerary[];
     rating_avg: number | null;
@@ -63,8 +79,28 @@ export type Package = {
 export type ProductOption = {
     id: number;
     code: string;
-    name: { id: string; en: string };
+    name: { id: string; en: string } | string;
     product_type: string;
+    price?: number | null;
+    currency?: string | null;
+    hotel_info?: {
+        city?: string | null;
+        country?: string | null;
+        currency?: string | null;
+        pricing: Array<{
+            broker_name: string | null;
+            room_type: string | null;
+            period_start: string | null;
+            period_end: string | null;
+            price: number | string | null;
+        }>;
+    } | null;
+};
+
+export type CurrencyOption = {
+    code: string;
+    name: string;
+    conversion_rate: number;
 };
 
 export type ActivityOption = {
@@ -94,6 +130,7 @@ export type PackageFormData = {
     content: PackageContent;
     itineraries: ItineraryInput[];
     product_ids: number[];
+    product_multipliers: Record<string, number>;
     is_featured: boolean;
     is_active: boolean;
 };

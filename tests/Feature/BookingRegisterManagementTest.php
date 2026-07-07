@@ -187,6 +187,103 @@ class BookingRegisterManagementTest extends TestCase
             );
     }
 
+    public function test_it_shows_all_active_packages_in_booking_listing_filter(): void
+    {
+        $user = User::factory()->create();
+
+        $packageWithRegisteredBooking = TravelPackage::query()->create([
+            'code' => 'ASF-FLTR-001',
+            'slug' => 'filter-package-1',
+            'name' => ['id' => 'Paket Filter 1', 'en' => 'Filter Package 1'],
+            'package_type' => 'reguler',
+            'departure_city' => 'Jakarta',
+            'duration_days' => 9,
+            'price' => 1000000,
+            'currency' => 'IDR',
+            'summary' => ['id' => 'Ringkasan', 'en' => 'Summary'],
+            'content' => [],
+            'is_active' => true,
+        ]);
+
+        $packageWithoutBooking = TravelPackage::query()->create([
+            'code' => 'ASF-FLTR-002',
+            'slug' => 'filter-package-2',
+            'name' => ['id' => 'Paket Filter 2', 'en' => 'Filter Package 2'],
+            'package_type' => 'reguler',
+            'departure_city' => 'Surabaya',
+            'duration_days' => 10,
+            'price' => 1200000,
+            'currency' => 'IDR',
+            'summary' => ['id' => 'Ringkasan', 'en' => 'Summary'],
+            'content' => [],
+            'is_active' => true,
+        ]);
+
+        $packageWithCancelledBooking = TravelPackage::query()->create([
+            'code' => 'ASF-FLTR-003',
+            'slug' => 'filter-package-3',
+            'name' => ['id' => 'Paket Filter 3', 'en' => 'Filter Package 3'],
+            'package_type' => 'reguler',
+            'departure_city' => 'Medan',
+            'duration_days' => 11,
+            'price' => 1300000,
+            'currency' => 'IDR',
+            'summary' => ['id' => 'Ringkasan', 'en' => 'Summary'],
+            'content' => [],
+            'is_active' => true,
+        ]);
+
+        TravelPackage::query()->create([
+            'code' => 'ASF-FLTR-004',
+            'slug' => 'filter-package-4',
+            'name' => ['id' => 'Paket Nonaktif', 'en' => 'Inactive Package'],
+            'package_type' => 'reguler',
+            'departure_city' => 'Bandung',
+            'duration_days' => 12,
+            'price' => 1400000,
+            'currency' => 'IDR',
+            'summary' => ['id' => 'Ringkasan', 'en' => 'Summary'],
+            'content' => [],
+            'is_active' => false,
+        ]);
+
+        Booking::query()->create([
+            'booking_code' => 'BK-FLTR-0001',
+            'package_id' => $packageWithRegisteredBooking->id,
+            'departure_schedule_id' => null,
+            'full_name' => 'Booking Registered',
+            'phone' => '081200000100',
+            'email' => null,
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 2,
+            'notes' => null,
+            'status' => 'registered',
+        ]);
+
+        Booking::query()->create([
+            'booking_code' => 'BK-FLTR-0002',
+            'package_id' => $packageWithCancelledBooking->id,
+            'departure_schedule_id' => null,
+            'full_name' => 'Booking Cancelled',
+            'phone' => '081200000101',
+            'email' => null,
+            'origin_city' => 'Medan',
+            'passenger_count' => 1,
+            'notes' => null,
+            'status' => 'cancelled',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('booking.listing.index', ['status' => 'registered']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('packages', 3)
+                ->where('packages.0.id', $packageWithRegisteredBooking->id)
+                ->where('packages.1.id', $packageWithoutBooking->id)
+                ->where('packages.2.id', $packageWithCancelledBooking->id)
+            );
+    }
+
     public function test_it_calculates_estimated_revenue_from_registered_bookings(): void
     {
         $user = User::factory()->create();
@@ -415,5 +512,59 @@ class BookingRegisterManagementTest extends TestCase
             'id' => $inventory->id,
             'quantity' => 20,
         ]);
+    }
+
+    public function test_it_uses_room_configuration_prices_for_regular_booking_revenue(): void
+    {
+        $this->withoutMiddleware(CheckMenuPermission::class);
+
+        $user = User::factory()->create();
+
+        $package = TravelPackage::query()->create([
+            'code' => 'ASF-ROOM-PRICE',
+            'slug' => 'umroh-room-price',
+            'name' => ['id' => 'Umroh Room Price', 'en' => 'Umroh Room Price'],
+            'package_type' => 'reguler',
+            'departure_city' => 'Jakarta',
+            'duration_days' => 9,
+            'price' => 30000000,
+            'currency' => 'IDR',
+            'content' => [
+                'room_prices' => [
+                    'dbl' => 28000000,
+                    'trpl' => 26000000,
+                    'quad' => 24000000,
+                ],
+            ],
+            'is_active' => true,
+        ]);
+
+        Booking::query()->create([
+            'booking_code' => 'BK-ROOM-0001',
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'full_name' => 'Jamaah Double',
+            'phone' => '081200000090',
+            'email' => 'double@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 3,
+            'room_configuration' => [
+                'single' => 1,
+                'double' => 1,
+                'triple' => 0,
+                'quad' => 0,
+            ],
+            'notes' => null,
+            'status' => 'registered',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('booking.listing.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('revenue.by_currency.0.amount', 86000000)
+                ->where('registrations.data.0.revenue.amount', 86000000)
+                ->where('registrations.data.0.room_summary', '1 single + 1 double')
+            );
     }
 }

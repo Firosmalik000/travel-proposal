@@ -14,6 +14,8 @@ class HotelPrice extends Model
 
     protected $fillable = [
         'hotel_id',
+        'broker_key',
+        'broker_name',
         'room_type_id',
         'period_start',
         'period_end',

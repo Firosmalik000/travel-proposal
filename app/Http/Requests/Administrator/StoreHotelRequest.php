@@ -30,6 +30,8 @@ class StoreHotelRequest extends FormRequest
             'currency' => ['required', 'string', 'size:3'],
             'is_active' => ['boolean'],
             'prices' => ['required', 'array', 'min:1'],
+            'prices.*.broker_key' => ['nullable', 'string', 'max:255'],
+            'prices.*.broker_name' => ['nullable', 'string', 'max:255'],
             'prices.*.room_type_id' => ['required', 'integer', 'exists:hotel_room_types,id'],
             'prices.*.period_start' => ['required', 'date'],
             'prices.*.period_end' => ['required', 'date'],

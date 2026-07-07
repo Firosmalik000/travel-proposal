@@ -221,7 +221,7 @@ export default function HotelRoomTypesIndex({
                                                                     onClick={() => {
                                                                         if (
                                                                             window.confirm(
-                                                                                `Hapus room type \"${item.name}\"?`,
+                                                                                `Hapus room type "${item.name}"?`,
                                                                             )
                                                                         ) {
                                                                             router.delete(

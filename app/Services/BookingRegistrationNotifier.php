@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\Mail;
 
 class BookingRegistrationNotifier
 {
+    public function __construct(
+        private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
+    ) {}
+
     public function notifyAdmin(PackageRegistration $registration): void
     {
         $this->sendEmailNotification($registration);
@@ -68,6 +72,9 @@ class BookingRegistrationNotifier
             'Email: '.($registration->email ?: '-'),
             'Kota Asal: '.$registration->origin_city,
             'Jumlah Jamaah: '.$registration->passenger_count.' pax',
+            'Komposisi Kamar: '.$this->packageRoomConfigurationService->summarize(
+                is_array($registration->room_configuration) ? $registration->room_configuration : null,
+            ),
             'Paket: '.$packageName,
             'Jadwal: '.$scheduleLabel.' - '.$departureCity,
             'Catatan: '.($registration->notes ?: '-'),

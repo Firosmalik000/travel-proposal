@@ -12,7 +12,7 @@ type Permission =
 
 interface PageProps extends Record<string, unknown> {
     auth: {
-        user: unknown;
+        user: { is_super_admin?: boolean } | null;
         permissions: Record<string, Permission[]> | null;
     };
 }
@@ -46,6 +46,10 @@ export function usePermission(menuKey?: string) {
         menuKeyParam: string,
         permission: Permission,
     ): boolean => {
+        if (auth.user?.is_super_admin) {
+            return true;
+        }
+
         // If no permissions data, deny access
         if (!auth.permissions) {
             return false;
@@ -118,6 +122,19 @@ export function usePermission(menuKey?: string) {
      * @returns Permission[] - Array of permissions
      */
     const getPermissions = (menuKeyParam?: string): Permission[] => {
+        if (auth.user?.is_super_admin) {
+            return [
+                'view',
+                'create',
+                'edit',
+                'delete',
+                'import',
+                'export',
+                'approve',
+                'reject',
+            ];
+        }
+
         const key = menuKeyParam || menuKey;
 
         if (!key) {

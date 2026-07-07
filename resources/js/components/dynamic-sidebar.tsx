@@ -70,7 +70,7 @@ interface MenuItem {
     children?: MenuItem[] | null;
 }
 
-const SIDEBAR_MENU_CACHE_KEY = 'travel-proposal:sidebar-menus:v1';
+const SIDEBAR_MENU_CACHE_KEY = 'travel-proposal:sidebar-menus:v3';
 
 function canonicalAdminPath(path: string | null | undefined): string {
     if (!path) {
@@ -182,9 +182,9 @@ export function DynamicSidebar() {
         <Sidebar
             collapsible="icon"
             variant="inset"
-            className="border-r border-black/15 bg-[color:var(--secondary)] text-white shadow-[0_20px_40px_-26px_rgba(0,0,0,0.55)] [&_[data-sidebar=sidebar]]:bg-[color:var(--secondary)]"
+            className="border-r border-white/10 bg-[#121826] text-white shadow-[0_20px_40px_-26px_rgba(0,0,0,0.55)] [&_[data-sidebar=sidebar]]:bg-[#121826]"
         >
-            <SidebarHeader className="border-b border-white/15 bg-transparent px-3 pt-3 pb-3">
+            <SidebarHeader className="border-b border-white/10 bg-transparent px-3 pt-3 pb-3">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
@@ -206,7 +206,7 @@ export function DynamicSidebar() {
                             placeholder="Cari menu..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-10 rounded-xl border-white/25 bg-white pl-9 text-xs text-[#475569] shadow-none ring-offset-background placeholder:text-[#94a3b8] focus-visible:ring-1 focus-visible:ring-white/45 dark:border-white/20 dark:bg-white/12 dark:text-white dark:placeholder:text-white/55"
+                            className="h-10 rounded-xl border-white/15 bg-white/10 pl-9 text-xs text-white shadow-none ring-offset-background placeholder:text-white/45 focus-visible:ring-1 focus-visible:ring-white/30"
                         />
                     </div>
                 </div>
@@ -223,8 +223,8 @@ export function DynamicSidebar() {
                         ))}
                     </div>
                 ) : (
-                    <SidebarGroup className="rounded-2xl border border-white/15 bg-white/8 p-2 backdrop-blur-sm">
-                        <SidebarGroupLabel className="px-3 text-[0.62rem] font-medium tracking-[0.14em] text-white/55 uppercase">
+                    <SidebarGroup className="rounded-2xl border border-white/10 bg-white/5 p-2 backdrop-blur-sm">
+                        <SidebarGroupLabel className="px-3 text-[0.62rem] font-medium tracking-[0.14em] text-white/50 uppercase">
                             Menu Navigasi
                         </SidebarGroupLabel>
                         <SidebarGroupContent>
@@ -252,7 +252,7 @@ export function DynamicSidebar() {
                 )}
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-white/15 bg-transparent p-2.5">
+            <SidebarFooter className="border-t border-white/10 bg-transparent p-2.5">
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

@@ -10,6 +10,10 @@ import { type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEvent, useMemo } from 'react';
 
+type RoomType = 'single' | 'double' | 'triple' | 'quad';
+
+type RoomConfigurationForm = Record<RoomType, string>;
+
 interface TravelPackageRegistrationPageProps extends SharedData {
     travelPackage: {
         id: number;
@@ -21,6 +25,8 @@ interface TravelPackageRegistrationPageProps extends SharedData {
         currency?: string;
         departure_city?: string | null;
         duration_days?: number | null;
+        room_prices?: Record<RoomType, number>;
+        recommended_room_configuration?: Record<RoomType, number>;
         schedules?: PackageSchedule[];
     };
 }
@@ -33,15 +39,110 @@ type PackageSchedule = {
     seats_available?: number | null;
 };
 
+type PriceBreakdownRow = {
+    type: RoomType;
+    label: string;
+    roomCount: number;
+    paxCount: number;
+    unitPrice: number;
+    subtotal: number;
+};
+
+const roomTypeMeta: Array<{
+    type: RoomType;
+    label: string;
+    capacity: number;
+}> = [
+    { type: 'single', label: 'Single', capacity: 1 },
+    { type: 'double', label: 'Double', capacity: 2 },
+    { type: 'triple', label: 'Triple', capacity: 3 },
+    { type: 'quad', label: 'Quad', capacity: 4 },
+];
+
+function recommendedRoomConfiguration(
+    passengerCount: number,
+): RoomConfigurationForm {
+    const remainingByType: Record<RoomType, number> = {
+        single: 0,
+        double: 0,
+        triple: 0,
+        quad: 0,
+    };
+
+    let remaining = Math.max(1, passengerCount);
+
+    for (const roomType of [...roomTypeMeta].sort(
+        (left, right) => right.capacity - left.capacity,
+    )) {
+        if (remaining < roomType.capacity) {
+            continue;
+        }
+
+        const roomCount = Math.floor(remaining / roomType.capacity);
+        remainingByType[roomType.type] = roomCount;
+        remaining -= roomCount * roomType.capacity;
+    }
+
+    return {
+        single: String(remainingByType.single),
+        double: String(remainingByType.double),
+        triple: String(remainingByType.triple),
+        quad: String(remainingByType.quad),
+    };
+}
+
+function normalizeRoomConfiguration(
+    configuration: RoomConfigurationForm,
+): Record<RoomType, number> {
+    return {
+        single: Math.max(0, Number(configuration.single) || 0),
+        double: Math.max(0, Number(configuration.double) || 0),
+        triple: Math.max(0, Number(configuration.triple) || 0),
+        quad: Math.max(0, Number(configuration.quad) || 0),
+    };
+}
+
+function buildPriceBreakdownRows(
+    configuration: Record<RoomType, number>,
+    roomPrices: Partial<Record<RoomType, number>>,
+): PriceBreakdownRow[] {
+    return roomTypeMeta
+        .map((roomType) => {
+            const roomCount = configuration[roomType.type];
+            const unitPrice = Number(roomPrices[roomType.type] ?? 0);
+            const paxCount = roomCount * roomType.capacity;
+
+            if (roomCount < 1 || unitPrice < 1) {
+                return null;
+            }
+
+            return {
+                type: roomType.type,
+                label: roomType.label,
+                roomCount,
+                paxCount,
+                unitPrice,
+                subtotal: paxCount * unitPrice,
+            };
+        })
+        .filter((row): row is PriceBreakdownRow => row !== null);
+}
+
 export default function PackageRegistrationPage() {
     const { travelPackage } =
         usePage<TravelPackageRegistrationPageProps>().props;
     const packageName = localize(travelPackage.name, 'id');
+    const todayDate = new Date().toISOString().slice(0, 10);
     const schedules = useMemo(
         () =>
-            Array.isArray(travelPackage.schedules)
+            (Array.isArray(travelPackage.schedules)
                 ? travelPackage.schedules
-                : [],
+                : []
+            ).filter(
+                (schedule) =>
+                    typeof schedule.departure_date === 'string' &&
+                    schedule.departure_date >= todayDate,
+            ),
         [travelPackage.schedules],
     );
     const defaultScheduleId = schedules[0]?.id ? String(schedules[0].id) : '';
@@ -50,6 +151,7 @@ export default function PackageRegistrationPage() {
             ? (new URLSearchParams(window.location.search).get('schedule') ??
               defaultScheduleId)
             : defaultScheduleId;
+    const defaultRoomConfiguration = recommendedRoomConfiguration(1);
 
     const form = useForm({
         departure_schedule_id: initialScheduleId,
@@ -58,6 +160,7 @@ export default function PackageRegistrationPage() {
         email: '',
         origin_city: '',
         passenger_count: '1',
+        room_configuration: defaultRoomConfiguration,
         notes: '',
     });
     const selectedSchedule = useMemo(
@@ -68,13 +171,96 @@ export default function PackageRegistrationPage() {
             ) ?? null,
         [schedules, form.data.departure_schedule_id],
     );
-    const selectedScheduleAvailableSeats = Math.max(
+    const selectedScheduleAvailableSeats = selectedSchedule
+        ? Math.max(1, Number(selectedSchedule.seats_available ?? 0))
+        : Math.max(
+              1,
+              ...schedules.map((schedule) =>
+                  Number(schedule.seats_available ?? 0),
+              ),
+          );
+    const selectedPassengerCount = Math.max(
         1,
-        Number(selectedSchedule?.seats_available ?? 0),
+        Number(form.data.passenger_count) || 1,
     );
+    const normalizedRoomConfiguration = useMemo(
+        () => normalizeRoomConfiguration(form.data.room_configuration),
+        [form.data.room_configuration],
+    );
+    const allocatedRoomPax = useMemo(
+        () =>
+            roomTypeMeta.reduce(
+                (total, roomType) =>
+                    total +
+                    normalizedRoomConfiguration[roomType.type] *
+                        roomType.capacity,
+                0,
+            ),
+        [normalizedRoomConfiguration],
+    );
+    const remainingRoomPax = selectedPassengerCount - allocatedRoomPax;
+    const isRoomConfigurationValid = remainingRoomPax === 0;
+    const roomSummary = roomTypeMeta
+        .map((roomType) => {
+            const count = normalizedRoomConfiguration[roomType.type];
+
+            return count > 0 ? `${count} ${roomType.label}` : null;
+        })
+        .filter(Boolean)
+        .join(' + ');
+    const estimatedTotalPrice = roomTypeMeta.reduce((total, roomType) => {
+        const pricePerPax = Number(
+            travelPackage.room_prices?.[roomType.type] ?? 0,
+        );
+        const roomCount = normalizedRoomConfiguration[roomType.type];
+
+        return total + roomCount * roomType.capacity * pricePerPax;
+    }, 0);
+    const selectedRoomBreakdown = buildPriceBreakdownRows(
+        normalizedRoomConfiguration,
+        travelPackage.room_prices ?? {},
+    );
+
+    const syncPassengerCount = (nextPassengerCount: number): void => {
+        const clampedValue = Math.min(
+            Math.max(nextPassengerCount, 1),
+            selectedScheduleAvailableSeats,
+        );
+
+        form.clearErrors('room_configuration');
+
+        form.setData((data) => ({
+            ...data,
+            passenger_count: String(clampedValue),
+            room_configuration: recommendedRoomConfiguration(clampedValue),
+        }));
+    };
+
+    const updateRoomConfiguration = (
+        roomType: RoomType,
+        nextValue: string,
+    ): void => {
+        const parsedValue = Math.max(0, Number(nextValue) || 0);
+
+        form.clearErrors('room_configuration');
+
+        form.setData('room_configuration', {
+            ...form.data.room_configuration,
+            [roomType]: String(parsedValue),
+        });
+    };
 
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
+
+        if (!isRoomConfigurationValid) {
+            form.setError(
+                'room_configuration',
+                'Komposisi kamar harus sama dengan jumlah jamaah.',
+            );
+
+            return;
+        }
 
         form.post(`/paket-umroh/${travelPackage.slug}/daftar`, {
             preserveScroll: true,
@@ -85,9 +271,11 @@ export default function PackageRegistrationPage() {
                     'email',
                     'origin_city',
                     'passenger_count',
+                    'room_configuration',
                     'notes',
                 );
                 form.setData('departure_schedule_id', initialScheduleId);
+                form.setData('room_configuration', defaultRoomConfiguration);
             },
         });
     };
@@ -124,7 +312,7 @@ export default function PackageRegistrationPage() {
                                 </p>
                             </div>
 
-                            <div className="grid gap-3 rounded-2xl bg-muted/40 p-4 text-sm">
+                            <div className="grid gap-2 rounded-2xl bg-muted/35 p-4 text-sm">
                                 <div className="flex items-center justify-between gap-3">
                                     <span className="text-muted-foreground">
                                         Harga mulai
@@ -152,6 +340,38 @@ export default function PackageRegistrationPage() {
                                     <span className="font-semibold text-foreground">
                                         {travelPackage.duration_days} Hari
                                     </span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 rounded-2xl bg-muted/18 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <h2 className="text-sm font-semibold text-foreground">
+                                        Harga per Tipe Kamar
+                                    </h2>
+                                    <span className="text-xs text-muted-foreground">
+                                        per jamaah
+                                    </span>
+                                </div>
+                                <div className="grid gap-2">
+                                    {roomTypeMeta.map((roomType) => (
+                                        <div
+                                            key={roomType.type}
+                                            className="flex items-center justify-between gap-3 rounded-xl bg-background/80 px-3 py-2"
+                                        >
+                                            <span className="text-sm font-medium text-foreground">
+                                                {roomType.label}
+                                            </span>
+                                            <span className="text-sm font-semibold text-primary">
+                                                {formatPrice(
+                                                    travelPackage.room_prices?.[
+                                                        roomType.type
+                                                    ] ?? 0,
+                                                    'id',
+                                                    travelPackage.currency,
+                                                )}
+                                            </span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
@@ -305,23 +525,11 @@ export default function PackageRegistrationPage() {
                                         min="1"
                                         max={selectedScheduleAvailableSeats}
                                         value={form.data.passenger_count}
-                                        onChange={(event) => {
-                                            const rawValue = Number(
-                                                event.target.value,
-                                            );
-                                            const clampedValue = Number.isNaN(
-                                                rawValue,
+                                        onChange={(event) =>
+                                            syncPassengerCount(
+                                                Number(event.target.value),
                                             )
-                                                ? 1
-                                                : Math.min(
-                                                      Math.max(rawValue, 1),
-                                                      selectedScheduleAvailableSeats,
-                                                  );
-                                            form.setData(
-                                                'passenger_count',
-                                                String(clampedValue),
-                                            );
-                                        }}
+                                        }
                                     />
                                     <p className="text-xs text-muted-foreground">
                                         Maksimal sesuai seat tersedia jadwal:{' '}
@@ -370,9 +578,8 @@ export default function PackageRegistrationPage() {
                                             currentPassengerCount >
                                             nextAvailableSeats
                                         ) {
-                                            form.setData(
-                                                'passenger_count',
-                                                String(nextAvailableSeats),
+                                            syncPassengerCount(
+                                                nextAvailableSeats,
                                             );
                                         }
                                     }}
@@ -399,6 +606,162 @@ export default function PackageRegistrationPage() {
                                 />
                             </div>
 
+                            <div className="grid gap-4 rounded-2xl bg-muted/20 p-4">
+                                <div className="space-y-1">
+                                    <Label>Komposisi Kamar</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Susun kamar sesuai jumlah pax. Contoh 3
+                                        pax bisa 1 triple, atau 1 double + 1
+                                        single.
+                                    </p>
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {roomTypeMeta.map((roomType) => (
+                                        <div
+                                            key={roomType.type}
+                                            className="grid gap-2 rounded-xl bg-background p-3"
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-sm font-semibold text-foreground">
+                                                        {roomType.label}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {roomType.capacity} pax
+                                                        per kamar
+                                                    </p>
+                                                </div>
+                                                <span className="text-sm font-semibold text-primary">
+                                                    {formatPrice(
+                                                        travelPackage
+                                                            .room_prices?.[
+                                                            roomType.type
+                                                        ] ?? 0,
+                                                        'id',
+                                                        travelPackage.currency,
+                                                    )}
+                                                    /pax
+                                                </span>
+                                            </div>
+
+                                            <Input
+                                                min="0"
+                                                type="number"
+                                                value={
+                                                    form.data
+                                                        .room_configuration[
+                                                        roomType.type
+                                                    ]
+                                                }
+                                                onChange={(event) =>
+                                                    updateRoomConfiguration(
+                                                        roomType.type,
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="grid gap-2 rounded-xl bg-background/85 p-4 text-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="text-muted-foreground">
+                                            Pax terisi
+                                        </span>
+                                        <span className="font-semibold text-foreground">
+                                            {allocatedRoomPax} /{' '}
+                                            {selectedPassengerCount}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="text-muted-foreground">
+                                            Sisa pax
+                                        </span>
+                                        <span
+                                            className={
+                                                remainingRoomPax === 0
+                                                    ? 'font-semibold text-emerald-600'
+                                                    : 'font-semibold text-amber-600'
+                                            }
+                                        >
+                                            {remainingRoomPax}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="text-muted-foreground">
+                                            Ringkasan
+                                        </span>
+                                        <span className="text-right font-semibold text-foreground">
+                                            {roomSummary || '-'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="text-muted-foreground">
+                                            Estimasi total
+                                        </span>
+                                        <span className="font-semibold text-primary">
+                                            {formatPrice(
+                                                estimatedTotalPrice,
+                                                'id',
+                                                travelPackage.currency,
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {selectedRoomBreakdown.length > 0 ? (
+                                    <div className="rounded-xl bg-background p-4">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <p className="text-sm font-semibold text-foreground">
+                                                Rincian Harga Sesuai Tipe
+                                            </p>
+                                            <span className="text-xs text-muted-foreground">
+                                                otomatis mengikuti pilihan kamar
+                                            </span>
+                                        </div>
+                                        <div className="mt-3 grid gap-2">
+                                            {selectedRoomBreakdown.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.type}
+                                                        className="flex items-center justify-between gap-3 rounded-xl bg-muted/20 px-3 py-2.5"
+                                                    >
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-foreground">
+                                                                {row.roomCount}{' '}
+                                                                kamar{' '}
+                                                                {row.label}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {row.paxCount}{' '}
+                                                                pax x{' '}
+                                                                {formatPrice(
+                                                                    row.unitPrice,
+                                                                    'id',
+                                                                    travelPackage.currency,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <span className="text-sm font-bold text-primary">
+                                                            {formatPrice(
+                                                                row.subtotal,
+                                                                'id',
+                                                                travelPackage.currency,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : null}
+                                <InputError
+                                    message={form.errors.room_configuration}
+                                />
+                            </div>
+
                             <div className="grid gap-2">
                                 <Label htmlFor="notes">Catatan Tambahan</Label>
                                 <Textarea
@@ -418,7 +781,9 @@ export default function PackageRegistrationPage() {
 
                             <Button
                                 type="submit"
-                                disabled={form.processing}
+                                disabled={
+                                    form.processing || !isRoomConfigurationValid
+                                }
                                 className="h-11 text-sm font-semibold"
                             >
                                 {form.processing
