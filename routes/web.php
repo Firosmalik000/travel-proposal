@@ -52,6 +52,99 @@ Route::get('/landing', function () {
         'html' => $landingHtml,
     ]);
 })->name('public.landing');
+Route::get('/landing/{package}', function (string $package) {
+    $travelPackage = TravelPackage::query()
+        ->where('is_active', true)
+        ->where(function ($query) use ($package): void {
+            if (is_numeric($package)) {
+                $query->whereKey((int) $package);
+            }
+
+            $query->orWhere('slug', $package);
+        })
+        ->with([
+            'products:id,name,product_type,slug',
+            'schedules' => fn ($query) => $query
+                ->withSum(['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')], 'passenger_count')
+                ->where('is_active', true)
+                ->whereDate('departure_date', '>=', now()->toDateString())
+                ->orderBy('departure_date'),
+            'testimonials.departureSchedule:id,departure_date,departure_city',
+            'itineraries.activity:id,code,name,description,sort_order,is_active',
+            'itineraries.products:id,name,product_type',
+        ])
+        ->firstOrFail();
+
+    return Inertia::render('public/landing/package/index', [
+        'travelPackage' => [
+            'id' => $travelPackage->id,
+            'code' => $travelPackage->code,
+            'slug' => $travelPackage->slug,
+            'name' => $travelPackage->name,
+            'package_type' => $travelPackage->package_type,
+            'departure_city' => $travelPackage->departure_city,
+            'duration_days' => $travelPackage->duration_days,
+            'price' => (float) $travelPackage->price,
+            'original_price' => $travelPackage->original_price ? (float) $travelPackage->original_price : null,
+            'discount_label' => $travelPackage->discount_label,
+            'discount_percent' => $travelPackage->discountPercent(),
+            'discount_ends_at' => $travelPackage->discount_ends_at?->toDateTimeString(),
+            'currency' => $travelPackage->currency,
+            'image_path' => $travelPackage->image_path,
+            'summary' => $travelPackage->summary,
+            'content' => $travelPackage->content,
+            'is_featured' => $travelPackage->is_featured,
+            'rating_avg' => $travelPackage->testimonials->avg('rating') ? round($travelPackage->testimonials->avg('rating'), 1) : null,
+            'rating_count' => $travelPackage->testimonials->count(),
+            'products' => $travelPackage->products->map(fn ($product): array => [
+                'name' => $product->name,
+                'product_type' => $product->product_type,
+                'slug' => $product->slug,
+            ])->values()->all(),
+            'schedules' => $travelPackage->schedules->map(fn ($schedule): array => [
+                'id' => $schedule->id,
+                'departure_date' => $schedule->departure_date?->toDateString(),
+                'return_date' => $schedule->return_date?->toDateString(),
+                'departure_city' => $schedule->departure_city,
+                'seats_total' => $schedule->seats_total,
+                'seats_available' => $schedule->availableSeatsCount(),
+                'status' => $schedule->status,
+                'notes' => $schedule->notes,
+            ])->values()->all(),
+            'testimonials' => $travelPackage->testimonials->where('is_active', true)->map(fn ($testimonial): array => [
+                'name' => $testimonial->name,
+                'origin_city' => $testimonial->origin_city,
+                'quote' => $testimonial->quote,
+                'rating' => $testimonial->rating,
+                'departure_schedule' => $testimonial->departureSchedule ? [
+                    'departure_date' => $testimonial->departureSchedule->departure_date?->toDateString(),
+                    'departure_city' => $testimonial->departureSchedule->departure_city,
+                ] : null,
+                'photos' => $testimonial->photos ?? [],
+            ])->values()->all(),
+            'itineraries' => $travelPackage->itineraries->map(fn ($itinerary): array => [
+                'activity_id' => $itinerary->activity_id,
+                'activity_ids' => collect($itinerary->activity_ids ?? [])->filter(fn ($activityId) => is_numeric($activityId))->map(fn ($activityId) => (int) $activityId)->values()->all(),
+                'day_number' => $itinerary->day_number,
+                'sort_order' => $itinerary->sort_order,
+                'title' => $itinerary->title,
+                'description' => $itinerary->description,
+                'activity' => $itinerary->activity ? [
+                    'id' => $itinerary->activity->id,
+                    'code' => $itinerary->activity->code,
+                    'name' => $itinerary->activity->name,
+                    'description' => $itinerary->activity->description,
+                ] : null,
+                'product_ids' => $itinerary->products->pluck('id')->values()->all(),
+                'products' => $itinerary->products->map(fn ($product): array => [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'product_type' => $product->product_type,
+                ])->values()->all(),
+            ])->values()->all(),
+        ],
+    ]);
+})->name('public.landing-package');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonation.stop.global');
@@ -178,6 +271,7 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::post('content/resources/{resource}', [ContentController::class, 'storeResource'])->middleware('check.menu.permission:create'), 'content.resources.store');
             $nameRoute(Route::patch('content/resources/{resource}/{id}', [ContentController::class, 'updateResource'])->middleware('check.menu.permission:edit'), 'content.resources.update');
             $nameRoute(Route::delete('content/resources/{resource}/{id}', [ContentController::class, 'destroyResource'])->middleware('check.menu.permission:delete'), 'content.resources.destroy');
+            $nameRoute(Route::post('content/resources/{resource}/bulk-delete', [ContentController::class, 'bulkDestroyResource'])->middleware('check.menu.permission:delete'), 'content.resources.bulk-destroy');
             $nameRoute(Route::get('seo', [SeoController::class, 'index'])->middleware('check.menu.permission:view'), 'seo.index');
             $nameRoute(Route::patch('seo', [SeoController::class, 'update'])->middleware('check.menu.permission:edit'), 'seo.update');
         });
@@ -246,6 +340,7 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::get('hotels', [HotelController::class, 'index'])->middleware('check.menu.permission:view'), 'master-data.hotels.index');
             $nameRoute(Route::post('hotels', [HotelController::class, 'store'])->middleware('check.menu.permission:create'), 'master-data.hotels.store');
             $nameRoute(Route::post('hotels/bulk', [HotelController::class, 'bulkStore'])->middleware('check.menu.permission:create'), 'master-data.hotels.bulk-store');
+            $nameRoute(Route::post('hotels/bulk-deactivate', [HotelController::class, 'bulkDeactivate'])->middleware('check.menu.permission:delete'), 'master-data.hotels.bulk-deactivate');
             $nameRoute(Route::put('hotels/{hotel}', [HotelController::class, 'update'])->middleware('check.menu.permission:edit'), 'master-data.hotels.update');
             $nameRoute(Route::delete('hotels/{hotel}', [HotelController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'master-data.hotels.destroy');
             $nameRoute(Route::get('hotel-countries', [HotelReferenceController::class, 'countries'])->middleware('check.menu.permission:view'), 'master-data.hotel-countries.index');

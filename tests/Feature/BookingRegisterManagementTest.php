@@ -133,6 +133,99 @@ class BookingRegisterManagementTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_it_includes_inventory_tracking_status_for_register_rows(): void
+    {
+        $user = User::factory()->create();
+
+        $product = TravelProduct::query()->create([
+            'code' => 'PRD-TRACK-001',
+            'slug' => 'prd-track-001',
+            'name' => 'Produk Tracking',
+            'product_type' => 'perlengkapan',
+            'description' => 'Desc',
+            'content' => ['price' => 5000],
+            'is_active' => true,
+        ]);
+
+        InventoryItem::query()->create([
+            'item_code' => $product->code,
+            'item_name' => (string) $product->name,
+            'category' => (string) $product->product_type,
+            'unit' => 'pcs',
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'is_active' => true,
+        ]);
+
+        $package = TravelPackage::factory()->create();
+        $package->products()->sync([$product->id => ['sort_order' => 1]]);
+
+        PackageRegistration::query()->create([
+            'package_id' => $package->id,
+            'full_name' => 'Tracking Stock',
+            'phone' => '081200000021',
+            'email' => 'tracking@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 2,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('booking.register.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('registrations.data.0.inventory.has_tracked_inventory', true)
+                ->where('registrations.data.0.inventory.total_tracked_products', 1)
+                ->where('registrations.data.0.inventory.insufficient_items', []));
+    }
+
+    public function test_it_flags_insufficient_inventory_for_register_rows(): void
+    {
+        $user = User::factory()->create();
+
+        $product = TravelProduct::query()->create([
+            'code' => 'PRD-TRACK-002',
+            'slug' => 'prd-track-002',
+            'name' => 'Produk Tracking Kurang',
+            'product_type' => 'perlengkapan',
+            'description' => 'Desc',
+            'content' => ['price' => 5000],
+            'is_active' => true,
+        ]);
+
+        InventoryItem::query()->create([
+            'item_code' => $product->code,
+            'item_name' => (string) $product->name,
+            'category' => (string) $product->product_type,
+            'unit' => 'pcs',
+            'product_id' => $product->id,
+            'quantity' => 0,
+            'is_active' => true,
+        ]);
+
+        $package = TravelPackage::factory()->create();
+        $package->products()->sync([$product->id => ['sort_order' => 1]]);
+
+        PackageRegistration::query()->create([
+            'package_id' => $package->id,
+            'full_name' => 'Tracking Stock Kurang',
+            'phone' => '081200000022',
+            'email' => 'tracking-kurang@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 1,
+            'status' => 'pending',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('booking.register.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('registrations.data.0.inventory.has_tracked_inventory', true)
+                ->where('registrations.data.0.inventory.insufficient_items.0.product_name', 'Produk Tracking Kurang')
+                ->where('registrations.data.0.inventory.insufficient_items.0.available', 0)
+                ->where('registrations.data.0.inventory.insufficient_items.0.required', 1));
+    }
+
     public function test_it_can_delete_pending_register_entry(): void
     {
         $user = User::factory()->create();

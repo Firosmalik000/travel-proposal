@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Administrator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Administrator\BulkDeactivateHotelRequest;
 use App\Http\Requests\Administrator\BulkStoreHotelRequest;
 use App\Http\Requests\Administrator\StoreHotelRequest;
 use App\Http\Requests\Administrator\UpdateHotelRequest;
@@ -35,6 +36,7 @@ class HotelController extends Controller
 
         $hotels = Hotel::query()
             ->with(['country:id,name', 'city:id,name', 'product:id,code', 'prices.roomType:id,name'])
+            ->where('is_active', true)
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($inner) use ($search): void {
                     $inner
@@ -81,7 +83,7 @@ class HotelController extends Controller
             'filters' => [
                 'search' => $search,
                 'city_id' => $cityId > 0 ? (string) $cityId : 'all',
-                'status' => in_array($status, ['active', 'inactive'], true) ? $status : 'all',
+                'status' => 'all',
             ],
             'cityStats' => Hotel::query()
                 ->selectRaw('city_id, COUNT(*) as total_hotels')
@@ -251,9 +253,35 @@ class HotelController extends Controller
         DB::transaction(function () use ($hotel): void {
             $this->hotelProductSyncService->deactivateProduct($hotel);
             $hotel->update(['is_active' => false]);
+            $hotel->delete();
         });
 
-        return back()->with('success', 'Hotel berhasil dinonaktifkan.');
+        return back()->with('success', 'Hotel berhasil dihapus.');
+    }
+
+    public function bulkDeactivate(BulkDeactivateHotelRequest $request): RedirectResponse
+    {
+        $ids = collect($request->validated('ids'))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $deactivatedCount = 0;
+
+        DB::transaction(function () use ($ids, &$deactivatedCount): void {
+            Hotel::query()
+                ->whereIn('id', $ids->all())
+                ->get()
+                ->each(function (Hotel $hotel) use (&$deactivatedCount): void {
+                    $this->hotelProductSyncService->deactivateProduct($hotel);
+                    $hotel->update(['is_active' => false]);
+                    $hotel->delete();
+                    $deactivatedCount++;
+                });
+        });
+
+        return back()->with('success', $deactivatedCount.' hotel berhasil dihapus.');
     }
 
     public function storeCountry(Request $request): RedirectResponse

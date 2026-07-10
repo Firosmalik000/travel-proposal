@@ -23,6 +23,8 @@ class PackageCostCalculation extends Model
         'hotel_total',
         'product_total',
         'manual_adjustment',
+        'tour_leader_fee',
+        'muthawwif_fee',
         'grand_total',
         'hpp_per_customer',
         'currency',

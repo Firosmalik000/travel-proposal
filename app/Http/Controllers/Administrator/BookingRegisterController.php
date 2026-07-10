@@ -765,6 +765,10 @@ class BookingRegisterController extends Controller
             ->paginate(10)
             ->withQueryString()
             ->through(fn (PackageRegistration $registration): array => [
+                'inventory' => $this->inventoryStockService->stockPreviewForPackage(
+                    (int) $registration->package_id,
+                    (int) $registration->passenger_count,
+                ),
                 'id' => $registration->id,
                 'booking_code' => sprintf(
                     'BK-%s-%04d',
@@ -789,6 +793,10 @@ class BookingRegisterController extends Controller
                     'code' => $registration->package?->code,
                     'slug' => $registration->package?->slug,
                     'name' => $registration->package?->name,
+                    'display_name' => $this->resolvePackageDisplayName(
+                        $registration->package?->name,
+                        $registration->package?->code,
+                    ),
                     'package_type' => $registration->package?->package_type,
                 ],
                 'departure_schedule' => [
@@ -901,6 +909,10 @@ class BookingRegisterController extends Controller
                         'code' => $booking->package?->code,
                         'slug' => $booking->package?->slug,
                         'name' => $booking->package?->name,
+                        'display_name' => $this->resolvePackageDisplayName(
+                            $booking->package?->name,
+                            $booking->package?->code,
+                        ),
                         'package_type' => $booking->package?->package_type,
                     ],
                     'departure_schedule' => [
@@ -1076,10 +1088,43 @@ class BookingRegisterController extends Controller
                 'id' => $travelPackage->id,
                 'code' => $travelPackage->code,
                 'name' => $travelPackage->name,
+                'display_name' => $this->resolvePackageDisplayName(
+                    $travelPackage->name,
+                    $travelPackage->code,
+                ),
                 'package_type' => $travelPackage->package_type,
             ])
             ->values()
             ->all();
+    }
+
+    private function resolvePackageDisplayName(mixed $name, ?string $code = null): string
+    {
+        if (is_string($name)) {
+            $trimmedName = trim($name);
+
+            if ($trimmedName === '') {
+                return (string) ($code ?? '-');
+            }
+
+            $decodedName = json_decode($trimmedName, true);
+
+            if (is_array($decodedName)) {
+                $localizedName = trim((string) ($decodedName['id'] ?? $decodedName['en'] ?? ''));
+
+                return $localizedName !== '' ? $localizedName : (string) ($code ?? '-');
+            }
+
+            return $trimmedName;
+        }
+
+        if (is_array($name)) {
+            $localizedName = trim((string) ($name['id'] ?? $name['en'] ?? ''));
+
+            return $localizedName !== '' ? $localizedName : (string) ($code ?? '-');
+        }
+
+        return (string) ($code ?? '-');
     }
 
     /**

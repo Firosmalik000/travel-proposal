@@ -292,7 +292,14 @@ export default function InventoryIndex({
                             <TableBody>
                                 {inventoryItems.data.length > 0 ? (
                                     inventoryItems.data.map((item, index) => (
-                                        <TableRow key={item.id}>
+                                        <TableRow
+                                            key={item.id}
+                                            className={
+                                                item.quantity === 0
+                                                    ? 'bg-red-50/80 hover:bg-red-50'
+                                                    : undefined
+                                            }
+                                        >
                                             <TableCell className="text-center text-sm text-muted-foreground">
                                                 {index + 1}
                                             </TableCell>
@@ -378,7 +385,9 @@ export default function InventoryIndex({
                                             <TableCell className="text-sm text-muted-foreground">
                                                 {item.product_type || '-'}
                                             </TableCell>
-                                            <TableCell className="text-sm text-muted-foreground">
+                                            <TableCell
+                                                className={`text-sm ${item.quantity === 0 ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}
+                                            >
                                                 {item.quantity}
                                             </TableCell>
                                             <TableCell>

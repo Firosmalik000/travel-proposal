@@ -43,9 +43,11 @@ class PackageCostCalculationService
         ?int $departureScheduleId,
         int $manualAdjustment = 0,
         ?string $notes = null,
+        ?int $tourLeaderFee = null,
+        ?int $muthawwifFee = null,
         string $calculationMode = self::MODE_PER_PAX_MULTIPLIER,
     ): PackageCostCalculation {
-        return DB::transaction(function () use ($packageId, $departureScheduleId, $manualAdjustment, $notes, $calculationMode): PackageCostCalculation {
+        return DB::transaction(function () use ($packageId, $departureScheduleId, $manualAdjustment, $notes, $tourLeaderFee, $muthawwifFee, $calculationMode): PackageCostCalculation {
             $payload = $this->calculatePayload(
                 $packageId,
                 $departureScheduleId,
@@ -59,6 +61,14 @@ class PackageCostCalculationService
             ]);
 
             $calculation->items()->createMany($payload['items']);
+
+            if ($tourLeaderFee !== null || $muthawwifFee !== null) {
+                $calculation = $this->applyFeeAdjustments(
+                    $calculation,
+                    $tourLeaderFee,
+                    $muthawwifFee,
+                );
+            }
 
             return $calculation->load(['package:id,code,name', 'departureSchedule:id,departure_date,departure_city', 'items']);
         });
@@ -74,9 +84,19 @@ class PackageCostCalculationService
                 calculationMode: (string) ($calculation->calculation_mode ?: self::MODE_LEGACY_ASSIGNMENT),
             );
 
+            $extraFeeTotal = max((int) ($calculation->tour_leader_fee ?? 0), 0)
+                + max((int) ($calculation->muthawwif_fee ?? 0), 0);
+            $grandTotal = max((int) ($payload['grand_total'] ?? 0) + $extraFeeTotal, 0);
+
             $calculation->update([
                 ...collect($payload)->except('items')->all(),
                 'notes' => $calculation->notes,
+                'tour_leader_fee' => $calculation->tour_leader_fee,
+                'muthawwif_fee' => $calculation->muthawwif_fee,
+                'grand_total' => $grandTotal,
+                'hpp_per_customer' => (int) $calculation->customer_count > 0
+                    ? (int) floor($grandTotal / (int) $calculation->customer_count)
+                    : null,
             ]);
 
             $calculation->items()->delete();
@@ -88,20 +108,65 @@ class PackageCostCalculationService
 
     public function updatePackagePrice(
         PackageCostCalculation $calculation,
-        int $packagePrice,
+        ?int $packagePrice,
         ?string $notes,
+        ?int $tourLeaderFee = null,
+        ?int $muthawwifFee = null,
     ): PackageCostCalculation {
-        return DB::transaction(function () use ($calculation, $packagePrice, $notes): PackageCostCalculation {
-            $calculation->package()->update([
-                'price' => $packagePrice,
-            ]);
+        return DB::transaction(function () use ($calculation, $packagePrice, $notes, $tourLeaderFee, $muthawwifFee): PackageCostCalculation {
+            if ($packagePrice !== null) {
+                $calculation->package()->update([
+                    'price' => $packagePrice,
+                ]);
+            }
+
+            $calculation = $this->applyFeeAdjustments(
+                $calculation,
+                $tourLeaderFee,
+                $muthawwifFee,
+            );
 
             $calculation->update([
                 'notes' => $notes,
+                'tour_leader_fee' => $calculation->tour_leader_fee,
+                'muthawwif_fee' => $calculation->muthawwif_fee,
+                'grand_total' => $calculation->grand_total,
+                'hpp_per_customer' => $calculation->hpp_per_customer,
             ]);
 
             return $calculation->load(['package:id,code,name', 'departureSchedule:id,departure_date,departure_city', 'items']);
         });
+    }
+
+    public function applyFeeAdjustments(
+        PackageCostCalculation $calculation,
+        ?int $tourLeaderFee,
+        ?int $muthawwifFee,
+    ): PackageCostCalculation {
+        if ($tourLeaderFee !== null) {
+            $calculation->tour_leader_fee = max($tourLeaderFee, 0);
+        }
+
+        if ($muthawwifFee !== null) {
+            $calculation->muthawwif_fee = max($muthawwifFee, 0);
+        }
+
+        $grandTotal = max(
+            (int) $calculation->hotel_total
+            + (int) $calculation->product_total
+            + (int) $calculation->manual_adjustment
+            + (int) ($calculation->tour_leader_fee ?? 0)
+            + (int) ($calculation->muthawwif_fee ?? 0),
+            0,
+        );
+
+        $calculation->grand_total = $grandTotal;
+        $calculation->hpp_per_customer = (int) $calculation->customer_count > 0
+            ? (int) floor($grandTotal / (int) $calculation->customer_count)
+            : null;
+        $calculation->save();
+
+        return $calculation;
     }
 
     /**
@@ -166,6 +231,8 @@ class PackageCostCalculationService
             'hotel_total' => $hotelPayload['total'],
             'product_total' => $productPayload['total'],
             'manual_adjustment' => $manualAdjustment,
+            'tour_leader_fee' => null,
+            'muthawwif_fee' => null,
             'grand_total' => $grandTotal,
             'hpp_per_customer' => $customerCount > 0 ? (int) floor($grandTotal / $customerCount) : null,
             'currency' => 'IDR',

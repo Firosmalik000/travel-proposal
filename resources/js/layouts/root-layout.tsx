@@ -6,8 +6,9 @@ import { type PropsWithChildren, useEffect } from 'react';
 
 export default function RootLayout({ children }: PropsWithChildren) {
     const { auth } = usePage<SharedData>().props;
-    const isImpersonating = auth.impersonation?.is_impersonating ?? false;
-    const impersonator = auth.impersonation?.impersonator ?? null;
+    const impersonation = auth?.impersonation ?? null;
+    const isImpersonating = impersonation?.is_impersonating ?? false;
+    const impersonator = impersonation?.impersonator ?? null;
 
     useEffect(() => {
         const barHeight = isImpersonating ? '48px' : '0px';

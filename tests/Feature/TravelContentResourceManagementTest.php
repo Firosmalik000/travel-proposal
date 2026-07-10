@@ -188,6 +188,40 @@ class TravelContentResourceManagementTest extends TestCase
         $this->assertSame('PRD-HOTEL', $product->code);
     }
 
+    public function test_it_can_bulk_delete_products_from_content_management(): void
+    {
+        $user = User::factory()->create();
+
+        $firstProduct = TravelProduct::query()->create([
+            'code' => 'PRD-ONE',
+            'slug' => 'product-one',
+            'name' => ['id' => 'Product One', 'en' => 'Product One'],
+            'product_type' => 'layanan',
+            'description' => ['id' => 'Produk pertama', 'en' => 'First product'],
+            'content' => ['unit' => 'per item'],
+            'is_active' => true,
+        ]);
+
+        $secondProduct = TravelProduct::query()->create([
+            'code' => 'PRD-TWO',
+            'slug' => 'product-two',
+            'name' => ['id' => 'Product Two', 'en' => 'Product Two'],
+            'product_type' => 'layanan',
+            'description' => ['id' => 'Produk kedua', 'en' => 'Second product'],
+            'content' => ['unit' => 'per item'],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('content.resources.bulk-destroy', ['resource' => 'products']), [
+                'ids' => [$firstProduct->id, $secondProduct->id],
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('products', ['id' => $firstProduct->id]);
+        $this->assertDatabaseMissing('products', ['id' => $secondProduct->id]);
+    }
+
     public function test_it_can_store_a_package_with_uploaded_image(): void
     {
         Storage::fake('public');

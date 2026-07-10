@@ -11,6 +11,71 @@ use Illuminate\Support\Collection;
 
 class InventoryStockService
 {
+    /**
+     * @return array{
+     *     has_tracked_inventory: bool,
+     *     total_tracked_products: int,
+     *     insufficient_items: array<int, array{product_name:string, available:int, required:int}>
+     * }
+     */
+    public function stockPreviewForPackage(int $packageId, int $passengerCount): array
+    {
+        if ($packageId <= 0 || $passengerCount <= 0) {
+            return [
+                'has_tracked_inventory' => false,
+                'total_tracked_products' => 0,
+                'insufficient_items' => [],
+            ];
+        }
+
+        $package = TravelPackage::query()
+            ->with(['products.inventoryItem:id,product_id,quantity'])
+            ->find($packageId);
+
+        if (! $package instanceof TravelPackage) {
+            return [
+                'has_tracked_inventory' => false,
+                'total_tracked_products' => 0,
+                'insufficient_items' => [],
+            ];
+        }
+
+        $trackedProducts = $package->products
+            ->filter(fn ($product): bool => $product->inventoryItem instanceof InventoryItem)
+            ->values();
+
+        $insufficientItems = $trackedProducts
+            ->map(function ($product) use ($passengerCount): ?array {
+                $inventoryItem = $product->inventoryItem;
+
+                if (! $inventoryItem instanceof InventoryItem) {
+                    return null;
+                }
+
+                $required = $passengerCount;
+                $available = (int) $inventoryItem->quantity;
+
+                if ($available >= $required) {
+                    return null;
+                }
+
+                return [
+                    'product_name' => (string) ($product->name ?: $product->code ?: 'Unknown Product'),
+                    'available' => $available,
+                    'required' => $required,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return [
+            'has_tracked_inventory' => $trackedProducts->isNotEmpty(),
+            'total_tracked_products' => $trackedProducts->count(),
+            'insufficient_items' => $insufficientItems,
+        ];
+    }
+
     public function syncForBooking(Booking $booking, array $previous = []): void
     {
         $currentAllocations = $this->allocationsFor(

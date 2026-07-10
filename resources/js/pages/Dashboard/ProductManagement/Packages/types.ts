@@ -52,7 +52,7 @@ export type Package = {
     id: number;
     code: string;
     slug: string;
-    name: { id: string; en: string };
+    name: { id: string; en: string } | string;
     package_type: 'reguler' | 'hemat' | 'vip' | 'premium' | 'private';
     departure_city: string;
     duration_days: number;
@@ -64,7 +64,7 @@ export type Package = {
     currency: string;
     image_path: string | null;
     images?: string[];
-    summary: { id: string; en: string };
+    summary: { id: string; en: string } | string;
     content: Record<string, any>;
     is_featured: boolean;
     is_active: boolean;

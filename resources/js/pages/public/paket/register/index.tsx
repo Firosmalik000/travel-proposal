@@ -9,6 +9,7 @@ import { formatDate, formatPrice, localize } from '@/lib/public/content';
 import { type SharedData } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { FormEvent, useMemo } from 'react';
+import { toast } from 'sonner';
 
 type RoomType = 'single' | 'double' | 'triple' | 'quad';
 
@@ -250,6 +251,28 @@ export default function PackageRegistrationPage() {
         });
     };
 
+    const getSubmissionErrorMessage = (
+        errors: Record<string, string | undefined>,
+    ): string => {
+        if (errors.departure_schedule_id) {
+            return 'Jadwal yang dipilih sudah tidak tersedia. Pilih jadwal aktif lainnya.';
+        }
+
+        if (errors.passenger_count) {
+            return 'Jumlah jamaah belum valid. Periksa lagi angka yang diisi.';
+        }
+
+        if (errors.room_configuration) {
+            return 'Komposisi kamar harus sesuai dengan jumlah jamaah.';
+        }
+
+        if (errors.full_name || errors.phone || errors.origin_city) {
+            return 'Ada data wajib yang belum lengkap. Silakan cek kembali isian form.';
+        }
+
+        return 'Pendaftaran gagal dikirim. Periksa kembali isian Anda.';
+    };
+
     const submit = (event: FormEvent<HTMLFormElement>): void => {
         event.preventDefault();
 
@@ -258,6 +281,7 @@ export default function PackageRegistrationPage() {
                 'room_configuration',
                 'Komposisi kamar harus sama dengan jumlah jamaah.',
             );
+            toast.error('Komposisi kamar harus sama dengan jumlah jamaah.');
 
             return;
         }
@@ -276,6 +300,12 @@ export default function PackageRegistrationPage() {
                 );
                 form.setData('departure_schedule_id', initialScheduleId);
                 form.setData('room_configuration', defaultRoomConfiguration);
+                toast.success(
+                    'Pendaftaran berhasil dikirim. Tim kami akan segera menghubungi Anda.',
+                );
+            },
+            onError: (errors) => {
+                toast.error(getSubmissionErrorMessage(errors));
             },
         });
     };

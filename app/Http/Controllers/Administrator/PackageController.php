@@ -399,6 +399,7 @@ class PackageController extends Controller
     {
         return TravelProduct::query()
             ->where('is_active', true)
+            ->whereHas('category', fn ($query) => $query->where('is_active', true))
             ->orderBy('code')
             ->get(['id', 'code', 'name', 'product_type', 'content'])
             ->map(function (TravelProduct $product): array {
@@ -573,10 +574,6 @@ class PackageController extends Controller
         $roomPrices = [];
         foreach (['dbl', 'trpl', 'quad'] as $roomType) {
             $originalRoomPrice = data_get($roomOriginalPrices, $roomType);
-
-            if (! is_numeric($originalRoomPrice)) {
-                $originalRoomPrice = $originalPrice;
-            }
 
             if (! is_numeric($originalRoomPrice)) {
                 $roomPrices[$roomType] = null;

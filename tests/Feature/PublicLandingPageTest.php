@@ -22,6 +22,62 @@ class PublicLandingPageTest extends TestCase
                 ->component('public/landing/index'));
     }
 
+    public function test_landing_package_page_renders_package_promo_component_by_id(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'slug' => 'umroh-basic-landing',
+            'name' => [
+                'id' => 'Umroh Basic 9 Hari',
+                'en' => 'Basic Umrah 9 Days',
+            ],
+            'price' => 29029000,
+            'original_price' => 31000000,
+            'content' => [
+                'room_prices' => [
+                    'quad' => 33500000,
+                    'trpl' => 35000000,
+                    'dbl' => 36500000,
+                ],
+                'included' => "Tiket Pesawat PP Direct Flight\nHotel Sesuai Paket",
+                'excluded' => "Pembuatan Paspor\nVaksin Meningitis",
+            ],
+        ]);
+
+        $this->get(route('public.landing-package', ['package' => $package->id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/package/index')
+                ->where('travelPackage.id', $package->id)
+                ->where('travelPackage.slug', 'umroh-basic-landing')
+                ->where('travelPackage.price', 29029000.0)
+                ->where('travelPackage.content.room_prices.quad', 33500000));
+    }
+
+    public function test_landing_package_page_can_resolve_package_by_slug(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'slug' => 'umroh-slug-landing',
+        ]);
+
+        $this->get('/landing/umroh-slug-landing')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/landing/package/index')
+                ->where('travelPackage.id', $package->id)
+                ->where('travelPackage.slug', 'umroh-slug-landing'));
+    }
+
+    public function test_landing_package_page_does_not_show_inactive_package(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'slug' => 'inactive-landing-package',
+            'is_active' => false,
+        ]);
+
+        $this->get(route('public.landing-package', ['package' => $package->id]))
+            ->assertNotFound();
+    }
+
     public function test_landing_page_exposes_package_discount_data(): void
     {
         $package = TravelPackage::factory()->create([

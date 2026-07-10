@@ -35,8 +35,18 @@ import {
     Users,
 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 type Registration = {
+    inventory: {
+        has_tracked_inventory: boolean;
+        total_tracked_products: number;
+        insufficient_items: Array<{
+            product_name: string;
+            available: number;
+            required: number;
+        }>;
+    };
     id: number;
     full_name: string;
     phone: string;
@@ -49,7 +59,8 @@ type Registration = {
     travel_package: {
         code: string | null;
         slug: string | null;
-        name: Record<string, string> | null;
+        name: Record<string, string> | string | null;
+        display_name?: string | null;
     };
     departure_schedule: {
         departure_date: string | null;
@@ -110,6 +121,60 @@ function normalizePhone(phone: string): string {
     return cleanedPhone;
 }
 
+function packageDisplayName(
+    registration: Registration,
+    locale: 'id' | 'en',
+): string {
+    const directDisplayName = registration.travel_package.display_name?.trim();
+
+    if (directDisplayName) {
+        return directDisplayName;
+    }
+
+    const rawName = registration.travel_package.name;
+
+    if (typeof rawName === 'string') {
+        const trimmedName = rawName.trim();
+
+        if (trimmedName === '') {
+            return registration.travel_package.code ?? '-';
+        }
+
+        try {
+            const parsedName = JSON.parse(trimmedName) as Record<
+                string,
+                string
+            > | null;
+
+            if (parsedName && typeof parsedName === 'object') {
+                return (
+                    parsedName[locale] ||
+                    parsedName.id ||
+                    parsedName.en ||
+                    registration.travel_package.code ||
+                    '-'
+                );
+            }
+        } catch {
+            return trimmedName;
+        }
+
+        return trimmedName;
+    }
+
+    if (rawName && typeof rawName === 'object') {
+        return (
+            rawName[locale] ||
+            rawName.id ||
+            rawName.en ||
+            registration.travel_package.code ||
+            '-'
+        );
+    }
+
+    return registration.travel_package.code ?? '-';
+}
+
 export default function BookingRegisterIndex({ registrations }: Props) {
     const { can } = usePermission('booking_register');
     const canApprove = can('approve');
@@ -123,12 +188,7 @@ export default function BookingRegisterIndex({ registrations }: Props) {
     const [search, setSearch] = useState('');
 
     const filteredRegistrations = registrationItems.filter((registration) => {
-        const packageName =
-            typeof registration.travel_package.name === 'string'
-                ? registration.travel_package.name
-                : (registration.travel_package.name?.[locale] ??
-                  registration.travel_package.name?.id ??
-                  '');
+        const packageName = packageDisplayName(registration, locale);
         const keyword = search.toLowerCase();
 
         return [
@@ -166,12 +226,7 @@ export default function BookingRegisterIndex({ registrations }: Props) {
     ];
 
     function openWhatsApp(registration: Registration): void {
-        const packageName =
-            typeof registration.travel_package.name === 'string'
-                ? registration.travel_package.name
-                : (registration.travel_package.name?.[locale] ??
-                  registration.travel_package.name?.id ??
-                  'Paket Umroh');
+        const packageName = packageDisplayName(registration, locale);
         const departureDate = formatDate(
             registration.departure_schedule.departure_date,
         );
@@ -210,6 +265,19 @@ export default function BookingRegisterIndex({ registrations }: Props) {
             {},
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    toast.success(
+                        'Booking berhasil dipindahkan ke registered.',
+                    );
+                },
+                onError: (errors) => {
+                    const bookingError =
+                        typeof errors.booking === 'string'
+                            ? errors.booking
+                            : 'Booking belum bisa dipindahkan ke registered.';
+
+                    toast.error(bookingError);
+                },
             },
         );
     }
@@ -332,11 +400,17 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                         {filteredRegistrations.map(
                                             (registration, index) => {
                                                 const packageName =
-                                                    registration.travel_package
-                                                        .name?.[locale] ??
-                                                    registration.travel_package
-                                                        .name?.id ??
-                                                    '-';
+                                                    packageDisplayName(
+                                                        registration,
+                                                        locale,
+                                                    );
+                                                const hasTrackedInventory =
+                                                    registration.inventory
+                                                        .has_tracked_inventory;
+                                                const hasInsufficientInventory =
+                                                    registration.inventory
+                                                        .insufficient_items
+                                                        .length > 0;
 
                                                 return (
                                                     <TableRow
@@ -363,6 +437,9 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                                                 <DropdownMenuContent align="end">
                                                                     {canApprove ? (
                                                                         <DropdownMenuItem
+                                                                            disabled={
+                                                                                hasInsufficientInventory
+                                                                            }
                                                                             onClick={() =>
                                                                                 markAsRegistered(
                                                                                     registration,
@@ -447,18 +524,59 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                                             </div>
                                                         </TableCell>
                                                         <TableCell className="min-w-52">
-                                                            <div className="space-y-1">
+                                                            <div className="space-y-1.5">
                                                                 <p className="font-medium">
                                                                     {
                                                                         packageName
                                                                     }
                                                                 </p>
-                                                                <p className="text-sm text-muted-foreground">
-                                                                    {registration
-                                                                        .travel_package
-                                                                        .code ??
-                                                                        '-'}
-                                                                </p>
+                                                                <div className="flex flex-wrap gap-1.5">
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className={
+                                                                            hasTrackedInventory
+                                                                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                                                                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                                        }
+                                                                    >
+                                                                        {hasTrackedInventory
+                                                                            ? `Tracked stock (${registration.inventory.total_tracked_products})`
+                                                                            : 'Unlimited'}
+                                                                    </Badge>
+                                                                </div>
+                                                                {hasInsufficientInventory ? (
+                                                                    <div className="space-y-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs text-rose-700">
+                                                                        <p className="font-semibold">
+                                                                            Stok
+                                                                            tidak
+                                                                            cukup
+                                                                            untuk
+                                                                            register.
+                                                                        </p>
+                                                                        {registration.inventory.insufficient_items.map(
+                                                                            (
+                                                                                item,
+                                                                            ) => (
+                                                                                <p
+                                                                                    key={`${registration.id}-${item.product_name}`}
+                                                                                >
+                                                                                    {
+                                                                                        item.product_name
+                                                                                    }
+                                                                                    :{' '}
+                                                                                    stok{' '}
+                                                                                    {
+                                                                                        item.available
+                                                                                    }{' '}
+                                                                                    / butuh{' '}
+                                                                                    {
+                                                                                        item.required
+                                                                                    }
+                                                                                </p>
+                                                                            ),
+                                                                        )}
+                                                                    </div>
+                                                                ) : null}
                                                             </div>
                                                         </TableCell>
                                                         <TableCell className="min-w-44">

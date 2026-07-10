@@ -38,6 +38,46 @@ type Props = {
     packageImageUploadMaxKilobytes: number;
 };
 
+function resolvePackageName(
+    name: Package['name'],
+    locale: 'id' | 'en',
+    fallback: string,
+): string {
+    if (typeof name === 'string') {
+        const trimmedName = name.trim();
+
+        if (trimmedName === '') {
+            return fallback;
+        }
+
+        try {
+            const parsedName = JSON.parse(trimmedName) as Record<
+                string,
+                string
+            > | null;
+
+            if (parsedName && typeof parsedName === 'object') {
+                return (
+                    parsedName[locale] ||
+                    parsedName.id ||
+                    parsedName.en ||
+                    fallback
+                );
+            }
+        } catch {
+            return trimmedName;
+        }
+
+        return trimmedName;
+    }
+
+    if (name && typeof name === 'object') {
+        return name[locale] || name.id || name.en || fallback;
+    }
+
+    return fallback;
+}
+
 export default function PackagesIndex({
     packages: packageList,
     productOptions,
@@ -64,10 +104,7 @@ export default function PackagesIndex({
     const [schedulePkgId, setSchedulePkgId] = useState<number | null>(null);
 
     const filtered = safePackageList.filter((pkg) => {
-        const localizedName =
-            typeof pkg.name === 'string'
-                ? pkg.name
-                : pkg.name?.[locale] || pkg.name?.id || '';
+        const localizedName = resolvePackageName(pkg.name, locale, '');
 
         return (
             localizedName.toLowerCase().includes(search.toLowerCase()) ||
@@ -83,7 +120,7 @@ export default function PackagesIndex({
 
         if (
             !confirm(
-                `Hapus package "${pkg.name?.id || pkg.code}"? Semua jadwal terkait juga akan dihapus.`,
+                `Hapus package "${resolvePackageName(pkg.name, locale, pkg.code)}"? Semua jadwal terkait juga akan dihapus.`,
             )
         ) {
             return;
@@ -139,9 +176,7 @@ export default function PackagesIndex({
     const schedulePkg =
         safePackageList.find((pkg) => pkg.id === schedulePkgId) ?? null;
     const editingPackageName = editingPackage
-        ? editingPackage.name?.[locale] ||
-          editingPackage.name?.id ||
-          editingPackage.code
+        ? resolvePackageName(editingPackage.name, locale, editingPackage.code)
         : null;
     function openCreatePackage(): void {
         if (!canCreate) {
@@ -320,7 +355,13 @@ export default function PackagesIndex({
                     <SheetHeader>
                         <SheetTitle className="text-lg">
                             Detail Package:{' '}
-                            {viewingPkg?.name?.[locale] || viewingPkg?.code}
+                            {viewingPkg
+                                ? resolvePackageName(
+                                      viewingPkg.name,
+                                      locale,
+                                      viewingPkg.code,
+                                  )
+                                : ''}
                         </SheetTitle>
                     </SheetHeader>
                     {viewingPkg ? (
@@ -365,9 +406,11 @@ export default function PackagesIndex({
                                     Ringkasan
                                 </p>
                                 <p className="mt-1">
-                                    {viewingPkg.summary?.[locale] ||
-                                        viewingPkg.summary?.id ||
-                                        '-'}
+                                    {typeof viewingPkg.summary === 'string'
+                                        ? viewingPkg.summary
+                                        : viewingPkg.summary?.[locale] ||
+                                          viewingPkg.summary?.id ||
+                                          '-'}
                                 </p>
                             </div>
 
@@ -396,7 +439,13 @@ export default function PackagesIndex({
                     <SheetHeader>
                         <SheetTitle className="text-lg">
                             Jadwal:{' '}
-                            {schedulePkg?.name?.[locale] || schedulePkg?.code}
+                            {schedulePkg
+                                ? resolvePackageName(
+                                      schedulePkg.name,
+                                      locale,
+                                      schedulePkg.code,
+                                  )
+                                : ''}
                         </SheetTitle>
                     </SheetHeader>
                     <div className="flex-1 overflow-y-auto px-6 py-5">

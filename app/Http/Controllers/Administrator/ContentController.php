@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Administrator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Administrator\BulkDeleteTravelProductRequest;
 use App\Http\Requests\Administrator\ManageTravelResourceRequest;
 use App\Http\Requests\Administrator\UpdatePageContentRequest;
 use App\Models\Article;
@@ -28,6 +29,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -234,6 +236,7 @@ class ContentController extends Controller
             'hotel_master' => [
                 'hotels' => Hotel::query()
                     ->with(['country:id,name', 'city:id,name', 'product:id,code', 'prices.roomType:id,name'])
+                    ->where('is_active', true)
                     ->when($search !== '', function ($query) use ($search): void {
                         $query->where(function ($inner) use ($search): void {
                             $inner
@@ -461,6 +464,33 @@ class ContentController extends Controller
         $definition['model']::query()->findOrFail($id)->delete();
 
         return back()->with('success', $definition['label'].' berhasil dihapus.');
+    }
+
+    public function bulkDestroyResource(BulkDeleteTravelProductRequest $request, string $resource): RedirectResponse
+    {
+        $definition = $this->resourceDefinitions()[$resource] ?? null;
+
+        abort_if($definition === null || $resource !== 'products', 404);
+
+        $ids = collect($request->validated('ids'))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $deletedCount = 0;
+
+        DB::transaction(function () use ($definition, $ids, &$deletedCount): void {
+            $definition['model']::query()
+                ->whereIn('id', $ids->all())
+                ->get()
+                ->each(function (Model $item) use (&$deletedCount): void {
+                    $item->delete();
+                    $deletedCount++;
+                });
+        });
+
+        return back()->with('success', $deletedCount.' '.$definition['label'].' berhasil dihapus.');
     }
 
     /**

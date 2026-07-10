@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Currency;
 use App\Models\DepartureSchedule;
 use App\Models\PackageItinerary;
+use App\Models\ProductCategory;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use App\Models\User;
@@ -87,6 +88,16 @@ class PackageManagementTest extends TestCase
     {
         $user = User::factory()->create();
         $this->makePackage();
+        ProductCategory::query()->create([
+            'key' => 'perlengkapan',
+            'name' => ['id' => 'Perlengkapan', 'en' => 'Equipment'],
+            'is_active' => true,
+        ]);
+        ProductCategory::query()->create([
+            'key' => 'hotel',
+            'name' => ['id' => 'Hotel', 'en' => 'Hotel'],
+            'is_active' => true,
+        ]);
         Currency::factory()->create([
             'code' => 'IDR',
             'conversion_rate' => 1,
@@ -146,6 +157,48 @@ class PackageManagementTest extends TestCase
                 ->where('currencies.1.code', 'SAR')
                 ->where('currencies.1.conversion_rate', 4300.0)
             );
+    }
+
+    public function test_it_only_includes_products_from_active_categories_in_package_options(): void
+    {
+        $user = User::factory()->create();
+        $this->makePackage();
+
+        ProductCategory::query()->create([
+            'key' => 'hotel',
+            'name' => ['id' => 'Hotel', 'en' => 'Hotel'],
+            'is_active' => true,
+        ]);
+        ProductCategory::query()->create([
+            'key' => 'merchandise',
+            'name' => ['id' => 'Merchandise', 'en' => 'Merchandise'],
+            'is_active' => false,
+        ]);
+
+        TravelProduct::query()->create([
+            'code' => 'HTL-AKTIF',
+            'slug' => 'hotel-aktif',
+            'name' => ['id' => 'Hotel Aktif', 'en' => 'Active Hotel'],
+            'product_type' => 'hotel',
+            'description' => ['id' => 'Hotel aktif', 'en' => 'Active hotel'],
+            'is_active' => true,
+        ]);
+
+        TravelProduct::query()->create([
+            'code' => 'PRD-KATEGORI-OFF',
+            'slug' => 'kategori-off',
+            'name' => ['id' => 'Kategori Off', 'en' => 'Inactive Category'],
+            'product_type' => 'merchandise',
+            'description' => ['id' => 'Kategori off', 'en' => 'Inactive category'],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('packages.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('productOptions', 1)
+                ->where('productOptions.0.code', 'HTL-AKTIF'));
     }
 
     public function test_it_stores_a_new_package(): void
@@ -377,6 +430,42 @@ class PackageManagementTest extends TestCase
         $this->assertSame(31625000, data_get($package->content, 'room_prices.dbl'));
         $this->assertSame(30983333, data_get($package->content, 'room_prices.trpl'));
         $this->assertSame(30250000, data_get($package->content, 'room_prices.quad'));
+    }
+
+    public function test_it_keeps_room_prices_empty_when_not_filled_manually(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'umroh-room-empty-10',
+                'name' => ['id' => 'Umroh Room Empty', 'en' => 'Umrah Room Empty'],
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'duration_days' => 10,
+                'price' => 30000000,
+                'original_price' => 36000000,
+                'currency' => 'IDR',
+                'content' => [
+                    'room_original_prices' => [
+                        'dbl' => null,
+                        'trpl' => null,
+                        'quad' => null,
+                    ],
+                ],
+                'is_active' => true,
+            ])
+            ->assertRedirect();
+
+        $package = TravelPackage::query()->where('slug', 'umroh-room-empty-10')->first();
+
+        $this->assertNotNull($package);
+        $this->assertNull(data_get($package->content, 'room_original_prices.dbl'));
+        $this->assertNull(data_get($package->content, 'room_original_prices.trpl'));
+        $this->assertNull(data_get($package->content, 'room_original_prices.quad'));
+        $this->assertNull(data_get($package->content, 'room_prices.dbl'));
+        $this->assertNull(data_get($package->content, 'room_prices.trpl'));
+        $this->assertNull(data_get($package->content, 'room_prices.quad'));
     }
 
     public function test_it_rejects_original_price_less_than_price(): void

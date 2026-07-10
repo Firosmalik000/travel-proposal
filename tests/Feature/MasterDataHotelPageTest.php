@@ -72,6 +72,44 @@ class MasterDataHotelPageTest extends TestCase
             );
     }
 
+    public function test_hotel_index_hides_inactive_hotels_from_the_listing(): void
+    {
+        $user = User::factory()->create();
+
+        $this->ensureMasterDataHotelMenuExists();
+        MenuPermissionService::ensurePermissionsExist();
+        $user->givePermissionTo('menu.hotel.view');
+
+        $country = HotelCountry::query()->create(['name' => 'Arab Saudi', 'is_active' => true]);
+        $city = HotelCity::query()->create(['country_id' => $country->id, 'name' => 'Mekkah', 'is_active' => true]);
+
+        Hotel::query()->create([
+            'country_id' => $country->id,
+            'city_id' => $city->id,
+            'name' => 'HOTEL AKTIF',
+            'code' => 'HTL-AKTIF',
+            'currency' => 'IDR',
+            'is_active' => true,
+        ]);
+
+        Hotel::query()->create([
+            'country_id' => $country->id,
+            'city_id' => $city->id,
+            'name' => 'HOTEL NONAKTIF',
+            'code' => 'HTL-NONAKTIF',
+            'currency' => 'IDR',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($user)
+            ->get('/admin/master-data/hotels')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('hotels.data', 1)
+                ->where('hotels.data.0.name', 'HOTEL AKTIF')
+            );
+    }
+
     public function test_hotel_store_creates_synced_product(): void
     {
         $user = User::factory()->create();
@@ -131,6 +169,88 @@ class MasterDataHotelPageTest extends TestCase
         $this->assertSame('Broker A', data_get($product?->content, 'pricing.0.broker_name'));
         $this->assertSame('Quad', data_get($product?->content, 'pricing.0.room_type'));
         $this->assertSame(3500000, data_get($product?->content, 'pricing.0.price'));
+    }
+
+    public function test_hotel_store_persists_multiple_brokers_and_period_prices(): void
+    {
+        $user = User::factory()->create();
+
+        $this->ensureMasterDataHotelMenuExists();
+        MenuPermissionService::ensurePermissionsExist();
+        $user->givePermissionTo(['menu.hotel.view', 'menu.hotel.create']);
+
+        ProductCategory::query()->firstOrCreate(
+            ['key' => 'hotel'],
+            [
+                'name' => 'Hotel',
+                'sort_order' => 6,
+                'is_active' => true,
+            ]
+        );
+
+        $country = HotelCountry::query()->create(['name' => 'Arab Saudi', 'is_active' => true]);
+        $city = HotelCity::query()->create(['country_id' => $country->id, 'name' => 'Madinah', 'is_active' => true]);
+        $dbl = HotelRoomType::query()->create(['name' => 'DBL', 'is_active' => true]);
+        $trpl = HotelRoomType::query()->create(['name' => 'TRPL', 'is_active' => true]);
+        $quad = HotelRoomType::query()->create(['name' => 'QUAD', 'is_active' => true]);
+
+        $payload = [
+            'country_id' => $country->id,
+            'city_id' => $city->id,
+            'name' => 'Sit explicabo Poss',
+            'description' => '',
+            'currency' => 'SAR',
+            'is_active' => true,
+            'prices' => [
+                [
+                    'broker_key' => 'broker-1',
+                    'broker_name' => 'Eligendi dolores vol',
+                    'room_type_id' => $dbl->id,
+                    'period_start' => '2026-06-01',
+                    'period_end' => '2026-06-10',
+                    'price' => 100,
+                ],
+                [
+                    'broker_key' => 'broker-1',
+                    'broker_name' => 'Eligendi dolores vol',
+                    'room_type_id' => $trpl->id,
+                    'period_start' => '2026-06-01',
+                    'period_end' => '2026-06-10',
+                    'price' => 200,
+                ],
+                [
+                    'broker_key' => 'broker-1',
+                    'broker_name' => 'Eligendi dolores vol',
+                    'room_type_id' => $quad->id,
+                    'period_start' => '2026-06-01',
+                    'period_end' => '2026-06-10',
+                    'price' => 300,
+                ],
+                [
+                    'broker_key' => 'broker-2',
+                    'broker_name' => 'In rerum eos saepe d',
+                    'room_type_id' => $dbl->id,
+                    'period_start' => '2026-07-01',
+                    'period_end' => '2026-07-10',
+                    'price' => 400,
+                ],
+            ],
+        ];
+
+        $this->actingAs($user)
+            ->post('/admin/master-data/hotels', $payload)
+            ->assertRedirect();
+
+        $hotel = Hotel::query()->where('name', 'Sit explicabo Poss')->first();
+        $product = TravelProduct::query()->where('name', 'Sit explicabo Poss')->first();
+
+        $this->assertNotNull($hotel);
+        $this->assertNotNull($product);
+        $this->assertSame('SAR', $hotel?->currency);
+        $this->assertSame('Eligendi dolores vol', data_get($product?->content, 'pricing.0.broker_name'));
+        $this->assertSame('broker-1', data_get($product?->content, 'pricing.0.broker_key'));
+        $this->assertSame('In rerum eos saepe d', data_get($product?->content, 'pricing.3.broker_name'));
+        $this->assertSame(4, $hotel?->prices()->count());
     }
 
     public function test_hotel_bulk_store_creates_multiple_hotels_and_products(): void
@@ -496,7 +616,7 @@ class MasterDataHotelPageTest extends TestCase
             ->assertSessionHas('bulk_skipped_hotels');
     }
 
-    public function test_hotel_destroy_marks_hotel_inactive_instead_of_soft_delete(): void
+    public function test_hotel_destroy_soft_deletes_the_hotel(): void
     {
         $user = User::factory()->create();
 
@@ -522,6 +642,55 @@ class MasterDataHotelPageTest extends TestCase
         $hotel->refresh();
 
         $this->assertFalse($hotel->is_active);
-        $this->assertNull($hotel->deleted_at);
+        $this->assertNotNull($hotel->deleted_at);
+
+        $this->actingAs($user)
+            ->get('/admin/master-data/hotels?search=TEST NONAKTIF')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->has('hotels.data', 0));
+    }
+
+    public function test_hotel_bulk_deactivate_soft_deletes_selected_hotels(): void
+    {
+        $user = User::factory()->create();
+
+        $this->ensureMasterDataHotelMenuExists();
+        MenuPermissionService::ensurePermissionsExist();
+        $user->givePermissionTo(['menu.hotel.view', 'menu.hotel.create', 'menu.hotel.delete']);
+
+        $country = HotelCountry::query()->create(['name' => 'Arab Saudi', 'is_active' => true]);
+        $city = HotelCity::query()->create(['country_id' => $country->id, 'name' => 'Mekkah', 'is_active' => true]);
+
+        $firstHotel = Hotel::query()->create([
+            'country_id' => $country->id,
+            'city_id' => $city->id,
+            'name' => 'HOTEL BULK 1',
+            'code' => 'HTL-BULK-1',
+            'currency' => 'IDR',
+            'is_active' => true,
+        ]);
+
+        $secondHotel = Hotel::query()->create([
+            'country_id' => $country->id,
+            'city_id' => $city->id,
+            'name' => 'HOTEL BULK 2',
+            'code' => 'HTL-BULK-2',
+            'currency' => 'IDR',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post('/admin/master-data/hotels/bulk-deactivate', [
+                'ids' => [$firstHotel->id, $secondHotel->id],
+            ])
+            ->assertRedirect();
+
+        $firstHotel->refresh();
+        $secondHotel->refresh();
+
+        $this->assertFalse($firstHotel->is_active);
+        $this->assertFalse($secondHotel->is_active);
+        $this->assertNotNull($firstHotel->deleted_at);
+        $this->assertNotNull($secondHotel->deleted_at);
     }
 }

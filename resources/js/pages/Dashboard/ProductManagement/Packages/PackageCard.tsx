@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import {
     Calendar,
     Clock,
+    ExternalLink,
     Eye,
     MapPin,
     Package as PackageIcon,
@@ -54,6 +55,46 @@ const typeConfig: Record<
     },
 };
 
+function resolvePackageName(
+    name: PackageType['name'],
+    locale: 'id' | 'en',
+    fallback: string,
+): string {
+    if (typeof name === 'string') {
+        const trimmedName = name.trim();
+
+        if (trimmedName === '') {
+            return fallback;
+        }
+
+        try {
+            const parsedName = JSON.parse(trimmedName) as Record<
+                string,
+                string
+            > | null;
+
+            if (parsedName && typeof parsedName === 'object') {
+                return (
+                    parsedName[locale] ||
+                    parsedName.id ||
+                    parsedName.en ||
+                    fallback
+                );
+            }
+        } catch {
+            return trimmedName;
+        }
+
+        return trimmedName;
+    }
+
+    if (name && typeof name === 'object') {
+        return name[locale] || name.id || name.en || fallback;
+    }
+
+    return fallback;
+}
+
 export function PackageCard({
     pkg,
     locale,
@@ -64,12 +105,13 @@ export function PackageCard({
     canEdit,
     canDelete,
 }: Props) {
-    const name = pkg.name?.[locale] || pkg.name?.id || pkg.code;
+    const name = resolvePackageName(pkg.name, locale, pkg.code);
     const type = typeConfig[pkg.package_type] ?? typeConfig.reguler;
     const schedules = Array.isArray(pkg.schedules) ? pkg.schedules : [];
     const activeSchedules = schedules.filter(
         (schedule) => schedule.is_active && schedule.status === 'open',
     ).length;
+    const landingPreviewPath = `/landing/${pkg.slug || pkg.id}`;
     const nextDeparture = schedules
         .filter((schedule) => schedule.is_active && schedule.status === 'open')
         .sort((a, b) => a.departure_date.localeCompare(b.departure_date))[0];
@@ -124,9 +166,6 @@ export function PackageCard({
                                     Featured
                                 </span>
                             ) : null}
-                            <span className="ml-auto font-mono text-xs text-muted-foreground">
-                                {pkg.code}
-                            </span>
                         </div>
 
                         <h3 className="mt-1.5 truncate text-base font-bold text-foreground">
@@ -191,6 +230,24 @@ export function PackageCard({
                         </div>
 
                         <div className="flex items-center gap-1.5">
+                            <Button
+                                asChild
+                                size="sm"
+                                variant="outline"
+                                className="h-8 gap-1.5 border-emerald-200 bg-emerald-50 text-xs text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300"
+                                title="Buka landing promo paket"
+                            >
+                                <a
+                                    href={landingPreviewPath}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">
+                                        Landing
+                                    </span>
+                                </a>
+                            </Button>
                             <Button
                                 size="sm"
                                 variant="outline"

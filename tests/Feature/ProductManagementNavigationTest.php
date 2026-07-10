@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Currency;
+use App\Models\Hotel;
+use App\Models\HotelCity;
+use App\Models\HotelCountry;
 use App\Models\Menu;
 use App\Models\User;
 use App\Support\MenuPermissionService;
@@ -18,13 +21,43 @@ class ProductManagementNavigationTest extends TestCase
     {
         $user = User::factory()->create();
 
+        $country = HotelCountry::query()->create([
+            'name' => 'Arab Saudi',
+            'is_active' => true,
+        ]);
+
+        $city = HotelCity::query()->create([
+            'country_id' => $country->id,
+            'name' => 'Madinah',
+            'is_active' => true,
+        ]);
+
+        Hotel::query()->create([
+            'country_id' => $country->id,
+            'city_id' => $city->id,
+            'name' => 'Hotel Aktif',
+            'code' => 'HTL-AKTIF',
+            'currency' => 'IDR',
+            'is_active' => true,
+        ]);
+
+        Hotel::query()->create([
+            'country_id' => $country->id,
+            'city_id' => $city->id,
+            'name' => 'Hotel Nonaktif',
+            'code' => 'HTL-NONAKTIF',
+            'currency' => 'IDR',
+            'is_active' => false,
+        ]);
+
         $this->actingAs($user)
             ->get(route('products.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/ProductManagement/Products/Index')
                 ->where('filters.product_type', 'hotel')
-                ->has('hotel_master.hotels')
+                ->has('hotel_master.hotels.data', 1)
+                ->where('hotel_master.hotels.data.0.name', 'Hotel Aktif')
                 ->has('hotel_master.cityOptions')
                 ->has('hotel_country_options')
                 ->has('hotel_city_options')

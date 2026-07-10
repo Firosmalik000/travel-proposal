@@ -807,58 +807,31 @@ export function PackageForm({
             ...form.data.content,
             room_original_prices: {
                 dbl:
-                    normalizeRoomPriceValue(
-                        String(
-                            roomOriginalPrices.dbl ??
-                                effectiveRoomOriginalPrices.dbl ??
-                                '',
-                        ),
-                    ) ?? null,
+                    normalizeRoomPriceValue(String(roomOriginalPrices.dbl ?? '')) ??
+                    null,
                 trpl:
                     normalizeRoomPriceValue(
-                        String(
-                            roomOriginalPrices.trpl ??
-                                effectiveRoomOriginalPrices.trpl ??
-                                '',
-                        ),
+                        String(roomOriginalPrices.trpl ?? ''),
                     ) ?? null,
                 quad:
                     normalizeRoomPriceValue(
-                        String(
-                            roomOriginalPrices.quad ??
-                                effectiveRoomOriginalPrices.quad ??
-                                '',
-                        ),
+                        String(roomOriginalPrices.quad ?? ''),
                     ) ?? null,
             },
             room_prices: {
                 dbl: calculateDiscountedPrice(
-                    normalizeRoomPriceValue(
-                        String(
-                            roomOriginalPrices.dbl ??
-                                effectiveRoomOriginalPrices.dbl ??
-                                '',
-                        ),
-                    ),
+                    normalizeRoomPriceValue(String(roomOriginalPrices.dbl ?? '')),
                     discountPercentValue,
                 ),
                 trpl: calculateDiscountedPrice(
                     normalizeRoomPriceValue(
-                        String(
-                            roomOriginalPrices.trpl ??
-                                effectiveRoomOriginalPrices.trpl ??
-                                '',
-                        ),
+                        String(roomOriginalPrices.trpl ?? ''),
                     ),
                     discountPercentValue,
                 ),
                 quad: calculateDiscountedPrice(
                     normalizeRoomPriceValue(
-                        String(
-                            roomOriginalPrices.quad ??
-                                effectiveRoomOriginalPrices.quad ??
-                                '',
-                        ),
+                        String(roomOriginalPrices.quad ?? ''),
                     ),
                     discountPercentValue,
                 ),
@@ -970,16 +943,13 @@ export function PackageForm({
     const effectiveRoomOriginalPrices = {
         dbl:
             roomOriginalPrices.dbl ??
-            inferOriginalRoomPrice(roomPrices.dbl ?? null, discountPercent) ??
-            (basePrice > 0 ? basePrice : null),
+            inferOriginalRoomPrice(roomPrices.dbl ?? null, discountPercent),
         trpl:
             roomOriginalPrices.trpl ??
-            inferOriginalRoomPrice(roomPrices.trpl ?? null, discountPercent) ??
-            (basePrice > 0 ? basePrice : null),
+            inferOriginalRoomPrice(roomPrices.trpl ?? null, discountPercent),
         quad:
             roomOriginalPrices.quad ??
-            inferOriginalRoomPrice(roomPrices.quad ?? null, discountPercent) ??
-            (basePrice > 0 ? basePrice : null),
+            inferOriginalRoomPrice(roomPrices.quad ?? null, discountPercent),
     };
     const effectiveRoomSellingPrices = {
         dbl: calculateDiscountedPrice(
@@ -1584,7 +1554,7 @@ export function PackageForm({
                                             )
                                         }
                                         className="pl-8"
-                                        placeholder="Kosongkan jika ikut harga base"
+                                        placeholder="Isi manual jika diperlukan"
                                     />
                                 </div>
                             </Field>
@@ -1608,7 +1578,7 @@ export function PackageForm({
                                             )
                                         }
                                         className="pl-8"
-                                        placeholder="Kosongkan jika ikut harga base"
+                                        placeholder="Isi manual jika diperlukan"
                                     />
                                 </div>
                             </Field>
@@ -1632,7 +1602,7 @@ export function PackageForm({
                                             )
                                         }
                                         className="pl-8"
-                                        placeholder="Kosongkan jika ikut harga base"
+                                        placeholder="Isi manual jika diperlukan"
                                     />
                                 </div>
                             </Field>

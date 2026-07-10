@@ -25,6 +25,8 @@ class StorePackageCostCalculationRequest extends FormRequest
                     ->where(fn ($query) => $query->where('package_id', (int) $this->input('travel_package_id'))),
             ],
             'manual_adjustment' => ['nullable', 'integer'],
+            'tour_leader_fee' => ['nullable', 'integer', 'min:0'],
+            'muthawwif_fee' => ['nullable', 'integer', 'min:0'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
     }

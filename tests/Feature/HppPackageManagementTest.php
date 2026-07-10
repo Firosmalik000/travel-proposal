@@ -41,6 +41,100 @@ class HppPackageManagementTest extends TestCase
                 ->has('calculationModes', 2));
     }
 
+    public function test_it_orders_hpp_package_rows_by_latest_departure_schedule_and_shows_package_name(): void
+    {
+        $user = $this->createUserWithHppPermissions(['view']);
+
+        $packageA = TravelPackage::factory()->create([
+            'code' => 'PKG-A',
+            'name' => [
+                'id' => 'Package A',
+                'en' => 'Package A',
+            ],
+            'currency' => 'IDR',
+            'content' => [],
+        ]);
+        $scheduleA = DepartureSchedule::query()->create([
+            'package_id' => $packageA->id,
+            'departure_date' => '2026-07-10',
+            'return_date' => '2026-07-20',
+            'departure_city' => 'Jakarta',
+            'seats_total' => 40,
+            'seats_available' => 40,
+            'status' => 'open',
+            'is_active' => true,
+        ]);
+
+        $packageB = TravelPackage::factory()->create([
+            'code' => 'PKG-B',
+            'name' => [
+                'id' => 'Package B',
+                'en' => 'Package B',
+            ],
+            'currency' => 'IDR',
+            'content' => [],
+        ]);
+        $scheduleB = DepartureSchedule::query()->create([
+            'package_id' => $packageB->id,
+            'departure_date' => '2026-08-10',
+            'return_date' => '2026-08-20',
+            'departure_city' => 'Madinah',
+            'seats_total' => 40,
+            'seats_available' => 40,
+            'status' => 'open',
+            'is_active' => true,
+        ]);
+
+        Booking::query()->create([
+            'booking_code' => 'BK-A-001',
+            'booking_type' => 'regular',
+            'full_name' => 'Jamaah A',
+            'phone' => '08123456781',
+            'email' => 'a@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 2,
+            'room_configuration' => [
+                'single' => 0,
+                'double' => 1,
+                'triple' => 0,
+                'quad' => 0,
+            ],
+            'status' => 'registered',
+            'package_id' => $packageA->id,
+            'departure_schedule_id' => $scheduleA->id,
+        ]);
+
+        Booking::query()->create([
+            'booking_code' => 'BK-B-001',
+            'booking_type' => 'regular',
+            'full_name' => 'Jamaah B',
+            'phone' => '08123456782',
+            'email' => 'b@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 3,
+            'room_configuration' => [
+                'single' => 0,
+                'double' => 1,
+                'triple' => 0,
+                'quad' => 0,
+            ],
+            'status' => 'registered',
+            'package_id' => $packageB->id,
+            'departure_schedule_id' => $scheduleB->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/FinancialManagement/HppPackage/Index')
+                ->has('sourceRows', 2)
+                ->where('sourceRows.0.package_name', 'Package B')
+                ->where('sourceRows.0.departure_date', '2026-08-10')
+                ->where('sourceRows.1.package_name', 'Package A')
+                ->where('sourceRows.1.departure_date', '2026-07-10'));
+    }
+
     public function test_it_can_generate_hpp_package_with_hotel_and_product_breakdown_from_customer_room_choices(): void
     {
         $user = $this->createUserWithHppPermissions(['create']);
@@ -402,6 +496,78 @@ class HppPackageManagementTest extends TestCase
         $this->assertDatabaseHas($package->getTable(), [
             'id' => $package->id,
             'price' => 42000000,
+        ]);
+    }
+
+    public function test_it_can_create_hpp_record_when_saving_fee_from_preview_state(): void
+    {
+        $user = $this->createUserWithHppPermissions(['create']);
+
+        $package = TravelPackage::factory()->create([
+            'currency' => 'IDR',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('hpp-package.store'), [
+                'travel_package_id' => $package->id,
+                'calculation_mode' => 'per_pax_multiplier',
+                'manual_adjustment' => 0,
+                'tour_leader_fee' => 250000,
+                'muthawwif_fee' => 150000,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('package_cost_calculations', [
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'tour_leader_fee' => 250000,
+            'muthawwif_fee' => 150000,
+            'grand_total' => 400000,
+            'hpp_per_customer' => null,
+        ]);
+    }
+
+    public function test_it_saves_tour_leader_and_muthawwif_fees_into_hpp_total(): void
+    {
+        $user = $this->createUserWithHppPermissions(['edit']);
+
+        $package = TravelPackage::factory()->create([
+            'price' => 1000000,
+            'currency' => 'IDR',
+        ]);
+
+        $calculation = PackageCostCalculation::query()->create([
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'calculation_mode' => 'legacy_assignment',
+            'calculation_date' => now()->toDateString(),
+            'booking_count' => 1,
+            'customer_count' => 5,
+            'hotel_total' => 2000000,
+            'product_total' => 1000000,
+            'manual_adjustment' => 0,
+            'tour_leader_fee' => 0,
+            'muthawwif_fee' => 0,
+            'grand_total' => 3000000,
+            'hpp_per_customer' => 600000,
+            'currency' => 'IDR',
+            'warnings' => [],
+            'calculated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->put(route('hpp-package.update', $calculation), [
+                'tour_leader_fee' => 200000,
+                'muthawwif_fee' => 100000,
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('package_cost_calculations', [
+            'id' => $calculation->id,
+            'tour_leader_fee' => 200000,
+            'muthawwif_fee' => 100000,
+            'grand_total' => 3300000,
+            'hpp_per_customer' => 660000,
         ]);
     }
 

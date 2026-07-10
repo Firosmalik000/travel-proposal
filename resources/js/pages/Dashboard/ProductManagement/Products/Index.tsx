@@ -340,6 +340,9 @@ function ProductTableRow({
     onView,
     onEdit,
     onDelete,
+    selectionMode,
+    isSelected,
+    onToggleSelected,
     canView,
     canEdit,
     canDelete,
@@ -352,6 +355,9 @@ function ProductTableRow({
     onView: (product: ProductItem) => void;
     onEdit: (product: ProductItem) => void;
     onDelete: (product: ProductItem) => void;
+    selectionMode: boolean;
+    isSelected: boolean;
+    onToggleSelected: (productId: number) => void;
     canView: boolean;
     canEdit: boolean;
     canDelete: boolean;
@@ -377,6 +383,15 @@ function ProductTableRow({
             <td className="px-4 py-4 text-center text-sm text-muted-foreground">
                 {index}
             </td>
+            {selectionMode ? (
+                <td className="px-4 py-4 text-center">
+                    <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => onToggleSelected(product.id)}
+                        aria-label={`Pilih ${product.name || product.code}`}
+                    />
+                </td>
+            ) : null}
             <td className="px-4 py-4 text-right">
                 {showActions ? (
                     <DropdownMenu>
@@ -488,6 +503,8 @@ export default function ProductsIndex({
         null,
     );
     const [activeFormTab, setActiveFormTab] = useState('general');
+    const [bulkSelectMode, setBulkSelectMode] = useState(false);
+    const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
     const defaultHotelCurrency = hotelCurrencyOptions[0]?.code ?? 'IDR';
     const formProductTypeOptions = productTypeOptions;
 
@@ -526,18 +543,63 @@ export default function ProductsIndex({
     }
 
     function submitFilters() {
+        clearBulkSelection();
         navigateToFilters({ search, product_type: activeProductType });
     }
 
     function resetFilters() {
         setSearch('');
         setProductType('hotel');
+        clearBulkSelection();
         navigateToFilters({ search: '', product_type: 'hotel' });
     }
 
     function selectProductType(nextProductType: string) {
         setProductType(nextProductType);
+        setBulkSelectMode(false);
+        setSelectedProductIds([]);
         navigateToFilters({ search, product_type: nextProductType });
+    }
+
+    function clearBulkSelection() {
+        setBulkSelectMode(false);
+        setSelectedProductIds([]);
+    }
+
+    function toggleSelectedProduct(productId: number) {
+        setSelectedProductIds((current) =>
+            current.includes(productId)
+                ? current.filter((selectedId) => selectedId !== productId)
+                : [...current, productId],
+        );
+    }
+
+    function submitBulkDeleteProducts() {
+        if (selectedProductIds.length === 0) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Hapus ${selectedProductIds.length} produk terpilih?`,
+            )
+        ) {
+            return;
+        }
+
+        router.post(
+            '/admin/website-management/content/resources/products/bulk-delete',
+            {
+                ids: selectedProductIds,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Produk terpilih berhasil dihapus.');
+                    clearBulkSelection();
+                },
+            },
+        );
     }
 
     function openCreateSheet() {
@@ -799,8 +861,52 @@ export default function ProductsIndex({
                     />
                 ) : (
                     <div className="overflow-hidden rounded-2xl border border-border/40 bg-card shadow-sm">
-                        <div className="border-b border-border/40 bg-muted/20 px-3 py-2 text-sm text-muted-foreground">
-                            <span>Total data: {products.total}</span>
+                        <div className="flex flex-col gap-3 border-b border-border/40 bg-muted/20 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <span className="text-sm text-muted-foreground">
+                                Total data: {products.total}
+                            </span>
+                            {canDelete ? (
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {bulkSelectMode ? (
+                                        <>
+                                            <span className="text-xs font-medium text-muted-foreground">
+                                                {selectedProductIds.length} item
+                                                dipilih
+                                            </span>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={clearBulkSelection}
+                                            >
+                                                Batal
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                onClick={
+                                                    submitBulkDeleteProducts
+                                                }
+                                                disabled={
+                                                    selectedProductIds.length ===
+                                                    0
+                                                }
+                                            >
+                                                Hapus Terpilih
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() =>
+                                                setBulkSelectMode(true)
+                                            }
+                                        >
+                                            Pilih Data
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : null}
                         </div>
                         <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-border text-left text-sm">
@@ -809,6 +915,11 @@ export default function ProductsIndex({
                                         <th className="w-16 px-4 py-3 text-center">
                                             No
                                         </th>
+                                        {bulkSelectMode ? (
+                                            <th className="w-14 px-4 py-3 text-center">
+                                                Pilih
+                                            </th>
+                                        ) : null}
                                         <th className="w-20 px-4 py-3 text-right">
                                             Aksi
                                         </th>
@@ -828,6 +939,13 @@ export default function ProductsIndex({
                                                 onView={openDetailSheet}
                                                 onEdit={openEditSheet}
                                                 onDelete={destroyProduct}
+                                                selectionMode={bulkSelectMode}
+                                                isSelected={selectedProductIds.includes(
+                                                    product.id,
+                                                )}
+                                                onToggleSelected={
+                                                    toggleSelectedProduct
+                                                }
                                                 canView={canView}
                                                 canEdit={canEdit}
                                                 canDelete={canDelete}
@@ -839,7 +957,7 @@ export default function ProductsIndex({
                                     ) : (
                                         <tr>
                                             <td
-                                                colSpan={6}
+                                                colSpan={bulkSelectMode ? 7 : 6}
                                                 className="px-4 py-10 text-center text-sm text-muted-foreground"
                                             >
                                                 {filters.search ||

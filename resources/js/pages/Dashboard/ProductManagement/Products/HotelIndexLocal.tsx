@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -436,6 +437,444 @@ function groupHotelPricesByBroker(
     }));
 }
 
+type BrokerPricingEditorProps = {
+    title: string;
+    subtitle: string;
+    periodRates: PeriodRateRow[];
+    onChange: (periodRates: PeriodRateRow[]) => void;
+    inlineEdit?: boolean;
+};
+
+function BrokerPricingEditor({
+    title,
+    subtitle,
+    periodRates,
+    onChange,
+    inlineEdit = false,
+}: BrokerPricingEditorProps) {
+    const [editingBrokerGroupId, setEditingBrokerGroupId] = useState<
+        string | null
+    >(null);
+    const [editingSessionId, setEditingSessionId] = useState<string | null>(
+        null,
+    );
+
+    const brokerGroups = useMemo(
+        () => groupPeriodRatesByBroker(periodRates),
+        [periodRates],
+    );
+
+    function getNextBrokerName(): string {
+        const existingNames = new Set(
+            brokerGroups.map((group) => normalizeKey(group.broker_name)),
+        );
+
+        let candidateIndex = brokerGroups.length + 1;
+        let candidateName = `Broker ${candidateIndex}`;
+
+        while (existingNames.has(normalizeKey(candidateName))) {
+            candidateIndex += 1;
+            candidateName = `Broker ${candidateIndex}`;
+        }
+
+        return candidateName;
+    }
+
+    function setPeriodRate(
+        index: number,
+        key: keyof PeriodRateRow,
+        value: string | number,
+    ): void {
+        const nextPeriodRates = [...periodRates];
+        nextPeriodRates[index] = {
+            ...nextPeriodRates[index],
+            [key]: value,
+        };
+        onChange(nextPeriodRates);
+    }
+
+    function setBrokerGroupName(
+        brokerGroupId: string,
+        nextBrokerName: string,
+    ): void {
+        onChange(
+            periodRates.map((periodRate) =>
+                (periodRate.broker_group_id ||
+                    periodRate.broker_key ||
+                    periodRate.ui_id ||
+                    '') === brokerGroupId
+                    ? { ...periodRate, broker_name: nextBrokerName }
+                    : periodRate,
+            ),
+        );
+    }
+
+    function addBrokerGroup(): void {
+        const nextBrokerName = getNextBrokerName();
+        const nextRow = blankPeriodRate(nextBrokerName);
+        onChange([...periodRates, nextRow]);
+        if (!inlineEdit) {
+            setEditingBrokerGroupId(nextRow.broker_group_id ?? null);
+            setEditingSessionId(nextRow.ui_id ?? null);
+        }
+    }
+
+    function addSeasonToBroker(groupId: string): void {
+        const brokerGroup = brokerGroups.find(
+            (group) => group.group_id === groupId,
+        );
+        const brokerKey = brokerGroup?.broker_key ?? groupId;
+        const nextRow = blankPeriodRate(
+            brokerGroup?.broker_name ?? 'Broker 1',
+            brokerKey,
+        );
+        nextRow.broker_group_id = brokerKey;
+        nextRow.broker_key = brokerKey;
+        onChange([...periodRates, nextRow]);
+        if (!inlineEdit) {
+            setEditingBrokerGroupId(groupId);
+            setEditingSessionId(nextRow.ui_id ?? null);
+        }
+    }
+
+    function removeBrokerGroup(groupId: string): void {
+        const remainingRows = periodRates.filter(
+            (periodRate) =>
+                (periodRate.broker_group_id ||
+                    periodRate.broker_key ||
+                    periodRate.ui_id ||
+                    '') !== groupId,
+        );
+
+        onChange(
+            remainingRows.length > 0 ? remainingRows : [blankPeriodRate()],
+        );
+        if (!inlineEdit) {
+            setEditingBrokerGroupId(null);
+            setEditingSessionId(null);
+        }
+    }
+
+    function removeSeasonRow(rowId: string): void {
+        const remainingRows = periodRates.filter(
+            (periodRate) => (periodRate.ui_id || '') !== rowId,
+        );
+
+        onChange(
+            remainingRows.length > 0 ? remainingRows : [blankPeriodRate()],
+        );
+        if (!inlineEdit && editingSessionId === rowId) {
+            setEditingSessionId(null);
+        }
+    }
+
+    return (
+        <div className="rounded-2xl border border-border/40 bg-muted/10 p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-sm font-semibold">{title}</p>
+                    <p className="text-xs text-muted-foreground">{subtitle}</p>
+                </div>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addBrokerGroup}
+                >
+                    Tambah Broker
+                </Button>
+            </div>
+
+            <div className="mt-3 space-y-3">
+                {brokerGroups.map((group) => {
+                    const isEditingBroker =
+                        inlineEdit || editingBrokerGroupId === group.group_id;
+
+                    return (
+                        <div
+                            key={group.group_id}
+                            className="space-y-2 rounded-2xl border border-border/40 bg-card p-2.5 shadow-sm"
+                        >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                                    <div className="min-w-0">
+                                        <Label className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                                            Broker
+                                        </Label>
+                                        {isEditingBroker ? (
+                                            <Input
+                                                className="h-9"
+                                                value={group.broker_name}
+                                                onChange={(event) =>
+                                                    setBrokerGroupName(
+                                                        group.group_id,
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                        ) : (
+                                            <div className="rounded-lg border border-border/40 bg-muted/20 px-3 py-2 text-sm font-medium">
+                                                {group.broker_name}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="rounded-full border border-border/40 bg-background px-2.5 py-1 text-[11px] text-muted-foreground">
+                                            {group.rows.length} season
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {inlineEdit ? (
+                                        <span className="rounded-full border border-border/40 bg-background px-2.5 py-1 text-[11px] text-muted-foreground">
+                                            Isi langsung
+                                        </span>
+                                    ) : (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                                setEditingBrokerGroupId(
+                                                    isEditingBroker
+                                                        ? null
+                                                        : group.group_id,
+                                                )
+                                            }
+                                        >
+                                            {isEditingBroker
+                                                ? 'Selesai'
+                                                : 'Edit Broker'}
+                                        </Button>
+                                    )}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            addSeasonToBroker(group.group_id)
+                                        }
+                                    >
+                                        + Tambah Session
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() =>
+                                            removeBrokerGroup(group.group_id)
+                                        }
+                                        aria-label="Hapus broker"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                {group.rows.map(({ index, row }) => {
+                                    const isEditingSession =
+                                        inlineEdit ||
+                                        editingSessionId === row.ui_id;
+
+                                    return isEditingSession ? (
+                                        <div
+                                            key={`${group.group_id}-${row.ui_id}`}
+                                            className="grid gap-2 rounded-xl border border-border/30 bg-background p-2 sm:grid-cols-2 lg:grid-cols-12"
+                                        >
+                                            <div className="lg:col-span-2">
+                                                <Label className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                                                    From
+                                                </Label>
+                                                <Input
+                                                    type="date"
+                                                    className="h-9"
+                                                    value={row.period_start}
+                                                    onChange={(event) =>
+                                                        setPeriodRate(
+                                                            index,
+                                                            'period_start',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="lg:col-span-2">
+                                                <Label className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                                                    To
+                                                </Label>
+                                                <Input
+                                                    type="date"
+                                                    className="h-9"
+                                                    value={row.period_end}
+                                                    onChange={(event) =>
+                                                        setPeriodRate(
+                                                            index,
+                                                            'period_end',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="lg:col-span-2">
+                                                <Label className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                                                    DBL
+                                                </Label>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    className="h-9"
+                                                    value={row.dbl_price}
+                                                    onChange={(event) =>
+                                                        setPeriodRate(
+                                                            index,
+                                                            'dbl_price',
+                                                            Number(
+                                                                event.target
+                                                                    .value,
+                                                            ),
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="lg:col-span-2">
+                                                <Label className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                                                    TRPL
+                                                </Label>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    className="h-9"
+                                                    value={row.trpl_price}
+                                                    onChange={(event) =>
+                                                        setPeriodRate(
+                                                            index,
+                                                            'trpl_price',
+                                                            Number(
+                                                                event.target
+                                                                    .value,
+                                                            ),
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="lg:col-span-2">
+                                                <Label className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                                                    Quad
+                                                </Label>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    className="h-9"
+                                                    value={row.quad_price}
+                                                    onChange={(event) =>
+                                                        setPeriodRate(
+                                                            index,
+                                                            'quad_price',
+                                                            Number(
+                                                                event.target
+                                                                    .value,
+                                                            ),
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                            <div className="flex items-end gap-2 lg:col-span-2">
+                                                {inlineEdit ? null : (
+                                                    <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            setEditingSessionId(
+                                                                null,
+                                                            )
+                                                        }
+                                                    >
+                                                        Selesai
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    type="button"
+                                                    size="icon"
+                                                    variant="destructive"
+                                                    className="h-9 w-9"
+                                                    onClick={() =>
+                                                        removeSeasonRow(
+                                                            row.ui_id || '',
+                                                        )
+                                                    }
+                                                    aria-label="Hapus periode"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            key={`${group.group_id}-${row.ui_id}`}
+                                            className="flex flex-col gap-2 rounded-xl border border-border/30 bg-background px-3 py-2.5 text-xs sm:flex-row sm:items-center sm:justify-between"
+                                        >
+                                            <div className="min-w-0 space-y-0.5">
+                                                <span className="block font-medium text-foreground">
+                                                    {formatDateDisplay(
+                                                        row.period_start,
+                                                    )}
+                                                    {' - '}
+                                                    {formatDateDisplay(
+                                                        row.period_end,
+                                                    )}
+                                                </span>
+                                                <span className="block text-muted-foreground">
+                                                    DBL: {row.dbl_price || '-'}
+                                                    {' / '}
+                                                    TRPL:{' '}
+                                                    {row.trpl_price || '-'}
+                                                    {' / '}
+                                                    Quad:{' '}
+                                                    {row.quad_price || '-'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2 self-start sm:self-auto">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setEditingSessionId(
+                                                            row.ui_id || null,
+                                                        )
+                                                    }
+                                                >
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="h-9 w-9"
+                                                    onClick={() =>
+                                                        removeSeasonRow(
+                                                            row.ui_id || '',
+                                                        )
+                                                    }
+                                                    aria-label="Hapus periode"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
 export default function HotelIndex({
     embedded = false,
     hotels,
@@ -453,7 +892,6 @@ export default function HotelIndex({
 
     const [search, setSearch] = useState(filters.search);
     const [cityId, setCityId] = useState(filters.city_id || 'all');
-    const [status, setStatus] = useState(filters.status || 'all');
     const [editingHotel, setEditingHotel] = useState<HotelItem | 'new' | null>(
         null,
     );
@@ -464,6 +902,8 @@ export default function HotelIndex({
         null,
     );
     const [bulkOpen, setBulkOpen] = useState(false);
+    const [bulkSelectMode, setBulkSelectMode] = useState(false);
+    const [selectedHotelIds, setSelectedHotelIds] = useState<number[]>([]);
 
     const defaultCurrency = getDefaultCurrency(currencyOptions);
     const form = useForm<HotelForm>(blankForm(defaultCurrency));
@@ -488,6 +928,45 @@ export default function HotelIndex({
         }
         return roomTypeMap;
     }, [roomTypeOptions]);
+
+    function clearBulkSelection(): void {
+        setBulkSelectMode(false);
+        setSelectedHotelIds([]);
+    }
+
+    function toggleSelectedHotel(hotelId: number): void {
+        setSelectedHotelIds((current) =>
+            current.includes(hotelId)
+                ? current.filter((selectedId) => selectedId !== hotelId)
+                : [...current, hotelId],
+        );
+    }
+
+    function submitBulkDeactivateHotels(): void {
+        if (selectedHotelIds.length === 0) {
+            return;
+        }
+
+        if (
+            !window.confirm(`Hapus ${selectedHotelIds.length} hotel terpilih?`)
+        ) {
+            return;
+        }
+
+        router.post(
+            '/admin/master-data/hotels/bulk-deactivate',
+            {
+                ids: selectedHotelIds,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Hotel terpilih berhasil dihapus.');
+                    clearBulkSelection();
+                },
+            },
+        );
+    }
 
     const brokerGroups = useMemo(
         () => groupPeriodRatesByBroker(form.data.period_rates),
@@ -681,25 +1160,6 @@ export default function HotelIndex({
             ...hotelsPayload[hotelIndex],
             [key]: value,
         } as BulkHotelForm;
-        bulkForm.setData('hotels', hotelsPayload);
-    }
-
-    function setBulkPeriodRate(
-        hotelIndex: number,
-        periodIndex: number,
-        key: keyof PeriodRateRow,
-        value: string | number,
-    ): void {
-        const hotelsPayload = [...bulkForm.data.hotels];
-        const periodRates = [...hotelsPayload[hotelIndex].period_rates];
-        periodRates[periodIndex] = {
-            ...periodRates[periodIndex],
-            [key]: value,
-        };
-        hotelsPayload[hotelIndex] = {
-            ...hotelsPayload[hotelIndex],
-            period_rates: periodRates,
-        };
         bulkForm.setData('hotels', hotelsPayload);
     }
 
@@ -1012,16 +1472,62 @@ export default function HotelIndex({
         <>
             <div className="space-y-2 px-2 py-2 md:px-3 md:py-3">
                 {embedded ? (
-                    <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/40 bg-card px-4 py-3 shadow-sm">
+                    <div className="flex flex-col gap-3 rounded-2xl border border-border/40 bg-card px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-muted-foreground">
                             {total} hotel terdaftar
                         </p>
-                        {canCreate ? (
-                            <Button onClick={openCreate}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Tambah Hotel
-                            </Button>
-                        ) : null}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {canDelete ? (
+                                bulkSelectMode ? (
+                                    <>
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                            {selectedHotelIds.length} item
+                                            dipilih
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={clearBulkSelection}
+                                        >
+                                            Batal
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            onClick={submitBulkDeactivateHotels}
+                                            disabled={
+                                                selectedHotelIds.length === 0
+                                            }
+                                        >
+                                            Hapus Terpilih
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setBulkSelectMode(true)}
+                                    >
+                                        Pilih Data
+                                    </Button>
+                                )
+                            ) : null}
+                            {canCreate ? (
+                                <>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setBulkOpen(true)}
+                                    >
+                                        Bulk Create Hotel
+                                    </Button>
+                                    <Button onClick={openCreate}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Tambah Hotel
+                                    </Button>
+                                </>
+                            ) : null}
+                        </div>
                     </div>
                 ) : (
                     <div className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-card p-3 shadow-sm lg:flex-row lg:items-start lg:justify-between">
@@ -1030,20 +1536,57 @@ export default function HotelIndex({
                                 Hotel
                             </h1>
                         </div>
-                        {canCreate ? (
-                            <div className="flex flex-wrap gap-2">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setBulkOpen(true)}
-                                >
-                                    Bulk Create Hotel
-                                </Button>
-                                <Button onClick={openCreate}>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Tambah Hotel
-                                </Button>
-                            </div>
-                        ) : null}
+                        <div className="flex flex-wrap gap-2">
+                            {canDelete ? (
+                                bulkSelectMode ? (
+                                    <>
+                                        <span className="flex items-center px-2 text-xs font-medium text-muted-foreground">
+                                            {selectedHotelIds.length} item
+                                            dipilih
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={clearBulkSelection}
+                                        >
+                                            Batal
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            onClick={submitBulkDeactivateHotels}
+                                            disabled={
+                                                selectedHotelIds.length === 0
+                                            }
+                                        >
+                                            Hapus Terpilih
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setBulkSelectMode(true)}
+                                    >
+                                        Pilih Data
+                                    </Button>
+                                )
+                            ) : null}
+                            {canCreate ? (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setBulkOpen(true)}
+                                    >
+                                        Bulk Create Hotel
+                                    </Button>
+                                    <Button onClick={openCreate}>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Tambah Hotel
+                                    </Button>
+                                </>
+                            ) : null}
+                        </div>
                     </div>
                 )}
 
@@ -1114,27 +1657,6 @@ export default function HotelIndex({
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="lg:col-span-3">
-                                    <Select
-                                        value={status}
-                                        onValueChange={setStatus}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Semua status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">
-                                                Semua status
-                                            </SelectItem>
-                                            <SelectItem value="active">
-                                                Aktif
-                                            </SelectItem>
-                                            <SelectItem value="inactive">
-                                                Nonaktif
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
                             </div>
                             <div className="flex justify-end gap-2">
                                 <Button
@@ -1142,7 +1664,7 @@ export default function HotelIndex({
                                     onClick={() => {
                                         setSearch('');
                                         setCityId('all');
-                                        setStatus('all');
+                                        clearBulkSelection();
                                         router.get(
                                             '/admin/master-data/hotels',
                                             {},
@@ -1156,20 +1678,20 @@ export default function HotelIndex({
                                     Reset
                                 </Button>
                                 <Button
-                                    onClick={() =>
+                                    onClick={() => {
+                                        clearBulkSelection();
                                         router.get(
                                             '/admin/master-data/hotels',
                                             {
                                                 search,
                                                 city_id: cityId,
-                                                status,
                                             },
                                             {
                                                 preserveState: true,
                                                 preserveScroll: true,
                                             },
-                                        )
-                                    }
+                                        );
+                                    }}
                                 >
                                     Terapkan
                                 </Button>
@@ -1226,6 +1748,19 @@ export default function HotelIndex({
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            {bulkSelectMode ? (
+                                                <Checkbox
+                                                    checked={selectedHotelIds.includes(
+                                                        hotel.id,
+                                                    )}
+                                                    onCheckedChange={() =>
+                                                        toggleSelectedHotel(
+                                                            hotel.id,
+                                                        )
+                                                    }
+                                                    aria-label={`Pilih ${hotel.name}`}
+                                                />
+                                            ) : null}
                                             {canEdit || canDelete ? (
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
@@ -1258,7 +1793,7 @@ export default function HotelIndex({
                                                                 onClick={() => {
                                                                     if (
                                                                         window.confirm(
-                                                                            `Nonaktifkan hotel "${hotel.name}"?`,
+                                                                            `Hapus hotel "${hotel.name}"?`,
                                                                         )
                                                                     ) {
                                                                         router.delete(
@@ -1268,7 +1803,7 @@ export default function HotelIndex({
                                                                                 onSuccess:
                                                                                     () =>
                                                                                         toast.success(
-                                                                                            'Hotel berhasil dinonaktifkan.',
+                                                                                            'Hotel berhasil dihapus.',
                                                                                         ),
                                                                             },
                                                                         );
@@ -1276,7 +1811,7 @@ export default function HotelIndex({
                                                                 }}
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
-                                                                Nonaktifkan
+                                                                Hapus
                                                             </DropdownMenuItem>
                                                         ) : null}
                                                     </DropdownMenuContent>
@@ -2205,233 +2740,22 @@ export default function HotelIndex({
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-3 rounded-lg border border-border/40 p-3">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-sm font-semibold">
-                                                        Pricing per Period
-                                                        (DBL/TRPL/Quad)
-                                                    </p>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            const hotelsPayload =
-                                                                [
-                                                                    ...bulkForm
-                                                                        .data
-                                                                        .hotels,
-                                                                ];
-                                                            hotelsPayload[
-                                                                hotelIndex
-                                                            ] = {
-                                                                ...hotelsPayload[
-                                                                    hotelIndex
-                                                                ],
-                                                                period_rates: [
-                                                                    ...hotelsPayload[
-                                                                        hotelIndex
-                                                                    ]
-                                                                        .period_rates,
-                                                                    blankPeriodRate(),
-                                                                ],
-                                                            };
-                                                            bulkForm.setData(
-                                                                'hotels',
-                                                                hotelsPayload,
-                                                            );
-                                                        }}
-                                                    >
-                                                        Tambah Period
-                                                    </Button>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {hotelItem.period_rates.map(
-                                                        (
-                                                            periodRow,
-                                                            periodIndex,
-                                                        ) => (
-                                                            <div
-                                                                key={
-                                                                    periodIndex
-                                                                }
-                                                                className="grid gap-2 rounded-lg border border-border/40 p-3 lg:grid-cols-12"
-                                                            >
-                                                                <div className="lg:col-span-2">
-                                                                    <Label className="mb-1 block text-xs">
-                                                                        From
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="date"
-                                                                        value={
-                                                                            periodRow.period_start
-                                                                        }
-                                                                        onChange={(
-                                                                            event,
-                                                                        ) =>
-                                                                            setBulkPeriodRate(
-                                                                                hotelIndex,
-                                                                                periodIndex,
-                                                                                'period_start',
-                                                                                event
-                                                                                    .target
-                                                                                    .value,
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                                <div className="lg:col-span-2">
-                                                                    <Label className="mb-1 block text-xs">
-                                                                        To
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="date"
-                                                                        value={
-                                                                            periodRow.period_end
-                                                                        }
-                                                                        onChange={(
-                                                                            event,
-                                                                        ) =>
-                                                                            setBulkPeriodRate(
-                                                                                hotelIndex,
-                                                                                periodIndex,
-                                                                                'period_end',
-                                                                                event
-                                                                                    .target
-                                                                                    .value,
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                                <div className="lg:col-span-2">
-                                                                    <Label className="mb-1 block text-xs">
-                                                                        DBL
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min={0}
-                                                                        value={
-                                                                            periodRow.dbl_price
-                                                                        }
-                                                                        onChange={(
-                                                                            event,
-                                                                        ) =>
-                                                                            setBulkPeriodRate(
-                                                                                hotelIndex,
-                                                                                periodIndex,
-                                                                                'dbl_price',
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                                <div className="lg:col-span-2">
-                                                                    <Label className="mb-1 block text-xs">
-                                                                        TRPL
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min={0}
-                                                                        value={
-                                                                            periodRow.trpl_price
-                                                                        }
-                                                                        onChange={(
-                                                                            event,
-                                                                        ) =>
-                                                                            setBulkPeriodRate(
-                                                                                hotelIndex,
-                                                                                periodIndex,
-                                                                                'trpl_price',
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                                <div className="lg:col-span-2">
-                                                                    <Label className="mb-1 block text-xs">
-                                                                        Quad
-                                                                    </Label>
-                                                                    <Input
-                                                                        type="number"
-                                                                        min={0}
-                                                                        value={
-                                                                            periodRow.quad_price
-                                                                        }
-                                                                        onChange={(
-                                                                            event,
-                                                                        ) =>
-                                                                            setBulkPeriodRate(
-                                                                                hotelIndex,
-                                                                                periodIndex,
-                                                                                'quad_price',
-                                                                                Number(
-                                                                                    event
-                                                                                        .target
-                                                                                        .value,
-                                                                                ),
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                                <div className="flex items-end lg:col-span-2">
-                                                                    <Button
-                                                                        type="button"
-                                                                        size="sm"
-                                                                        variant="destructive"
-                                                                        disabled={
-                                                                            hotelItem
-                                                                                .period_rates
-                                                                                .length ===
-                                                                            1
-                                                                        }
-                                                                        onClick={() => {
-                                                                            const hotelsPayload =
-                                                                                [
-                                                                                    ...bulkForm
-                                                                                        .data
-                                                                                        .hotels,
-                                                                                ];
-                                                                            hotelsPayload[
-                                                                                hotelIndex
-                                                                            ] =
-                                                                                {
-                                                                                    ...hotelsPayload[
-                                                                                        hotelIndex
-                                                                                    ],
-                                                                                    period_rates:
-                                                                                        hotelsPayload[
-                                                                                            hotelIndex
-                                                                                        ].period_rates.filter(
-                                                                                            (
-                                                                                                _,
-                                                                                                rowIndex,
-                                                                                            ) =>
-                                                                                                rowIndex !==
-                                                                                                periodIndex,
-                                                                                        ),
-                                                                                };
-                                                                            bulkForm.setData(
-                                                                                'hotels',
-                                                                                hotelsPayload,
-                                                                            );
-                                                                        }}
-                                                                    >
-                                                                        Hapus
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        ),
-                                                    )}
-                                                </div>
-                                            </div>
+                                            <BrokerPricingEditor
+                                                key={hotelIndex}
+                                                title="Pricing per Broker"
+                                                subtitle="Satu broker bisa punya banyak season."
+                                                periodRates={
+                                                    hotelItem.period_rates
+                                                }
+                                                inlineEdit
+                                                onChange={(periodRates) =>
+                                                    setBulkHotelData(
+                                                        hotelIndex,
+                                                        'period_rates',
+                                                        periodRates,
+                                                    )
+                                                }
+                                            />
                                         </div>
                                     );
                                 },
@@ -2575,147 +2899,15 @@ export default function HotelIndex({
                             </div>
                         </div>
 
-                        <div className="space-y-2 rounded-xl border border-border/40 bg-card p-3">
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm font-semibold">
-                                    Pricing per Period (DBL/TRPL/Quad)
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                        form.setData('period_rates', [
-                                            ...form.data.period_rates,
-                                            blankPeriodRate(),
-                                        ])
-                                    }
-                                >
-                                    Tambah Period
-                                </Button>
-                            </div>
-                            <div className="space-y-3">
-                                {form.data.period_rates.map((row, index) => (
-                                    <div
-                                        key={index}
-                                        className="grid gap-2 rounded-lg border border-border/40 bg-muted/20 p-2 lg:grid-cols-12"
-                                    >
-                                        <div className="lg:col-span-2">
-                                            <Label className="mb-1 block text-xs">
-                                                From
-                                            </Label>
-                                            <Input
-                                                type="date"
-                                                value={row.period_start}
-                                                onChange={(event) =>
-                                                    setPeriodRate(
-                                                        index,
-                                                        'period_start',
-                                                        event.target.value,
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                        <div className="lg:col-span-2">
-                                            <Label className="mb-1 block text-xs">
-                                                To
-                                            </Label>
-                                            <Input
-                                                type="date"
-                                                value={row.period_end}
-                                                onChange={(event) =>
-                                                    setPeriodRate(
-                                                        index,
-                                                        'period_end',
-                                                        event.target.value,
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                        <div className="lg:col-span-2">
-                                            <Label className="mb-1 block text-xs">
-                                                DBL
-                                            </Label>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                value={row.dbl_price}
-                                                onChange={(event) =>
-                                                    setPeriodRate(
-                                                        index,
-                                                        'dbl_price',
-                                                        Number(
-                                                            event.target.value,
-                                                        ),
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                        <div className="lg:col-span-2">
-                                            <Label className="mb-1 block text-xs">
-                                                TRPL
-                                            </Label>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                value={row.trpl_price}
-                                                onChange={(event) =>
-                                                    setPeriodRate(
-                                                        index,
-                                                        'trpl_price',
-                                                        Number(
-                                                            event.target.value,
-                                                        ),
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                        <div className="lg:col-span-2">
-                                            <Label className="mb-1 block text-xs">
-                                                Quad
-                                            </Label>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                value={row.quad_price}
-                                                onChange={(event) =>
-                                                    setPeriodRate(
-                                                        index,
-                                                        'quad_price',
-                                                        Number(
-                                                            event.target.value,
-                                                        ),
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                        <div className="flex items-end lg:col-span-2">
-                                            <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="destructive"
-                                                disabled={
-                                                    form.data.period_rates
-                                                        .length === 1
-                                                }
-                                                onClick={() =>
-                                                    form.setData(
-                                                        'period_rates',
-                                                        form.data.period_rates.filter(
-                                                            (_, rowIndex) =>
-                                                                rowIndex !==
-                                                                index,
-                                                        ),
-                                                    )
-                                                }
-                                            >
-                                                Hapus
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                        <BrokerPricingEditor
+                            title="Pricing per Broker"
+                            subtitle="Satu broker bisa punya banyak season."
+                            periodRates={form.data.period_rates}
+                            inlineEdit
+                            onChange={(periodRates) =>
+                                form.setData('period_rates', periodRates)
+                            }
+                        />
 
                         <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-border/40 bg-background/95 pt-3 pb-1 backdrop-blur">
                             <Button
