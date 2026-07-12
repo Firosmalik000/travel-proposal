@@ -51,7 +51,7 @@ export function AppSidebar() {
                             asChild
                             className="rounded-2xl border border-white/14 bg-white/12 text-white shadow-[0_14px_32px_-20px_rgba(0,0,0,0.42)] transition hover:-translate-y-[1px] hover:bg-white/18 hover:text-white"
                         >
-                            <Link href={dashboard()} prefetch>
+                            <Link href={dashboard()}>
                                 <div className="flex aspect-square size-8 items-center justify-center">
                                     <AppLogoIcon className="size-8 object-contain" />
                                 </div>

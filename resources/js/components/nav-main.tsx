@@ -27,7 +27,7 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                             className="text-white/74 hover:bg-white/12 hover:text-white data-[active=true]:bg-white/18 data-[active=true]:text-white data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)]"
                             tooltip={{ children: item.title }}
                         >
-                            <Link href={item.href} prefetch>
+                            <Link href={item.href}>
                                 {item.icon && <item.icon />}
                                 <span>{item.title}</span>
                             </Link>

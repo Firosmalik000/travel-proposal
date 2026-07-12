@@ -51,7 +51,7 @@ import {
     Wallet,
     type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLogo from './app-logo';
 import { NavUser } from './nav-user';
 import {
@@ -138,6 +138,8 @@ export function DynamicSidebar() {
     });
     const [loading, setLoading] = useState(menus.length === 0);
     const [searchQuery, setSearchQuery] = useState('');
+    const { url } = usePage();
+    const currentPath = useMemo(() => normalizePath(url), [url]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -168,15 +170,17 @@ export function DynamicSidebar() {
         };
     }, []);
 
-    const filteredMenus = menus.filter((menu) => {
-        const matchesName = menu.name
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase());
-        const matchesChildren = menu.children?.some((child) =>
-            child.name.toLowerCase().includes(searchQuery.toLowerCase()),
-        );
-        return matchesName || matchesChildren;
-    });
+    const filteredMenus = useMemo(() => {
+        const query = searchQuery.toLowerCase();
+
+        return menus.filter((menu) => {
+            const matchesName = menu.name.toLowerCase().includes(query);
+            const matchesChildren = menu.children?.some((child) =>
+                child.name.toLowerCase().includes(query),
+            );
+            return matchesName || matchesChildren;
+        });
+    }, [menus, searchQuery]);
 
     return (
         <Sidebar
@@ -192,7 +196,7 @@ export function DynamicSidebar() {
                             asChild
                             className="h-12 rounded-2xl border border-transparent bg-transparent shadow-none transition-colors hover:bg-transparent"
                         >
-                            <Link href={dashboard()} prefetch>
+                            <Link href={dashboard()}>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
@@ -233,6 +237,7 @@ export function DynamicSidebar() {
                                     <MenuItemComponent
                                         key={menu.menu_key}
                                         item={menu}
+                                        currentPath={currentPath}
                                     />
                                 ))}
                                 {filteredMenus.length === 0 && !searchQuery && (
@@ -259,10 +264,14 @@ export function DynamicSidebar() {
     );
 }
 
-function MenuItemComponent({ item }: { item: MenuItem }) {
+function MenuItemComponent({
+    item,
+    currentPath,
+}: {
+    item: MenuItem;
+    currentPath: string;
+}) {
     const IconComponent = iconMap[item.icon] || Folder;
-    const { url } = usePage();
-    const currentPath = normalizePath(url);
     const itemHref = canonicalAdminPath(item.path);
     const itemPath = normalizePath(itemHref);
 
@@ -311,6 +320,7 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
                                 <SubMenuItem
                                     key={child.menu_key}
                                     item={child}
+                                    currentPath={currentPath}
                                 />
                             ))}
                         </SidebarMenuSub>
@@ -328,7 +338,7 @@ function MenuItemComponent({ item }: { item: MenuItem }) {
                 isActive={isActive}
                 className={buttonClasses}
             >
-                <Link href={itemHref} prefetch>
+                <Link href={itemHref}>
                     <div className="flex size-5 items-center justify-center transition-transform group-hover:scale-110">
                         <IconComponent
                             className={cn(
@@ -375,10 +385,14 @@ function isMenuActive(menu: MenuItem, currentPath: string): boolean {
     return false;
 }
 
-function SubMenuItem({ item }: { item: MenuItem }) {
+function SubMenuItem({
+    item,
+    currentPath,
+}: {
+    item: MenuItem;
+    currentPath: string;
+}) {
     const IconComponent = iconMap[item.icon] || Folder;
-    const { url } = usePage();
-    const currentPath = normalizePath(url);
     const itemHref = canonicalAdminPath(item.path);
     const itemPath = normalizePath(itemHref);
 
@@ -426,6 +440,7 @@ function SubMenuItem({ item }: { item: MenuItem }) {
                                 <SubMenuItem
                                     key={child.menu_key}
                                     item={child}
+                                    currentPath={currentPath}
                                 />
                             ))}
                         </SidebarMenuSub>
@@ -442,7 +457,7 @@ function SubMenuItem({ item }: { item: MenuItem }) {
                 isActive={isActive}
                 className={subButtonClasses}
             >
-                <Link href={itemHref} prefetch>
+                <Link href={itemHref}>
                     <IconComponent
                         className={cn(
                             'size-3.5 shrink-0',

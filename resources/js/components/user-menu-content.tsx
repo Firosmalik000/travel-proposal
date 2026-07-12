@@ -26,7 +26,6 @@ export function UserMenuContent() {
                         className="block w-full"
                         href={edit()}
                         as="button"
-                        prefetch
                         onClick={cleanup}
                     >
                         <Settings className="mr-2" />
