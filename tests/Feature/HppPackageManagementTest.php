@@ -4,13 +4,18 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\LogAdminActivityMiddleware;
 use App\Models\Booking;
-use App\Models\Currency;
 use App\Models\DepartureSchedule;
+use App\Models\PackageAllInConfig;
 use App\Models\PackageCostCalculation;
+use App\Models\PackageVendor;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use App\Models\User;
+use App\Models\VendorPricePeriod;
+use App\Services\PackageCostCalculationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -37,7 +42,6 @@ class HppPackageManagementTest extends TestCase
                 ->component('Dashboard/FinancialManagement/HppPackage/Index')
                 ->has('rows')
                 ->has('packages')
-                ->has('schedules')
                 ->has('calculationModes', 2));
     }
 
@@ -52,6 +56,7 @@ class HppPackageManagementTest extends TestCase
                 'en' => 'Package A',
             ],
             'currency' => 'IDR',
+            'start_date' => '2026-07-10',
             'content' => [],
         ]);
         $scheduleA = DepartureSchedule::query()->create([
@@ -72,6 +77,7 @@ class HppPackageManagementTest extends TestCase
                 'en' => 'Package B',
             ],
             'currency' => 'IDR',
+            'start_date' => '2026-08-10',
             'content' => [],
         ]);
         $scheduleB = DepartureSchedule::query()->create([
@@ -123,6 +129,19 @@ class HppPackageManagementTest extends TestCase
             'departure_schedule_id' => $scheduleB->id,
         ]);
 
+        Booking::query()->create([
+            'booking_code' => 'BK-B-PENDING',
+            'booking_type' => 'regular',
+            'full_name' => 'Jamaah Pending',
+            'phone' => '08123456783',
+            'email' => 'pending@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 10,
+            'status' => 'pending',
+            'package_id' => $packageB->id,
+            'departure_schedule_id' => $scheduleB->id,
+        ]);
+
         $this->actingAs($user)
             ->get(route('hpp-package.index'))
             ->assertOk()
@@ -131,18 +150,100 @@ class HppPackageManagementTest extends TestCase
                 ->has('sourceRows', 2)
                 ->where('sourceRows.0.package_name', 'Package B')
                 ->where('sourceRows.0.departure_date', '2026-08-10')
+                ->where('sourceRows.0.total_bookings', 1)
+                ->where('sourceRows.0.total_customers', 3)
                 ->where('sourceRows.1.package_name', 'Package A')
                 ->where('sourceRows.1.departure_date', '2026-07-10'));
+    }
+
+    public function test_it_shows_package_estimate_even_when_the_schedule_has_no_booking(): void
+    {
+        $user = $this->createUserWithHppPermissions(['view']);
+        $package = TravelPackage::factory()->create([
+            'name' => 'Package Persiapan',
+            'content' => [
+                'hpp_estimate' => [
+                    'customer_count' => 40,
+                    'product_cost_per_customer' => 5_000_000,
+                    'product_total' => 200_000_000,
+                    'hotel_total' => 100_000_000,
+                    'tour_leader_fee' => 10_000_000,
+                    'muthawwif_fee' => 5_000_000,
+                    'other_cost' => 0,
+                    'revenue_total' => 1_400_000_000,
+                    'grand_total' => 315_000_000,
+                    'hpp_per_customer' => 7_875_000,
+                    'estimated_profit' => 1_085_000_000,
+                    'notes' => null,
+                ],
+            ],
+        ]);
+        $schedule = DepartureSchedule::query()->create([
+            'package_id' => $package->id,
+            'departure_date' => '2026-12-10',
+            'return_date' => '2026-12-20',
+            'departure_city' => 'Jakarta',
+            'seats_total' => 40,
+            'seats_available' => 40,
+            'status' => 'open',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('sourceRows', 1)
+                ->where('sourceRows.0.total_bookings', 0)
+                ->where('sourceRows.0.total_customers', 0)
+                ->where('sourceRows.0.latest_calculation.is_saved', false)
+                ->where('sourceRows.0.hpp_estimate.grand_total', 315_000_000));
+
+        PackageCostCalculation::query()->create([
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'calculation_mode' => 'legacy_assignment',
+            'calculation_date' => now()->toDateString(),
+            'booking_count' => 0,
+            'customer_count' => 0,
+            'hotel_total' => 0,
+            'product_total' => 0,
+            'manual_adjustment' => 0,
+            'grand_total' => 0,
+            'hpp_per_customer' => null,
+            'currency' => 'IDR',
+            'warnings' => [],
+            'calculated_at' => now()->subMinute(),
+        ]);
+
+        PackageCostCalculation::query()->create([
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'calculation_mode' => 'legacy_assignment',
+            'calculation_date' => now()->toDateString(),
+            'booking_count' => 0,
+            'customer_count' => 0,
+            'hotel_total' => 123_000,
+            'product_total' => 0,
+            'manual_adjustment' => 0,
+            'grand_total' => 123_000,
+            'hpp_per_customer' => null,
+            'currency' => 'IDR',
+            'warnings' => [],
+            'calculated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('sourceRows.0.latest_calculation.is_saved', true)
+                ->where('sourceRows.0.latest_calculation.grand_total', 0));
     }
 
     public function test_it_can_generate_hpp_package_with_hotel_and_product_breakdown_from_customer_room_choices(): void
     {
         $user = $this->createUserWithHppPermissions(['create']);
-        Currency::factory()->create([
-            'code' => 'IDR',
-            'conversion_rate' => 1,
-            'is_active' => true,
-        ]);
         $package = TravelPackage::factory()->create([
             'code' => 'PKG-HPP-01',
             'name' => 'Paket HPP',
@@ -243,7 +344,7 @@ class HppPackageManagementTest extends TestCase
             ],
             'status' => 'registered',
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
+            'departure_schedule_id' => null,
         ]);
         Booking::query()->create([
             'booking_code' => 'BK-HPP-002',
@@ -275,7 +376,7 @@ class HppPackageManagementTest extends TestCase
 
         $this->assertDatabaseHas('package_cost_calculations', [
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
+            'departure_schedule_id' => null,
             'calculation_mode' => 'per_pax_multiplier',
             'hotel_total' => 9200000,
             'product_total' => 36000000,
@@ -285,25 +386,29 @@ class HppPackageManagementTest extends TestCase
         ]);
     }
 
-    public function test_it_converts_non_idr_product_and_hotel_prices_in_hpp_using_active_currency_rates(): void
+    public function test_it_converts_non_idr_product_and_hotel_prices_using_the_rate_saved_on_the_package(): void
     {
         $user = $this->createUserWithHppPermissions(['create']);
-        Currency::factory()->create([
-            'code' => 'IDR',
-            'conversion_rate' => 1,
-            'is_active' => true,
-        ]);
-        Currency::factory()->create([
-            'code' => 'SAR',
-            'conversion_rate' => 4300,
-            'is_active' => true,
-        ]);
 
         $package = TravelPackage::factory()->create([
             'code' => 'PKG-HPP-SAR',
             'name' => 'Paket HPP SAR',
             'currency' => 'IDR',
             'content' => [
+                'hpp_currency_snapshots' => [
+                    'IDR' => [
+                        'currency' => 'IDR',
+                        'rate_to_idr' => 1,
+                        'source' => 'identity',
+                        'fetched_at' => '2026-08-01 08:00:00',
+                    ],
+                    'SAR' => [
+                        'currency' => 'SAR',
+                        'rate_to_idr' => 5000,
+                        'source' => 'live',
+                        'fetched_at' => '2026-08-01 08:00:00',
+                    ],
+                ],
                 'hotel_product_brokers' => [
                     '1' => 'Broker SAR',
                 ],
@@ -357,6 +462,20 @@ class HppPackageManagementTest extends TestCase
         ]);
         $package->update([
             'content' => [
+                'hpp_currency_snapshots' => [
+                    'IDR' => [
+                        'currency' => 'IDR',
+                        'rate_to_idr' => 1,
+                        'source' => 'identity',
+                        'fetched_at' => '2026-08-01 08:00:00',
+                    ],
+                    'SAR' => [
+                        'currency' => 'SAR',
+                        'rate_to_idr' => 5000,
+                        'source' => 'live',
+                        'fetched_at' => '2026-08-01 08:00:00',
+                    ],
+                ],
                 'hotel_product_brokers' => [
                     (string) $hotelProduct->id => 'Broker SAR',
                 ],
@@ -393,12 +512,21 @@ class HppPackageManagementTest extends TestCase
 
         $this->assertDatabaseHas('package_cost_calculations', [
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
-            'hotel_total' => 4300000,
-            'product_total' => 3440000,
-            'grand_total' => 7740000,
-            'hpp_per_customer' => 3870000,
+            'departure_schedule_id' => null,
+            'hotel_total' => 5000000,
+            'product_total' => 4000000,
+            'grand_total' => 9000000,
+            'hpp_per_customer' => 4500000,
         ]);
+
+        $calculation = PackageCostCalculation::query()
+            ->where('package_id', $package->id)
+            ->firstOrFail();
+
+        $this->assertTrue($calculation->items->every(
+            fn ($item): bool => data_get($item->meta, 'conversion_rate_to_idr') === 5000
+                && data_get($item->meta, 'conversion_rate_snapshot_scope') === 'package',
+        ));
     }
 
     public function test_it_can_generate_legacy_hpp_package_for_backup_mode(): void
@@ -452,7 +580,7 @@ class HppPackageManagementTest extends TestCase
 
         $this->assertDatabaseHas('package_cost_calculations', [
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
+            'departure_schedule_id' => null,
             'calculation_mode' => 'legacy_assignment',
             'product_total' => 5000000,
             'grand_total' => 5000000,
@@ -571,9 +699,190 @@ class HppPackageManagementTest extends TestCase
         ]);
     }
 
+    public function test_recalculate_explicitly_refreshes_the_saved_package_currency_snapshot(): void
+    {
+        $user = $this->createUserWithHppPermissions(['edit']);
+        config()->set('services.currency.live.enabled', true);
+        config()->set('services.currency.live.endpoint', 'https://rates.test/latest/IDR');
+        Cache::flush();
+        Http::fake(['rates.test/*' => Http::response([
+            'result' => 'success',
+            'rates' => ['IDR' => 1, 'SAR' => 0.00025],
+        ])]);
+
+        $package = TravelPackage::factory()->create([
+            'price' => 1000,
+            'currency' => 'SAR',
+            'content' => [
+                'hpp_currency_snapshots' => [
+                    'SAR' => [
+                        'currency' => 'SAR',
+                        'rate_to_idr' => 5000,
+                        'source' => 'live',
+                        'fetched_at' => '2026-08-01 08:00:00',
+                    ],
+                ],
+            ],
+        ]);
+        $calculation = PackageCostCalculation::query()->create([
+            'package_id' => $package->id,
+            'calculation_mode' => 'legacy_assignment',
+            'calculation_date' => now()->toDateString(),
+            'booking_count' => 0,
+            'customer_count' => 0,
+            'hotel_total' => 0,
+            'product_total' => 0,
+            'manual_adjustment' => 0,
+            'grand_total' => 0,
+            'currency' => 'IDR',
+            'warnings' => [],
+            'calculated_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('hpp-package.recalculate', $calculation))
+            ->assertRedirect();
+
+        $this->assertSame(4000, data_get($package->fresh()->content, 'hpp_currency_snapshots.SAR.rate_to_idr'));
+        $this->assertSame('4000.000000', $calculation->fresh()->package_conversion_rate_to_idr);
+    }
+
+    public function test_product_hotel_hpp_ignores_unsupported_room_pricing(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'currency' => 'IDR',
+            'content' => [],
+        ]);
+        $schedule = DepartureSchedule::query()->create([
+            'package_id' => $package->id,
+            'departure_date' => '2026-09-10',
+            'return_date' => '2026-09-20',
+            'departure_city' => 'Jakarta',
+            'seats_total' => 40,
+            'seats_available' => 39,
+            'status' => 'open',
+            'is_active' => true,
+        ]);
+        $hotelProduct = TravelProduct::query()->create([
+            'code' => 'PRD-HOTEL-UNSUPPORTED-ROOM',
+            'slug' => 'prd-hotel-unsupported-room',
+            'name' => 'Hotel Legacy Room',
+            'product_type' => 'hotel',
+            'content' => [
+                'currency' => 'IDR',
+                'pricing' => [[
+                    'broker_name' => 'Broker Legacy',
+                    'room_type' => 'Single',
+                    'period_start' => '2026-09-01',
+                    'period_end' => '2026-09-30',
+                    'price' => 5000000,
+                ]],
+            ],
+            'is_active' => true,
+        ]);
+        $package->products()->attach($hotelProduct->id, [
+            'sort_order' => 1,
+            'multiplier_per_pax' => 1,
+        ]);
+
+        Booking::query()->create([
+            'booking_code' => 'BK-UNSUPPORTED-ROOM',
+            'booking_type' => 'regular',
+            'full_name' => 'Jamaah Legacy',
+            'phone' => '08123456789',
+            'email' => 'legacy-room@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 1,
+            'room_configuration' => ['single' => 1],
+            'status' => 'registered',
+            'package_id' => $package->id,
+            'departure_schedule_id' => $schedule->id,
+        ]);
+
+        $payload = app(PackageCostCalculationService::class)->preview(
+            $package->id,
+            $schedule->id,
+        );
+
+        $this->assertSame(0, $payload['hotel_total']);
+        $this->assertEmpty(collect($payload['items'])->where('cost_type', 'hotel'));
+        $this->assertContains(
+            'Ada konfigurasi kamar di luar Double, Triple, dan Quad yang tidak didukung pricing Product Hotel.',
+            $payload['warnings'],
+        );
+    }
+
     /**
      * @param  array<int, string>  $actions
      */
+    public function test_actual_hpp_converts_all_in_to_idr_without_counting_covered_products(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'start_date' => '2026-08-10',
+            'end_date' => '2026-08-19',
+            'content' => [
+                'hpp_currency_snapshots' => [
+                    'IDR' => ['currency' => 'IDR', 'rate_to_idr' => 1, 'source' => 'identity'],
+                    'SAR' => ['currency' => 'SAR', 'rate_to_idr' => 4_000, 'source' => 'snapshot'],
+                ],
+            ],
+        ]);
+        $hotel = TravelProduct::query()->create([
+            'code' => 'HTL-VENDOR-COVERED',
+            'slug' => 'hotel-vendor-covered',
+            'name' => 'Hotel Vendor Covered',
+            'product_type' => 'hotel',
+            'content' => ['currency' => 'IDR', 'pricing' => []],
+            'is_active' => true,
+        ]);
+        $ticket = TravelProduct::query()->create([
+            'code' => 'PRD-TICKET-ACTUAL',
+            'slug' => 'ticket-actual',
+            'name' => 'Tiket Actual',
+            'product_type' => 'tiket',
+            'content' => ['currency' => 'IDR', 'price' => 50_000],
+            'is_active' => true,
+        ]);
+        $package->products()->sync([
+            $hotel->id => ['sort_order' => 1, 'multiplier_per_pax' => 3],
+            $ticket->id => ['sort_order' => 2, 'multiplier_per_pax' => 1],
+        ]);
+        $vendor = PackageVendor::factory()->create(['name' => 'Vendor HPP']);
+        $period = VendorPricePeriod::factory()->create([
+            'package_vendor_id' => $vendor->id,
+            'currency' => 'SAR',
+            'price_per_pax' => 100,
+        ]);
+        PackageAllInConfig::factory()->create([
+            'package_id' => $package->id,
+            'package_vendor_id' => $vendor->id,
+            'vendor_price_period_id' => $period->id,
+            'currency' => 'SAR',
+            'price_per_pax' => 100,
+            'included_category_keys' => ['hotel'],
+            'vendor_name_snapshot' => 'Vendor HPP',
+        ]);
+        Booking::factory()->create([
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'passenger_count' => 2,
+            'room_configuration' => ['double' => 1],
+            'status' => 'registered',
+        ]);
+
+        $preview = app(PackageCostCalculationService::class)->preview(
+            $package->id,
+            null,
+            calculationMode: PackageCostCalculationService::MODE_PER_PAX_MULTIPLIER,
+        );
+
+        $this->assertSame(0, $preview['hotel_total']);
+        $this->assertSame(900_000, $preview['product_total']);
+        $this->assertSame(900_000, $preview['grand_total']);
+        $this->assertSame(800_000, collect($preview['items'])->firstWhere('cost_type', 'all_in')['total_price']);
+        $this->assertNull(collect($preview['items'])->firstWhere('cost_type', 'hotel'));
+    }
+
     private function createUserWithHppPermissions(array $actions): User
     {
         $user = User::factory()->create();

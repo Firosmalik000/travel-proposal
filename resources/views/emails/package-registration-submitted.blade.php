@@ -98,12 +98,12 @@
         </tr>
         <tr>
             <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-weight: bold;">
-                Jadwal
+                Keberangkatan
             </td>
             <td style="padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
-                {{ $registration->departureSchedule?->departure_date?->translatedFormat('d F Y') ?? '-' }}
-                @if($registration->departureSchedule?->departure_city)
-                    - {{ $registration->departureSchedule->departure_city }}
+                {{ $registration->package?->start_date?->translatedFormat('d F Y') ?? '-' }}
+                @if($registration->package?->departure_city)
+                    - {{ $registration->package->departure_city }}
                 @endif
             </td>
         </tr>

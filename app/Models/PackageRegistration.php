@@ -13,6 +13,9 @@ class PackageRegistration extends Model
 
     protected $fillable = [
         'package_id',
+        'customer_id',
+        'agent_profile_id',
+        'referral_code',
         'departure_schedule_id',
         'full_name',
         'phone',
@@ -35,6 +38,16 @@ class PackageRegistration extends Model
     public function package(): BelongsTo
     {
         return $this->belongsTo(TravelPackage::class, 'package_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    public function agentProfile(): BelongsTo
+    {
+        return $this->belongsTo(AgentProfile::class);
     }
 
     public function departureSchedule(): BelongsTo

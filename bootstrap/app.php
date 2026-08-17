@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Middleware\CheckMenuPermission;
+use App\Http\Middleware\EnsureAdminPortalAccess;
+use App\Http\Middleware\EnsureAgentAccess;
+use App\Http\Middleware\EnsureCustomerAccess;
 use App\Http\Middleware\EnsureSuperAdmin;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LogAdminActivityMiddleware;
+use App\Http\Middleware\TrackAgentReferral;
 use App\Http\Middleware\TrackPublicVisitMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -30,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             HandleAppearance::class,
+            TrackAgentReferral::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             LogAdminActivityMiddleware::class,
@@ -40,6 +45,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'check.menu.permission' => CheckMenuPermission::class,
             'super.admin' => EnsureSuperAdmin::class,
+            'admin.portal' => EnsureAdminPortalAccess::class,
+            'agent' => EnsureAgentAccess::class,
+            'customer' => EnsureCustomerAccess::class,
             'permission' => PermissionMiddleware::class,
             'role' => RoleMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,

@@ -19,7 +19,7 @@ class StoreCustomUmrohRequestRequest extends FormRequest
         return [
             'full_name' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
-            'email' => ['nullable', 'email', 'max:255'],
+            'email' => ['required', 'email', 'max:255'],
             'origin_city' => ['required', 'string', 'max:255'],
             'passenger_count' => ['required', 'integer', 'min:1', 'max:1000'],
 

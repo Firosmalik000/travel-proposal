@@ -16,6 +16,7 @@ type RoomType = 'single' | 'double' | 'triple' | 'quad';
 type RoomConfigurationForm = Record<RoomType, string>;
 
 interface TravelPackageRegistrationPageProps extends SharedData {
+    referralCode?: string | null;
     travelPackage: {
         id: number;
         slug: string;
@@ -25,20 +26,14 @@ interface TravelPackageRegistrationPageProps extends SharedData {
         price?: number | string | null;
         currency?: string;
         departure_city?: string | null;
+        start_date?: string | null;
+        end_date?: string | null;
+        seats_available?: number | null;
         duration_days?: number | null;
         room_prices?: Record<RoomType, number>;
         recommended_room_configuration?: Record<RoomType, number>;
-        schedules?: PackageSchedule[];
     };
 }
-
-type PackageSchedule = {
-    id: number;
-    departure_date: string;
-    return_date?: string | null;
-    departure_city?: string | null;
-    seats_available?: number | null;
-};
 
 type PriceBreakdownRow = {
     type: RoomType;
@@ -130,56 +125,25 @@ function buildPriceBreakdownRows(
 }
 
 export default function PackageRegistrationPage() {
-    const { travelPackage } =
+    const { travelPackage, referralCode } =
         usePage<TravelPackageRegistrationPageProps>().props;
     const packageName = localize(travelPackage.name, 'id');
-    const todayDate = new Date().toISOString().slice(0, 10);
-    const schedules = useMemo(
-        () =>
-            (Array.isArray(travelPackage.schedules)
-                ? travelPackage.schedules
-                : []
-            ).filter(
-                (schedule) =>
-                    typeof schedule.departure_date === 'string' &&
-                    schedule.departure_date >= todayDate,
-            ),
-        [travelPackage.schedules],
-    );
-    const defaultScheduleId = schedules[0]?.id ? String(schedules[0].id) : '';
-    const initialScheduleId =
-        typeof window !== 'undefined'
-            ? (new URLSearchParams(window.location.search).get('schedule') ??
-              defaultScheduleId)
-            : defaultScheduleId;
     const defaultRoomConfiguration = recommendedRoomConfiguration(1);
 
     const form = useForm({
-        departure_schedule_id: initialScheduleId,
         full_name: '',
         phone: '',
         email: '',
         origin_city: '',
+        referral_code: referralCode ?? '',
         passenger_count: '1',
         room_configuration: defaultRoomConfiguration,
         notes: '',
     });
-    const selectedSchedule = useMemo(
-        () =>
-            schedules.find(
-                (schedule) =>
-                    String(schedule.id) === form.data.departure_schedule_id,
-            ) ?? null,
-        [schedules, form.data.departure_schedule_id],
+    const selectedScheduleAvailableSeats = Math.max(
+        1,
+        Number(travelPackage.seats_available ?? 0),
     );
-    const selectedScheduleAvailableSeats = selectedSchedule
-        ? Math.max(1, Number(selectedSchedule.seats_available ?? 0))
-        : Math.max(
-              1,
-              ...schedules.map((schedule) =>
-                  Number(schedule.seats_available ?? 0),
-              ),
-          );
     const selectedPassengerCount = Math.max(
         1,
         Number(form.data.passenger_count) || 1,
@@ -254,10 +218,6 @@ export default function PackageRegistrationPage() {
     const getSubmissionErrorMessage = (
         errors: Record<string, string | undefined>,
     ): string => {
-        if (errors.departure_schedule_id) {
-            return 'Jadwal yang dipilih sudah tidak tersedia. Pilih jadwal aktif lainnya.';
-        }
-
         if (errors.passenger_count) {
             return 'Jumlah jamaah belum valid. Periksa lagi angka yang diisi.';
         }
@@ -298,7 +258,6 @@ export default function PackageRegistrationPage() {
                     'room_configuration',
                     'notes',
                 );
-                form.setData('departure_schedule_id', initialScheduleId);
                 form.setData('room_configuration', defaultRoomConfiguration);
                 toast.success(
                     'Pendaftaran berhasil dikirim. Tim kami akan segera menghubungi Anda.',
@@ -405,39 +364,34 @@ export default function PackageRegistrationPage() {
                                 </div>
                             </div>
 
-                            {schedules.length > 0 && (
+                            {travelPackage.start_date && (
                                 <div>
                                     <h2 className="text-sm font-semibold text-foreground">
-                                        Jadwal tersedia
+                                        Keberangkatan
                                     </h2>
                                     <div className="mt-3 grid gap-2">
-                                        {schedules.map((schedule) => (
-                                            <div
-                                                key={schedule.id}
-                                                className="rounded-2xl border border-border bg-background px-4 py-3 text-sm"
-                                            >
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <span className="font-semibold text-foreground">
-                                                        {formatDate(
-                                                            schedule.departure_date,
-                                                            'id',
-                                                        )}
-                                                    </span>
-                                                    <span className="text-xs text-emerald-600">
-                                                        {
-                                                            schedule.seats_available
-                                                        }{' '}
-                                                        seat tersedia
-                                                    </span>
-                                                </div>
-                                                <p className="mt-1 text-xs text-muted-foreground">
-                                                    {schedule.departure_city}
-                                                    {schedule.return_date
-                                                        ? ` - Pulang ${formatDate(schedule.return_date, 'id')}`
-                                                        : ''}
-                                                </p>
+                                        <div className="rounded-2xl border border-border bg-background px-4 py-3 text-sm">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="font-semibold text-foreground">
+                                                    {formatDate(
+                                                        travelPackage.start_date,
+                                                        'id',
+                                                    )}
+                                                </span>
+                                                <span className="text-xs text-emerald-600">
+                                                    {
+                                                        travelPackage.seats_available
+                                                    }{' '}
+                                                    seat tersedia
+                                                </span>
                                             </div>
-                                        ))}
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                {travelPackage.departure_city}
+                                                {travelPackage.end_date
+                                                    ? ` - Pulang ${formatDate(travelPackage.end_date, 'id')}`
+                                                    : ''}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -545,6 +499,26 @@ export default function PackageRegistrationPage() {
                                         message={form.errors.origin_city}
                                     />
                                 </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="referral_code">
+                                        Kode Referral Agent (Opsional)
+                                    </Label>
+                                    <Input
+                                        id="referral_code"
+                                        value={form.data.referral_code}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'referral_code',
+                                                event.target.value.toUpperCase(),
+                                            )
+                                        }
+                                        placeholder="Contoh: AGENT-001"
+                                    />
+                                    <InputError
+                                        message={form.errors.referral_code}
+                                    />
+                                </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="passenger_count">
                                         Jumlah Jamaah
@@ -562,78 +536,13 @@ export default function PackageRegistrationPage() {
                                         }
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Maksimal sesuai seat tersedia jadwal:{' '}
+                                        Maksimal sesuai seat tersedia package:{' '}
                                         {selectedScheduleAvailableSeats}
                                     </p>
                                     <InputError
                                         message={form.errors.passenger_count}
                                     />
                                 </div>
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="departure_schedule_id">
-                                    Pilih Jadwal Keberangkatan
-                                </Label>
-                                <select
-                                    id="departure_schedule_id"
-                                    className="h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground"
-                                    value={form.data.departure_schedule_id}
-                                    onChange={(event) => {
-                                        const nextScheduleId =
-                                            event.target.value;
-                                        form.setData(
-                                            'departure_schedule_id',
-                                            nextScheduleId,
-                                        );
-
-                                        const nextSchedule = schedules.find(
-                                            (schedule) =>
-                                                String(schedule.id) ===
-                                                nextScheduleId,
-                                        );
-                                        const nextAvailableSeats = Math.max(
-                                            1,
-                                            Number(
-                                                nextSchedule?.seats_available ??
-                                                    0,
-                                            ),
-                                        );
-                                        const currentPassengerCount = Math.max(
-                                            1,
-                                            Number(form.data.passenger_count),
-                                        );
-
-                                        if (
-                                            currentPassengerCount >
-                                            nextAvailableSeats
-                                        ) {
-                                            syncPassengerCount(
-                                                nextAvailableSeats,
-                                            );
-                                        }
-                                    }}
-                                >
-                                    <option value="">
-                                        Pilih nanti dengan admin
-                                    </option>
-                                    {schedules.map((schedule) => (
-                                        <option
-                                            key={schedule.id}
-                                            value={schedule.id}
-                                        >
-                                            {formatDate(
-                                                schedule.departure_date,
-                                                'id',
-                                            )}{' '}
-                                            - {schedule.departure_city} (
-                                            {schedule.seats_available} seat)
-                                        </option>
-                                    ))}
-                                </select>
-                                <InputError
-                                    message={form.errors.departure_schedule_id}
-                                />
                             </div>
 
                             <div className="grid gap-4 rounded-2xl bg-muted/20 p-4">

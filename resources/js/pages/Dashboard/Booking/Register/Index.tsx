@@ -563,12 +563,14 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                                                                                     {
                                                                                         item.product_name
                                                                                     }
+
                                                                                     :{' '}
                                                                                     stok{' '}
                                                                                     {
                                                                                         item.available
                                                                                     }{' '}
-                                                                                    / butuh{' '}
+                                                                                    /
+                                                                                    butuh{' '}
                                                                                     {
                                                                                         item.required
                                                                                     }

@@ -16,19 +16,12 @@ class StoreHotelAssignmentRequest extends FormRequest
     {
         return [
             'travel_package_id' => ['required', 'integer', 'exists:packages,id'],
-            'departure_schedule_id' => [
-                'required',
-                'integer',
-                'exists:departure_schedules,id',
-                Rule::exists('departure_schedules', 'id')
-                    ->where(fn ($query) => $query->where('package_id', (int) $this->input('travel_package_id'))),
-            ],
             'hotel_id' => [
                 'required',
                 'integer',
                 'exists:hotels,id',
                 Rule::unique('hotel_assignments', 'hotel_id')
-                    ->where(fn ($query) => $query->where('departure_schedule_id', (int) $this->input('departure_schedule_id'))),
+                    ->where(fn ($query) => $query->where('package_id', (int) $this->input('travel_package_id'))),
             ],
             'status' => ['required', 'string', Rule::in(['draft', 'confirmed'])],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -41,10 +34,9 @@ class StoreHotelAssignmentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'hotel_id.unique' => 'Hotel ini sudah pernah di-assign pada jadwal keberangkatan yang sama.',
+            'hotel_id.unique' => 'Hotel ini sudah pernah di-assign pada package yang sama.',
             'rooms.min' => 'Minimal isi 1 room allocation.',
             'rooms.*.room_count.min' => 'Jumlah room minimal 1.',
-            'departure_schedule_id.exists' => 'Jadwal tidak sesuai dengan package yang dipilih.',
         ];
     }
 }

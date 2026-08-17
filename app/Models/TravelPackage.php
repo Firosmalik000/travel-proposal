@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TravelPackage extends Model
 {
@@ -22,6 +23,12 @@ class TravelPackage extends Model
         'name',
         'package_type',
         'departure_city',
+        'start_date',
+        'end_date',
+        'seats_total',
+        'seats_available',
+        'booking_status',
+        'departure_notes',
         'duration_days',
         'price',
         'original_price',
@@ -39,6 +46,10 @@ class TravelPackage extends Model
     {
         return [
             'content' => 'array',
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'seats_total' => 'integer',
+            'seats_available' => 'integer',
             'price' => 'decimal:2',
             'original_price' => 'decimal:2',
             'discount_ends_at' => 'datetime',
@@ -76,6 +87,34 @@ class TravelPackage extends Model
         return $this->hasMany(DepartureSchedule::class, 'package_id');
     }
 
+    public function bookedPassengerCount(?int $excludingBookingId = null): int
+    {
+        return (int) $this->registrations()
+            ->where('status', 'registered')
+            ->when(
+                $excludingBookingId !== null,
+                fn ($query) => $query->whereKeyNot($excludingBookingId),
+            )
+            ->sum('passenger_count');
+    }
+
+    public function availableSeatsCount(?int $excludingBookingId = null): int
+    {
+        return max((int) $this->seats_total - $this->bookedPassengerCount($excludingBookingId), 0);
+    }
+
+    public function syncSeatAvailability(): void
+    {
+        $availableSeats = $this->availableSeatsCount();
+
+        $this->forceFill([
+            'seats_available' => $availableSeats,
+            'booking_status' => $this->booking_status === 'closed'
+                ? 'closed'
+                : ($availableSeats > 0 ? 'open' : 'full'),
+        ])->saveQuietly();
+    }
+
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(TravelProduct::class, 'package_product', 'package_id', 'product_id')
@@ -104,5 +143,15 @@ class TravelPackage extends Model
     public function hotelAssignments(): HasMany
     {
         return $this->hasMany(HotelAssignment::class, 'package_id');
+    }
+
+    public function agentFees(): HasMany
+    {
+        return $this->hasMany(AgentPackageFee::class, 'package_id');
+    }
+
+    public function allInConfig(): HasOne
+    {
+        return $this->hasOne(PackageAllInConfig::class, 'package_id');
     }
 }

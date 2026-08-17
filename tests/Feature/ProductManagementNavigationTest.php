@@ -2,14 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Models\Currency;
 use App\Models\Hotel;
 use App\Models\HotelCity;
 use App\Models\HotelCountry;
 use App\Models\Menu;
+use App\Models\TravelProduct;
 use App\Models\User;
 use App\Support\MenuPermissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -56,9 +58,9 @@ class ProductManagementNavigationTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/ProductManagement/Products/Index')
                 ->where('filters.product_type', 'hotel')
-                ->has('hotel_master.hotels.data', 1)
-                ->where('hotel_master.hotels.data.0.name', 'Hotel Aktif')
-                ->has('hotel_master.cityOptions')
+                ->has('product_category_hotel.hotels.data', 1)
+                ->where('product_category_hotel.hotels.data.0.name', 'Hotel Aktif')
+                ->has('product_category_hotel.cityOptions')
                 ->has('hotel_country_options')
                 ->has('hotel_city_options')
                 ->has('hotel_room_type_options')
@@ -78,53 +80,54 @@ class ProductManagementNavigationTest extends TestCase
             );
     }
 
-    public function test_product_management_currency_options_come_from_active_master_currency_data(): void
+    public function test_product_management_currency_options_come_from_live_currency_data(): void
     {
         $user = User::factory()->create();
-
-        Currency::query()->updateOrCreate(
-            ['code' => 'USD'],
-            [
-                'name' => 'US Dollar',
-                'conversion_rate' => 16000,
-                'notes' => null,
-                'is_active' => true,
-            ],
-        );
-
-        Currency::query()->updateOrCreate(
-            ['code' => 'IDR'],
-            [
-                'name' => 'Indonesian Rupiah',
-                'conversion_rate' => 1,
-                'notes' => null,
-                'is_active' => true,
-            ],
-        );
-
-        Currency::query()->updateOrCreate(
-            ['code' => 'SAR'],
-            [
-                'name' => 'Saudi Riyal',
-                'conversion_rate' => 4300,
-                'notes' => null,
-                'is_active' => false,
-            ],
-        );
+        config()->set('services.currency.live.enabled', true);
+        Cache::flush();
+        Http::fake(['*' => Http::response([
+            'result' => 'success',
+            'rates' => ['IDR' => 1, 'USD' => 0.0000625, 'SAR' => 0.0002],
+        ])]);
 
         $this->actingAs($user)
             ->get(route('products.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('hotel_currency_options')
-                ->where(
-                    'hotel_currency_options',
-                    fn ($options): bool => collect($options)
-                        ->pluck('code')
-                        ->contains('IDR')
-                    && collect($options)->pluck('code')->contains('USD'),
-                )
+                ->where('hotel_currency_options.0.code', 'IDR')
+                ->where('hotel_currency_options.2.code', 'USD')
+                ->where('hotel_currency_options.2.conversion_rate', 16000)
             );
+    }
+
+    public function test_product_currency_rate_is_saved_as_an_editable_snapshot(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('content.resources.store', ['resource' => 'products']), [
+                'payload' => [
+                    'code' => 'PRD-SAR-MANUAL',
+                    'slug' => 'prd-sar-manual',
+                    'name' => 'Product SAR Manual',
+                    'product_type' => 'layanan',
+                    'description' => '',
+                    'content' => [
+                        'price' => 100,
+                        'currency' => 'SAR',
+                        'currency_rate_to_idr' => 5000,
+                    ],
+                    'is_active' => true,
+                ],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $product = TravelProduct::query()->where('code', 'PRD-SAR-MANUAL')->firstOrFail();
+
+        $this->assertSame(5000, data_get($product->content, 'currency_rate_snapshot.rate_to_idr'));
+        $this->assertSame('manual', data_get($product->content, 'currency_rate_snapshot.source'));
     }
 
     public function test_product_category_renders_from_its_own_dashboard_menu_route(): void

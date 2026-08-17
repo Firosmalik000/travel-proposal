@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asfar Tour — Jelas Rencananya, Terjamin Amanahnya.</title>
+  <meta name="description" content="Pengalaman ibadah umroh yang khusyuk, nyaman, dan terarah bersama tim yang amanah." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter','ui-sans-serif','system-ui','sans-serif'],
+            display: ['Playfair Display','Georgia','serif'],
+          },
+          colors: {
+            wine: {
+              950:'#23060F',
+              900:'#320916',
+              800:'#4A0D21',
+              700:'#64132E',
+              600:'#7D1B3D',
+              500:'#9A2850',
+            },
+            gold: {
+              300:'#F1D7A1',
+              400:'#E4C17B',
+              500:'#CB9943',
+              600:'#A8742F',
+            },
+            cream: {
+              50:'#FFFDF9',
+              100:'#FFF8EF',
+              200:'#FAECD9',
+              300:'#EFD8B9',
+            }
+          },
+          boxShadow: {
+            soft:'0 18px 52px rgba(64,17,34,.08)',
+            luxe:'0 34px 90px rgba(50,9,22,.16)',
+            glow:'0 25px 80px rgba(127,27,62,.18)'
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      color:#2A2024;
+      background:
+        radial-gradient(circle at 5% 2%,rgba(203,153,67,.13),transparent 30rem),
+        radial-gradient(circle at 95% 16%,rgba(125,27,61,.07),transparent 28rem),
+        linear-gradient(180deg,#fffdf9 0%,#fff7ee 42%,#fffaf4 100%);
+    }
+    .container-x{width:min(1240px,calc(100% - 40px));margin-inline:auto}
+    .nav-glass{
+      background:rgba(255,252,247,.92);
+      border-bottom:1px solid rgba(203,153,67,.17);
+      backdrop-filter:blur(18px);
+    }
+    .hero-overlay{
+      background:
+        radial-gradient(circle at 72% 48%,rgba(221,167,76,.24),transparent 30rem),
+        linear-gradient(90deg,rgba(35,6,15,.98) 0%,rgba(61,11,28,.94) 33%,rgba(88,18,42,.70) 57%,rgba(23,4,10,.14) 100%);
+    }
+    .light-bg{
+      background:
+        radial-gradient(circle at 8% 14%,rgba(203,153,67,.11),transparent 24rem),
+        radial-gradient(circle at 92% 74%,rgba(125,27,61,.05),transparent 26rem),
+        linear-gradient(180deg,#fffdf9 0%,#fff3e4 100%);
+    }
+    .soft-bg{
+      background:
+        radial-gradient(circle at 84% 14%,rgba(125,27,61,.07),transparent 25rem),
+        radial-gradient(circle at 7% 86%,rgba(203,153,67,.11),transparent 22rem),
+        linear-gradient(135deg,#fff8ef 0%,#f7e4d7 100%);
+    }
+    .dark-bg{
+      background:
+        radial-gradient(circle at 82% 20%,rgba(227,178,85,.24),transparent 25rem),
+        linear-gradient(118deg,#250610 0%,#4b0d22 48%,#7c193a 100%);
+    }
+    .surface{
+      background:linear-gradient(180deg,rgba(255,255,255,.985),rgba(255,249,240,.965));
+      border:1px solid rgba(194,146,71,.22);
+      box-shadow:0 18px 48px rgba(58,14,32,.07);
+    }
+    .surface-dark{
+      background:linear-gradient(145deg,rgba(83,15,37,.88),rgba(44,7,18,.88));
+      border:1px solid rgba(244,213,158,.16);
+      backdrop-filter:blur(10px);
+    }
+    .eyebrow{
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      color:#A8742F;
+    }
+    .rule{
+      width:70px;height:3px;border-radius:999px;
+      background:linear-gradient(90deg,#64132E,#CB9943);
+    }
+    .image-card{position:relative;overflow:hidden}
+    .image-card img{transition:transform .75s ease,filter .5s ease}
+    .image-card:hover img{transform:scale(1.04);filter:saturate(1.08)}
+    .image-card:after{
+      content:"";position:absolute;inset:0;
+      background:linear-gradient(180deg,transparent 58%,rgba(32,5,14,.30));
+      pointer-events:none;
+    }
+    .journey-card{
+      position:relative;
+      border-radius:28px;
+      padding:34px 28px 28px;
+      background:
+        radial-gradient(circle at 90% 0%,rgba(203,153,67,.10),transparent 12rem),
+        linear-gradient(160deg,rgba(255,255,255,.99),rgba(255,248,238,.96));
+      border:1px solid rgba(194,146,71,.24);
+      box-shadow:0 18px 48px rgba(58,14,32,.07);
+      transition:.35s ease;
+    }
+    .journey-card:hover{transform:translateY(-7px);box-shadow:0 30px 78px rgba(58,14,32,.12)}
+    .journey-icon{
+      position:absolute;top:-30px;left:28px;
+      width:64px;height:64px;border-radius:20px;
+      display:grid;place-items:center;
+      border:1px solid rgba(255,255,255,.88);
+      box-shadow:0 15px 34px rgba(58,14,32,.13);
+    }
+    .journey-number{
+      position:absolute;top:18px;right:22px;
+      font-size:10px;font-weight:800;letter-spacing:.12em;
+      color:#A8742F;
+    }
+    .package-row{
+      overflow:hidden;border-radius:34px;
+      background:linear-gradient(180deg,rgba(255,255,255,.985),rgba(255,249,240,.97));
+      border:1px solid rgba(194,146,71,.22);
+      box-shadow:0 24px 72px rgba(58,14,32,.08);
+    }
+    .reveal{opacity:0;transform:translateY(18px);transition:.75s ease}
+    .reveal.show{opacity:1;transform:none}
+
+    @media(max-width:1023px){
+      .hero-overlay{
+        background:linear-gradient(180deg,rgba(35,6,15,.80),rgba(76,13,33,.69),rgba(35,6,15,.56));
+      }
+    }
+  
+    /* ===== V10 refinements ===== */
+    .offer-overlay{
+      background:
+        linear-gradient(90deg,rgba(35,6,15,.96) 0%,rgba(69,13,31,.90) 28%,rgba(93,18,43,.74) 52%,rgba(93,18,43,.42) 68%,rgba(44,7,18,.16) 84%,rgba(44,7,18,.08) 100%),
+        radial-gradient(circle at 74% 48%,rgba(223,170,79,.18),transparent 25rem);
+    }
+
+    .offer-panel{
+      padding:28px 30px;
+      border-radius:28px;
+      background:linear-gradient(145deg,rgba(72,11,31,.44),rgba(31,5,13,.26));
+      border:1px solid rgba(244,213,158,.18);
+      backdrop-filter:blur(10px);
+      box-shadow:0 24px 70px rgba(24,4,10,.18);
+    }
+
+    .offer-card{
+      padding:26px 24px;
+      border-radius:24px;
+      background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.04));
+      border:1px solid rgba(244,213,158,.16);
+      backdrop-filter:blur(8px);
+      box-shadow:0 16px 40px rgba(24,4,10,.12);
+      transition:transform .3s ease, background .3s ease;
+    }
+    .offer-card:hover{
+      transform:translateY(-4px);
+      background:linear-gradient(145deg,rgba(255,255,255,.12),rgba(255,255,255,.05));
+    }
+
+    .timeline-shell{
+      position:relative;
+    }
+    .timeline-line{
+      position:absolute;
+      top:0;
+      bottom:0;
+      left:50%;
+      transform:translateX(-50%);
+      width:2px;
+      background:linear-gradient(180deg,transparent,rgba(203,153,67,.45) 8%,rgba(203,153,67,.45) 92%,transparent);
+    }
+    .timeline-middle{
+      justify-content:center;
+      align-items:center;
+    }
+    .timeline-node{
+      display:block;
+      width:18px;
+      height:18px;
+      border-radius:999px;
+      background:linear-gradient(145deg,#f5dfaa,#d9aa56);
+      box-shadow:0 0 0 8px rgba(255,248,234,.9),0 10px 26px rgba(60,15,31,.11);
+    }
+    .timeline-card{
+      position:relative;
+      border-radius:28px;
+      padding:24px 24px 22px;
+      background:
+        radial-gradient(circle at 92% 0%,rgba(203,153,67,.10),transparent 12rem),
+        linear-gradient(155deg,rgba(255,255,255,.99),rgba(255,248,238,.96));
+      border:1px solid rgba(194,146,71,.22);
+      box-shadow:0 18px 50px rgba(58,14,32,.07);
+      transition:transform .32s ease, box-shadow .32s ease;
+    }
+    .timeline-card:hover{
+      transform:translateY(-6px);
+      box-shadow:0 30px 76px rgba(58,14,32,.11);
+    }
+    .timeline-kicker{
+      color:#A8742F;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+    .timeline-icon{
+      width:58px;
+      height:58px;
+      border-radius:18px;
+      display:grid;
+      place-items:center;
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.85);
+      box-shadow:0 14px 34px rgba(58,14,32,.11);
+    }
+    .timeline-badge{
+      position:absolute;
+      top:16px;
+      right:18px;
+      min-width:38px;
+      text-align:center;
+      padding:5px 8px;
+      border-radius:999px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.12em;
+      color:#A8742F;
+      background:rgba(255,253,249,.9);
+      border:1px solid rgba(203,153,67,.20);
+    }
+
+    .testimonial-carousel{
+      border-radius:32px;
+      border:1px solid rgba(194,146,71,.18);
+      box-shadow:0 24px 70px rgba(58,14,32,.08);
+      background:linear-gradient(180deg,rgba(255,255,255,.6),rgba(255,255,255,.35));
+      backdrop-filter:blur(4px);
+    }
+    .testimonial-slide{
+      min-width:100%;
+      width:100%;
+      padding:0;
+    }
+    .testimonial-card{
+      min-height:420px;
+      padding:34px 34px 30px;
+      background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(255,250,242,.96));
+    }
+    .testimonial-initial{
+      display:grid;
+      place-items:center;
+      width:52px;
+      height:52px;
+      border-radius:999px;
+      background:#f3e1c1;
+      color:#64132E;
+      font-size:14px;
+      font-weight:800;
+    }
+    .testimonial-dot{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:#ddc6a0;
+      transition:all .25s ease;
+    }
+    .testimonial-dot.active{
+      width:26px;
+      background:#64132E;
+    }
+
+    @media(max-width:1023px){
+      .offer-overlay{
+        background:
+          linear-gradient(180deg,rgba(35,6,15,.88) 0%,rgba(69,13,31,.72) 48%,rgba(69,13,31,.46) 100%),
+          radial-gradient(circle at 74% 48%,rgba(223,170,79,.18),transparent 25rem);
+      }
+    }
+
+    @media(max-width:767px){
+      .testimonial-card{
+        min-height:440px;
+        padding:28px 24px 26px;
+      }
+      .testimonial-card blockquote{
+        font-size:27px !important;
+      }
+    }
+
+  
+    /* ===== V11 simplification ===== */
+    .offer-overlay{
+      background:
+        linear-gradient(90deg,rgba(35,6,15,.96) 0%,rgba(66,12,30,.90) 32%,rgba(92,18,43,.68) 56%,rgba(92,18,43,.34) 74%,rgba(44,7,18,.10) 100%),
+        radial-gradient(circle at 72% 48%,rgba(223,170,79,.16),transparent 24rem);
+    }
+
+    .offer-simple-panel{
+      border-radius:28px;
+      background:linear-gradient(145deg,rgba(255,255,255,.10),rgba(255,255,255,.04));
+      border:1px solid rgba(244,213,158,.16);
+      backdrop-filter:blur(10px);
+      box-shadow:0 18px 50px rgba(24,4,10,.16);
+      overflow:hidden;
+    }
+    .offer-simple-item{
+      display:grid;
+      grid-template-columns:58px 1fr;
+      gap:18px;
+      padding:24px 24px;
+    }
+    .offer-simple-item + .offer-simple-item{
+      border-top:1px solid rgba(255,255,255,.10);
+    }
+    .offer-simple-num{
+      width:42px;
+      height:42px;
+      border-radius:999px;
+      display:grid;
+      place-items:center;
+      background:rgba(255,255,255,.10);
+      color:#F1D7A1;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.12em;
+      border:1px solid rgba(244,213,158,.16);
+    }
+
+    .journey-mini{
+      border-radius:24px;
+      padding:22px 22px 20px;
+      background:
+        radial-gradient(circle at 92% 0%,rgba(203,153,67,.10),transparent 10rem),
+        linear-gradient(155deg,rgba(255,255,255,.99),rgba(255,248,238,.96));
+      border:1px solid rgba(194,146,71,.21);
+      box-shadow:0 16px 42px rgba(58,14,32,.06);
+      transition:transform .28s ease, box-shadow .28s ease;
+    }
+    .journey-mini:hover{
+      transform:translateY(-4px);
+      box-shadow:0 24px 58px rgba(58,14,32,.10);
+    }
+    .journey-mini-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .journey-mini-icon{
+      width:48px;
+      height:48px;
+      border-radius:16px;
+      display:grid;
+      place-items:center;
+      border:1px solid rgba(255,255,255,.86);
+      box-shadow:0 12px 28px rgba(58,14,32,.10);
+      flex:0 0 auto;
+    }
+    .journey-mini-num{
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.12em;
+      color:#A8742F;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#fffdfa;
+      border:1px solid rgba(203,153,67,.18);
+    }
+    .journey-mini-kicker{
+      margin-top:16px;
+      color:#A8742F;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+
+    .testimonial-clean{
+      background:linear-gradient(180deg,rgba(255,255,255,.985),rgba(255,250,242,.97));
+      border:1px solid rgba(194,146,71,.20);
+      box-shadow:0 22px 64px rgba(58,14,32,.08);
+    }
+    .testimonial-clean-slide{
+      min-width:100%;
+      width:100%;
+      padding:0;
+    }
+
+    .testimonial-dot{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:#ddc6a0;
+      transition:all .25s ease;
+    }
+    .testimonial-dot.active{
+      width:26px;
+      background:#64132E;
+    }
+
+    @media(max-width:1023px){
+      .offer-overlay{
+        background:
+          linear-gradient(180deg,rgba(35,6,15,.88) 0%,rgba(66,12,30,.74) 48%,rgba(66,12,30,.42) 100%),
+          radial-gradient(circle at 72% 48%,rgba(223,170,79,.16),transparent 24rem);
+      }
+    }
+
+    @media(max-width:767px){
+      .offer-simple-item{
+        grid-template-columns:44px 1fr;
+        gap:14px;
+        padding:20px 18px;
+      }
+      .testimonial-clean blockquote{
+        font-size:28px !important;
+      }
+    }
+
+  
+    /* ===== V12 slider + DB-ready package UI ===== */
+    .slider-nav{
+      width:44px;
+      height:44px;
+      display:grid;
+      place-items:center;
+      border-radius:999px;
+      background:white;
+      color:#64132E;
+      border:1px solid #dfc79f;
+      box-shadow:0 12px 28px rgba(58,14,32,.08);
+      transition:.25s ease;
+    }
+    .slider-nav:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(58,14,32,.12)}
+
+    .package-filter{
+      padding:10px 15px;
+      border-radius:999px;
+      border:1px solid #dfc79f;
+      background:rgba(255,255,255,.84);
+      color:#64132E;
+      font-size:12px;
+      font-weight:700;
+      transition:.25s ease;
+    }
+    .package-filter:hover,
+    .package-filter.active{
+      background:linear-gradient(90deg,#4A0D21,#7D1B3D);
+      border-color:transparent;
+      color:white;
+      box-shadow:0 12px 26px rgba(100,19,46,.18);
+    }
+
+    .package-slider{
+      display:grid;
+      grid-auto-flow:column;
+      grid-auto-columns:minmax(310px,1fr);
+      gap:20px;
+      overflow-x:auto;
+      scroll-snap-type:x mandatory;
+      scroll-behavior:smooth;
+      padding:4px 2px 12px;
+      scrollbar-width:none;
+    }
+    .package-slider::-webkit-scrollbar{display:none}
+
+    .package-db-card{
+      scroll-snap-align:start;
+      overflow:hidden;
+      border-radius:28px;
+      background:linear-gradient(180deg,#fff,#fff9f0);
+      border:1px solid rgba(194,146,71,.22);
+      box-shadow:0 18px 48px rgba(58,14,32,.07);
+      transition:.3s ease;
+    }
+    .package-db-card:hover{
+      transform:translateY(-5px);
+      box-shadow:0 28px 72px rgba(58,14,32,.12);
+    }
+    .package-db-image{
+      position:relative;
+      height:250px;
+      overflow:hidden;
+    }
+    .package-db-image img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      transition:transform .65s ease;
+    }
+    .package-db-card:hover .package-db-image img{transform:scale(1.04)}
+    .package-db-image:after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg,transparent 50%,rgba(33,5,15,.34));
+      pointer-events:none;
+    }
+    .package-db-meta{
+      position:absolute;
+      left:18px;
+      right:18px;
+      bottom:16px;
+      z-index:2;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      color:white;
+    }
+    .package-db-badge{
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:9px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      background:rgba(255,247,224,.93);
+      color:#64132E;
+      backdrop-filter:blur(8px);
+    }
+    .package-db-featured{
+      border-radius:999px;
+      padding:7px 10px;
+      font-size:9px;
+      font-weight:800;
+      background:rgba(100,19,46,.88);
+      color:white;
+      backdrop-filter:blur(8px);
+    }
+    .package-db-content{padding:22px 22px 20px}
+    .package-db-title{
+      font-family:'Playfair Display',serif;
+      font-size:28px;
+      font-weight:700;
+      line-height:1.15;
+      color:#4A0D21;
+    }
+    .package-db-spec{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#756269;
+      font-size:12px;
+    }
+    .package-db-price{
+      margin-top:18px;
+      font-size:27px;
+      font-weight:800;
+      color:#64132E;
+    }
+    .package-db-footer{
+      margin-top:18px;
+      padding-top:16px;
+      border-top:1px solid #ead8bb;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .package-db-link{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      border-radius:999px;
+      padding:10px 14px;
+      background:linear-gradient(90deg,#4A0D21,#7D1B3D);
+      color:white;
+      font-size:11px;
+      font-weight:800;
+    }
+
+    .testimonial-slider{
+      display:grid;
+      grid-auto-flow:column;
+      grid-auto-columns:calc((100% - 40px)/3);
+      gap:20px;
+      overflow-x:auto;
+      scroll-snap-type:x mandatory;
+      scroll-behavior:smooth;
+      padding:4px 2px 14px;
+      scrollbar-width:none;
+    }
+    .testimonial-slider::-webkit-scrollbar{display:none}
+    .testimonial-slide-card{
+      scroll-snap-align:start;
+      min-height:330px;
+      border-radius:28px;
+      padding:26px 24px;
+      background:linear-gradient(180deg,#fff,#fff9f1);
+      border:1px solid rgba(194,146,71,.20);
+      box-shadow:0 18px 48px rgba(58,14,32,.07);
+    }
+    .testimonial-avatar{
+      width:46px;
+      height:46px;
+      border-radius:999px;
+      display:grid;
+      place-items:center;
+      background:#f3e1c1;
+      color:#64132E;
+      font-size:12px;
+      font-weight:800;
+    }
+
+    @media(max-width:1023px){
+      .testimonial-slider{grid-auto-columns:calc((100% - 20px)/2)}
+    }
+    @media(max-width:767px){
+      .testimonial-slider{grid-auto-columns:88%}
+      .package-slider{grid-auto-columns:88%}
+    }
+
+  
+    /* ===== V13 hero premium redesign ===== */
+    .hero-premium{
+      min-height:860px;
+      background:
+        radial-gradient(circle at 8% 6%, rgba(203,153,67,.16), transparent 26rem),
+        radial-gradient(circle at 88% 16%, rgba(125,27,61,.08), transparent 24rem),
+        linear-gradient(180deg,#fffdf9 0%,#fff7ee 52%,#fffaf4 100%);
+      border-bottom:1px solid rgba(203,153,67,.10);
+    }
+
+    .hero-bg-glow{
+      position:absolute;
+      border-radius:999px;
+      filter:blur(70px);
+      pointer-events:none;
+    }
+    .hero-glow-a{
+      width:240px;height:240px;left:-60px;top:80px;
+      background:rgba(203,153,67,.18);
+    }
+    .hero-glow-b{
+      width:320px;height:320px;right:-80px;top:30px;
+      background:rgba(125,27,61,.10);
+    }
+    .hero-glow-c{
+      width:260px;height:260px;right:18%;bottom:20px;
+      background:rgba(203,153,67,.12);
+    }
+
+    .hero-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:10px 14px;
+      border-radius:999px;
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(203,153,67,.20);
+      color:#64132E;
+      box-shadow:0 12px 28px rgba(58,14,32,.06);
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      backdrop-filter:blur(10px);
+    }
+
+    .hero-cta-primary{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:52px;
+      padding:0 22px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#4A0D21,#7D1B3D);
+      color:white;
+      font-size:13px;
+      font-weight:800;
+      box-shadow:0 16px 36px rgba(100,19,46,.18);
+    }
+    .hero-cta-secondary{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:52px;
+      padding:0 22px;
+      border-radius:999px;
+      background:rgba(255,255,255,.82);
+      border:1px solid rgba(203,153,67,.22);
+      color:#64132E;
+      font-size:13px;
+      font-weight:800;
+      box-shadow:0 12px 28px rgba(58,14,32,.06);
+      backdrop-filter:blur(10px);
+    }
+
+    .hero-trust-chip{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:50px;
+      padding:12px 14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.78);
+      border:1px solid rgba(203,153,67,.16);
+      color:#5a464d;
+      font-size:12px;
+      font-weight:700;
+      box-shadow:0 12px 24px rgba(58,14,32,.05);
+      backdrop-filter:blur(10px);
+    }
+
+    .hero-artboard{
+      position:relative;
+      min-height:680px;
+      padding:18px;
+    }
+
+    .hero-arch-outline{
+      position:absolute;
+      inset:16px 24px 70px 70px;
+      border:1.5px solid rgba(203,153,67,.22);
+      border-radius:220px 220px 34px 34px;
+      pointer-events:none;
+    }
+
+    .hero-main-shot{
+      position:absolute;
+      inset:46px 34px 110px 110px;
+      overflow:hidden;
+      border-radius:260px 260px 38px 38px;
+      box-shadow:0 34px 86px rgba(58,14,32,.16);
+      background:#f7ede1;
+    }
+
+    .hero-main-overlay{
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg,rgba(15,3,8,.06) 0%,rgba(15,3,8,.10) 36%,rgba(15,3,8,.42) 100%);
+      pointer-events:none;
+    }
+
+    .hero-caption{
+      position:absolute;
+      left:28px;
+      right:28px;
+      bottom:28px;
+      z-index:2;
+      padding:22px 22px 20px;
+      border-radius:26px;
+      background:linear-gradient(145deg,rgba(61,11,28,.56),rgba(31,5,13,.40));
+      border:1px solid rgba(244,213,158,.14);
+      backdrop-filter:blur(10px);
+      box-shadow:0 16px 40px rgba(19,4,9,.14);
+    }
+
+    .hero-floating-card{
+      position:absolute;
+      border-radius:28px;
+      background:linear-gradient(180deg,rgba(255,255,255,.97),rgba(255,249,240,.95));
+      border:1px solid rgba(194,146,71,.18);
+      box-shadow:0 20px 52px rgba(58,14,32,.10);
+      backdrop-filter:blur(10px);
+    }
+
+    .hero-floating-top{
+      left:0;
+      top:84px;
+      width:min(330px,66%);
+      padding:18px 18px 18px 18px;
+    }
+
+    .hero-floating-bottom{
+      left:42px;
+      right:0;
+      bottom:8px;
+      padding:20px;
+      width:min(480px,86%);
+    }
+
+    .hero-side-mini{
+      position:absolute;
+      right:0;
+      top:140px;
+      width:165px;
+      height:230px;
+      overflow:hidden;
+      border-radius:34px;
+      border:8px solid rgba(255,252,247,.92);
+      box-shadow:0 22px 56px rgba(58,14,32,.14);
+      background:#f4e8d7;
+    }
+
+    @media(max-width:1279px){
+      .hero-artboard{min-height:620px}
+      .hero-main-shot{inset:42px 26px 105px 80px}
+      .hero-side-mini{width:145px;height:210px;top:128px}
+      .hero-floating-bottom{left:22px}
+    }
+
+    @media(max-width:1023px){
+      .hero-premium{min-height:auto}
+      .hero-artboard{
+        min-height:auto;
+        padding:0;
+        margin-top:8px;
+      }
+      .hero-arch-outline{
+        inset:12px 10px 120px 10px;
+      }
+      .hero-main-shot{
+        position:relative;
+        inset:auto;
+        min-height:520px;
+        border-radius:220px 220px 30px 30px;
+        margin:20px 0 110px;
+      }
+      .hero-floating-top{
+        top:10px;
+        left:8px;
+        width:min(300px,72%);
+      }
+      .hero-side-mini{
+        right:6px;
+        top:74px;
+        width:132px;
+        height:190px;
+      }
+      .hero-floating-bottom{
+        left:12px;
+        right:12px;
+        bottom:0;
+        width:auto;
+      }
+    }
+
+    @media(max-width:767px){
+      .hero-premium .container-x{
+        width:min(100% - 26px,1240px);
+      }
+      .hero-main-shot{
+        min-height:460px;
+        border-radius:160px 160px 28px 28px;
+      }
+      .hero-caption{
+        left:16px;
+        right:16px;
+        bottom:16px;
+        padding:18px;
+      }
+      .hero-floating-top{
+        position:relative;
+        left:auto;
+        top:auto;
+        width:100%;
+        margin-bottom:14px;
+      }
+      .hero-side-mini{
+        display:none;
+      }
+      .hero-arch-outline{
+        display:none;
+      }
+      .hero-floating-bottom{
+        position:relative;
+        left:auto;
+        right:auto;
+        bottom:auto;
+        width:100%;
+        margin-top:-86px;
+      }
+      .hero-artboard{
+        display:flex;
+        flex-direction:column;
+      }
+      .hero-main-shot{
+        order:2;
+        margin:0;
+      }
+    }
+
+  
+    .journey-editorial{
+      background:radial-gradient(circle at 5% 12%,rgba(203,153,67,.14),transparent 28rem),
+      radial-gradient(circle at 94% 82%,rgba(125,27,61,.06),transparent 26rem),
+      linear-gradient(180deg,#fffdf9 0%,#fff5e8 100%);
+      border-top:1px solid rgba(203,153,67,.10);
+      border-bottom:1px solid rgba(203,153,67,.10);
+    }
+    .journey-editorial-intro{position:sticky;top:110px;align-self:start}
+    .journey-photo-wrap{position:relative;overflow:hidden;min-height:420px;border-radius:34px;box-shadow:0 28px 76px rgba(58,14,32,.12);background:#f1e6d8}
+    .journey-photo-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .7s ease}
+    .journey-photo-wrap:hover img{transform:scale(1.035)}
+    .journey-photo-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(27,5,12,.02) 0%,rgba(27,5,12,.08) 38%,rgba(38,7,16,.60) 100%)}
+    .journey-photo-caption{position:absolute;left:24px;right:24px;bottom:24px;z-index:2;padding:20px;border-radius:24px;background:linear-gradient(145deg,rgba(68,12,30,.50),rgba(31,5,13,.34));border:1px solid rgba(244,213,158,.14);backdrop-filter:blur(8px);box-shadow:0 14px 36px rgba(19,4,9,.12)}
+    .journey-flow{position:relative;padding-left:72px}
+    .journey-flow-line{position:absolute;left:27px;top:30px;bottom:30px;width:2px;background:linear-gradient(180deg,transparent,rgba(203,153,67,.38) 8%,rgba(203,153,67,.38) 92%,transparent)}
+    .journey-flow-item{position:relative;min-height:140px;padding:24px 24px 24px 26px;margin-bottom:18px;border-radius:26px;background:linear-gradient(180deg,rgba(255,255,255,.86),rgba(255,249,240,.76));border:1px solid rgba(194,146,71,.16);box-shadow:0 14px 36px rgba(58,14,32,.045);backdrop-filter:blur(6px);transition:.3s ease}
+    .journey-flow-item:hover{transform:translateX(6px);border-color:rgba(194,146,71,.30);box-shadow:0 22px 48px rgba(58,14,32,.08)}
+    .journey-flow-icon{position:absolute;left:-72px;top:26px;width:56px;height:56px;display:grid;place-items:center;border-radius:18px;border:1px solid rgba(255,255,255,.88);box-shadow:0 12px 28px rgba(58,14,32,.10);z-index:2}
+    .journey-flow-icon:after{content:"";position:absolute;width:12px;height:12px;right:-25px;top:22px;border-radius:999px;background:#d8aa59;border:3px solid #fff9ed;box-shadow:0 5px 14px rgba(58,14,32,.08)}
+    .journey-flow-topline{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .journey-flow-label{color:#A8742F;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+    .journey-flow-num{color:#B78B49;font-size:10px;font-weight:800;letter-spacing:.12em}
+    @media(max-width:1023px){.journey-editorial-intro{position:relative;top:auto}.journey-photo-wrap{min-height:360px}.journey-flow{padding-left:64px}.journey-flow-line{left:24px}.journey-flow-icon{left:-64px}}
+    @media(max-width:767px){.journey-flow{padding-left:0}.journey-flow-line{display:none}.journey-flow-item{padding:22px 20px 20px;margin-bottom:16px}.journey-flow-icon{position:relative;left:auto;top:auto;margin-bottom:16px}.journey-flow-icon:after{display:none}.journey-photo-wrap{min-height:320px}}
+
+  
+    /* ===== V15 package polish ===== */
+    .package-shell{
+      border-radius:34px;
+      border:1px solid rgba(203,153,67,.18);
+      background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,248,238,.76));
+      box-shadow:0 28px 80px rgba(58,14,32,.07);
+      backdrop-filter:blur(10px);
+      padding:18px;
+    }
+
+    .package-slider{
+      display:grid;
+      grid-auto-flow:column;
+      grid-auto-columns:minmax(350px,1fr);
+      gap:24px;
+      overflow-x:auto;
+      scroll-snap-type:x mandatory;
+      scroll-behavior:smooth;
+      padding:4px 2px 12px;
+      scrollbar-width:none;
+    }
+    .package-slider::-webkit-scrollbar{display:none}
+
+    .package-db-card{
+      scroll-snap-align:start;
+      overflow:hidden;
+      border-radius:30px;
+      background:linear-gradient(180deg,#fffdf9,#fff8ef);
+      border:1px solid rgba(203,153,67,.20);
+      box-shadow:0 18px 48px rgba(58,14,32,.07);
+      transition:transform .3s ease, box-shadow .3s ease;
+      display:flex;
+      flex-direction:column;
+      min-height:705px;
+    }
+    .package-db-card:hover{
+      transform:translateY(-5px);
+      box-shadow:0 28px 72px rgba(58,14,32,.12);
+    }
+
+    .package-db-image{
+      position:relative;
+      height:235px;
+      overflow:hidden;
+      background:linear-gradient(135deg,#eadcc6,#d8c4a7);
+      flex:0 0 auto;
+    }
+    .package-db-image img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      transition:transform .65s ease;
+      display:block;
+    }
+    .package-db-card:hover .package-db-image img{transform:scale(1.045)}
+    .package-db-image-shade{
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg,rgba(34,7,16,.08) 0%,rgba(34,7,16,.10) 24%,rgba(34,7,16,.28) 100%);
+      pointer-events:none;
+    }
+    .package-db-topchips{
+      position:absolute;
+      left:16px;
+      right:16px;
+      top:16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      z-index:2;
+    }
+    .package-db-bottommeta{
+      position:absolute;
+      left:18px;
+      right:18px;
+      bottom:14px;
+      z-index:2;
+      display:flex;
+      justify-content:flex-start;
+    }
+    .package-db-loc{
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      padding:8px 12px;
+      font-size:10px;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      background:rgba(255,250,242,.95);
+      color:#9f6c29;
+      backdrop-filter:blur(8px);
+      box-shadow:0 10px 24px rgba(27,5,12,.12);
+    }
+
+    .package-db-badge{
+      display:inline-flex;
+      align-items:center;
+      border-radius:999px;
+      padding:8px 11px;
+      font-size:9px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      background:rgba(255,247,224,.95);
+      color:#64132E;
+      backdrop-filter:blur(8px);
+    }
+    .package-db-featured{
+      border-radius:999px;
+      padding:8px 11px;
+      font-size:9px;
+      font-weight:800;
+      background:rgba(100,19,46,.92);
+      color:white;
+      backdrop-filter:blur(8px);
+    }
+
+    .package-db-content{
+      padding:22px 22px 22px;
+      display:flex;
+      flex-direction:column;
+      flex:1;
+    }
+    .package-db-title{
+      font-family:'Playfair Display',serif;
+      font-size:28px;
+      font-weight:700;
+      line-height:1.14;
+      color:#4A0D21;
+      min-height:64px;
+    }
+
+    .package-db-specbox{
+      margin-top:18px;
+      display:grid;
+      gap:10px;
+      padding:16px;
+      border-radius:20px;
+      background:rgba(255,255,255,.74);
+      border:1px solid rgba(203,153,67,.14);
+      min-height:122px;
+    }
+    .package-db-spec{
+      display:flex;
+      align-items:flex-start;
+      gap:9px;
+      color:#756269;
+      font-size:12px;
+      line-height:1.5;
+    }
+    .package-db-spec svg{
+      flex:0 0 auto;
+      margin-top:1px;
+    }
+
+    .package-db-priceblock{
+      margin-top:18px;
+    }
+    .package-db-price-label{
+      font-size:11px;
+      font-weight:700;
+      color:#a47a48;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+    }
+    .package-db-price{
+      margin-top:6px;
+      font-size:28px;
+      font-weight:800;
+      line-height:1.1;
+      color:#64132E;
+      min-height:62px;
+      display:flex;
+      align-items:flex-end;
+    }
+
+    .package-db-desc{
+      margin-top:12px;
+      font-size:12px;
+      line-height:1.8;
+      color:#756269;
+      min-height:88px;
+    }
+
+    .package-db-footer{
+      margin-top:auto;
+      padding-top:16px;
+      border-top:1px solid #ead8bb;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      min-height:62px;
+    }
+    .package-db-link{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+      border-radius:999px;
+      padding:12px 16px;
+      background:linear-gradient(90deg,#4A0D21,#7D1B3D);
+      color:white;
+      font-size:11px;
+      font-weight:800;
+      white-space:nowrap;
+      box-shadow:0 12px 24px rgba(100,19,46,.16);
+    }
+
+    @media(max-width:767px){
+      .package-shell{padding:14px}
+      .package-slider{grid-auto-columns:90%}
+      .package-db-card{min-height:680px}
+      .package-db-title{font-size:26px;min-height:auto}
+      .package-db-desc{min-height:auto}
+      .package-db-price{min-height:auto}
+    }
+
+  
+    /* ===== V17 hero + readability fixes ===== */
+    .hero-artboard-clean{min-height:650px}
+    .hero-mini-stat{
+      position:absolute;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:12px 16px;
+      border-radius:999px;
+      background:rgba(255,249,240,.92);
+      border:1px solid rgba(203,153,67,.20);
+      color:#64132E;
+      font-size:12px;
+      font-weight:700;
+      box-shadow:0 16px 34px rgba(58,14,32,.08);
+      backdrop-filter:blur(10px);
+      z-index:3;
+    }
+    .hero-mini-dot{
+      width:8px;height:8px;border-radius:999px;background:#C89A41;flex:0 0 auto;
+    }
+    .hero-mini-stat-top{left:10px;top:86px}
+    .hero-mini-stat-bottom{left:34px;bottom:12px}
+
+    .important-premium{
+      background:
+        linear-gradient(135deg,#3B0A1B 0%,#5E112B 48%,#270713 100%);
+    }
+    .surface-dark-strong{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      color:#FFF7EA;
+      box-shadow:0 12px 28px rgba(0,0,0,.12);
+      backdrop-filter:blur(8px);
+    }
+
+    .offer-premium .offer-left-panel{
+      padding:24px 24px 20px;
+      border-radius:28px;
+      background:linear-gradient(145deg,rgba(43,8,18,.42),rgba(43,8,18,.18));
+      border:1px solid rgba(244,213,158,.12);
+      backdrop-filter:blur(10px);
+      max-width:520px;
+    }
+    .offer-overlay-strong{
+      background:
+        linear-gradient(90deg,rgba(30,6,13,.96) 0%,rgba(64,11,27,.90) 28%,rgba(85,15,36,.76) 46%,rgba(85,15,36,.50) 64%,rgba(35,6,15,.18) 100%),
+        radial-gradient(circle at 78% 46%,rgba(224,173,89,.18),transparent 24rem);
+    }
+
+    @media(max-width:1023px){
+      .offer-overlay-strong{
+        background:
+          linear-gradient(180deg,rgba(30,6,13,.90) 0%,rgba(64,11,27,.78) 52%,rgba(35,6,15,.38) 100%),
+          radial-gradient(circle at 78% 46%,rgba(224,173,89,.16),transparent 24rem);
+      }
+    }
+
+    @media(max-width:767px){
+      .hero-mini-stat-top{left:10px;top:20px}
+      .hero-mini-stat-bottom{left:10px;bottom:16px}
+      .hero-artboard-clean{min-height:500px}
+    }
+
+  </style>
+</head>
+
+<body class="font-sans">
+
+<header class="nav-glass sticky top-0 z-50">
+  <div class="container-x flex h-[78px] items-center justify-between">
+    <a href="#" class="flex items-center gap-3">
+      <div class="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-wine-800 to-wine-600 text-white shadow-soft">
+        <i data-lucide="moon-star" class="h-5 w-5"></i>
+      </div>
+      <div>
+        <div class="font-display text-[25px] font-bold leading-none text-wine-800">Asfar Tour</div>
+        <div class="mt-1 text-[10px] font-semibold uppercase tracking-[.14em] text-[#8D7469]">Jelas Rencananya, Terjamin Amanahnya.</div>
+      </div>
+    </a>
+
+    <nav class="hidden items-center gap-6 text-[13px] font-semibold text-[#4F3E44] lg:flex">
+      <a href="#paket" class="hover:text-wine-700">Paket Umroh</a>
+      <a href="#" class="hover:text-wine-700">Reguler</a>
+      <a href="#" class="hover:text-wine-700">Custom</a>
+      <a href="#" class="hover:text-wine-700">Jadwal</a>
+      <a href="#tentang" class="hover:text-wine-700">Tentang Kami</a>
+      <a href="#artikel" class="hover:text-wine-700">Artikel</a>
+      <a href="#galeri" class="hover:text-wine-700">Galeri</a>
+      <a href="#kontak" class="hover:text-wine-700">Kontak</a>
+    </nav>
+
+    <a href="#kontak" class="hidden rounded-full bg-gradient-to-r from-wine-800 to-wine-600 px-5 py-3 text-xs font-bold text-white shadow-soft lg:inline-flex">Kontak Kami</a>
+
+    <button id="menuBtn" class="grid h-10 w-10 place-items-center rounded-xl border border-[#E2CCAA] bg-white lg:hidden">
+      <i data-lucide="menu" class="h-5 w-5"></i>
+    </button>
+  </div>
+
+  <div id="mobileMenu" class="hidden border-t border-[#E7D4B6] bg-[#FFF9F0] lg:hidden">
+    <div class="container-x grid gap-2 py-4 text-sm font-semibold">
+      <a href="#paket" class="rounded-lg px-3 py-2 hover:bg-white">Paket Umroh</a>
+      <a href="#" class="rounded-lg px-3 py-2 hover:bg-white">Reguler</a>
+      <a href="#" class="rounded-lg px-3 py-2 hover:bg-white">Custom</a>
+      <a href="#" class="rounded-lg px-3 py-2 hover:bg-white">Jadwal</a>
+      <a href="#tentang" class="rounded-lg px-3 py-2 hover:bg-white">Tentang Kami</a>
+      <a href="#artikel" class="rounded-lg px-3 py-2 hover:bg-white">Artikel</a>
+      <a href="#galeri" class="rounded-lg px-3 py-2 hover:bg-white">Galeri</a>
+      <a href="#kontak" class="rounded-lg px-3 py-2 hover:bg-white">Kontak</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero-premium relative overflow-hidden">
+  <div class="hero-bg-glow hero-glow-a"></div>
+  <div class="hero-bg-glow hero-glow-b"></div>
+  <div class="hero-bg-glow hero-glow-c"></div>
+
+  <div class="container-x relative z-10 grid min-h-[820px] items-center gap-14 py-16 lg:grid-cols-[.92fr_1.08fr] lg:py-24">
+    <div class="max-w-[620px] reveal">
+      <div class="eyebrow">Asfar Tour</div>
+
+      <h1 class="mt-5 font-display text-[52px] font-bold leading-[1.04] tracking-[-.03em] text-wine-800 sm:text-[68px] lg:text-[76px]">
+        Jelas Rencananya, Terjamin Amanahnya.
+      </h1>
+
+      <p class="mt-6 max-w-[560px] text-[15px] leading-8 text-[#6D5A61]">
+        Pengalaman ibadah umroh yang khusyuk, nyaman, dan terarah bersama tim yang amanah.
+      </p>
+
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="#kontak" class="hero-cta-primary">FREE KONSULTASI</a>
+        <a href="#paket" class="hero-cta-secondary">Lihat Paket</a>
+      </div>
+    </div>
+
+    <div class="relative reveal">
+      <div class="hero-artboard hero-artboard-clean">
+        <div class="hero-arch-outline"></div>
+
+        <div class="hero-main-shot image-card">
+          <img src="https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1800&q=90" alt="Ka'bah dan jamaah umroh" class="h-full w-full object-cover object-center">
+          <div class="hero-main-overlay"></div>
+        </div>
+
+        <div class="hero-mini-stat hero-mini-stat-top">
+          <div class="hero-mini-dot"></div>
+          <span>Paket Umroh</span>
+        </div>
+
+        <div class="hero-mini-stat hero-mini-stat-bottom">
+          <div class="hero-mini-dot"></div>
+          <span>Kontak Kami</span>
+        </div>
+
+        <div class="hero-side-mini image-card">
+          <img src="https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=900&q=90" alt="Jamaah dan suasana umroh" class="h-full w-full object-cover object-center">
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- JOURNEY -->
+<section class="journey-editorial relative overflow-hidden py-24 lg:py-28">
+  <div class="container-x relative">
+    <div class="grid gap-12 lg:grid-cols-[.82fr_1.18fr] lg:items-start">
+      <div class="journey-editorial-intro reveal">
+        <div class="eyebrow">ALUR PERJALANAN</div>
+        <h2 class="mt-4 font-display text-[46px] font-bold leading-[1.04] text-wine-800 sm:text-[56px]">Alur Perjalanan yang Kami Jalankan</h2>
+        <div class="mt-6 rule"></div>
+        <p class="mt-6 max-w-[470px] text-sm leading-7 text-[#756269]">Setiap tahap dibuat jelas sejak awal, sehingga jamaah tahu apa yang harus dipersiapkan, kapan proses berjalan, dan siapa yang mendampingi.</p>
+
+        <div class="journey-photo-wrap mt-10">
+          <img src="https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1300&q=90" alt="Perjalanan jamaah umroh">
+          <div class="journey-photo-overlay"></div>
+          <div class="journey-photo-caption">
+            <div class="text-[10px] font-extrabold uppercase tracking-[.16em] text-gold-300">Asfar Tour</div>
+            <div class="mt-2 font-display text-[27px] font-bold leading-tight text-white">Dari persiapan hingga pulang, satu alur yang terarah.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="journey-flow reveal">
+        <div class="journey-flow-line"></div>
+        
+        <article class="journey-flow-item">
+          <div class="journey-flow-icon" style="background:linear-gradient(145deg,#FFF5D9,#EACB8B);color:#7A5520">
+            <i data-lucide="clipboard-list" class="h-6 w-6"></i>
+          </div>
+          <div class="journey-flow-content">
+            <div class="journey-flow-topline">
+              <span class="journey-flow-label">DAFTAR & KONSULTASI</span>
+              <span class="journey-flow-num">01</span>
+            </div>
+            <h3 class="mt-2 font-display text-[29px] font-bold text-wine-800">Registrasi</h3>
+            <p class="mt-2 text-[13px] leading-6 text-[#756269]">Konsultasi & pilih paket yang sesuai.</p>
+          </div>
+        </article>
+
+        <article class="journey-flow-item">
+          <div class="journey-flow-icon" style="background:linear-gradient(145deg,#FFF0F4,#ECC8D4);color:#64132E">
+            <i data-lucide="wallet-cards" class="h-6 w-6"></i>
+          </div>
+          <div class="journey-flow-content">
+            <div class="journey-flow-topline">
+              <span class="journey-flow-label">DP / PELUNASAN</span>
+              <span class="journey-flow-num">02</span>
+            </div>
+            <h3 class="mt-2 font-display text-[29px] font-bold text-wine-800">Pembayaran</h3>
+            <p class="mt-2 text-[13px] leading-6 text-[#756269]">Skema biaya jelas, konfirmasi transparan.</p>
+          </div>
+        </article>
+
+        <article class="journey-flow-item">
+          <div class="journey-flow-icon" style="background:linear-gradient(145deg,#F0FAF3,#D4E8DA);color:#347949">
+            <i data-lucide="book-open-check" class="h-6 w-6"></i>
+          </div>
+          <div class="journey-flow-content">
+            <div class="journey-flow-topline">
+              <span class="journey-flow-label">MANASIK & DOKUMEN</span>
+              <span class="journey-flow-num">03</span>
+            </div>
+            <h3 class="mt-2 font-display text-[29px] font-bold text-wine-800">Persiapan Umroh</h3>
+            <p class="mt-2 text-[13px] leading-6 text-[#756269]">Manasik, perlengkapan, dan dokumen.</p>
+          </div>
+        </article>
+
+        <article class="journey-flow-item">
+          <div class="journey-flow-icon" style="background:linear-gradient(145deg,#EEF6FC,#D3E6F2);color:#326D96">
+            <i data-lucide="plane-takeoff" class="h-6 w-6"></i>
+          </div>
+          <div class="journey-flow-content">
+            <div class="journey-flow-topline">
+              <span class="journey-flow-label">BERANGKAT BARENG</span>
+              <span class="journey-flow-num">04</span>
+            </div>
+            <h3 class="mt-2 font-display text-[29px] font-bold text-wine-800">Keberangkatan</h3>
+            <p class="mt-2 text-[13px] leading-6 text-[#756269]">Briefing & pendampingan sebelum berangkat.</p>
+          </div>
+        </article>
+
+        <article class="journey-flow-item">
+          <div class="journey-flow-icon" style="background:linear-gradient(145deg,#FFF5D9,#EACB8B);color:#7A5520">
+            <i data-lucide="heart-handshake" class="h-6 w-6"></i>
+          </div>
+          <div class="journey-flow-content">
+            <div class="journey-flow-topline">
+              <span class="journey-flow-label">BIMBINGAN IBADAH</span>
+              <span class="journey-flow-num">05</span>
+            </div>
+            <h3 class="mt-2 font-display text-[29px] font-bold text-wine-800">Ibadah</h3>
+            <p class="mt-2 text-[13px] leading-6 text-[#756269]">Bimbingan ibadah sepanjang perjalanan.</p>
+          </div>
+        </article>
+
+        <article class="journey-flow-item">
+          <div class="journey-flow-icon" style="background:linear-gradient(145deg,#FFF0F4,#ECC8D4);color:#64132E">
+            <i data-lucide="house-check" class="h-6 w-6"></i>
+          </div>
+          <div class="journey-flow-content">
+            <div class="journey-flow-topline">
+              <span class="journey-flow-label">PULANG AMAN</span>
+              <span class="journey-flow-num">06</span>
+            </div>
+            <h3 class="mt-2 font-display text-[29px] font-bold text-wine-800">Kepulangan</h3>
+            <p class="mt-2 text-[13px] leading-6 text-[#756269]">Kontrol perjalanan sampai tiba di tanah air.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- SYSTEM -->
+<section id="tentang" class="soft-bg py-24 lg:py-28">
+  <div class="container-x grid items-center gap-12 lg:grid-cols-[1.12fr_.88fr]">
+    <div class="relative reveal">
+      <div class="image-card min-h-[620px] rounded-[34px] shadow-luxe">
+        <img src="https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1900&q=90" alt="Perjalanan umroh" class="absolute inset-0 h-full w-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-wine-950/70 via-transparent to-transparent"></div>
+      </div>
+      <div class="surface absolute -bottom-8 -right-4 hidden max-w-[330px] rounded-[26px] p-6 lg:block">
+        <div class="eyebrow">Asfar Tour</div>
+        <div class="mt-2 font-display text-[28px] font-bold text-wine-800">Jelas prosesnya. Tenang perjalanannya.</div>
+      </div>
+    </div>
+
+    <div class="reveal">
+      <div class="eyebrow">Tentang Sistem Kami</div>
+      <h2 class="mt-4 font-display text-[46px] font-bold leading-[1.03] text-wine-800 sm:text-[54px]">Sistem Perjalanan yang Jelas, Bukan Sekadar Janji</h2>
+      <div class="mt-6 rule"></div>
+
+      <div class="mt-9 space-y-4">
+        <div class="surface rounded-[22px] p-5"><h3 class="font-display text-[25px] font-bold text-wine-800">Transparansi Biaya</h3><p class="mt-2 text-sm leading-7 text-[#756269]">Rincian biaya jelas sejak awal, tanpa kejutan di tengah jalan.</p></div>
+        <div class="surface rounded-[22px] p-5"><h3 class="font-display text-[25px] font-bold text-wine-800">Timeline Terencana</h3><p class="mt-2 text-sm leading-7 text-[#756269]">Jadwal terstruktur dari pendaftaran sampai kepulangan.</p></div>
+        <div class="surface rounded-[22px] p-5"><h3 class="font-display text-[25px] font-bold text-wine-800">Pendampingan Ibadah</h3><p class="mt-2 text-sm leading-7 text-[#756269]">Pembimbing berpengalaman memastikan ibadah lebih tenang dan khusyuk.</p></div>
+        <div class="surface rounded-[22px] p-5"><h3 class="font-display text-[25px] font-bold text-wine-800">Sistem Terstruktur</h3><p class="mt-2 text-sm leading-7 text-[#756269]">Proses administrasi, keberangkatan, dan pelayanan berjalan rapi.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- IMPORTANT -->
+<section class="important-premium relative overflow-hidden py-22 text-white">
+  <div class="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(214,169,91,.16),transparent_26rem)]"></div>
+  <div class="container-x relative z-10 grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-end">
+    <div class="reveal">
+      <div class="eyebrow !text-[#F2CD7A]">PENTING DIKETAHUI</div>
+      <h2 class="mt-4 font-display text-[44px] font-bold leading-[1.07] text-white sm:text-[54px]">
+        Banyak Jamaah Gagal Berangkat Bukan Karena Niat, Tapi Karena Salah Pilih Travel
+      </h2>
+    </div>
+    <div class="reveal">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="surface-dark-strong rounded-[20px] p-5">Biaya tiba-tiba berubah di tengah jalan</div>
+        <div class="surface-dark-strong rounded-[20px] p-5">Minimnya informasi & komunikasi</div>
+        <div class="surface-dark-strong rounded-[20px] p-5">Jadwal keberangkatan tidak jelas</div>
+        <div class="surface-dark-strong rounded-[20px] p-5">Takut tertipu travel yang tidak amanah</div>
+      </div>
+      <blockquote class="mt-8 border-l-2 border-[#F2CD7A] pl-5 font-display text-[24px] leading-snug text-[#F9EED3]">
+        “Kami memahami kekhawatiran itu. Karena itu, kami hadir dengan sistem yang jelas dan transparan.”
+      </blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<section id="galeri" class="light-bg py-24 lg:py-28">
+  <div class="container-x">
+    <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between reveal">
+      <div>
+        <div class="eyebrow">Galeri Perjalanan</div>
+        <h2 class="mt-3 font-display text-[46px] font-bold text-wine-800 sm:text-[54px]">Galeri Perjalanan</h2>
+        <p class="mt-3 text-sm text-[#77656C]">Momen-momen berharga selama perjalanan jamaah.</p>
+      </div>
+      <div class="text-[11px] font-extrabold uppercase tracking-[.16em] text-[#A8742F]">OUR HISTORY</div>
+    </div>
+
+    <div class="mt-10 grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
+      <figure class="image-card min-h-[590px] rounded-[32px] shadow-luxe reveal">
+        <img src="https://images.unsplash.com/photo-1564769625905-50e93615e769?auto=format&fit=crop&w=1900&q=90" alt="Dokumentasi 1" class="absolute inset-0 h-full w-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#230815]/70 via-transparent to-transparent"></div>
+        <figcaption class="absolute bottom-6 left-6 z-10 text-sm font-semibold text-white">Dokumentasi 1</figcaption>
+      </figure>
+      <div class="grid gap-5">
+        <figure class="image-card min-h-[285px] rounded-[30px] shadow-soft reveal">
+          <img src="https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1400&q=90" alt="Dokumentasi 2" class="absolute inset-0 h-full w-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-[#230815]/60 via-transparent to-transparent"></div>
+          <figcaption class="absolute bottom-5 left-5 z-10 text-sm font-semibold text-white">Dokumentasi 2</figcaption>
+        </figure>
+        <figure class="image-card min-h-[285px] rounded-[30px] shadow-soft reveal">
+          <img src="https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?auto=format&fit=crop&w=1400&q=90" alt="Dokumentasi 3" class="absolute inset-0 h-full w-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-[#230815]/60 via-transparent to-transparent"></div>
+          <figcaption class="absolute bottom-5 left-5 z-10 text-sm font-semibold text-white">Dokumentasi 3</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OFFER -->
+<section class="offer-premium relative overflow-hidden py-24 lg:py-28 text-white">
+  <img src="https://images.unsplash.com/photo-1564769625905-50e93615e769?auto=format&fit=crop&w=2400&q=90" alt="Masjidil Haram" class="absolute inset-0 h-full w-full object-cover object-center">
+  <div class="offer-overlay-strong absolute inset-0"></div>
+
+  <div class="container-x relative z-10 grid gap-10 lg:grid-cols-[.88fr_1.12fr] lg:items-start">
+    <div class="offer-left-panel reveal">
+      <div class="eyebrow !text-[#F2CD7A]">Apa yang Kami Tawarkan?</div>
+      <h2 class="mt-4 font-display text-[46px] font-bold leading-tight text-white sm:text-[54px]">Apa yang Kami Tawarkan?</h2>
+    </div>
+
+    <div class="offer-simple-panel reveal">
+      <div class="offer-simple-item">
+        <div class="offer-simple-num">01</div>
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#F2CD7A]">Legalitas Terjamin</div>
+          <h3 class="mt-2 font-display text-[27px] font-bold text-white">Legalitas Terjamin</h3>
+          <p class="mt-2 text-sm leading-7 text-white/82">Travel berizin resmi dengan informasi keberangkatan yang jelas.</p>
+        </div>
+      </div>
+
+      <div class="offer-simple-item">
+        <div class="offer-simple-num">02</div>
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#F2CD7A]">Pembimbing Profesional</div>
+          <h3 class="mt-2 font-display text-[27px] font-bold text-white">Pembimbing Profesional</h3>
+          <p class="mt-2 text-sm leading-7 text-white/82">Ustadz berpengalaman mendampingi jamaah sejak manasik hingga pulang.</p>
+        </div>
+      </div>
+
+      <div class="offer-simple-item">
+        <div class="offer-simple-num">03</div>
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#F2CD7A]">Akomodasi Terbaik</div>
+          <h3 class="mt-2 font-display text-[27px] font-bold text-white">Akomodasi Terbaik</h3>
+          <p class="mt-2 text-sm leading-7 text-white/82">Pilihan hotel nyaman yang menyesuaikan kelas paket.</p>
+        </div>
+      </div>
+
+      <div class="offer-simple-item">
+        <div class="offer-simple-num">04</div>
+        <div>
+          <div class="text-[11px] font-extrabold uppercase tracking-[.14em] text-[#F2CD7A]">Layanan Menyeluruh</div>
+          <h3 class="mt-2 font-display text-[27px] font-bold text-white">Layanan Menyeluruh</h3>
+          <p class="mt-2 text-sm leading-7 text-white/82">Visa, tiket, manasik, perlengkapan, dan dokumen ditangani satu tim.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PACKAGES -->
+<section id="paket" class="light-bg py-24 lg:py-28">
+  <div class="container-x">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between reveal">
+      <div>
+        <div class="eyebrow">PAKET UMROH KAMI</div>
+        <h2 class="mt-3 font-display text-[46px] font-bold text-wine-800 sm:text-[54px]">PAKET UMROH KAMI</h2>
+        <p class="mt-4 max-w-[640px] text-sm leading-7 text-[#756269]">
+          Tampilan ini dirancang agar tetap menarik untuk jamaah dan tetap mudah dikelola ketika data paket diambil langsung dari database.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="package-filter active" data-filter="all">Semua</button>
+        <button class="package-filter" data-filter="reguler">Reguler</button>
+        <button class="package-filter" data-filter="custom">Custom</button>
+      </div>
+    </div>
+
+    <div class="package-shell mt-10 reveal">
+      <div class="mb-5 flex items-center justify-between gap-4">
+        <div class="text-[11px] font-extrabold uppercase tracking-[.14em] text-gold-600">Paket Tersedia</div>
+        <div class="flex items-center gap-2">
+          <button id="packagePrev" class="slider-nav"><i data-lucide="arrow-left" class="h-4 w-4"></i></button>
+          <button id="packageNext" class="slider-nav"><i data-lucide="arrow-right" class="h-4 w-4"></i></button>
+        </div>
+      </div>
+      <div id="packageSlider" class="package-slider"></div>
+    </div>
+
+    <div class="mt-8 text-center">
+      <a href="#" class="inline-flex items-center gap-2 text-sm font-bold text-wine-700">
+        Lihat Paket Lainnya
+        <i data-lucide="arrow-right" class="h-4 w-4"></i>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIAL -->
+<section class="soft-bg py-24 lg:py-28">
+  <div class="container-x">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between reveal">
+      <div>
+        <div class="eyebrow">Kesan Jamaah</div>
+        <h2 class="mt-4 font-display text-[46px] font-bold text-wine-800 sm:text-[54px]">Kesan Jamaah</h2>
+        <div class="mt-6 rule"></div>
+        <p class="mt-5 max-w-[620px] text-sm leading-7 text-[#756269]">
+          Pengalaman jamaah menjadi gambaran nyata tentang pelayanan dan pendampingan selama perjalanan.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="testimonialPrev" class="slider-nav"><i data-lucide="arrow-left" class="h-4 w-4"></i></button>
+        <button id="testimonialNext" class="slider-nav"><i data-lucide="arrow-right" class="h-4 w-4"></i></button>
+      </div>
+    </div>
+
+    <div id="testimonialSlider" class="testimonial-slider mt-10 reveal">
+      <article class="testimonial-slide-card">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-gold-500">★★★★★</span>
+          <span class="testimonial-avatar">BH</span>
+        </div>
+        <p class="mt-6 font-display text-[26px] leading-snug text-wine-800">“Paket basic-nya rapi, jelas, dan sangat membantu untuk jamaah pertama kali.”</p>
+        <div class="mt-7 border-t border-[#ead8bb] pt-5 text-sm font-bold text-wine-800">Bapak Hendra S., Jakarta</div>
+      </article>
+
+      <article class="testimonial-slide-card">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-gold-500">★★★★★</span>
+          <span class="testimonial-avatar bg-[#e8f2ea] text-[#357C4B]">KP</span>
+        </div>
+        <p class="mt-6 font-display text-[26px] leading-snug text-wine-800">“Paket regular paling pas untuk keluarga kami, layanan tim sangat responsif.”</p>
+        <div class="mt-7 border-t border-[#ead8bb] pt-5 text-sm font-bold text-wine-800">Keluarga Pak Ridwan, Surabaya</div>
+      </article>
+
+      <article class="testimonial-slide-card">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-gold-500">★★★★★</span>
+          <span class="testimonial-avatar bg-[#f3e4ea] text-wine-700">IP</span>
+        </div>
+        <p class="mt-6 font-display text-[26px] leading-snug text-wine-800">“Pengalaman premium sangat terasa, dari hotel sampai pendampingan ibadah.”</p>
+        <div class="mt-7 border-t border-[#ead8bb] pt-5 text-sm font-bold text-wine-800">Ibu Prof. Aminah, Bandung</div>
+      </article>
+
+      <article class="testimonial-slide-card">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-gold-500">★★★★★</span>
+          <span class="testimonial-avatar">BH</span>
+        </div>
+        <p class="mt-6 font-display text-[26px] leading-snug text-wine-800">“Alhamdulillah, paket hemat tapi pelayanannya tidak murahan. Pembimbing sangat sabar dan hotel cukup nyaman.”</p>
+        <div class="mt-7 border-t border-[#ead8bb] pt-5 text-sm font-bold text-wine-800">Bapak Hendra S., Jakarta</div>
+      </article>
+
+      <article class="testimonial-slide-card">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-gold-500">★★★★★</span>
+          <span class="testimonial-avatar bg-[#f4ead3] text-[#8d6423]">IS</span>
+        </div>
+        <p class="mt-6 font-display text-[26px] leading-snug text-wine-800">“Pertama kali umroh dan sangat terbantu dengan manasik yang lengkap. Harga terjangkau untuk kualitas ini.”</p>
+        <div class="mt-7 border-t border-[#ead8bb] pt-5 text-sm font-bold text-wine-800">Ibu Sari W., Bekasi</div>
+      </article>
+
+      <article class="testimonial-slide-card">
+        <div class="flex items-center justify-between gap-4">
+          <span class="text-gold-500">★★★★★</span>
+          <span class="testimonial-avatar bg-[#e8f2ea] text-[#357C4B]">KP</span>
+        </div>
+        <p class="mt-6 font-display text-[26px] leading-snug text-wine-800">“Kami sekeluarga 4 orang sangat puas. Hotel dekat, pembimbing profesional, dan semua urusan dibantu tim Asfar.”</p>
+        <div class="mt-7 border-t border-[#ead8bb] pt-5 text-sm font-bold text-wine-800">Keluarga Pak Ridwan, Surabaya</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ARTICLE -->
+<section id="artikel" class="light-bg py-24 lg:py-28">
+  <div class="container-x">
+    <div class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between reveal">
+      <div>
+        <div class="eyebrow">Artikel</div>
+        <h2 class="mt-3 font-display text-[46px] font-bold text-wine-800 sm:text-[54px]">News & Update Terbaru</h2>
+      </div>
+      <a href="#" class="text-sm font-bold text-wine-700">Lihat Semua Artikel</a>
+    </div>
+
+    <div class="mt-10 grid gap-6 lg:grid-cols-12">
+      <article class="surface overflow-hidden rounded-[30px] lg:col-span-7 reveal">
+        <div class="image-card h-[380px]"><img src="https://images.unsplash.com/photo-1564769625905-50e93615e769?auto=format&fit=crop&w=1700&q=90" alt="Doloribus delectus" class="h-full w-full object-cover"></div>
+        <div class="p-7"><h3 class="font-display text-[32px] font-bold text-wine-800">Doloribus delectus</h3><p class="mt-3 text-sm text-[#756269]">Molestiae laborum si</p><a href="#" class="mt-5 inline-block text-sm font-bold text-wine-700">Baca selengkapnya</a></div>
+      </article>
+
+      <div class="grid gap-6 lg:col-span-5">
+        <article class="surface overflow-hidden rounded-[26px] reveal"><div class="grid sm:grid-cols-[.9fr_1.1fr]"><div class="image-card min-h-[220px]"><img src="https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1200&q=90" alt="Doloribus delectus" class="absolute inset-0 h-full w-full object-cover"></div><div class="p-6"><h3 class="font-display text-[25px] font-bold text-wine-800">Doloribus delectus</h3><p class="mt-2 text-sm text-[#756269]">Molestiae laborum si</p><a href="#" class="mt-4 inline-block text-xs font-bold text-wine-700">Baca selengkapnya</a></div></div></article>
+        <article class="surface overflow-hidden rounded-[26px] reveal"><div class="grid sm:grid-cols-[.9fr_1.1fr]"><div class="image-card min-h-[220px]"><img src="https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?auto=format&fit=crop&w=1200&q=90" alt="Doloribus delectus" class="absolute inset-0 h-full w-full object-cover"></div><div class="p-6"><h3 class="font-display text-[25px] font-bold text-wine-800">Doloribus delectus</h3><p class="mt-2 text-sm text-[#756269]">Molestiae laborum si</p><a href="#" class="mt-4 inline-block text-xs font-bold text-wine-700">Baca selengkapnya</a></div></div></article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="relative min-h-[540px] overflow-hidden text-white">
+  <img src="https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=2400&q=90" alt="Tanah Suci" class="absolute inset-0 h-full w-full object-cover object-center">
+  <div class="hero-overlay absolute inset-0"></div>
+  <div class="container-x relative z-10 flex min-h-[540px] items-center py-20">
+    <div class="max-w-[780px] reveal">
+      <div class="eyebrow !text-gold-300">Konsultasi Gratis</div>
+      <h2 class="mt-4 font-display text-[48px] font-bold leading-[1.03] sm:text-[61px]">AYO WUJUDKAN IBADAH KE TANAH SUCI BARENG <span class="text-gold-300">Asfar Tour</span></h2>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="#kontak" class="rounded-full bg-gradient-to-r from-[#18A95D] to-[#2BC875] px-6 py-3.5 text-sm font-bold text-white shadow-lg">Konsultasi WhatsApp</a>
+        <a href="#paket" class="rounded-full bg-[#FFF5DB] px-6 py-3.5 text-sm font-bold text-wine-800">Lihat Paket</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="kontak" class="soft-bg py-16">
+  <div class="container-x grid gap-8 lg:grid-cols-[1.25fr_.75fr_.75fr]">
+    <div><div class="eyebrow">Alamat</div><p class="mt-3 max-w-[620px] text-sm leading-7 text-[#756269]">Casa pesanggrahan, 2 no B6, Jl. H. Sulaiman, Petukangan Utara, Kec. Pesanggrahan, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12260</p></div>
+    <div><div class="eyebrow">Kontak</div><p class="mt-3 text-sm leading-7 text-[#756269]">08137892647<br><a class="font-semibold text-wine-700" href="mailto:info@asfartour.co.id">info@asfartour.co.id</a></p></div>
+    <div><div class="eyebrow">Jam Operasional</div><p class="mt-3 text-sm leading-7 text-[#756269]">Senin - Jumat, 08.00 - 17.00<br>Sabtu, 09.00 - 14.00</p></div>
+  </div>
+</section>
+
+<footer class="bg-gradient-to-br from-wine-950 via-wine-800 to-wine-950 py-14 text-white">
+  <div class="container-x grid gap-10 lg:grid-cols-[1.25fr_.75fr_.75fr_.9fr]">
+    <div>
+      <div class="font-display text-[31px] font-bold">Asfar Tour</div>
+      <div class="mt-2 text-sm font-semibold text-gold-300">Jelas Rencananya, Terjamin Amanahnya.</div>
+      <p class="mt-4 max-w-[440px] text-[12px] leading-6 text-white/65">Wujudkan perjalanan suci Anda dengan layanan umroh yang amanah, profesional, dan terpercaya.</p>
+    </div>
+    <div><div class="font-bold text-gold-300">Perusahaan</div><div class="mt-4 grid gap-2 text-[12px] text-white/68"><a href="#">Tentang Kami</a><a href="#">Legalitas</a><a href="#">Kontak</a><a href="#">Karier</a></div></div>
+    <div><div class="font-bold text-gold-300">Jelajah</div><div class="mt-4 grid gap-2 text-[12px] text-white/68"><a href="#">Paket Umroh</a><a href="#">Jadwal</a><a href="#">Layanan</a><a href="#">Artikel</a></div></div>
+    <div><div class="font-bold text-gold-300">Kebijakan</div><div class="mt-4 grid gap-2 text-[12px] text-white/68"><a href="#">FAQ</a><a href="#">Syarat & Ketentuan</a><a href="#">Kebijakan Privasi</a><a href="#">Kebijakan Refund</a><a href="#">Disclaimer</a></div></div>
+  </div>
+  <div class="container-x mt-10 border-t border-white/10 pt-6 text-[11px] text-white/50">(c) 2026 Asfar Tour. Semua hak dilindungi.</div>
+</footer>
+
+<script>
+  lucide.createIcons();
+  document.getElementById('menuBtn')?.addEventListener('click',()=>document.getElementById('mobileMenu')?.classList.toggle('hidden'));
+
+  const observer = new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting) entry.target.classList.add('show');
+    });
+  },{threshold:.08});
+
+
+  // ===== Package data demo =====
+  // In production, replace this array with JSON/API data from your Laravel / Node / backend database.
+  const packageData = [
+    {
+      id: 1,
+      type: 'reguler',
+      name: 'Umroh Basic 9 Hari',
+      city: 'Jakarta',
+      duration: '9 hari',
+      airline: 'Saudia Airlines',
+      hotel: 'Hotel area Ajyad / setara',
+      departure: '2026-08-18',
+      price: 29029000,
+      badge: 'EARLY BIRD',
+      featured: true,
+      rating: 5.0,
+      reviewCount: 1,
+      description: 'Paket basic untuk jamaah yang mengutamakan harga terjangkau dengan layanan inti lengkap.',
+      image: 'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1400&q=90'
+    },
+    {
+      id: 2,
+      type: 'custom',
+      name: 'test 1',
+      city: 'Surabaya',
+      duration: '9 hari',
+      airline: '',
+      hotel: '',
+      departure: '2026-08-31',
+      price: 35200000,
+      badge: 'HEMAT 12%',
+      featured: true,
+      rating: null,
+      reviewCount: null,
+      description: 'test',
+      image: 'https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?auto=format&fit=crop&w=1400&q=90'
+    },
+    {
+      id: 3,
+      type: 'reguler',
+      name: 'Umroh Regular 10 Hari',
+      city: 'Jakarta',
+      duration: '10 hari',
+      airline: 'Garuda Indonesia',
+      hotel: 'Hotel bintang 4 dekat Masjidil Haram',
+      departure: '2026-10-06',
+      price: 36708000,
+      badge: 'FAMILY DEAL',
+      featured: true,
+      rating: 5.0,
+      reviewCount: 1,
+      description: 'Paket seimbang untuk keluarga dan jamaah umum dengan hotel nyaman serta pembimbing berpengalaman.',
+      image: 'https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1400&q=90'
+    }
+  ];
+
+  const packageSlider = document.getElementById('packageSlider');
+  const formatRupiah = value => new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    maximumFractionDigits: 0
+  }).format(value);
+
+  function packageCard(p){
+    const fallbackImage = 'https://images.unsplash.com/photo-1565552645632-d725f8bfc19a?auto=format&fit=crop&w=1400&q=90';
+    const imageSrc = p.image || fallbackImage;
+
+    const rating = p.rating
+      ? `<div class="flex items-center gap-2 text-[11px]"><span class="text-gold-500">★★★★★</span><strong>${p.rating.toFixed(1)}</strong><span class="text-[#8B747B]">(${p.reviewCount ?? 0})</span></div>`
+      : `<div class="text-[11px] text-[#9B868D]">${p.type === 'custom' ? 'Custom Package' : 'Paket Umroh'}</div>`;
+
+    const specs = [
+      p.airline ? `<div class="package-db-spec"><i data-lucide="plane" class="h-4 w-4"></i><span>${p.airline}</span></div>` : '',
+      p.hotel ? `<div class="package-db-spec"><i data-lucide="hotel" class="h-4 w-4"></i><span>${p.hotel}</span></div>` : '',
+      `<div class="package-db-spec"><i data-lucide="calendar-days" class="h-4 w-4"></i><span>Berangkat ${p.departure}</span></div>`
+    ].join('');
+
+    return `
+      <article class="package-db-card" data-type="${p.type}">
+        <div class="package-db-image">
+          <img src="${imageSrc}" alt="${p.name}" onerror="this.onerror=null;this.src='${fallbackImage}'">
+          <div class="package-db-image-shade"></div>
+
+          <div class="package-db-topchips">
+            <span class="package-db-badge">${p.badge || 'Paket Umroh'}</span>
+            ${p.featured ? '<span class="package-db-featured">Featured</span>' : ''}
+          </div>
+
+          <div class="package-db-bottommeta">
+            <div class="package-db-loc">${p.duration} • ${p.city}</div>
+          </div>
+        </div>
+
+        <div class="package-db-content">
+          <h3 class="package-db-title">${p.name}</h3>
+
+          <div class="package-db-specbox">
+            ${specs}
+          </div>
+
+          <div class="package-db-priceblock">
+            <div class="package-db-price-label">Mulai dari</div>
+            <div class="package-db-price">${formatRupiah(p.price)}</div>
+          </div>
+
+          <p class="package-db-desc">${p.description}</p>
+
+          <div class="package-db-footer">
+            ${rating}
+            <a class="package-db-link" href="/paket/${p.id}">
+              Lihat Detail
+              <i data-lucide="arrow-up-right" class="h-4 w-4"></i>
+            </a>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderPackages(filter='all'){
+    if(!packageSlider) return;
+    const list = filter === 'all'
+      ? packageData
+      : packageData.filter(p => p.type === filter);
+    packageSlider.innerHTML = list.map(packageCard).join('');
+    lucide.createIcons();
+    packageSlider.scrollTo({left:0, behavior:'smooth'});
+  }
+
+  renderPackages();
+
+  document.querySelectorAll('.package-filter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.package-filter').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderPackages(btn.dataset.filter);
+    });
+  });
+
+  document.getElementById('packageNext')?.addEventListener('click', () => {
+    packageSlider?.scrollBy({left: 380, behavior:'smooth'});
+  });
+  document.getElementById('packagePrev')?.addEventListener('click', () => {
+    packageSlider?.scrollBy({left: -380, behavior:'smooth'});
+  });
+
+  // ===== Testimonial slider =====
+  const testimonialSlider = document.getElementById('testimonialSlider');
+  document.getElementById('testimonialNext')?.addEventListener('click', () => {
+    testimonialSlider?.scrollBy({left: Math.max(320, testimonialSlider.clientWidth * .72), behavior:'smooth'});
+  });
+  document.getElementById('testimonialPrev')?.addEventListener('click', () => {
+    testimonialSlider?.scrollBy({left: -Math.max(320, testimonialSlider.clientWidth * .72), behavior:'smooth'});
+  });
+
+  document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+  // testimonial carousel
+  const testimonialTrack = document.getElementById('testimonialTrack');
+  const testimonialSlides = testimonialTrack ? Array.from(testimonialTrack.children) : [];
+  const dotsWrap = document.getElementById('testimonialDots');
+  let currentTestimonial = 0;
+
+  function buildDots(){
+    if(!dotsWrap || !testimonialSlides.length) return;
+    dotsWrap.innerHTML = '';
+    testimonialSlides.forEach((_, i) => {
+      const b = document.createElement('button');
+      b.className = 'testimonial-dot' + (i === 0 ? ' active' : '');
+      b.setAttribute('aria-label', 'Go to testimonial ' + (i + 1));
+      b.addEventListener('click', () => goToTestimonial(i));
+      dotsWrap.appendChild(b);
+    });
+  }
+
+  function goToTestimonial(index){
+    if(!testimonialTrack || !testimonialSlides.length) return;
+    currentTestimonial = (index + testimonialSlides.length) % testimonialSlides.length;
+    testimonialTrack.style.transform = `translateX(-${currentTestimonial * 100}%)`;
+    if(dotsWrap){
+      [...dotsWrap.children].forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentTestimonial);
+      });
+    }
+  }
+
+  function nextTestimonial(){
+    goToTestimonial(currentTestimonial + 1);
+  }
+
+  function prevTestimonial(){
+    goToTestimonial(currentTestimonial - 1);
+  }
+
+  buildDots();
+  document.getElementById('testimonialNext')?.addEventListener('click', nextTestimonial);
+  document.getElementById('testimonialPrev')?.addEventListener('click', prevTestimonial);
+  document.getElementById('testimonialNextMobile')?.addEventListener('click', nextTestimonial);
+  document.getElementById('testimonialPrevMobile')?.addEventListener('click', prevTestimonial);
+
+</script>
+
+</body>
+</html>

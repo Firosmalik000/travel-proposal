@@ -18,10 +18,12 @@ import {
     packageHighlightIconOptions,
     type PackageHighlightItem,
 } from '@/lib/package-highlights';
+import { cn } from '@/lib/utils';
 import packages from '@/routes/packages';
 import { router, useForm } from '@inertiajs/react';
 import {
     BookOpenText,
+    Calculator,
     Camera,
     DollarSign,
     FileText,
@@ -35,14 +37,24 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { AllInPackageCard } from './AllInPackageCard';
+import { PackageOperationalCostCards } from './PackageOperationalCostCards';
 import { ProductSelector } from './ProductSelector';
+import {
+    calculateOperationalCostTotals,
+    normalizePackageOperationalCosts,
+} from './package-operational-costs';
 import type {
     ActivityOption,
     CurrencyOption,
     Itinerary,
     ItineraryInput,
     Package,
+    PackageAllInConfiguration,
     PackageFormData,
+    PackageHppEstimate,
+    PackageVendorOption,
+    ProductCategoryOption,
     ProductOption,
 } from './types';
 import { packageImageMimeTypes } from './types';
@@ -52,10 +64,28 @@ type Props = {
     productOptions: ProductOption[];
     currencies: CurrencyOption[];
     activityOptions: ActivityOption[];
+    productCategories: ProductCategoryOption[];
+    vendors: PackageVendorOption[];
     packageImageUploadMaxKilobytes: number;
     locale: 'id' | 'en';
     onSuccess: () => void;
 };
+
+function calculateEndDate(startDate: string, durationDays: number): string {
+    if (!startDate) {
+        return '';
+    }
+
+    const [year, month, day] = startDate.split('-').map(Number);
+    if (!year || !month || !day) {
+        return '';
+    }
+
+    const endDate = new Date(Date.UTC(year, month - 1, day));
+    endDate.setUTCDate(endDate.getUTCDate() + Math.max(1, durationDays) - 1);
+
+    return endDate.toISOString().slice(0, 10);
+}
 
 const indonesianDepartureCities = [
     'Jakarta',
@@ -207,6 +237,11 @@ function buildFormData(pkg: Package | null): PackageFormData {
         'name.en': nameEn,
         package_type: pkg?.package_type ?? 'reguler',
         departure_city: pkg?.departure_city ?? '',
+        start_date: pkg?.start_date ?? '',
+        end_date: pkg?.end_date ?? '',
+        seats_total: pkg?.seats_total ?? 45,
+        booking_status: pkg?.booking_status === 'closed' ? 'closed' : 'open',
+        departure_notes: pkg?.departure_notes ?? '',
         duration_days: durationDays,
         price: pkg?.price ?? 0,
         original_price: originalPrice,
@@ -225,6 +260,15 @@ function buildFormData(pkg: Package | null): PackageFormData {
         product_multipliers: pkg?.product_multipliers ?? {},
         is_featured: pkg?.is_featured ?? false,
         is_active: pkg?.is_active ?? true,
+        all_in: pkg?.all_in ?? {
+            enabled: false,
+            vendor_id: null,
+            period_id: null,
+            broker_package_name: '',
+            currency: 'IDR',
+            price_per_pax: null,
+            included_category_keys: [],
+        },
     };
 }
 
@@ -398,6 +442,134 @@ function formatCurrencyInputPreview(value: number | null): string {
     return `Rp ${value.toLocaleString('id-ID')}`;
 }
 
+function formatEstimateCurrency(value: number): string {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0,
+    }).format(value);
+}
+
+const estimateRoomCapacities = { dbl: 2, trpl: 3, quad: 4 } as const;
+
+function quadFirstEstimateRoomAllocation(
+    customerCount: number,
+    availableRoomTypes: Array<keyof typeof estimateRoomCapacities>,
+): Record<keyof typeof estimateRoomCapacities, number> {
+    const allocation = { dbl: 0, trpl: 0, quad: 0 };
+
+    if (customerCount < 1) {
+        return allocation;
+    }
+
+    if (availableRoomTypes.includes('quad')) {
+        allocation.quad = Math.floor(
+            customerCount / estimateRoomCapacities.quad,
+        );
+        const remainingPax = customerCount % estimateRoomCapacities.quad;
+
+        if (remainingPax === 3 && availableRoomTypes.includes('trpl')) {
+            allocation.trpl = 1;
+        } else if (remainingPax === 2 && availableRoomTypes.includes('dbl')) {
+            allocation.dbl = 1;
+        } else if (remainingPax === 1 && availableRoomTypes.includes('dbl')) {
+            allocation.dbl = 1;
+        } else if (remainingPax === 1 && availableRoomTypes.includes('trpl')) {
+            allocation.trpl = 1;
+        } else if (remainingPax > 0) {
+            allocation.quad += 1;
+        }
+
+        return allocation;
+    }
+
+    const fallbackRoomType = availableRoomTypes.includes('trpl')
+        ? 'trpl'
+        : availableRoomTypes.includes('dbl')
+          ? 'dbl'
+          : null;
+    if (fallbackRoomType) {
+        allocation[fallbackRoomType] = Math.ceil(
+            customerCount / estimateRoomCapacities[fallbackRoomType],
+        );
+    }
+
+    return allocation;
+}
+
+function getHotelRoomCountLimit(
+    allocation: Record<keyof typeof estimateRoomCapacities, number>,
+    roomType: keyof typeof estimateRoomCapacities,
+    customerCount: number,
+): number {
+    const otherAllocatedPax = (
+        Object.entries(allocation) as Array<
+            [keyof typeof estimateRoomCapacities, number]
+        >
+    ).reduce((total, [currentRoomType, roomCount]) => {
+        if (currentRoomType === roomType) {
+            return total;
+        }
+
+        return total + roomCount * estimateRoomCapacities[currentRoomType];
+    }, 0);
+
+    const remainingPax = Math.max(0, customerCount - otherAllocatedPax);
+
+    return Math.ceil(remainingPax / estimateRoomCapacities[roomType]);
+}
+
+function deriveCustomerPriceComposition(
+    customerCount: number,
+    allocation?: Record<keyof typeof estimateRoomCapacities, number>,
+): { single: number; dbl: number; trpl: number; quad: number } {
+    const composition = { single: 0, dbl: 0, trpl: 0, quad: 0 };
+    let remainingCustomers = Math.max(0, customerCount);
+
+    if (!allocation) {
+        composition.single = remainingCustomers;
+
+        return composition;
+    }
+
+    (['quad', 'trpl', 'dbl'] as const).forEach((roomType) => {
+        const allocatedCapacity =
+            Math.max(0, Number(allocation[roomType]) || 0) *
+            estimateRoomCapacities[roomType];
+        const allocatedCustomers = Math.min(
+            remainingCustomers,
+            allocatedCapacity,
+        );
+
+        composition[roomType] = allocatedCustomers;
+        remainingCustomers -= allocatedCustomers;
+    });
+
+    composition.single = remainingCustomers;
+
+    return composition;
+}
+
+function normalizeEstimateRoomType(
+    value?: string | null,
+): keyof typeof estimateRoomCapacities | null {
+    const normalized = (value ?? '').trim().toLowerCase();
+
+    if (normalized === 'dbl' || normalized === 'double') {
+        return 'dbl';
+    }
+
+    if (normalized === 'trpl' || normalized === 'triple') {
+        return 'trpl';
+    }
+
+    if (normalized === 'quad' || normalized === 'quadruple') {
+        return 'quad';
+    }
+
+    return null;
+}
+
 function SectionHeader({
     icon: Icon,
     title,
@@ -412,6 +584,30 @@ function SectionHeader({
             </div>
             <div>
                 <p className="text-sm font-semibold">{title}</p>
+            </div>
+        </div>
+    );
+}
+
+function InfoSectionHeading({
+    icon: Icon,
+    title,
+    description,
+}: {
+    icon: React.ElementType;
+    title: string;
+    description: string;
+}) {
+    return (
+        <div className="flex items-start gap-3 border-t border-border/70 pt-5">
+            <div className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary">
+                <Icon className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">{title}</p>
+                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+                    {description}
+                </p>
             </div>
         </div>
     );
@@ -494,6 +690,8 @@ export function PackageForm({
     productOptions,
     currencies,
     activityOptions,
+    productCategories,
+    vendors,
     packageImageUploadMaxKilobytes,
     locale,
     onSuccess,
@@ -565,6 +763,12 @@ export function PackageForm({
         form.setData((currentData) => ({
             ...currentData,
             duration_days: normalizedDurationDays,
+            end_date: currentData.start_date
+                ? calculateEndDate(
+                      currentData.start_date,
+                      normalizedDurationDays,
+                  )
+                : currentData.end_date,
             itineraries: normalizeItineraries(
                 normalizedDurationDays,
                 currentData.itineraries,
@@ -578,6 +782,63 @@ export function PackageForm({
         if (selectedDayNumber > normalizedDurationDays) {
             switchItineraryTab(`day-${normalizedDurationDays}`);
         }
+    }
+
+    function updateStartDate(startDate: string) {
+        form.setData((currentData) => ({
+            ...currentData,
+            start_date: startDate,
+            end_date: calculateEndDate(
+                startDate,
+                Number(currentData.duration_days) || 1,
+            ),
+        }));
+    }
+
+    function updateAllInConfiguration(
+        allInConfiguration: PackageAllInConfiguration,
+    ) {
+        form.setData((currentData) => {
+            const coveredCategoryKeys = allInConfiguration.enabled
+                ? new Set(allInConfiguration.included_category_keys)
+                : new Set<string>();
+            const retainedProductIds = currentData.product_ids.filter(
+                (productId) => {
+                    const product = productOptions.find(
+                        (option) => option.id === productId,
+                    );
+
+                    return (
+                        product === undefined ||
+                        !coveredCategoryKeys.has(product.product_type)
+                    );
+                },
+            );
+            const retainedProductIdKeys = new Set(
+                retainedProductIds.map(String),
+            );
+            const retainedMultipliers = Object.fromEntries(
+                Object.entries(currentData.product_multipliers).filter(
+                    ([productId]) => retainedProductIdKeys.has(productId),
+                ),
+            );
+            const retainedHotelBrokers = Object.fromEntries(
+                Object.entries(
+                    getHotelBrokerSelections(currentData.content),
+                ).filter(([productId]) => retainedProductIdKeys.has(productId)),
+            );
+
+            return {
+                ...currentData,
+                all_in: allInConfiguration,
+                product_ids: retainedProductIds,
+                product_multipliers: retainedMultipliers,
+                content: setHotelBrokerSelections(
+                    currentData.content,
+                    retainedHotelBrokers,
+                ),
+            };
+        });
     }
 
     function appendSelectedImages(selectedFiles: File[]) {
@@ -784,10 +1045,52 @@ export function PackageForm({
             ...currentData,
             product_ids: productIds,
             product_multipliers: productMultipliers,
-            content: setHotelBrokerSelections(
-                currentData.content,
-                hotelBrokerSelections,
-            ),
+            content: {
+                ...setHotelBrokerSelections(
+                    currentData.content,
+                    hotelBrokerSelections,
+                ),
+                hpp_currency_snapshots: productIds.reduce(
+                    (snapshots, productId) => {
+                        const currencyCode = String(
+                            productOptions.find(
+                                (product) => product.id === productId,
+                            )?.currency ?? 'IDR',
+                        ).toUpperCase();
+
+                        if (snapshots[currencyCode]) {
+                            return snapshots;
+                        }
+
+                        const liveCurrency = currencies.find(
+                            (currency) => currency.code === currencyCode,
+                        );
+
+                        return {
+                            ...snapshots,
+                            [currencyCode]: {
+                                currency: currencyCode,
+                                rate_to_idr:
+                                    currencyCode === 'IDR'
+                                        ? 1
+                                        : Number(
+                                              liveCurrency?.live_conversion_rate ??
+                                                  0,
+                                          ),
+                                source:
+                                    currencyCode === 'IDR'
+                                        ? 'identity'
+                                        : 'live',
+                                fetched_at:
+                                    liveCurrency?.rate_fetched_at ?? null,
+                            },
+                        };
+                    },
+                    {
+                        ...(currentData.content.hpp_currency_snapshots ?? {}),
+                    },
+                ),
+            },
         }));
     }
 
@@ -803,12 +1106,52 @@ export function PackageForm({
         const calculatedSellingPrice = hasDiscount
             ? Math.round(basePrice * (1 - discountPercentValue / 100))
             : basePrice;
+        const resolvedEstimate: PackageHppEstimate = {
+            ...hppEstimate,
+            customers: estimatedCustomers,
+            customers_is_manual: false,
+            product_quantities: estimateProductItems.reduce(
+                (quantities, item) => ({
+                    ...quantities,
+                    [String(item.product.id)]: item.quantity,
+                }),
+                {} as Record<string, number>,
+            ),
+            product_quantities_is_manual: estimateProductItems.reduce(
+                (manualStates, item) => ({
+                    ...manualStates,
+                    [String(item.product.id)]: item.quantityIsManual,
+                }),
+                {} as Record<string, boolean>,
+            ),
+            hotel_allocations: estimateHotelGroups.reduce(
+                (allocations, group) => ({
+                    ...allocations,
+                    [String(group.product.id)]: group.allocation,
+                }),
+                {} as NonNullable<PackageHppEstimate['hotel_allocations']>,
+            ),
+            hotel_allocations_unit: 'rooms',
+            hotel_allocations_is_manual: estimateHotelGroups.reduce(
+                (manualStates, group) => ({
+                    ...manualStates,
+                    [String(group.product.id)]: group.allocationIsManual,
+                }),
+                {} as Record<string, boolean>,
+            ),
+            tour_leader_fee: estimatedTourLeaderFee,
+            tour_leader_fee_is_manual: tourLeaderFeeIsManual,
+            muthawwif_fee: estimatedMuthawwifFee,
+            muthawwif_fee_is_manual: muthawwifFeeIsManual,
+        };
         const resolvedContent = normalizePackageContent({
             ...form.data.content,
+            hpp_estimate: resolvedEstimate,
             room_original_prices: {
                 dbl:
-                    normalizeRoomPriceValue(String(roomOriginalPrices.dbl ?? '')) ??
-                    null,
+                    normalizeRoomPriceValue(
+                        String(roomOriginalPrices.dbl ?? ''),
+                    ) ?? null,
                 trpl:
                     normalizeRoomPriceValue(
                         String(roomOriginalPrices.trpl ?? ''),
@@ -820,7 +1163,9 @@ export function PackageForm({
             },
             room_prices: {
                 dbl: calculateDiscountedPrice(
-                    normalizeRoomPriceValue(String(roomOriginalPrices.dbl ?? '')),
+                    normalizeRoomPriceValue(
+                        String(roomOriginalPrices.dbl ?? ''),
+                    ),
                     discountPercentValue,
                 ),
                 trpl: calculateDiscountedPrice(
@@ -848,12 +1193,21 @@ export function PackageForm({
         formData.append('name[en]', form.data['name.en']);
         formData.append('package_type', form.data.package_type);
         formData.append('departure_city', form.data.departure_city);
+        formData.append('start_date', form.data.start_date);
+        formData.append('end_date', form.data.end_date);
+        formData.append('seats_total', String(form.data.seats_total));
+        formData.append('booking_status', form.data.booking_status);
+        formData.append('departure_notes', form.data.departure_notes);
         formData.append('duration_days', String(form.data.duration_days));
         formData.append('price', String(calculatedSellingPrice));
         formData.append('original_price', hasDiscount ? String(basePrice) : '');
         formData.append('discount_label', form.data.discount_label ?? '');
         formData.append('discount_ends_at', form.data.discount_ends_at ?? '');
         formData.append('currency', form.data.currency);
+        formData.append(
+            'refresh_currency_rates',
+            form.data.refresh_currency_rates ? '1' : '0',
+        );
         formData.append('summary[id]', form.data['summary.id']);
         formData.append('summary[en]', form.data['summary.en']);
         formData.append('content', JSON.stringify(resolvedContent));
@@ -862,6 +1216,7 @@ export function PackageForm({
             'product_multipliers',
             JSON.stringify(form.data.product_multipliers ?? {}),
         );
+        formData.append('all_in', JSON.stringify(form.data.all_in));
         formData.append('is_featured', form.data.is_featured ? '1' : '0');
         formData.append('is_active', form.data.is_active ? '1' : '0');
         (form.data.product_ids ?? []).forEach((productId: number) =>
@@ -916,7 +1271,6 @@ export function PackageForm({
     const sellingPrice = hasDiscount
         ? Math.round(basePrice * (1 - discountPercent / 100))
         : basePrice;
-    const savingsAmount = hasDiscount ? basePrice - sellingPrice : 0;
     const generatedCodePreview = buildPackageCodePreview(
         form.data['name.id'] || form.data['name.en'],
         Number(form.data.duration_days) || 0,
@@ -965,6 +1319,421 @@ export function PackageForm({
             discountPercent,
         ),
     };
+    const hppEstimate = (contentObject.hpp_estimate ??
+        {}) as PackageHppEstimate;
+    const operationalCosts = normalizePackageOperationalCosts(
+        hppEstimate.operational_costs,
+    );
+    const hasOperationalCostConfiguration = Boolean(
+        hppEstimate.operational_costs,
+    );
+    const estimatedCustomerCount = Math.max(
+        0,
+        Number(form.data.seats_total) || 0,
+    );
+    const selectedCurrency = currencies.find(
+        (currency) => currency.code === form.data.currency.toUpperCase(),
+    );
+    const selectedStoredSnapshot =
+        form.data.content.hpp_currency_snapshots?.[
+            form.data.currency.toUpperCase()
+        ];
+    const currencyRateToIdr =
+        form.data.currency.toUpperCase() === 'IDR'
+            ? 1
+            : Number(
+                  selectedStoredSnapshot?.rate_to_idr ??
+                      selectedCurrency?.live_conversion_rate ??
+                      selectedCurrency?.conversion_rate ??
+                      0,
+              );
+    const effectiveCurrencies = currencies.map((currency) => {
+        const snapshot =
+            form.data.content.hpp_currency_snapshots?.[currency.code];
+
+        return snapshot
+            ? {
+                  ...currency,
+                  conversion_rate: Number(snapshot.rate_to_idr),
+                  live_conversion_rate: Number(snapshot.rate_to_idr),
+                  rate_source: snapshot.source,
+                  rate_fetched_at: snapshot.fetched_at,
+                  is_live: false,
+              }
+            : currency;
+    });
+    const selectedProductCurrencyCodes = Array.from(
+        new Set(
+            form.data.product_ids
+                .map((productId) =>
+                    String(
+                        productOptions.find(
+                            (product) => product.id === productId,
+                        )?.currency ?? 'IDR',
+                    ).toUpperCase(),
+                )
+                .filter((currencyCode) => currencyCode !== 'IDR'),
+        ),
+    );
+    const selectedProductsForEstimate = productOptions.filter(
+        (product) =>
+            form.data.product_ids.includes(product.id) &&
+            !(
+                form.data.all_in.enabled &&
+                form.data.all_in.included_category_keys.includes(
+                    product.product_type,
+                )
+            ),
+    );
+    const estimateCurrencyRates = effectiveCurrencies.reduce(
+        (rates, currency) => ({
+            ...rates,
+            [currency.code.toUpperCase()]: Number(
+                currency.live_conversion_rate ?? currency.conversion_rate ?? 0,
+            ),
+        }),
+        {} as Record<string, number>,
+    );
+    const convertEstimatePriceToIdr = (
+        value: number | string | null | undefined,
+        currency?: string | null,
+    ): number => {
+        const numericValue = Number(value ?? 0);
+        const currencyCode = (currency || 'IDR').toUpperCase();
+        const rate =
+            currencyCode === 'IDR'
+                ? 1
+                : Number(estimateCurrencyRates[currencyCode] ?? 0);
+
+        return numericValue > 0 && rate > 0
+            ? Math.round(numericValue * rate)
+            : 0;
+    };
+    const estimateProductItems = selectedProductsForEstimate
+        .filter((product) => product.product_type !== 'hotel')
+        .map((product) => {
+            const multiplier = Math.max(
+                1,
+                Number(form.data.product_multipliers[String(product.id)] ?? 1),
+            );
+            const quantityIsManual = Boolean(
+                hppEstimate.product_quantities_is_manual?.[String(product.id)],
+            );
+            const quantity = Math.max(
+                0,
+                Number(
+                    quantityIsManual
+                        ? (hppEstimate.product_quantities?.[
+                              String(product.id)
+                          ] ?? 0)
+                        : estimatedCustomerCount * multiplier,
+                ),
+            );
+            const unitPrice = convertEstimatePriceToIdr(
+                product.price,
+                product.currency,
+            );
+
+            return {
+                product,
+                multiplier,
+                quantityIsManual,
+                quantity,
+                unitPrice,
+                totalPrice: quantity * unitPrice,
+            };
+        });
+    const selectedHotelBrokers = getHotelBrokerSelections(form.data.content);
+    const estimateHotelGroups = selectedProductsForEstimate
+        .filter((product) => product.product_type === 'hotel')
+        .map((product) => {
+            const selectedBroker = selectedHotelBrokers[String(product.id)];
+            const prices = (
+                Object.keys(estimateRoomCapacities) as Array<
+                    keyof typeof estimateRoomCapacities
+                >
+            ).reduce(
+                (roomPricesByType, roomType) => {
+                    const matchingPricing = (product.hotel_info?.pricing ?? [])
+                        .filter(
+                            (pricing) =>
+                                normalizeEstimateRoomType(pricing.room_type) ===
+                                roomType,
+                        )
+                        .filter(
+                            (pricing) =>
+                                !selectedBroker ||
+                                pricing.broker_name?.trim().toLowerCase() ===
+                                    selectedBroker.trim().toLowerCase(),
+                        )
+                        .filter(
+                            (pricing) =>
+                                !form.data.start_date ||
+                                (!!pricing.period_start &&
+                                    !!pricing.period_end &&
+                                    pricing.period_start <=
+                                        form.data.start_date &&
+                                    pricing.period_end >= form.data.start_date),
+                        )
+                        .sort((left, right) =>
+                            String(right.period_start ?? '').localeCompare(
+                                String(left.period_start ?? ''),
+                            ),
+                        )[0];
+
+                    roomPricesByType[roomType] = {
+                        pricing: matchingPricing,
+                        unitPrice: convertEstimatePriceToIdr(
+                            matchingPricing?.price,
+                            product.currency ?? product.hotel_info?.currency,
+                        ),
+                    };
+
+                    return roomPricesByType;
+                },
+                {} as Record<
+                    keyof typeof estimateRoomCapacities,
+                    {
+                        pricing?: NonNullable<
+                            ProductOption['hotel_info']
+                        >['pricing'][number];
+                        unitPrice: number;
+                    }
+                >,
+            );
+            const availableRoomTypes = (
+                Object.keys(estimateRoomCapacities) as Array<
+                    keyof typeof estimateRoomCapacities
+                >
+            ).filter((roomType) => prices[roomType].unitPrice > 0);
+            const defaultAllocation = quadFirstEstimateRoomAllocation(
+                estimatedCustomerCount,
+                availableRoomTypes,
+            );
+            const storedAllocation =
+                hppEstimate.hotel_allocations?.[String(product.id)];
+            const allocationIsManual = Boolean(
+                hppEstimate.hotel_allocations_is_manual?.[String(product.id)],
+            );
+            const storedAllocationUsesRooms =
+                hppEstimate.hotel_allocations_unit === 'rooms';
+            const allocation = (
+                Object.keys(estimateRoomCapacities) as Array<
+                    keyof typeof estimateRoomCapacities
+                >
+            ).reduce(
+                (values, roomType) => ({
+                    ...values,
+                    [roomType]: Math.max(
+                        0,
+                        Number(
+                            allocationIsManual
+                                ? storedAllocationUsesRooms
+                                    ? (storedAllocation?.[roomType] ?? 0)
+                                    : Math.ceil(
+                                          Number(
+                                              storedAllocation?.[roomType] ?? 0,
+                                          ) / estimateRoomCapacities[roomType],
+                                      )
+                                : defaultAllocation[roomType],
+                        ),
+                    ),
+                }),
+                {} as Record<keyof typeof estimateRoomCapacities, number>,
+            );
+            const multiplier = Math.max(
+                1,
+                Number(form.data.product_multipliers[String(product.id)] ?? 1),
+            );
+            const rows = (
+                Object.keys(estimateRoomCapacities) as Array<
+                    keyof typeof estimateRoomCapacities
+                >
+            ).map((roomType) => {
+                const roomCount = allocation[roomType];
+                const pax = roomCount * estimateRoomCapacities[roomType];
+                const quantity = roomCount * multiplier;
+                const roomCountLimit = getHotelRoomCountLimit(
+                    allocation,
+                    roomType,
+                    estimatedCustomerCount,
+                );
+
+                return {
+                    roomType,
+                    pax,
+                    roomCount,
+                    roomCountLimit,
+                    quantity,
+                    unitPrice: prices[roomType].unitPrice,
+                    totalPrice: quantity * prices[roomType].unitPrice,
+                    pricing: prices[roomType].pricing,
+                };
+            });
+            const allocatedPax = rows.reduce(
+                (total, row) => total + row.pax,
+                0,
+            );
+            const allocationDelta = allocatedPax - estimatedCustomerCount;
+            const allocationDeltaLabel =
+                allocationDelta === 0
+                    ? 'pas'
+                    : allocationDelta > 0
+                      ? `lebih ${allocationDelta} pax`
+                      : `kurang ${Math.abs(allocationDelta)} pax`;
+
+            return {
+                product,
+                allocationIsManual,
+                defaultAllocation,
+                allocation,
+                rows,
+                allocatedPax,
+                allocationDelta,
+                allocationDeltaLabel,
+                totalPrice: rows.reduce(
+                    (total, row) => total + row.totalPrice,
+                    0,
+                ),
+            };
+        });
+    const estimatedProductTotal = estimateProductItems.reduce(
+        (total, item) => total + item.totalPrice,
+        0,
+    );
+    const estimatedHotelTotal = estimateHotelGroups.reduce(
+        (total, group) => total + group.totalPrice,
+        0,
+    );
+    const estimatedCustomers = deriveCustomerPriceComposition(
+        estimatedCustomerCount,
+        estimateHotelGroups[0]?.allocation,
+    );
+    const estimatedRevenueInPackageCurrency =
+        estimatedCustomers.single * sellingPrice +
+        estimatedCustomers.dbl *
+            (effectiveRoomSellingPrices.dbl ?? sellingPrice) +
+        estimatedCustomers.trpl *
+            (effectiveRoomSellingPrices.trpl ?? sellingPrice) +
+        estimatedCustomers.quad *
+            (effectiveRoomSellingPrices.quad ?? sellingPrice);
+    const estimatedRevenue = Math.round(
+        estimatedRevenueInPackageCurrency * currencyRateToIdr,
+    );
+    const estimatedAllInTotal = form.data.all_in.enabled
+        ? convertEstimatePriceToIdr(
+              form.data.all_in.price_per_pax,
+              form.data.all_in.currency,
+          ) * estimatedCustomerCount
+        : 0;
+    const estimatedTicketAndVisaTotal = estimateProductItems
+        .filter((item) => {
+            const productName = localizedFieldValue(
+                item.product.name,
+                'id',
+                item.product.code,
+            ).toLowerCase();
+
+            return (
+                item.product.product_type === 'tiket' ||
+                productName.includes('visa')
+            );
+        })
+        .reduce((total, item) => total + item.totalPrice, 0);
+    const estimatedOperationalTotals = calculateOperationalCostTotals(
+        operationalCosts,
+        estimatedCustomerCount,
+        estimatedHotelTotal,
+        estimatedTicketAndVisaTotal,
+        (amount, currency) => convertEstimatePriceToIdr(amount, currency),
+    );
+    const estimatedHotelPerPax =
+        estimatedCustomerCount > 0
+            ? Math.floor(estimatedHotelTotal / estimatedCustomerCount)
+            : 0;
+    const estimatedTicketAndVisaPerPax =
+        estimatedCustomerCount > 0
+            ? Math.floor(estimatedTicketAndVisaTotal / estimatedCustomerCount)
+            : 0;
+    const tourLeaderFeeIsManual =
+        hppEstimate.tour_leader_fee_is_manual ??
+        Number(hppEstimate.tour_leader_fee ?? 0) > 0;
+    const muthawwifFeeIsManual =
+        hppEstimate.muthawwif_fee_is_manual ??
+        Number(hppEstimate.muthawwif_fee ?? 0) > 0;
+    const defaultTourLeaderFee =
+        estimatedCustomerCount > 0
+            ? Math.floor(estimatedRevenue / estimatedCustomerCount)
+            : 0;
+    const defaultMuthawwifFee =
+        estimatedCustomerCount > 0
+            ? Math.floor(estimatedHotelTotal / estimatedCustomerCount)
+            : 0;
+    const estimatedTourLeaderFee = hasOperationalCostConfiguration
+        ? estimatedOperationalTotals.tourLeader
+        : tourLeaderFeeIsManual
+          ? Number(hppEstimate.tour_leader_fee ?? 0)
+          : defaultTourLeaderFee;
+    const estimatedMuthawwifFee = hasOperationalCostConfiguration
+        ? estimatedOperationalTotals.muthawwif
+        : muthawwifFeeIsManual
+          ? Number(hppEstimate.muthawwif_fee ?? 0)
+          : defaultMuthawwifFee;
+    const estimatedAdditionalOperationalTotal = hasOperationalCostConfiguration
+        ? estimatedOperationalTotals.total -
+          estimatedOperationalTotals.tourLeader -
+          estimatedOperationalTotals.muthawwif
+        : 0;
+    const estimatedGrandTotal =
+        estimatedProductTotal +
+        estimatedHotelTotal +
+        estimatedAllInTotal +
+        estimatedTourLeaderFee +
+        estimatedMuthawwifFee +
+        estimatedAdditionalOperationalTotal +
+        Number(hppEstimate.other_cost ?? 0);
+    const estimatedHppPerCustomer =
+        estimatedCustomerCount > 0
+            ? Math.floor(estimatedGrandTotal / estimatedCustomerCount)
+            : 0;
+    const estimatedProfit = estimatedRevenue - estimatedGrandTotal;
+    const estimatedProfitPerCustomer =
+        estimatedCustomerCount > 0
+            ? Math.floor(estimatedProfit / estimatedCustomerCount)
+            : 0;
+    const estimatedMarginPercent =
+        estimatedRevenue > 0 ? (estimatedProfit / estimatedRevenue) * 100 : 0;
+    const estimatedRoomPriceBreakdown = [
+        {
+            key: 'single',
+            label: 'Single',
+            pax: estimatedCustomers.single,
+            unitPrice: sellingPrice,
+        },
+        {
+            key: 'dbl',
+            label: 'Double',
+            pax: estimatedCustomers.dbl,
+            unitPrice: effectiveRoomSellingPrices.dbl ?? sellingPrice,
+        },
+        {
+            key: 'trpl',
+            label: 'Triple',
+            pax: estimatedCustomers.trpl,
+            unitPrice: effectiveRoomSellingPrices.trpl ?? sellingPrice,
+        },
+        {
+            key: 'quad',
+            label: 'Quad',
+            pax: estimatedCustomers.quad,
+            unitPrice: effectiveRoomSellingPrices.quad ?? sellingPrice,
+        },
+    ]
+        .filter((item) => item.pax > 0 && item.unitPrice > 0)
+        .map((item) => ({
+            ...item,
+            totalPrice: item.pax * item.unitPrice,
+        }));
     const packageHighlights = Array.isArray(contentObject.highlights)
         ? (contentObject.highlights as PackageHighlightItem[])
         : [];
@@ -1001,6 +1770,127 @@ export function PackageForm({
                 ...roomPrices,
                 [roomType]: nextSellingValue,
             },
+        });
+    }
+
+    function updateHppEstimate(nextEstimate: PackageHppEstimate) {
+        form.setData('content', {
+            ...contentObject,
+            hpp_estimate: nextEstimate,
+        });
+    }
+
+    function updateEstimatedCost(
+        field: 'tour_leader_fee' | 'muthawwif_fee' | 'other_cost',
+        value: string,
+    ) {
+        updateHppEstimate({
+            ...hppEstimate,
+            [field]: Math.max(0, Number(value) || 0),
+            ...(field === 'tour_leader_fee'
+                ? { tour_leader_fee_is_manual: true }
+                : {}),
+            ...(field === 'muthawwif_fee'
+                ? { muthawwif_fee_is_manual: true }
+                : {}),
+        });
+    }
+
+    function updateEstimatedProductQuantity(productId: number, value: string) {
+        updateHppEstimate({
+            ...hppEstimate,
+            product_quantities: {
+                ...(hppEstimate.product_quantities ?? {}),
+                [String(productId)]: Math.max(0, Number(value) || 0),
+            },
+            product_quantities_is_manual: {
+                ...(hppEstimate.product_quantities_is_manual ?? {}),
+                [String(productId)]: true,
+            },
+        });
+    }
+
+    function resetEstimatedProductQuantity(productId: number) {
+        updateHppEstimate({
+            ...hppEstimate,
+            product_quantities_is_manual: {
+                ...(hppEstimate.product_quantities_is_manual ?? {}),
+                [String(productId)]: false,
+            },
+        });
+    }
+
+    function updateEstimatedHotelAllocation(
+        productId: number,
+        roomType: keyof typeof estimateRoomCapacities,
+        value: string,
+    ) {
+        const effectiveAllocation = estimateHotelGroups.find(
+            (group) => group.product.id === productId,
+        )?.allocation ?? { dbl: 0, trpl: 0, quad: 0 };
+        const roomCountLimit = getHotelRoomCountLimit(
+            effectiveAllocation,
+            roomType,
+            estimatedCustomerCount,
+        );
+        const nextRoomCount = Math.min(
+            Math.max(0, Number(value) || 0),
+            roomCountLimit,
+        );
+
+        updateHppEstimate({
+            ...hppEstimate,
+            hotel_allocations: {
+                ...(hppEstimate.hotel_allocations ?? {}),
+                [String(productId)]: {
+                    ...effectiveAllocation,
+                    [roomType]: nextRoomCount,
+                },
+            },
+            hotel_allocations_unit: 'rooms',
+            hotel_allocations_is_manual: {
+                ...(hppEstimate.hotel_allocations_is_manual ?? {}),
+                [String(productId)]: true,
+            },
+        });
+    }
+
+    function applyQuadFirstHotelScenario(
+        productId: number,
+        defaultAllocation: Record<keyof typeof estimateRoomCapacities, number>,
+    ) {
+        if (
+            Object.values(defaultAllocation).every((roomCount) => roomCount < 1)
+        ) {
+            toast.error('Harga room type untuk periode package belum lengkap.');
+
+            return;
+        }
+
+        updateHppEstimate({
+            ...hppEstimate,
+            hotel_allocations: {
+                ...(hppEstimate.hotel_allocations ?? {}),
+                [String(productId)]: defaultAllocation,
+            },
+            hotel_allocations_unit: 'rooms',
+            hotel_allocations_is_manual: {
+                ...(hppEstimate.hotel_allocations_is_manual ?? {}),
+                [String(productId)]: false,
+            },
+        });
+    }
+
+    function resetEstimatedFeeToFormula(
+        fee: 'tour_leader_fee' | 'muthawwif_fee',
+    ) {
+        updateHppEstimate({
+            ...hppEstimate,
+            [fee]:
+                fee === 'tour_leader_fee'
+                    ? defaultTourLeaderFee
+                    : defaultMuthawwifFee,
+            [`${fee}_is_manual`]: false,
         });
     }
 
@@ -1062,7 +1952,7 @@ export function PackageForm({
     return (
         <form onSubmit={submit}>
             <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid h-auto w-full grid-cols-2 gap-2 sm:grid-cols-6">
+                <TabsList className="grid h-auto w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
                     <TabsTrigger value="info" className="gap-1.5 text-xs">
                         <Info className="h-3.5 w-3.5" />
                         Info
@@ -1070,10 +1960,6 @@ export function PackageForm({
                     <TabsTrigger value="gallery" className="gap-1.5 text-xs">
                         <Camera className="h-3.5 w-3.5" />
                         Gallery
-                    </TabsTrigger>
-                    <TabsTrigger value="harga" className="gap-1.5 text-xs">
-                        <DollarSign className="h-3.5 w-3.5" />
-                        Harga
                     </TabsTrigger>
                     <TabsTrigger value="konten" className="gap-1.5 text-xs">
                         <FileText className="h-3.5 w-3.5" />
@@ -1083,9 +1969,16 @@ export function PackageForm({
                         <BookOpenText className="h-3.5 w-3.5" />
                         Itinerary
                     </TabsTrigger>
-                    <TabsTrigger value="produk" className="gap-1.5 text-xs">
-                        <Layers className="h-3.5 w-3.5" />
-                        Produk
+                    <TabsTrigger value="harga" className="gap-1.5 text-xs">
+                        <DollarSign className="h-3.5 w-3.5" />
+                        Harga
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="estimasi-hpp"
+                        className="gap-1.5 text-xs"
+                    >
+                        <Calculator className="h-3.5 w-3.5" />
+                        Estimasi HPP
                     </TabsTrigger>
                 </TabsList>
 
@@ -1194,6 +2087,282 @@ export function PackageForm({
                                 />
                             </Field>
                         </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <Field
+                                label="Tanggal Berangkat *"
+                                error={errors.start_date}
+                            >
+                                <Input
+                                    type="date"
+                                    value={form.data.start_date}
+                                    onChange={(event) =>
+                                        updateStartDate(event.target.value)
+                                    }
+                                />
+                            </Field>
+                            <Field
+                                label="Tanggal Pulang *"
+                                error={errors.end_date}
+                            >
+                                <Input
+                                    type="date"
+                                    min={form.data.start_date || undefined}
+                                    value={form.data.end_date}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'end_date',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field
+                                label="Total Seat / Pax *"
+                                error={errors.seats_total}
+                            >
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    value={form.data.seats_total}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'seats_total',
+                                            Math.max(
+                                                1,
+                                                Number(event.target.value) || 1,
+                                            ),
+                                        )
+                                    }
+                                />
+                            </Field>
+                            <Field
+                                label="Status Pendaftaran *"
+                                error={errors.booking_status}
+                            >
+                                <Select
+                                    value={form.data.booking_status}
+                                    onValueChange={(value: 'open' | 'closed') =>
+                                        form.setData('booking_status', value)
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="open">
+                                            Dibuka
+                                        </SelectItem>
+                                        <SelectItem value="closed">
+                                            Ditutup
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                        </div>
+
+                        <Field
+                            label="Catatan Keberangkatan"
+                            error={errors.departure_notes}
+                        >
+                            <Input
+                                value={form.data.departure_notes}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'departure_notes',
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Contoh: Meeting point Terminal 3"
+                            />
+                        </Field>
+
+                        <AllInPackageCard
+                            value={form.data.all_in}
+                            vendors={vendors}
+                            categories={productCategories}
+                            currencies={effectiveCurrencies}
+                            packageStartDate={form.data.start_date}
+                            packageEndDate={form.data.end_date}
+                            errors={errors as Record<string, string>}
+                            onChange={updateAllInConfiguration}
+                        />
+
+                        <InfoSectionHeading
+                            icon={Layers}
+                            title="Produk"
+                            description="Kategori yang ditanggung vendor All In otomatis tidak dapat dipilih kembali."
+                        />
+
+                        <div className="space-y-4">
+                            {selectedProductCurrencyCodes.length > 0 ? (
+                                <div className="grid gap-3 rounded-xl bg-muted/30 p-3 sm:grid-cols-2">
+                                    {selectedProductCurrencyCodes.map(
+                                        (currencyCode) => {
+                                            const snapshot =
+                                                form.data.content
+                                                    .hpp_currency_snapshots?.[
+                                                    currencyCode
+                                                ];
+                                            const liveCurrency =
+                                                currencies.find(
+                                                    (currency) =>
+                                                        currency.code ===
+                                                        currencyCode,
+                                                );
+
+                                            return (
+                                                <div
+                                                    key={currencyCode}
+                                                    className="space-y-2"
+                                                >
+                                                    <Label>
+                                                        Kurs {currencyCode} ke
+                                                        IDR
+                                                    </Label>
+                                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                                        <Input
+                                                            type="number"
+                                                            min={0.000001}
+                                                            step="any"
+                                                            value={
+                                                                snapshot?.rate_to_idr ||
+                                                                ''
+                                                            }
+                                                            onChange={(event) =>
+                                                                form.setData(
+                                                                    'content',
+                                                                    {
+                                                                        ...form
+                                                                            .data
+                                                                            .content,
+                                                                        hpp_currency_snapshots:
+                                                                            {
+                                                                                ...(form
+                                                                                    .data
+                                                                                    .content
+                                                                                    .hpp_currency_snapshots ??
+                                                                                    {}),
+                                                                                [currencyCode]:
+                                                                                    {
+                                                                                        currency:
+                                                                                            currencyCode,
+                                                                                        rate_to_idr:
+                                                                                            Number(
+                                                                                                event
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            ),
+                                                                                        source: 'manual',
+                                                                                        fetched_at:
+                                                                                            null,
+                                                                                    },
+                                                                            },
+                                                                    },
+                                                                )
+                                                            }
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="shrink-0"
+                                                            disabled={
+                                                                Number(
+                                                                    liveCurrency?.live_conversion_rate ??
+                                                                        0,
+                                                                ) <= 0
+                                                            }
+                                                            onClick={() =>
+                                                                form.setData(
+                                                                    'content',
+                                                                    {
+                                                                        ...form
+                                                                            .data
+                                                                            .content,
+                                                                        hpp_currency_snapshots:
+                                                                            {
+                                                                                ...(form
+                                                                                    .data
+                                                                                    .content
+                                                                                    .hpp_currency_snapshots ??
+                                                                                    {}),
+                                                                                [currencyCode]:
+                                                                                    {
+                                                                                        currency:
+                                                                                            currencyCode,
+                                                                                        rate_to_idr:
+                                                                                            Number(
+                                                                                                liveCurrency?.live_conversion_rate ??
+                                                                                                    0,
+                                                                                            ),
+                                                                                        source: 'live',
+                                                                                        fetched_at:
+                                                                                            liveCurrency?.rate_fetched_at ??
+                                                                                            null,
+                                                                                    },
+                                                                            },
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            Gunakan Kurs Live
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        },
+                                    )}
+                                </div>
+                            ) : null}
+
+                            <ProductSelector
+                                options={productOptions}
+                                categories={productCategories}
+                                currencies={effectiveCurrencies}
+                                selected={form.data.product_ids}
+                                productMultipliers={
+                                    form.data.product_multipliers
+                                }
+                                hotelBrokerSelections={getHotelBrokerSelections(
+                                    form.data.content,
+                                )}
+                                locale={locale}
+                                lockedCategoryKeys={
+                                    form.data.all_in.enabled
+                                        ? form.data.all_in
+                                              .included_category_keys
+                                        : []
+                                }
+                                onChange={updateSelectedProducts}
+                            />
+                        </div>
+
+                        <InfoSectionHeading
+                            icon={Calculator}
+                            title="Biaya Operasional"
+                            description="Lengkapi biaya pendukung package. Nilainya langsung dipakai dalam breakdown Estimasi HPP."
+                        />
+
+                        <PackageOperationalCostCards
+                            value={operationalCosts}
+                            currencies={effectiveCurrencies}
+                            hotelPerPax={estimatedHotelPerPax}
+                            ticketAndVisaPerPax={estimatedTicketAndVisaPerPax}
+                            tourLeaderTotal={estimatedTourLeaderFee}
+                            muthawwifTotal={estimatedMuthawwifFee}
+                            onChange={(nextCosts) =>
+                                updateHppEstimate({
+                                    ...hppEstimate,
+                                    operational_costs: nextCosts,
+                                })
+                            }
+                        />
+
+                        <InfoSectionHeading
+                            icon={FileText}
+                            title="Ringkasan & Publikasi"
+                            description="Tambahkan ringkasan singkat dan tentukan visibilitas package pada halaman publik."
+                        />
 
                         <Field label="Ringkasan">
                             <Textarea
@@ -1631,11 +2800,6 @@ export function PackageForm({
                                 </div>
                             </Field>
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            Harga jual `DBL / TRPL / QUAD` otomatis mengikuti
-                            persentase diskon package yang diisi di atas.
-                        </p>
-
                         <div className="rounded-2xl border border-border bg-muted/20 p-4">
                             <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
                                 Harga Jual Otomatis
@@ -1650,11 +2814,6 @@ export function PackageForm({
                                     </p>
                                 ) : null}
                             </div>
-                            <p className="mt-2 text-xs text-muted-foreground">
-                                {hasDiscount
-                                    ? `Diskon ${discountPercent}% aktif. Hemat Rp ${savingsAmount.toLocaleString('id-ID')}.`
-                                    : 'Tidak ada diskon. Harga base/single dipakai sebagai harga jual utama.'}
-                            </p>
                         </div>
 
                         {hasDiscount ? (
@@ -1662,15 +2821,9 @@ export function PackageForm({
                                 <div className="rounded-full bg-emerald-500 px-3 py-1 text-sm font-bold text-white">
                                     -{discountPercent}%
                                 </div>
-                                <div>
-                                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                                        Diskon aktif
-                                    </p>
-                                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                                        Hemat Rp{' '}
-                                        {savingsAmount.toLocaleString('id-ID')}
-                                    </p>
-                                </div>
+                                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                                    Diskon aktif
+                                </p>
                             </div>
                         ) : null}
 
@@ -1699,16 +2852,1165 @@ export function PackageForm({
                             />
                         </Field>
                         <Field label="Mata Uang">
-                            <Input
+                            <Select
                                 value={form.data.currency}
-                                onChange={(event) =>
-                                    form.setData('currency', event.target.value)
-                                }
-                                maxLength={3}
-                                className="w-24 font-mono uppercase"
-                            />
+                                onValueChange={(value) => {
+                                    const liveCurrency = currencies.find(
+                                        (currency) => currency.code === value,
+                                    );
+                                    form.setData((current) => ({
+                                        ...current,
+                                        currency: value,
+                                        content: {
+                                            ...current.content,
+                                            hpp_currency_snapshots: {
+                                                ...(current.content
+                                                    .hpp_currency_snapshots ??
+                                                    {}),
+                                                [value]: {
+                                                    currency: value,
+                                                    rate_to_idr:
+                                                        value === 'IDR'
+                                                            ? 1
+                                                            : Number(
+                                                                  liveCurrency?.live_conversion_rate ??
+                                                                      0,
+                                                              ),
+                                                    source:
+                                                        value === 'IDR'
+                                                            ? 'identity'
+                                                            : 'live',
+                                                    fetched_at:
+                                                        liveCurrency?.rate_fetched_at ??
+                                                        null,
+                                                },
+                                            },
+                                        },
+                                    }));
+                                }}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {currencies.map((currency) => (
+                                        <SelectItem
+                                            key={currency.code}
+                                            value={currency.code}
+                                        >
+                                            {currency.code} - {currency.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {form.data.currency !== 'IDR' ? (
+                                <div className="mt-2 flex gap-2">
+                                    <Input
+                                        type="number"
+                                        min={0.000001}
+                                        step="any"
+                                        value={currencyRateToIdr || ''}
+                                        onChange={(event) => {
+                                            const code =
+                                                form.data.currency.toUpperCase();
+                                            form.setData('content', {
+                                                ...form.data.content,
+                                                hpp_currency_snapshots: {
+                                                    ...(form.data.content
+                                                        .hpp_currency_snapshots ??
+                                                        {}),
+                                                    [code]: {
+                                                        currency: code,
+                                                        rate_to_idr: Number(
+                                                            event.target.value,
+                                                        ),
+                                                        source: 'manual',
+                                                        fetched_at: null,
+                                                    },
+                                                },
+                                            });
+                                        }}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={
+                                            Number(
+                                                selectedCurrency?.live_conversion_rate ??
+                                                    0,
+                                            ) <= 0
+                                        }
+                                        onClick={() => {
+                                            const code =
+                                                form.data.currency.toUpperCase();
+                                            form.setData('content', {
+                                                ...form.data.content,
+                                                hpp_currency_snapshots: {
+                                                    ...(form.data.content
+                                                        .hpp_currency_snapshots ??
+                                                        {}),
+                                                    [code]: {
+                                                        currency: code,
+                                                        rate_to_idr: Number(
+                                                            selectedCurrency?.live_conversion_rate ??
+                                                                0,
+                                                        ),
+                                                        source: 'live',
+                                                        fetched_at:
+                                                            selectedCurrency?.rate_fetched_at ??
+                                                            null,
+                                                    },
+                                                },
+                                            });
+                                        }}
+                                    >
+                                        Gunakan Kurs Live
+                                    </Button>
+                                </div>
+                            ) : null}
                         </Field>
                     </FieldGroup>
+                </TabsContent>
+
+                <TabsContent value="estimasi-hpp" className="mt-4">
+                    <SectionHeader
+                        icon={Calculator}
+                        title="Estimasi HPP Package"
+                    />
+                    <div className="space-y-4">
+                        <div className="rounded-2xl border border-border bg-card p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-semibold">
+                                        Target dan Komposisi Jamaah
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Komposisi harga jual otomatis mengikuti
+                                        Breakdown Hotel utama.
+                                    </p>
+                                </div>
+                                <strong className="text-sm">
+                                    {estimatedCustomerCount} jamaah
+                                </strong>
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/60 pt-3 text-sm">
+                                {(
+                                    [
+                                        ['single', 'Single'],
+                                        ['dbl', 'Double'],
+                                        ['trpl', 'Triple'],
+                                        ['quad', 'Quad'],
+                                    ] as const
+                                ).map(([roomType, label]) => (
+                                    <span key={roomType}>
+                                        <span className="text-muted-foreground">
+                                            {label}
+                                        </span>{' '}
+                                        <strong>
+                                            {estimatedCustomers[roomType]} pax
+                                        </strong>
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+
+                        {form.data.all_in.enabled ? (
+                            <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <p className="text-sm font-semibold text-sky-950 dark:text-sky-100">
+                                            Paket All In Vendor
+                                        </p>
+                                        <p className="mt-1 text-xs text-sky-800 dark:text-sky-300">
+                                            {form.data.all_in
+                                                .broker_package_name ||
+                                                'Nama paket vendor belum diisi'}
+                                            {' - '}
+                                            {form.data.all_in.included_category_keys
+                                                .map(
+                                                    (categoryKey) =>
+                                                        productCategories.find(
+                                                            (category) =>
+                                                                category.key ===
+                                                                categoryKey,
+                                                        )?.name,
+                                                )
+                                                .map((name) =>
+                                                    typeof name === 'string'
+                                                        ? name
+                                                        : name?.id || name?.en,
+                                                )
+                                                .filter(Boolean)
+                                                .join(', ') ||
+                                                'Kategori belum dipilih'}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-sky-700 dark:text-sky-300">
+                                            {formatEstimateCurrency(
+                                                convertEstimatePriceToIdr(
+                                                    form.data.all_in
+                                                        .price_per_pax,
+                                                    form.data.all_in.currency,
+                                                ),
+                                            )}{' '}
+                                            / jamaah
+                                        </p>
+                                        <p className="font-semibold text-sky-950 dark:text-sky-100">
+                                            {formatEstimateCurrency(
+                                                estimatedAllInTotal,
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
+
+                        <div className="rounded-2xl border border-border bg-card p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                                <p className="text-sm font-semibold">
+                                    Breakdown Product
+                                </p>
+                                <strong className="text-sm">
+                                    {formatEstimateCurrency(
+                                        estimatedProductTotal,
+                                    )}
+                                </strong>
+                            </div>
+                            {estimateProductItems.length > 0 ? (
+                                <div className="divide-y divide-border/70 rounded-xl border border-border/70">
+                                    {estimateProductItems.map((item) => (
+                                        <div
+                                            key={item.product.id}
+                                            className="grid gap-2 p-3 sm:grid-cols-[1fr_190px_150px] sm:items-end"
+                                        >
+                                            <div>
+                                                <p className="text-sm font-medium">
+                                                    {localizedFieldValue(
+                                                        item.product.name,
+                                                        locale,
+                                                        item.product.code,
+                                                    )}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {formatEstimateCurrency(
+                                                        item.unitPrice,
+                                                    )}{' '}
+                                                    / unit
+                                                </p>
+                                            </div>
+                                            <Field label="Quantity">
+                                                <div className="flex gap-1.5">
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        value={item.quantity}
+                                                        onChange={(event) =>
+                                                            updateEstimatedProductQuantity(
+                                                                item.product.id,
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                    />
+                                                    {item.quantityIsManual ? (
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                resetEstimatedProductQuantity(
+                                                                    item.product
+                                                                        .id,
+                                                                )
+                                                            }
+                                                        >
+                                                            Auto
+                                                        </Button>
+                                                    ) : null}
+                                                </div>
+                                            </Field>
+                                            <div className="sm:text-right">
+                                                <p className="text-xs text-muted-foreground">
+                                                    Total
+                                                </p>
+                                                <p className="text-sm font-semibold">
+                                                    {formatEstimateCurrency(
+                                                        item.totalPrice,
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
+                                    Belum ada product non-hotel yang dipilih.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-card p-4">
+                            <div className="mb-3 flex items-center justify-between gap-3">
+                                <p className="text-sm font-semibold">
+                                    Breakdown Hotel
+                                </p>
+                                <strong className="text-sm">
+                                    {formatEstimateCurrency(
+                                        estimatedHotelTotal,
+                                    )}
+                                </strong>
+                            </div>
+                            {estimateHotelGroups.length > 0 ? (
+                                <div className="space-y-3">
+                                    {estimateHotelGroups.map((group, index) => (
+                                        <div
+                                            key={group.product.id}
+                                            className="rounded-xl border border-border/70 p-3"
+                                        >
+                                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                                <div>
+                                                    <p className="text-sm font-medium">
+                                                        {localizedFieldValue(
+                                                            group.product.name,
+                                                            locale,
+                                                            group.product.code,
+                                                        )}
+                                                    </p>
+                                                    {index === 0 ? (
+                                                        <p className="mt-0.5 text-[11px] font-medium text-primary">
+                                                            Acuan komposisi
+                                                            harga jual
+                                                        </p>
+                                                    ) : null}
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Kapasitas{' '}
+                                                        {group.allocatedPax}{' '}
+                                                        pax, target{' '}
+                                                        {estimatedCustomerCount}{' '}
+                                                        jamaah,{' '}
+                                                        {
+                                                            group.allocationDeltaLabel
+                                                        }
+                                                    </p>
+                                                </div>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        applyQuadFirstHotelScenario(
+                                                            group.product.id,
+                                                            group.defaultAllocation,
+                                                        )
+                                                    }
+                                                >
+                                                    Skenario QUAD
+                                                </Button>
+                                            </div>
+                                            <div className="grid gap-2 md:grid-cols-3">
+                                                {group.rows.map((row) => (
+                                                    <div
+                                                        key={row.roomType}
+                                                        className="rounded-lg bg-muted/30 p-2.5"
+                                                    >
+                                                        <div className="mb-2 flex items-center justify-between gap-2">
+                                                            <strong className="text-xs uppercase">
+                                                                {row.roomType}
+                                                            </strong>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {row.roomCount}{' '}
+                                                                kamar
+                                                            </span>
+                                                        </div>
+                                                        <Field label="Jumlah kamar">
+                                                            <Input
+                                                                type="number"
+                                                                min={0}
+                                                                max={
+                                                                    row.roomCountLimit
+                                                                }
+                                                                value={
+                                                                    row.roomCount
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    updateEstimatedHotelAllocation(
+                                                                        group
+                                                                            .product
+                                                                            .id,
+                                                                        row.roomType,
+                                                                        event
+                                                                            .target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                            />
+                                                            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                                                                {row.roomCount}{' '}
+                                                                kamar x{' '}
+                                                                {
+                                                                    estimateRoomCapacities[
+                                                                        row
+                                                                            .roomType
+                                                                    ]
+                                                                }{' '}
+                                                                pax = {row.pax}{' '}
+                                                                pax
+                                                            </p>
+                                                        </Field>
+                                                        <div className="mt-2 flex justify-between gap-2 text-xs">
+                                                            <span>
+                                                                {row.pax} pax
+                                                            </span>
+                                                            <strong>
+                                                                {formatEstimateCurrency(
+                                                                    row.totalPrice,
+                                                                )}
+                                                            </strong>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
+                                    Belum ada product hotel yang dipilih.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <div className="rounded-2xl border border-border bg-card p-4">
+                                <p className="mb-3 text-sm font-semibold">
+                                    Fee dan Biaya Tambahan
+                                </p>
+                                {hasOperationalCostConfiguration ? (
+                                    <div className="divide-y divide-border/60 text-sm">
+                                        {[
+                                            [
+                                                'SDM',
+                                                estimatedOperationalTotals.humanResources,
+                                                `${operationalCosts.human_resources.length} SDM`,
+                                            ],
+                                            [
+                                                'Overhead',
+                                                estimatedOperationalTotals.overhead,
+                                                operationalCosts.overhead
+                                                    .mode === 'per_pax'
+                                                    ? `${formatEstimateCurrency(operationalCosts.overhead.amount)} x ${estimatedCustomerCount} jamaah`
+                                                    : 'Total flat',
+                                            ],
+                                            [
+                                                'Fotografer',
+                                                estimatedOperationalTotals.photographer,
+                                                `${operationalCosts.photographer.count} x ${formatEstimateCurrency(operationalCosts.photographer.daily_salary)} x ${operationalCosts.photographer.days} hari`,
+                                            ],
+                                            [
+                                                'Tour Leader',
+                                                estimatedOperationalTotals.tourLeader,
+                                                `${operationalCosts.tour_leader.count} x (gaji + hotel ${formatEstimateCurrency(operationalCosts.tour_leader.include_hotel ? estimatedHotelPerPax : 0)} + tiket/visa ${formatEstimateCurrency(operationalCosts.tour_leader.include_ticket_and_visa ? estimatedTicketAndVisaPerPax : 0)})`,
+                                            ],
+                                            [
+                                                'Muthawwif',
+                                                estimatedOperationalTotals.muthawwif,
+                                                `${operationalCosts.muthawwif.count} x (${operationalCosts.muthawwif.daily_salary} ${operationalCosts.muthawwif.currency} x ${operationalCosts.muthawwif.days} hari${operationalCosts.muthawwif.include_hotel ? ` + kamar hotel ${formatEstimateCurrency(estimatedHotelPerPax)}` : ''})`,
+                                            ],
+                                            [
+                                                'Marketing',
+                                                estimatedOperationalTotals.marketing,
+                                                estimatedCustomerCount > 0
+                                                    ? `${formatEstimateCurrency(operationalCosts.marketing.amount_per_pax)} ÷ ${estimatedCustomerCount} jamaah = ${formatEstimateCurrency(Math.floor(operationalCosts.marketing.amount_per_pax / estimatedCustomerCount))} / pax`
+                                                    : `${formatEstimateCurrency(operationalCosts.marketing.amount_per_pax)} ÷ 0 jamaah`,
+                                            ],
+                                            [
+                                                'Tips guide lokal',
+                                                estimatedOperationalTotals.guideTips,
+                                                `${operationalCosts.guide_tips.length} negara / baris`,
+                                            ],
+                                            [
+                                                'Tips sopir',
+                                                estimatedOperationalTotals.driverTips,
+                                                `${operationalCosts.driver_tips.length} negara / baris`,
+                                            ],
+                                        ].map(([label, amount, formula]) => (
+                                            <div
+                                                key={String(label)}
+                                                className="flex items-start justify-between gap-3 py-2 first:pt-0"
+                                            >
+                                                <span className="min-w-0 text-muted-foreground">
+                                                    <span className="block text-foreground">
+                                                        {label}
+                                                    </span>
+                                                    <span className="block text-[11px] leading-4">
+                                                        {formula}
+                                                    </span>
+                                                </span>
+                                                <strong className="shrink-0">
+                                                    {formatEstimateCurrency(
+                                                        Number(amount),
+                                                    )}
+                                                </strong>
+                                            </div>
+                                        ))}
+                                        <div className="flex justify-between gap-3 py-2 font-semibold text-primary">
+                                            <span>Total operasional</span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    estimatedOperationalTotals.total,
+                                                )}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        <Field label="HPP Tour Leader (IDR)">
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={1000}
+                                                    value={
+                                                        estimatedTourLeaderFee
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateEstimatedCost(
+                                                            'tour_leader_fee',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                {tourLeaderFeeIsManual ? (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            resetEstimatedFeeToFormula(
+                                                                'tour_leader_fee',
+                                                            )
+                                                        }
+                                                    >
+                                                        Rumus
+                                                    </Button>
+                                                ) : null}
+                                            </div>
+                                        </Field>
+                                        <Field label="HPP Muthawwif (IDR)">
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={1000}
+                                                    value={
+                                                        estimatedMuthawwifFee
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateEstimatedCost(
+                                                            'muthawwif_fee',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                                {muthawwifFeeIsManual ? (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        onClick={() =>
+                                                            resetEstimatedFeeToFormula(
+                                                                'muthawwif_fee',
+                                                            )
+                                                        }
+                                                    >
+                                                        Rumus
+                                                    </Button>
+                                                ) : null}
+                                            </div>
+                                        </Field>
+                                    </div>
+                                )}
+                                <div className="mt-3">
+                                    <Field label="Biaya lainnya (IDR)">
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            step={1000}
+                                            value={hppEstimate.other_cost ?? ''}
+                                            onChange={(event) =>
+                                                updateEstimatedCost(
+                                                    'other_cost',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+                                <div className="mt-3">
+                                    <Field label="Catatan estimasi">
+                                        <Textarea
+                                            value={hppEstimate.notes ?? ''}
+                                            onChange={(event) =>
+                                                updateHppEstimate({
+                                                    ...hppEstimate,
+                                                    notes: event.target.value,
+                                                })
+                                            }
+                                            rows={3}
+                                        />
+                                    </Field>
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 dark:bg-emerald-500/15">
+                                <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                                    Ringkasan Perkiraan
+                                </p>
+                                <div className="mt-3 divide-y divide-emerald-500/20 text-sm">
+                                    <div className="flex justify-between gap-3 py-2">
+                                        <span>Target jamaah</span>
+                                        <strong>
+                                            {estimatedCustomerCount} pax
+                                        </strong>
+                                    </div>
+                                    <div className="flex justify-between gap-3 py-2">
+                                        <span>Total produk</span>
+                                        <strong>
+                                            {formatEstimateCurrency(
+                                                estimatedProductTotal,
+                                            )}
+                                        </strong>
+                                    </div>
+                                    <div className="flex justify-between gap-3 py-2">
+                                        <span>Total hotel</span>
+                                        <strong>
+                                            {formatEstimateCurrency(
+                                                estimatedHotelTotal,
+                                            )}
+                                        </strong>
+                                    </div>
+                                    {form.data.all_in.enabled ? (
+                                        <div className="flex justify-between gap-3 py-2">
+                                            <span>Paket All In</span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    estimatedAllInTotal,
+                                                )}
+                                            </strong>
+                                        </div>
+                                    ) : null}
+                                    <div className="flex justify-between gap-3 py-2">
+                                        <span>
+                                            {hasOperationalCostConfiguration
+                                                ? 'Biaya operasional'
+                                                : 'Fee TL & Muthawwif'}
+                                        </span>
+                                        <strong>
+                                            {formatEstimateCurrency(
+                                                hasOperationalCostConfiguration
+                                                    ? estimatedOperationalTotals.total
+                                                    : estimatedTourLeaderFee +
+                                                          estimatedMuthawwifFee,
+                                            )}
+                                        </strong>
+                                    </div>
+                                    <div className="flex justify-between gap-3 py-2">
+                                        <span>Total HPP estimasi</span>
+                                        <strong>
+                                            {formatEstimateCurrency(
+                                                estimatedGrandTotal,
+                                            )}
+                                        </strong>
+                                    </div>
+                                    <div className="flex justify-between gap-3 py-2">
+                                        <span>HPP / jamaah</span>
+                                        <strong>
+                                            {formatEstimateCurrency(
+                                                estimatedCustomerCount > 0
+                                                    ? Math.floor(
+                                                          estimatedGrandTotal /
+                                                              estimatedCustomerCount,
+                                                      )
+                                                    : 0,
+                                            )}
+                                        </strong>
+                                    </div>
+                                    <div className="flex justify-between gap-3 py-2">
+                                        <span>Estimasi omzet</span>
+                                        <strong>
+                                            {formatEstimateCurrency(
+                                                estimatedRevenue,
+                                            )}
+                                        </strong>
+                                    </div>
+                                    <div className="flex justify-between gap-3 py-2 text-emerald-800 dark:text-emerald-200">
+                                        <span>Estimasi keuntungan</span>
+                                        <strong>
+                                            {formatEstimateCurrency(
+                                                estimatedRevenue -
+                                                    estimatedGrandTotal,
+                                            )}
+                                        </strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+                            <div className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">
+                                        Keputusan Harga Jual
+                                    </p>
+                                </div>
+                                <span className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                    Semua total dalam IDR
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-border/60 py-4 lg:grid-cols-4">
+                                <div>
+                                    <p className="text-xs text-muted-foreground">
+                                        HPP / jamaah
+                                    </p>
+                                    <p className="mt-1 text-base font-bold text-foreground sm:text-lg">
+                                        {formatEstimateCurrency(
+                                            estimatedHppPerCustomer,
+                                        )}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Profit / jamaah
+                                    </p>
+                                    <p
+                                        className={cn(
+                                            'mt-1 text-base font-bold sm:text-lg',
+                                            estimatedProfitPerCustomer >= 0
+                                                ? 'text-emerald-700 dark:text-emerald-300'
+                                                : 'text-destructive',
+                                        )}
+                                    >
+                                        {formatEstimateCurrency(
+                                            estimatedProfitPerCustomer,
+                                        )}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Margin
+                                    </p>
+                                    <p
+                                        className={cn(
+                                            'mt-1 text-base font-bold sm:text-lg',
+                                            estimatedMarginPercent >= 0
+                                                ? 'text-emerald-700 dark:text-emerald-300'
+                                                : 'text-destructive',
+                                        )}
+                                    >
+                                        {estimatedMarginPercent.toLocaleString(
+                                            'id-ID',
+                                            {
+                                                minimumFractionDigits: 1,
+                                                maximumFractionDigits: 1,
+                                            },
+                                        )}
+                                        %
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Total profit
+                                    </p>
+                                    <p
+                                        className={cn(
+                                            'mt-1 text-base font-bold sm:text-lg',
+                                            estimatedProfit >= 0
+                                                ? 'text-emerald-700 dark:text-emerald-300'
+                                                : 'text-destructive',
+                                        )}
+                                    >
+                                        {formatEstimateCurrency(
+                                            estimatedProfit,
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 rounded-2xl border border-border/60 bg-muted/30 p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                        Komposisi harga paket
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {estimatedCustomerCount} pax
+                                    </p>
+                                </div>
+                                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                                    Ini komposisi harga jual per tipe kamar
+                                    untuk skenario estimasi. Saat booking
+                                    aktual, komposisi bisa lebih efisien dan
+                                    margin bisa berubah.
+                                </p>
+                                {estimatedRoomPriceBreakdown.length > 0 ? (
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                        {estimatedRoomPriceBreakdown.map(
+                                            (room) => (
+                                                <div
+                                                    key={room.key}
+                                                    className="rounded-xl border border-border/60 bg-background p-3"
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-sm font-medium text-foreground">
+                                                                {room.label}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                {room.pax} pax x{' '}
+                                                                {formatEstimateCurrency(
+                                                                    room.unitPrice,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <strong className="text-sm">
+                                                            {formatEstimateCurrency(
+                                                                room.totalPrice,
+                                                            )}
+                                                        </strong>
+                                                    </div>
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <div className="grid gap-4 pt-4">
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <Field
+                                        label="Harga Base / Single (IDR) *"
+                                        error={
+                                            errors.original_price ||
+                                            errors.price
+                                        }
+                                    >
+                                        <div className="relative">
+                                            <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                Rp
+                                            </span>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                step={100000}
+                                                value={form.data.original_price}
+                                                onChange={(event) => {
+                                                    const nextOriginalPrice =
+                                                        event.target.value
+                                                            ? Number(
+                                                                  event.target
+                                                                      .value,
+                                                              )
+                                                            : '';
+                                                    form.setData(
+                                                        'original_price',
+                                                        nextOriginalPrice,
+                                                    );
+
+                                                    if (!event.target.value) {
+                                                        form.setData(
+                                                            'discount_percent',
+                                                            '',
+                                                        );
+                                                    }
+                                                }}
+                                                className="pl-8"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </Field>
+                                    <Field label="Diskon (%)">
+                                        <div className="relative">
+                                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                %
+                                            </span>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                max={99}
+                                                value={
+                                                    form.data.discount_percent
+                                                }
+                                                onChange={(event) =>
+                                                    form.setData(
+                                                        'discount_percent',
+                                                        event.target.value
+                                                            ? Math.min(
+                                                                  99,
+                                                                  Math.max(
+                                                                      0,
+                                                                      Number(
+                                                                          event
+                                                                              .target
+                                                                              .value,
+                                                                      ),
+                                                                  ),
+                                                              )
+                                                            : '',
+                                                    )
+                                                }
+                                                className="pr-8"
+                                                placeholder="0"
+                                            />
+                                        </div>
+                                    </Field>
+                                </div>
+
+                                <div className="grid gap-3 md:grid-cols-3">
+                                    {(
+                                        [
+                                            ['dbl', 'Double (DBL)'],
+                                            ['trpl', 'Triple (TRPL)'],
+                                            ['quad', 'Quad (QUAD)'],
+                                        ] as const
+                                    ).map(([roomType, label]) => (
+                                        <Field
+                                            key={roomType}
+                                            label={`Harga Asli ${label}`}
+                                        >
+                                            <div className="relative">
+                                                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                    Rp
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={100000}
+                                                    value={
+                                                        effectiveRoomOriginalPrices[
+                                                            roomType
+                                                        ] ?? ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateRoomOriginalPrice(
+                                                            roomType,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className="pl-8"
+                                                    placeholder="Isi manual"
+                                                />
+                                            </div>
+                                        </Field>
+                                    ))}
+                                </div>
+
+                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                    {[
+                                        {
+                                            label: 'Single',
+                                            value: sellingPrice,
+                                        },
+                                        {
+                                            label: 'Double',
+                                            value: effectiveRoomSellingPrices.dbl,
+                                        },
+                                        {
+                                            label: 'Triple',
+                                            value: effectiveRoomSellingPrices.trpl,
+                                        },
+                                        {
+                                            label: 'Quad',
+                                            value: effectiveRoomSellingPrices.quad,
+                                        },
+                                    ].map((roomPrice) => (
+                                        <div
+                                            key={roomPrice.label}
+                                            className="border-l-2 border-primary/30 pl-3"
+                                        >
+                                            <p className="text-xs text-muted-foreground">
+                                                Harga jual {roomPrice.label}
+                                            </p>
+                                            <p className="mt-1 text-sm font-bold text-foreground">
+                                                {formatCurrencyInputPreview(
+                                                    roomPrice.value ?? null,
+                                                )}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                    <Field label="Label Diskon">
+                                        <Input
+                                            value={form.data.discount_label}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'discount_label',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="Contoh: EARLY BIRD"
+                                        />
+                                    </Field>
+                                    <Field label="Promo Berakhir">
+                                        <Input
+                                            type="datetime-local"
+                                            value={form.data.discount_ends_at}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'discount_ends_at',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                    <Field label="Mata Uang">
+                                        <Select
+                                            value={form.data.currency}
+                                            onValueChange={(value) => {
+                                                const liveCurrency =
+                                                    currencies.find(
+                                                        (currency) =>
+                                                            currency.code ===
+                                                            value,
+                                                    );
+                                                form.setData((current) => ({
+                                                    ...current,
+                                                    currency: value,
+                                                    content: {
+                                                        ...current.content,
+                                                        hpp_currency_snapshots:
+                                                            {
+                                                                ...(current
+                                                                    .content
+                                                                    .hpp_currency_snapshots ??
+                                                                    {}),
+                                                                [value]: {
+                                                                    currency:
+                                                                        value,
+                                                                    rate_to_idr:
+                                                                        value ===
+                                                                        'IDR'
+                                                                            ? 1
+                                                                            : Number(
+                                                                                  liveCurrency?.live_conversion_rate ??
+                                                                                      0,
+                                                                              ),
+                                                                    source:
+                                                                        value ===
+                                                                        'IDR'
+                                                                            ? 'identity'
+                                                                            : 'live',
+                                                                    fetched_at:
+                                                                        liveCurrency?.rate_fetched_at ??
+                                                                        null,
+                                                                },
+                                                            },
+                                                    },
+                                                }));
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-full">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {currencies.map((currency) => (
+                                                    <SelectItem
+                                                        key={currency.code}
+                                                        value={currency.code}
+                                                    >
+                                                        {currency.code} -{' '}
+                                                        {currency.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </Field>
+                                </div>
+
+                                {form.data.currency !== 'IDR' ? (
+                                    <Field
+                                        label={`Kurs ${form.data.currency} ke IDR`}
+                                    >
+                                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                            <Input
+                                                type="number"
+                                                min={0.000001}
+                                                step="any"
+                                                value={currencyRateToIdr || ''}
+                                                onChange={(event) => {
+                                                    const code =
+                                                        form.data.currency.toUpperCase();
+                                                    form.setData('content', {
+                                                        ...form.data.content,
+                                                        hpp_currency_snapshots:
+                                                            {
+                                                                ...(form.data
+                                                                    .content
+                                                                    .hpp_currency_snapshots ??
+                                                                    {}),
+                                                                [code]: {
+                                                                    currency:
+                                                                        code,
+                                                                    rate_to_idr:
+                                                                        Number(
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        ),
+                                                                    source: 'manual',
+                                                                    fetched_at:
+                                                                        null,
+                                                                },
+                                                            },
+                                                    });
+                                                }}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                disabled={
+                                                    Number(
+                                                        selectedCurrency?.live_conversion_rate ??
+                                                            0,
+                                                    ) <= 0
+                                                }
+                                                onClick={() => {
+                                                    const code =
+                                                        form.data.currency.toUpperCase();
+                                                    form.setData('content', {
+                                                        ...form.data.content,
+                                                        hpp_currency_snapshots:
+                                                            {
+                                                                ...(form.data
+                                                                    .content
+                                                                    .hpp_currency_snapshots ??
+                                                                    {}),
+                                                                [code]: {
+                                                                    currency:
+                                                                        code,
+                                                                    rate_to_idr:
+                                                                        Number(
+                                                                            selectedCurrency?.live_conversion_rate ??
+                                                                                0,
+                                                                        ),
+                                                                    source: 'live',
+                                                                    fetched_at:
+                                                                        selectedCurrency?.rate_fetched_at ??
+                                                                        null,
+                                                                },
+                                                            },
+                                                    });
+                                                }}
+                                            >
+                                                Gunakan Kurs Live
+                                            </Button>
+                                        </div>
+                                    </Field>
+                                ) : null}
+                            </div>
+                        </div>
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="konten" className="mt-4">
@@ -2363,21 +4665,6 @@ export function PackageForm({
                             ))}
                         </Tabs>
                     </div>
-                </TabsContent>
-
-                <TabsContent value="produk" className="mt-4">
-                    <SectionHeader icon={Layers} title="Produk dalam Package" />
-                        <ProductSelector
-                            options={productOptions}
-                            currencies={currencies}
-                            selected={form.data.product_ids}
-                            productMultipliers={form.data.product_multipliers}
-                            hotelBrokerSelections={getHotelBrokerSelections(
-                            form.data.content,
-                        )}
-                        locale={locale}
-                        onChange={updateSelectedProducts}
-                    />
                 </TabsContent>
             </Tabs>
 

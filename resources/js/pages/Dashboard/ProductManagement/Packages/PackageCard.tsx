@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Link } from '@inertiajs/react';
 import {
     Calendar,
     Clock,
@@ -16,10 +17,7 @@ import type { Package as PackageType } from './types';
 type Props = {
     pkg: PackageType;
     locale: 'id' | 'en';
-    onView: (pkg: PackageType) => void;
-    onEdit: (pkg: PackageType) => void;
     onDelete: (pkg: PackageType) => void;
-    onManageSchedules: (pkg: PackageType) => void;
     canEdit: boolean;
     canDelete: boolean;
 };
@@ -98,23 +96,13 @@ function resolvePackageName(
 export function PackageCard({
     pkg,
     locale,
-    onView,
-    onEdit,
     onDelete,
-    onManageSchedules,
     canEdit,
     canDelete,
 }: Props) {
     const name = resolvePackageName(pkg.name, locale, pkg.code);
     const type = typeConfig[pkg.package_type] ?? typeConfig.reguler;
-    const schedules = Array.isArray(pkg.schedules) ? pkg.schedules : [];
-    const activeSchedules = schedules.filter(
-        (schedule) => schedule.is_active && schedule.status === 'open',
-    ).length;
     const landingPreviewPath = `/landing/${pkg.slug || pkg.id}`;
-    const nextDeparture = schedules
-        .filter((schedule) => schedule.is_active && schedule.status === 'open')
-        .sort((a, b) => a.departure_date.localeCompare(b.departure_date))[0];
 
     return (
         <div
@@ -212,19 +200,22 @@ export function PackageCard({
                                     </span>
                                 ) : null}
                             </div>
-                            {nextDeparture ? (
+                            {pkg.start_date ? (
                                 <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                                     <Calendar className="h-3 w-3" />
-                                    Berangkat {
-                                        nextDeparture.departure_date
-                                    } - {nextDeparture.seats_available} seat
-                                    tersisa
+                                    Berangkat{' '}
+                                    {new Intl.DateTimeFormat('id-ID', {
+                                        day: 'numeric',
+                                        month: 'short',
+                                        year: 'numeric',
+                                    }).format(
+                                        new Date(`${pkg.start_date}T00:00:00`),
+                                    )}{' '}
+                                    - {pkg.seats_available} seat tersisa
                                 </p>
                             ) : (
                                 <p className="mt-0.5 text-xs text-muted-foreground">
-                                    {activeSchedules === 0
-                                        ? 'Belum ada jadwal'
-                                        : `${activeSchedules} jadwal open`}
+                                    Tanggal keberangkatan belum diisi
                                 </p>
                             )}
                         </div>
@@ -249,42 +240,37 @@ export function PackageCard({
                                 </a>
                             </Button>
                             <Button
+                                asChild
                                 size="sm"
                                 variant="outline"
                                 className="h-8 gap-1.5 text-xs"
-                                onClick={() => onView(pkg)}
                                 title="Detail"
                             >
-                                <Eye className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Detail</span>
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="outline"
-                                className="relative h-8 gap-1.5 text-xs"
-                                onClick={() => onManageSchedules(pkg)}
-                                title="Jadwal"
-                            >
-                                <Calendar className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Jadwal</span>
-                                {activeSchedules > 0 ? (
-                                    <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-xs font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                                        {activeSchedules}
+                                <Link
+                                    href={`/admin/product-management/packages/${pkg.id}`}
+                                >
+                                    <Eye className="h-3.5 w-3.5" />
+                                    <span className="hidden sm:inline">
+                                        Detail
                                     </span>
-                                ) : null}
+                                </Link>
                             </Button>
                             {canEdit ? (
                                 <Button
+                                    asChild
                                     size="sm"
                                     variant="outline"
                                     className="h-8 gap-1.5 text-xs"
-                                    onClick={() => onEdit(pkg)}
                                     title="Edit"
                                 >
-                                    <Pencil className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">
-                                        Edit
-                                    </span>
+                                    <Link
+                                        href={`/admin/product-management/packages/${pkg.id}/edit`}
+                                    >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                        <span className="hidden sm:inline">
+                                            Edit
+                                        </span>
+                                    </Link>
                                 </Button>
                             ) : null}
                             {canDelete ? (

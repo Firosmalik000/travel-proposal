@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Menu;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class MasterDataMenuCleanupTest extends TestCase
@@ -69,8 +70,13 @@ class MasterDataMenuCleanupTest extends TestCase
             ],
         ]);
 
+        Permission::query()->create([
+            'name' => 'menu.hotel.view',
+            'guard_name' => 'web',
+        ]);
+
         /** @var object $migration */
-        $migration = require database_path('migrations/2026_07_07_164420_remove_hotel_submenus_from_master_data_menu.php');
+        $migration = require database_path('migrations/2026_08_13_151016_remove_legacy_master_data_hotel_module.php');
         $migration->up();
 
         $children = Menu::query()->where('menu_key', 'master_data')->firstOrFail()->children;
@@ -78,6 +84,14 @@ class MasterDataMenuCleanupTest extends TestCase
         $this->assertSame(
             ['inventory', 'hotel_country', 'hotel_city', 'hotel_room_type'],
             collect($children)->pluck('menu_key')->all(),
+        );
+        $this->assertDatabaseMissing('permissions', ['name' => 'menu.hotel.view']);
+
+        $migration->down();
+
+        $this->assertSame(
+            ['inventory', 'hotel_country', 'hotel_city', 'hotel_room_type'],
+            collect(Menu::query()->where('menu_key', 'master_data')->firstOrFail()->children)->pluck('menu_key')->all(),
         );
     }
 }

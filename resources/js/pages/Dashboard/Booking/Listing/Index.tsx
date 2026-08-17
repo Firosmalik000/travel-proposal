@@ -110,6 +110,10 @@ type TravelPackageOption = {
     code: string | null;
     name: Record<string, string> | null;
     package_type: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    departure_city?: string | null;
+    seats_available?: number | null;
 };
 
 type ScheduleOption = {
@@ -857,10 +861,6 @@ function packageDisplayName(
     return travelPackage.name?.[locale] ?? travelPackage.name?.id ?? '-';
 }
 
-function scheduleLabel(schedule: ScheduleOption): string {
-    return `${formatDate(schedule.departure_date)} - ${schedule.departure_city ?? '-'} - ${schedule.seats_available ?? 0} seat`;
-}
-
 export default function BookingListingIndex({
     registrations,
     packages,
@@ -881,10 +881,6 @@ export default function BookingListingIndex({
     const packageOptions = useMemo(
         () => (Array.isArray(packages) ? packages : []),
         [packages],
-    );
-    const scheduleOptions = useMemo(
-        () => (Array.isArray(schedules) ? schedules : []),
-        [schedules],
     );
     const [search, setSearch] = useState(filters.search ?? '');
     const [statusFilter, setStatusFilter] = useState(
@@ -1124,18 +1120,6 @@ export default function BookingListingIndex({
             }).format(amount);
         }
     }
-
-    const filteredSchedules = useMemo(() => {
-        if (!form.data.travel_package_id) {
-            return scheduleOptions;
-        }
-
-        const travelPackageId = Number(form.data.travel_package_id);
-
-        return scheduleOptions.filter(
-            (schedule) => schedule.travel_package_id === travelPackageId,
-        );
-    }, [form.data.travel_package_id, scheduleOptions]);
 
     const primaryRevenue = revenue?.by_currency?.[0] ?? null;
 
@@ -3211,7 +3195,7 @@ export default function BookingListingIndex({
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
                                             <p className="text-sm font-semibold">
-                                                Paket & Jadwal
+                                                Paket & Keberangkatan
                                             </p>
                                         </div>
                                     </div>
@@ -3246,14 +3230,13 @@ export default function BookingListingIndex({
                                                                     travelPackage.id,
                                                                 )}
                                                             >
-                                                                {
-                                                                    travelPackage.code
-                                                                }{' '}
-                                                                -{' '}
                                                                 {packageDisplayName(
                                                                     travelPackage,
                                                                     locale,
                                                                 )}
+                                                                {travelPackage.start_date
+                                                                    ? ` - ${formatDate(travelPackage.start_date)}`
+                                                                    : ''}
                                                             </SelectItem>
                                                         ),
                                                     )}
@@ -3379,61 +3362,7 @@ export default function BookingListingIndex({
                                                     </p>
                                                 </div>
                                             </>
-                                        ) : (
-                                            <div className="grid gap-2 md:col-span-2">
-                                                <Label htmlFor="departure_schedule_id">
-                                                    Jadwal Keberangkatan
-                                                </Label>
-                                                <Select
-                                                    value={
-                                                        form.data
-                                                            .departure_schedule_id
-                                                    }
-                                                    onValueChange={(value) =>
-                                                        form.setData(
-                                                            'departure_schedule_id',
-                                                            value === 'none'
-                                                                ? ''
-                                                                : value,
-                                                        )
-                                                    }
-                                                >
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Pilih jadwal atau kosongkan" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="none">
-                                                            Tanpa jadwal dulu
-                                                        </SelectItem>
-                                                        {filteredSchedules.map(
-                                                            (schedule) => (
-                                                                <SelectItem
-                                                                    key={
-                                                                        schedule.id
-                                                                    }
-                                                                    value={String(
-                                                                        schedule.id,
-                                                                    )}
-                                                                >
-                                                                    {scheduleLabel(
-                                                                        schedule,
-                                                                    )}
-                                                                </SelectItem>
-                                                            ),
-                                                        )}
-                                                    </SelectContent>
-                                                </Select>
-                                                {form.errors
-                                                    .departure_schedule_id && (
-                                                    <p className="text-sm text-destructive">
-                                                        {
-                                                            form.errors
-                                                                .departure_schedule_id
-                                                        }
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
+                                        ) : null}
                                     </div>
                                 </div>
 

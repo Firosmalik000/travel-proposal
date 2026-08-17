@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\CheckMenuPermission;
 use App\Models\Booking;
-use App\Models\DepartureSchedule;
 use App\Models\Hotel;
 use App\Models\HotelCity;
 use App\Models\HotelCountry;
@@ -22,11 +21,10 @@ class HotelAssignmentManagementTest extends TestCase
     public function test_hotel_assignment_page_is_rendered_with_summary(): void
     {
         $this->withoutMiddleware(CheckMenuPermission::class);
-        [$package, $schedule] = $this->seedPackageSchedule();
+        $package = $this->seedPackage();
         Booking::query()->create([
             'booking_code' => 'BK-HA-0001',
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
             'full_name' => 'Ahmad',
             'phone' => '0812',
             'origin_city' => 'Jakarta',
@@ -37,28 +35,27 @@ class HotelAssignmentManagementTest extends TestCase
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->get(route('booking.hotel-assignment.index', ['departure_schedule_id' => $schedule->id]))
+            ->get(route('booking.hotel-assignment.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/Booking/HotelAssignment/Index')
                 ->where('bookingSummary.total_customers', 5)
                 ->has('packages')
-                ->has('schedules')
                 ->has('hotels')
                 ->has('roomTypes')
+                ->has('bookingStatsByPackage')
             );
     }
 
     public function test_hotel_assignment_can_be_created_and_deleted(): void
     {
         $this->withoutMiddleware(CheckMenuPermission::class);
-        [$package, $schedule] = $this->seedPackageSchedule();
+        $package = $this->seedPackage();
         $hotel = $this->seedHotel();
         $dbl = HotelRoomType::query()->create(['name' => 'DBL', 'is_active' => true]);
         Booking::query()->create([
             'booking_code' => 'BK-HA-0002',
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
             'full_name' => 'Budi',
             'phone' => '0813',
             'origin_city' => 'Surabaya',
@@ -70,7 +67,6 @@ class HotelAssignmentManagementTest extends TestCase
 
         $this->actingAs($user)->post(route('booking.hotel-assignment.store'), [
             'travel_package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
             'hotel_id' => $hotel->id,
             'status' => 'draft',
             'rooms' => [['room_type_id' => $dbl->id, 'room_count' => 2]],
@@ -78,7 +74,6 @@ class HotelAssignmentManagementTest extends TestCase
 
         $this->assertDatabaseHas('hotel_assignments', [
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
             'hotel_id' => $hotel->id,
         ]);
 
@@ -90,14 +85,13 @@ class HotelAssignmentManagementTest extends TestCase
     public function test_hotel_assignment_rejects_insufficient_capacity(): void
     {
         $this->withoutMiddleware(CheckMenuPermission::class);
-        [$package, $schedule] = $this->seedPackageSchedule();
+        $package = $this->seedPackage();
         $hotel = $this->seedHotel();
         $dbl = HotelRoomType::query()->create(['name' => 'DBL', 'is_active' => true]);
 
         Booking::query()->create([
             'booking_code' => 'BK-HA-0003',
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
             'full_name' => 'Cici',
             'phone' => '0814',
             'origin_city' => 'Bandung',
@@ -109,7 +103,6 @@ class HotelAssignmentManagementTest extends TestCase
 
         $this->actingAs($user)->from(route('booking.hotel-assignment.index'))->post(route('booking.hotel-assignment.store'), [
             'travel_package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
             'hotel_id' => $hotel->id,
             'status' => 'draft',
             'rooms' => [['room_type_id' => $dbl->id, 'room_count' => 2]],
@@ -118,9 +111,9 @@ class HotelAssignmentManagementTest extends TestCase
         $this->assertDatabaseCount('hotel_assignments', 0);
     }
 
-    private function seedPackageSchedule(): array
+    private function seedPackage(): TravelPackage
     {
-        $package = TravelPackage::query()->create([
+        return TravelPackage::query()->create([
             'code' => 'ASF-HA-10',
             'slug' => 'hotel-assignment-test',
             'name' => ['id' => 'Hotel Assignment Test', 'en' => 'Hotel Assignment Test'],
@@ -129,23 +122,12 @@ class HotelAssignmentManagementTest extends TestCase
             'duration_days' => 10,
             'price' => 1000000,
             'currency' => 'IDR',
+            'start_date' => '2026-07-01',
+            'end_date' => '2026-07-10',
             'summary' => ['id' => 'Ringkasan', 'en' => 'Summary'],
             'content' => [],
             'is_active' => true,
         ]);
-
-        $schedule = DepartureSchedule::query()->create([
-            'package_id' => $package->id,
-            'departure_date' => '2026-07-01',
-            'return_date' => '2026-07-10',
-            'departure_city' => 'Jakarta',
-            'seats_total' => 40,
-            'seats_available' => 40,
-            'status' => 'open',
-            'is_active' => true,
-        ]);
-
-        return [$package, $schedule];
     }
 
     private function seedHotel(): Hotel

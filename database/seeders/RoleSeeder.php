@@ -17,6 +17,12 @@ class RoleSeeder extends Seeder
         $this->ensureRoleAllAccess('Super Admin');
         $this->ensureRoleAllAccess('Operasional');
 
+        $customerRole = Role::query()->firstOrCreate(['name' => 'Customer', 'guard_name' => 'web']);
+        $customerRole->syncPermissions([]);
+
+        $agentRole = Role::query()->firstOrCreate(['name' => 'Agent', 'guard_name' => 'web']);
+        $agentRole->syncPermissions([]);
+
         $this->ensureRoleWithMenuAccess(
             roleName: 'ContentEditor',
             access: [
@@ -34,6 +40,7 @@ class RoleSeeder extends Seeder
                 'dashboard' => ['view'],
                 'booking_register' => ['view', 'approve', 'reject', 'export'],
                 'booking_listing' => ['view', 'edit', 'export'],
+                'booking_customer_data' => ['view'],
                 'booking_custom_requests' => ['view', 'approve', 'reject'],
                 'booking_hotel_assignment' => ['view', 'create', 'edit', 'delete'],
                 'cashflow' => ['view', 'create', 'edit', 'delete', 'export'],

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Administrator;
 
+use App\Actions\Agent\CreateBookingCommission;
+use App\Actions\Customer\ResolveCustomerAccount;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\BulkStoreBookingParticipantRequest;
 use App\Http\Requests\Administrator\StoreBookingParticipantRequest;
@@ -9,7 +11,6 @@ use App\Http\Requests\Administrator\UpdateBookingParticipantRequest;
 use App\Http\Requests\ManagePackageRegistrationRequest;
 use App\Models\Booking;
 use App\Models\BookingParticipant;
-use App\Models\DepartureSchedule;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
 use App\Services\BookingParticipantImportService;
@@ -39,6 +40,8 @@ class BookingRegisterController extends Controller
         private readonly InventoryStockService $inventoryStockService,
         private readonly BookingParticipantImportService $bookingParticipantImportService,
         private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
+        private readonly ResolveCustomerAccount $resolveCustomerAccount,
+        private readonly CreateBookingCommission $createBookingCommission,
     ) {}
 
     public function index(): Response
@@ -109,8 +112,7 @@ class BookingRegisterController extends Controller
 
         $rows = Booking::query()
             ->with([
-                'package:id,code,name,price,currency,content',
-                'departureSchedule:id,departure_date,departure_city',
+                'package:id,code,name,departure_city,start_date,price,currency,content',
             ])
             ->when(in_array($bookingType, ['regular', 'custom'], true), function ($query) use ($bookingType): void {
                 $query->where('booking_type', $bookingType);
@@ -142,10 +144,10 @@ class BookingRegisterController extends Controller
                 $packageCode = (string) ($booking->package?->code ?? '-');
                 $departureDate = $booking->booking_type === 'custom'
                     ? ($booking->custom_departure_date?->toDateString() ?? '-')
-                    : ($booking->departureSchedule?->departure_date?->toDateString() ?? '-');
+                    : ($booking->package?->start_date?->toDateString() ?? '-');
                 $departureCity = $booking->booking_type === 'custom'
                     ? 'Custom'
-                    : (string) ($booking->departureSchedule?->departure_city ?? '-');
+                    : (string) ($booking->package?->departure_city ?? '-');
 
                 $currency = $booking->booking_type === 'custom'
                     ? (string) ($booking->custom_currency ?: 'IDR')
@@ -305,8 +307,7 @@ class BookingRegisterController extends Controller
         $seo = $this->pdfBrandingService->seo();
 
         $registration->loadMissing([
-            'package:id,code,name,package_type,departure_city,duration_days,price,currency',
-            'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
+            'package:id,code,name,package_type,departure_city,start_date,end_date,duration_days,price,currency',
             'participants',
         ]);
 
@@ -323,11 +324,11 @@ class BookingRegisterController extends Controller
             ['Paket', trim(sprintf('%s (%s)', $packageName, (string) ($registration->package?->code ?? '-')))],
             [
                 'Keberangkatan',
-                $registration->departureSchedule?->departure_date?->toDateString()
+                $registration->package?->start_date?->toDateString()
                     ? sprintf(
                         '%s (%s)',
-                        $registration->departureSchedule?->departure_date?->toDateString(),
-                        (string) ($registration->departureSchedule?->departure_city ?? '-'),
+                        $registration->package?->start_date?->toDateString(),
+                        (string) ($registration->package?->departure_city ?? '-'),
                     )
                     : '-',
             ],
@@ -410,8 +411,7 @@ class BookingRegisterController extends Controller
         $seo = $this->pdfBrandingService->seo();
 
         $registration->loadMissing([
-            'package:id,code,name,package_type,departure_city,duration_days,price,currency,content',
-            'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
+            'package:id,code,name,package_type,departure_city,start_date,end_date,duration_days,price,currency,content',
         ]);
 
         $bookingCode = (string) $registration->booking_code;
@@ -419,15 +419,15 @@ class BookingRegisterController extends Controller
 
         $departureDate = $registration->booking_type === 'custom'
             ? $registration->custom_departure_date?->toDateString()
-            : $registration->departureSchedule?->departure_date?->toDateString();
+            : $registration->package?->start_date?->toDateString();
 
         $returnDate = $registration->booking_type === 'custom'
             ? $registration->custom_return_date?->toDateString()
-            : $registration->departureSchedule?->return_date?->toDateString();
+            : $registration->package?->end_date?->toDateString();
 
         $departureCity = $registration->booking_type === 'custom'
             ? 'Custom'
-            : (string) ($registration->departureSchedule?->departure_city ?? '-');
+            : (string) ($registration->package?->departure_city ?? '-');
 
         $currency = $registration->booking_type === 'custom'
             ? (string) ($registration->custom_currency ?: 'IDR')
@@ -536,7 +536,7 @@ class BookingRegisterController extends Controller
 
     public function markRegistered(PackageRegistration $registration): RedirectResponse
     {
-        $registration->loadMissing(['departureSchedule', 'package:id,code']);
+        $registration->loadMissing('package');
 
         $bookingCode = sprintf(
             'BK-%s-%04d',
@@ -544,26 +544,40 @@ class BookingRegisterController extends Controller
             $registration->id,
         );
 
-        $schedule = $registration->departureSchedule;
+        if ($registration->package === null || $registration->package->availableSeatsCount() < (int) $registration->passenger_count) {
+            return back()->withErrors([
+                'booking' => 'Seat tersedia pada package tidak mencukupi untuk jumlah jamaah ini.',
+            ]);
+        }
 
         try {
             DB::transaction(function () use ($bookingCode, $registration): void {
                 $booking = Booking::query()->create([
+                    'customer_id' => $registration->customer_id,
+                    'agent_profile_id' => $registration->agent_profile_id,
+                    'referral_code' => $registration->referral_code,
                     'booking_code' => $bookingCode,
                     'package_id' => $registration->package_id,
-                    'departure_schedule_id' => $registration->departure_schedule_id,
+                    'departure_schedule_id' => null,
                     'full_name' => $registration->full_name,
                     'phone' => $registration->phone,
                     'email' => $registration->email,
                     'origin_city' => $registration->origin_city,
                     'passenger_count' => $registration->passenger_count,
                     'room_configuration' => $registration->room_configuration,
+                    'agreed_total_amount' => (int) round($this->packageRoomConfigurationService->calculateTotalAmount(
+                        $registration->package,
+                        $registration->room_configuration,
+                        (int) $registration->passenger_count,
+                    )),
+                    'agreed_currency' => $registration->package->currency,
                     'notes' => $registration->notes,
                     'status' => 'registered',
                     'created_at' => $registration->created_at,
                 ]);
 
                 $this->inventoryStockService->syncForBooking($booking);
+                $this->createBookingCommission->handle($booking);
                 $registration->delete();
             });
         } catch (DomainException $exception) {
@@ -572,9 +586,7 @@ class BookingRegisterController extends Controller
             ]);
         }
 
-        if ($schedule !== null) {
-            $schedule->refresh()->syncSeatAvailability();
-        }
+        $registration->package?->refresh()->syncSeatAvailability();
 
         return to_route('booking.register.index')->with(
             'success',
@@ -584,8 +596,6 @@ class BookingRegisterController extends Controller
 
     public function store(ManagePackageRegistrationRequest $request): RedirectResponse
     {
-        $schedule = $request->selectedSchedule();
-
         $bookingCode = sprintf(
             'BK-%s-%04d',
             now()->format('ymdHis'),
@@ -593,19 +603,36 @@ class BookingRegisterController extends Controller
         );
 
         try {
-            DB::transaction(function () use ($request, $schedule, $bookingCode): void {
+            DB::transaction(function () use ($request, $bookingCode): void {
+                $customer = $request->filled('email')
+                    ? $this->resolveCustomerAccount->handle(
+                        $request->string('full_name')->value(),
+                        $request->string('email')->value(),
+                        $request->string('phone')->value(),
+                    )
+                    : null;
+                $travelPackage = TravelPackage::query()->findOrFail($request->integer('travel_package_id'));
+                $roomConfiguration = $request->filled('room_configuration')
+                    ? $this->packageRoomConfigurationService->normalizeConfiguration((array) $request->input('room_configuration', []))
+                    : null;
+
                 $booking = Booking::query()->create([
+                    'customer_id' => $customer?->id,
                     'booking_code' => $bookingCode,
                     'package_id' => $request->integer('travel_package_id'),
-                    'departure_schedule_id' => $schedule?->id,
+                    'departure_schedule_id' => null,
                     'full_name' => $request->string('full_name')->value(),
                     'phone' => $request->string('phone')->value(),
                     'email' => $request->filled('email') ? $request->string('email')->value() : null,
                     'origin_city' => $request->string('origin_city')->value(),
                     'passenger_count' => $request->integer('passenger_count'),
-                    'room_configuration' => $request->filled('room_configuration')
-                        ? $this->packageRoomConfigurationService->normalizeConfiguration((array) $request->input('room_configuration', []))
-                        : null,
+                    'room_configuration' => $roomConfiguration,
+                    'agreed_total_amount' => (int) round($this->packageRoomConfigurationService->calculateTotalAmount(
+                        $travelPackage,
+                        $roomConfiguration,
+                        $request->integer('passenger_count'),
+                    )),
+                    'agreed_currency' => $travelPackage->currency,
                     'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
                     'status' => $request->string('status')->value(),
                 ]);
@@ -618,17 +645,15 @@ class BookingRegisterController extends Controller
             ]);
         }
 
-        if ($schedule !== null) {
-            $schedule->syncSeatAvailability();
-        }
+        TravelPackage::query()->find($request->integer('travel_package_id'))?->syncSeatAvailability();
 
         return to_route('booking.listing.index')->with('success', 'Booking berhasil ditambahkan.');
     }
 
     public function update(ManagePackageRegistrationRequest $request, Booking $registration): RedirectResponse
     {
-        $previousSchedule = $registration->departureSchedule;
-        $schedule = $request->selectedSchedule();
+        $previousPackage = $registration->package;
+        $travelPackage = TravelPackage::query()->findOrFail($request->integer('travel_package_id'));
         $previousStockState = [
             'package_id' => (int) $registration->package_id,
             'passenger_count' => (int) $registration->passenger_count,
@@ -637,7 +662,7 @@ class BookingRegisterController extends Controller
 
         $payload = [
             'package_id' => $request->integer('travel_package_id'),
-            'departure_schedule_id' => $schedule?->id,
+            'departure_schedule_id' => null,
             'full_name' => $request->string('full_name')->value(),
             'phone' => $request->string('phone')->value(),
             'email' => $request->filled('email') ? $request->string('email')->value() : null,
@@ -649,6 +674,15 @@ class BookingRegisterController extends Controller
             'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
             'status' => $request->string('status')->value(),
         ];
+
+        if ($registration->booking_type === 'regular') {
+            $payload['agreed_total_amount'] = (int) round($this->packageRoomConfigurationService->calculateTotalAmount(
+                $travelPackage,
+                $payload['room_configuration'],
+                (int) $payload['passenger_count'],
+            ));
+            $payload['agreed_currency'] = $travelPackage->currency;
+        }
 
         if ($registration->booking_type === 'custom') {
             $customUnitPrice = $request->filled('custom_unit_price')
@@ -667,10 +701,30 @@ class BookingRegisterController extends Controller
             $payload['custom_currency'] = $registration->custom_currency ?: 'IDR';
         }
 
+        $commission = $registration->agentCommission;
+        $changesCommissionBasis = (int) $registration->package_id !== (int) $payload['package_id']
+            || (int) $registration->passenger_count !== (int) $payload['passenger_count']
+            || (int) ($registration->agreed_total_amount ?? 0) !== (int) ($payload['agreed_total_amount'] ?? $registration->agreed_total_amount)
+            || (string) $registration->status !== (string) $payload['status'];
+
+        if ($changesCommissionBasis && in_array($commission?->status, ['approved', 'paid'], true) && $payload['status'] !== 'cancelled') {
+            return back()->withErrors([
+                'booking' => 'Package, pax, nilai, atau status booking tidak dapat diubah setelah komisi disetujui.',
+            ]);
+        }
+
+        if ($commission?->status === 'paid' && $payload['status'] === 'cancelled') {
+            return back()->withErrors([
+                'booking' => 'Booking dengan komisi yang sudah dibayar tidak dapat dibatalkan. Selesaikan koreksi payout terlebih dahulu.',
+            ]);
+        }
+
         try {
             DB::transaction(function () use ($registration, $payload, $previousStockState): void {
                 $registration->update($payload);
-                $this->inventoryStockService->syncForBooking($registration->fresh(), $previousStockState);
+                $freshBooking = $registration->fresh();
+                $this->inventoryStockService->syncForBooking($freshBooking, $previousStockState);
+                $this->createBookingCommission->handle($freshBooking);
             });
         } catch (DomainException $exception) {
             return back()->withErrors([
@@ -678,32 +732,30 @@ class BookingRegisterController extends Controller
             ]);
         }
 
-        if ($previousSchedule !== null) {
-            $previousSchedule->refresh()->syncSeatAvailability();
-        }
-
-        if ($schedule !== null) {
-            $schedule->refresh()->syncSeatAvailability();
-        }
+        $previousPackage?->refresh()->syncSeatAvailability();
+        TravelPackage::query()->find($request->integer('travel_package_id'))?->syncSeatAvailability();
 
         return to_route('booking.listing.index')->with('success', 'Booking berhasil diperbarui.');
     }
 
     public function destroyPending(PackageRegistration $registration): RedirectResponse
     {
-        $schedule = $registration->departureSchedule;
+        $package = $registration->package;
         $registration->delete();
-
-        if ($schedule !== null) {
-            $schedule->refresh()->syncSeatAvailability();
-        }
+        $package?->refresh()->syncSeatAvailability();
 
         return back()->with('success', 'Data registrasi berhasil dihapus.');
     }
 
     public function destroy(Booking $registration): RedirectResponse
     {
-        $schedule = $registration->departureSchedule;
+        if ($registration->agentCommission?->status === 'paid') {
+            return back()->withErrors([
+                'booking' => 'Booking dengan komisi yang sudah dibayar tidak dapat dibatalkan. Selesaikan koreksi payout terlebih dahulu.',
+            ]);
+        }
+
+        $package = $registration->package;
         $previousStockState = [
             'package_id' => (int) $registration->package_id,
             'passenger_count' => (int) $registration->passenger_count,
@@ -711,17 +763,15 @@ class BookingRegisterController extends Controller
         ];
 
         DB::transaction(function () use ($registration, $previousStockState): void {
-            $registration->setAttribute('status', 'cancelled');
-            $registration->setAttribute('passenger_count', 0);
-            $this->inventoryStockService->syncForBooking($registration, $previousStockState);
-            $registration->delete();
+            $registration->update(['status' => 'cancelled']);
+            $freshBooking = $registration->fresh();
+            $this->inventoryStockService->syncForBooking($freshBooking, $previousStockState);
+            $this->createBookingCommission->handle($freshBooking);
         });
 
-        if ($schedule !== null) {
-            $schedule->refresh()->syncSeatAvailability();
-        }
+        $package?->refresh()->syncSeatAvailability();
 
-        return back()->with('success', 'Booking berhasil dihapus.');
+        return back()->with('success', 'Booking berhasil dibatalkan dan histori tetap tersimpan.');
     }
 
     /**
@@ -735,8 +785,7 @@ class BookingRegisterController extends Controller
 
         return PackageRegistration::query()
             ->with([
-                'package:id,code,slug,name,package_type',
-                'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
+                'package:id,code,slug,name,package_type,departure_city,start_date,end_date,booking_status',
             ])
             ->when($travelPackageId > 0, function ($query) use ($travelPackageId): void {
                 $query->where('package_id', $travelPackageId);
@@ -751,10 +800,8 @@ class BookingRegisterController extends Controller
                         ->orWhereHas('package', function ($packageQuery) use ($search): void {
                             $packageQuery
                                 ->where('code', 'like', "%{$search}%")
-                                ->orWhere('name', 'like', "%{$search}%");
-                        })
-                        ->orWhereHas('departureSchedule', function ($scheduleQuery) use ($search): void {
-                            $scheduleQuery->where('departure_city', 'like', "%{$search}%");
+                                ->orWhere('name', 'like', "%{$search}%")
+                                ->orWhere('departure_city', 'like', "%{$search}%");
                         });
                 });
             })
@@ -800,10 +847,10 @@ class BookingRegisterController extends Controller
                     'package_type' => $registration->package?->package_type,
                 ],
                 'departure_schedule' => [
-                    'departure_date' => $registration->departureSchedule?->departure_date?->toDateString(),
-                    'return_date' => $registration->departureSchedule?->return_date?->toDateString(),
-                    'departure_city' => $registration->departureSchedule?->departure_city,
-                    'status' => $registration->departureSchedule?->status,
+                    'departure_date' => $registration->package?->start_date?->toDateString(),
+                    'return_date' => $registration->package?->end_date?->toDateString(),
+                    'departure_city' => $registration->package?->departure_city,
+                    'status' => $registration->package?->booking_status,
                 ],
             ])
             ->toArray();
@@ -821,8 +868,7 @@ class BookingRegisterController extends Controller
 
         return Booking::query()
             ->with([
-                'package:id,code,slug,name,package_type,price,currency,content',
-                'departureSchedule:id,package_id,departure_date,return_date,departure_city,status',
+                'package:id,code,slug,name,package_type,departure_city,start_date,end_date,booking_status,price,currency,content',
             ])
             ->withCount('participants')
             ->withExists('testimonial')
@@ -842,10 +888,8 @@ class BookingRegisterController extends Controller
                         ->orWhereHas('package', function ($packageQuery) use ($search): void {
                             $packageQuery
                                 ->where('code', 'like', "%{$search}%")
-                                ->orWhere('name', 'like', "%{$search}%");
-                        })
-                        ->orWhereHas('departureSchedule', function ($scheduleQuery) use ($search): void {
-                            $scheduleQuery->where('departure_city', 'like', "%{$search}%");
+                                ->orWhere('name', 'like', "%{$search}%")
+                                ->orWhere('departure_city', 'like', "%{$search}%");
                         });
                 });
             })
@@ -866,15 +910,15 @@ class BookingRegisterController extends Controller
 
                 $departureDate = $booking->booking_type === 'custom'
                     ? $booking->custom_departure_date?->toDateString()
-                    : $booking->departureSchedule?->departure_date?->toDateString();
+                    : $booking->package?->start_date?->toDateString();
 
                 $returnDate = $booking->booking_type === 'custom'
                     ? $booking->custom_return_date?->toDateString()
-                    : $booking->departureSchedule?->return_date?->toDateString();
+                    : $booking->package?->end_date?->toDateString();
 
                 $departureCity = $booking->booking_type === 'custom'
                     ? 'Custom'
-                    : $booking->departureSchedule?->departure_city;
+                    : $booking->package?->departure_city;
 
                 return [
                     'id' => $booking->id,
@@ -919,7 +963,7 @@ class BookingRegisterController extends Controller
                         'departure_date' => $departureDate,
                         'return_date' => $returnDate,
                         'departure_city' => $departureCity,
-                        'status' => $booking->departureSchedule?->status,
+                        'status' => $booking->package?->booking_status,
                     ],
                     'has_review' => (bool) ($booking->testimonial_exists ?? false),
                     'review_url' => ($booking->testimonial_exists ?? false) ? null : URL::temporarySignedRoute(
@@ -1020,8 +1064,7 @@ class BookingRegisterController extends Controller
 
         $rows = Booking::query()
             ->with([
-                'package:id,price,currency,content',
-                'departureSchedule:id,departure_city',
+                'package:id,price,currency,content,departure_city',
             ])
             ->where('booking_type', 'regular')
             ->when($travelPackageId > 0, function ($query) use ($travelPackageId): void {
@@ -1039,9 +1082,6 @@ class BookingRegisterController extends Controller
                             $packageQuery
                                 ->where('code', 'like', "%{$search}%")
                                 ->orWhere('name', 'like', "%{$search}%");
-                        })
-                        ->orWhereHas('departureSchedule', function ($scheduleQuery) use ($search): void {
-                            $scheduleQuery->where('departure_city', 'like', "%{$search}%");
                         });
                 });
             })
@@ -1083,7 +1123,7 @@ class BookingRegisterController extends Controller
         return TravelPackage::query()
             ->where('is_active', true)
             ->orderBy('code')
-            ->get(['id', 'code', 'name', 'package_type'])
+            ->get(['id', 'code', 'name', 'package_type', 'start_date', 'end_date', 'departure_city', 'seats_total'])
             ->map(fn (TravelPackage $travelPackage): array => [
                 'id' => $travelPackage->id,
                 'code' => $travelPackage->code,
@@ -1093,6 +1133,10 @@ class BookingRegisterController extends Controller
                     $travelPackage->code,
                 ),
                 'package_type' => $travelPackage->package_type,
+                'start_date' => $travelPackage->start_date?->toDateString(),
+                'end_date' => $travelPackage->end_date?->toDateString(),
+                'departure_city' => $travelPackage->departure_city,
+                'seats_available' => $travelPackage->availableSeatsCount(),
             ])
             ->values()
             ->all();
@@ -1320,32 +1364,28 @@ class BookingRegisterController extends Controller
      */
     private function schedules(): array
     {
-        return DepartureSchedule::query()
+        return TravelPackage::query()
             ->where('is_active', true)
-            ->withSum(
-                ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
-                'passenger_count',
-            )
-            ->orderBy('departure_date')
+            ->whereNotNull('start_date')
+            ->orderBy('start_date')
             ->get([
                 'id',
-                'package_id',
-                'departure_date',
-                'return_date',
+                'start_date',
+                'end_date',
                 'departure_city',
-                'status',
+                'booking_status',
                 'seats_total',
                 'seats_available',
             ])
-            ->map(fn (DepartureSchedule $departureSchedule): array => [
-                'id' => $departureSchedule->id,
-                'travel_package_id' => $departureSchedule->package_id,
-                'departure_date' => $departureSchedule->departure_date?->toDateString(),
-                'return_date' => $departureSchedule->return_date?->toDateString(),
-                'departure_city' => $departureSchedule->departure_city,
-                'status' => $departureSchedule->status,
-                'seats_total' => (int) $departureSchedule->seats_total,
-                'seats_available' => $departureSchedule->availableSeatsCount(),
+            ->map(fn (TravelPackage $package): array => [
+                'id' => $package->id,
+                'travel_package_id' => $package->id,
+                'departure_date' => $package->start_date?->toDateString(),
+                'return_date' => $package->end_date?->toDateString(),
+                'departure_city' => $package->departure_city,
+                'status' => $package->booking_status,
+                'seats_total' => (int) $package->seats_total,
+                'seats_available' => $package->availableSeatsCount(),
             ])
             ->values()
             ->all();

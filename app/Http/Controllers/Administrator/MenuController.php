@@ -197,7 +197,6 @@ class MenuController extends Controller
         $accessibleMenuKeys = $leafMenuKeys
             ->filter(fn (string $menuKey): bool => $user->can('menu.'.$menuKey.'.view'))
             ->reject(fn (string $menuKey): bool => $menuKey === 'hotel')
-            ->reject(fn (string $menuKey): bool => ! $user->isSuperAdmin() && $menuKey === 'master_currency')
             ->values()
             ->all();
 

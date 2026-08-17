@@ -58,6 +58,8 @@ type UserRow = {
     address: string | null;
     avatar?: string | null;
     role: string | null;
+    roles: string[];
+    booking_count: number;
     is_super_admin: boolean;
 };
 
@@ -285,6 +287,7 @@ export default function UserManagementIndex({ users, roles }: Props) {
                                     <TableHead>Nama</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Role</TableHead>
+                                    <TableHead>Booking</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -339,9 +342,22 @@ export default function UserManagementIndex({ users, roles }: Props) {
                                         </TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <span className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
-                                                {user.role ?? 'NoAccess'}
-                                            </span>
+                                            <div className="flex flex-wrap gap-1">
+                                                {(user.roles.length > 0
+                                                    ? user.roles
+                                                    : ['NoAccess']
+                                                ).map((role) => (
+                                                    <span
+                                                        key={role}
+                                                        className="inline-flex rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground"
+                                                    >
+                                                        {role}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.booking_count}
                                         </TableCell>
                                     </TableRow>
                                 ))}

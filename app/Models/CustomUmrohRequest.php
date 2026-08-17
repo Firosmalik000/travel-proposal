@@ -12,6 +12,7 @@ class CustomUmrohRequest extends Model
 
     protected $fillable = [
         'request_code',
+        'customer_id',
         'full_name',
         'phone',
         'email',
@@ -48,6 +49,11 @@ class CustomUmrohRequest extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'customer_id');
     }
 
     public function approvedBy(): BelongsTo

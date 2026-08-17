@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Administrator;
 
+use App\Actions\Customer\ResolveCustomerAccount;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\UpdateUserPasswordRequest;
 use App\Http\Requests\Administrator\UpdateUserRequest;
@@ -15,6 +16,8 @@ use Spatie\Permission\Models\Role;
 
 class UserManagementController extends Controller
 {
+    public function __construct(private readonly ResolveCustomerAccount $resolveCustomerAccount) {}
+
     public function index(): Response
     {
         Role::query()->firstOrCreate(['name' => 'NoAccess', 'guard_name' => 'web']);
@@ -25,6 +28,7 @@ class UserManagementController extends Controller
 
         $users = User::query()
             ->with(['roles:id,name', 'profile:user_id,full_name,phone,gender,birth_place,birth_date,address'])
+            ->withCount('customerBookings')
             ->orderBy('name')
             ->get(['id', 'name', 'email', 'full_name'])
             ->map(fn (User $user): array => [
@@ -38,7 +42,10 @@ class UserManagementController extends Controller
                 'birth_date' => $user->profile?->birth_date?->format('Y-m-d'),
                 'address' => $user->profile?->address,
                 'avatar' => $user->avatar,
-                'role' => $user->roles->first()?->name,
+                'role' => $user->roles->first(fn (Role $role): bool => $role->name !== 'Customer')?->name
+                    ?? $user->roles->first()?->name,
+                'roles' => $user->roles->pluck('name')->values()->all(),
+                'booking_count' => (int) $user->customer_bookings_count,
                 'is_super_admin' => $user->isSuperAdmin(),
             ]);
 
@@ -58,7 +65,7 @@ class UserManagementController extends Controller
         $roleId = $request->validated('role_id');
         $role = Role::query()->findOrFail($roleId);
 
-        $user->syncRoles([$role->name]);
+        $this->syncManagedRole($user, $role->name);
 
         return back()->with('success', 'Role user berhasil diperbarui.');
     }
@@ -99,11 +106,13 @@ class UserManagementController extends Controller
             'full_name' => $validated['full_name'] ?: $validated['name'],
         ]);
 
-        $user->syncRoles([$role->name]);
+        $this->syncManagedRole($user, $role->name);
 
         $profile->fill([
             'full_name' => $validated['full_name'] ?: $validated['name'],
-            'phone' => $validated['phone'] ?? null,
+            'phone' => filled($validated['phone'] ?? null)
+                ? $this->resolveCustomerAccount->normalizePhone($validated['phone'])
+                : null,
             'gender' => $validated['gender'] ?? null,
             'birth_place' => $validated['birth_place'] ?? null,
             'birth_date' => $validated['birth_date'] ?? null,
@@ -126,5 +135,16 @@ class UserManagementController extends Controller
         ]);
 
         return back()->with('success', 'Password user berhasil diperbarui.');
+    }
+
+    private function syncManagedRole(User $user, string $roleName): void
+    {
+        $roles = [$roleName];
+
+        if ($user->customerBookings()->exists() && $roleName !== 'Customer') {
+            $roles[] = 'Customer';
+        }
+
+        $user->syncRoles($roles);
     }
 }

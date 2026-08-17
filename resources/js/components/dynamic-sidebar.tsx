@@ -18,6 +18,7 @@ import { dashboard } from '@/routes';
 import { Link, usePage } from '@inertiajs/react';
 import {
     Archive,
+    BadgeDollarSign,
     BookOpen,
     Briefcase,
     Building,
@@ -33,6 +34,7 @@ import {
     Folder,
     FolderTree,
     HandCoins,
+    Handshake,
     History,
     Home,
     LayoutGrid,
@@ -84,6 +86,7 @@ function canonicalAdminPath(path: string | null | undefined): string {
 
 const iconMap: Record<string, LucideIcon> = {
     Archive,
+    BadgeDollarSign,
     BookOpen,
     Briefcase,
     Building,
@@ -98,6 +101,7 @@ const iconMap: Record<string, LucideIcon> = {
     Folder,
     FolderTree,
     HandCoins,
+    Handshake,
     History,
     Home,
     LayoutGrid,

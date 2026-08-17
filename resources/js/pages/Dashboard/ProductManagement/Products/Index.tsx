@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import HotelIndexLocal from './HotelIndexLocal';
+import ProductCategoryHotel from './ProductCategoryHotel';
 
 type ProductItem = {
     id: number;
@@ -47,6 +47,11 @@ type ProductItem = {
     description: string | null;
     price: number | null;
     currency: string | null;
+    currency_rate_snapshot?: {
+        rate_to_idr: number;
+        source: string;
+        fetched_at: string | null;
+    } | null;
     hotel_info?: {
         hotel_id: number;
         city: string;
@@ -73,7 +78,7 @@ type Props = {
         product_type: string;
     };
     product_type_options: Array<{ value: string; label: string }>;
-    hotel_master: {
+    product_category_hotel: {
         hotels: {
             data: Array<{
                 id: number;
@@ -120,7 +125,7 @@ type Props = {
             country_name: string;
         }>;
         roomTypeOptions: Array<{ id: number; name: string }>;
-        currencyOptions: Array<{ code: string; name: string }>;
+        currencyOptions: CurrencyOption[];
     };
     hotel_options: Array<{
         id: number;
@@ -154,7 +159,17 @@ type Props = {
         country_name: string;
     }>;
     hotel_room_type_options: Array<{ id: number; name: string }>;
-    hotel_currency_options: Array<{ code: string; name: string }>;
+    hotel_currency_options: CurrencyOption[];
+};
+
+type CurrencyOption = {
+    code: string;
+    name: string;
+    conversion_rate: number;
+    live_conversion_rate: number;
+    rate_source: string;
+    rate_fetched_at: string | null;
+    is_live: boolean;
 };
 
 type ProductFormData = {
@@ -163,6 +178,7 @@ type ProductFormData = {
     description: string;
     price: string;
     currency: string;
+    currency_rate_to_idr: string;
     source_hotel_id: string;
     is_active: boolean;
 };
@@ -183,6 +199,10 @@ function buildFormData(
             product?.currency ??
             product?.hotel_info?.currency ??
             defaultCurrency,
+        currency_rate_to_idr:
+            product?.currency_rate_snapshot?.rate_to_idr !== undefined
+                ? String(product.currency_rate_snapshot.rate_to_idr)
+                : '',
         source_hotel_id:
             product?.hotel_info?.hotel_id && product.hotel_info.hotel_id > 0
                 ? String(product.hotel_info.hotel_id)
@@ -479,19 +499,18 @@ export default function ProductsIndex({
     products,
     filters,
     product_type_options: productTypeOptions,
-    hotel_master: hotelMaster,
+    product_category_hotel: productCategoryHotel,
     hotel_options: hotelOptions,
     hotel_currency_options: hotelCurrencyOptions,
 }: Props) {
     const { can: canProduct } = usePermission('product');
-    const { can: canHotel } = usePermission('hotel');
     const canCreate = canProduct('create');
     const canView = canProduct('view');
     const canEdit = canProduct('edit');
     const canDelete = canProduct('delete');
-    const canViewHotel = canHotel('view');
-    const canEditHotel = canHotel('edit');
-    const canDeleteHotel = canHotel('delete');
+    const canViewHotel = canView;
+    const canEditHotel = canEdit;
+    const canDeleteHotel = canDelete;
     const [search, setSearch] = useState(filters.search);
     const [productType, setProductType] = useState(
         filters.product_type || 'hotel',
@@ -510,6 +529,14 @@ export default function ProductsIndex({
 
     const form = useForm<ProductFormData>(
         buildFormData(null, defaultHotelCurrency),
+    );
+    const selectedCurrency = hotelCurrencyOptions.find(
+        (currency) => currency.code === form.data.currency,
+    );
+    const selectedLiveRate = Number(
+        selectedCurrency?.live_conversion_rate ??
+            selectedCurrency?.conversion_rate ??
+            0,
     );
     const generatedSlug = useMemo(
         () => generateSlug(form.data.name),
@@ -610,6 +637,11 @@ export default function ProductsIndex({
         form.setData({
             ...buildFormData(null, defaultHotelCurrency),
             product_type: activeProductType,
+            currency_rate_to_idr: String(
+                hotelCurrencyOptions.find(
+                    (currency) => currency.code === defaultHotelCurrency,
+                )?.live_conversion_rate ?? 1,
+            ),
         });
         form.clearErrors();
         setActiveFormTab('general');
@@ -687,6 +719,10 @@ export default function ProductsIndex({
                 content: {
                     price: parsedPrice,
                     currency: form.data.currency || defaultHotelCurrency,
+                    currency_rate_to_idr: Number(
+                        form.data.currency_rate_to_idr ||
+                            (form.data.currency === 'IDR' ? 1 : 0),
+                    ),
                 },
                 is_active: form.data.is_active,
             },
@@ -854,9 +890,8 @@ export default function ProductsIndex({
                 </div>
 
                 {activeProductType === 'hotel' ? (
-                    <HotelIndexLocal
-                        embedded
-                        {...hotelMaster}
+                    <ProductCategoryHotel
+                        {...productCategoryHotel}
                         currencyOptions={hotelCurrencyOptions}
                     />
                 ) : (
@@ -1161,6 +1196,45 @@ export default function ProductsIndex({
                                                 placeholder="350000"
                                                 required
                                             />
+                                            {form.data.currency !== 'IDR' ? (
+                                                <div className="mt-2 flex gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        min={0.000001}
+                                                        step="any"
+                                                        value={
+                                                            form.data
+                                                                .currency_rate_to_idr
+                                                        }
+                                                        onChange={(event) =>
+                                                            form.setData(
+                                                                'currency_rate_to_idr',
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        placeholder="Kurs ke IDR"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        disabled={
+                                                            selectedLiveRate <=
+                                                            0
+                                                        }
+                                                        onClick={() =>
+                                                            form.setData(
+                                                                'currency_rate_to_idr',
+                                                                String(
+                                                                    selectedLiveRate,
+                                                                ),
+                                                            )
+                                                        }
+                                                    >
+                                                        Gunakan Kurs Live
+                                                    </Button>
+                                                </div>
+                                            ) : null}
                                         </div>
                                         <div>
                                             <Label className="mb-1.5 block">
@@ -1170,17 +1244,31 @@ export default function ProductsIndex({
                                                 value={
                                                     form.data.currency || 'none'
                                                 }
-                                                onValueChange={(value) =>
-                                                    form.setData(
-                                                        'currency',
+                                                onValueChange={(value) => {
+                                                    const nextCurrency =
                                                         value === 'none'
                                                             ? defaultHotelCurrency
-                                                            : value,
-                                                    )
-                                                }
+                                                            : value;
+                                                    const nextRate =
+                                                        hotelCurrencyOptions.find(
+                                                            (currency) =>
+                                                                currency.code ===
+                                                                nextCurrency,
+                                                        )
+                                                            ?.live_conversion_rate ??
+                                                        (nextCurrency === 'IDR'
+                                                            ? 1
+                                                            : 0);
+                                                    form.setData((current) => ({
+                                                        ...current,
+                                                        currency: nextCurrency,
+                                                        currency_rate_to_idr:
+                                                            String(nextRate),
+                                                    }));
+                                                }}
                                             >
                                                 <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Pilih kurs dari master" />
+                                                    <SelectValue placeholder="Pilih mata uang" />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="none">
@@ -1204,10 +1292,6 @@ export default function ProductsIndex({
                                                     )}
                                                 </SelectContent>
                                             </Select>
-                                            <p className="mt-1.5 text-xs text-muted-foreground">
-                                                Dipakai untuk perhitungan HPP
-                                                dan mengikuti Master Kurs.
-                                            </p>
                                         </div>
                                     </div>
 

@@ -62,8 +62,8 @@ class BookingRegistrationNotifier
             ?? $registration->package?->code
             ?? 'Paket Umroh';
 
-        $scheduleLabel = $registration->departureSchedule?->departure_date?->translatedFormat('d F Y') ?? '-';
-        $departureCity = $registration->departureSchedule?->departure_city ?? '-';
+        $departureLabel = $registration->package?->start_date?->translatedFormat('d F Y') ?? '-';
+        $departureCity = $registration->package?->departure_city ?? '-';
 
         return implode("\n", [
             'Pendaftaran paket baru masuk.',
@@ -76,7 +76,7 @@ class BookingRegistrationNotifier
                 is_array($registration->room_configuration) ? $registration->room_configuration : null,
             ),
             'Paket: '.$packageName,
-            'Jadwal: '.$scheduleLabel.' - '.$departureCity,
+            'Keberangkatan: '.$departureLabel.' - '.$departureCity,
             'Catatan: '.($registration->notes ?: '-'),
         ]);
     }

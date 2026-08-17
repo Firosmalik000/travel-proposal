@@ -13,11 +13,18 @@ class ManageTravelResourceRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'payload' => ['nullable', 'array'],
             'payload_json' => ['nullable', 'json'],
             'image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:4096'],
         ];
+
+        if ($this->route('resource') === 'products' && $this->has('payload')) {
+            $rules['payload.content.currency'] = ['required', 'string', 'size:3'];
+            $rules['payload.content.currency_rate_to_idr'] = ['required', 'numeric', 'gt:0'];
+        }
+
+        return $rules;
     }
 
     public function messages(): array

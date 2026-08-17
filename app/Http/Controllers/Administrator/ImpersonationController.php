@@ -35,10 +35,11 @@ class ImpersonationController extends Controller
         $request->session()->save();
 
         if ($request->header('X-Inertia')) {
-            return Inertia::location('/dashboard');
+            return Inertia::location($user->isCustomerOnly() ? '/customer' : '/dashboard');
         }
 
-        return redirect('/dashboard')->with('success', 'Berhasil impersonate user: '.$user->email);
+        return redirect($user->isCustomerOnly() ? '/customer' : '/dashboard')
+            ->with('success', 'Berhasil impersonate user: '.$user->email);
     }
 
     public function stop(Request $request): Response

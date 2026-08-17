@@ -8,7 +8,6 @@ use App\Http\Requests\Administrator\ManageTravelResourceRequest;
 use App\Http\Requests\Administrator\UpdatePageContentRequest;
 use App\Models\Article;
 use App\Models\CareerOpening;
-use App\Models\Currency;
 use App\Models\DepartureSchedule;
 use App\Models\Faq;
 use App\Models\GalleryItem;
@@ -24,6 +23,7 @@ use App\Models\Testimonial;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use App\Models\TravelService;
+use App\Services\LiveCurrencyRateService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +36,8 @@ use Inertia\Response;
 
 class ContentController extends Controller
 {
+    public function __construct(private readonly LiveCurrencyRateService $liveCurrencyRateService) {}
+
     public function index(): Response
     {
         return $this->renderContentPage(
@@ -113,6 +115,9 @@ class ContentController extends Controller
                 'currency' => is_array($product->content)
                     ? (string) ($product->content['currency'] ?? '')
                     : '',
+                'currency_rate_snapshot' => is_array($product->content)
+                    ? data_get($product->content, 'currency_rate_snapshot')
+                    : null,
                 'hotel_info' => is_array($product->content)
                     ? [
                         'hotel_id' => (int) ($product->content['hotel_id'] ?? 0),
@@ -150,6 +155,8 @@ class ContentController extends Controller
             ->values()
             ->all();
 
+        $currencyOptions = $this->liveCurrencyRateService->options();
+
         return Inertia::render('Dashboard/ProductManagement/Products/Index', [
             'products' => $products,
             'filters' => [
@@ -177,6 +184,7 @@ class ContentController extends Controller
                     'currency' => $hotel->currency,
                     'is_active' => $hotel->is_active,
                     'pricing' => $hotel->prices
+                        ->filter(fn ($price): bool => HotelRoomType::isProductHotelPricingName($price->roomType?->name))
                         ->sortBy('period_start')
                         ->values()
                         ->map(fn ($price): array => [
@@ -215,6 +223,7 @@ class ContentController extends Controller
                 ->values()
                 ->all(),
             'hotel_room_type_options' => HotelRoomType::query()
+                ->forProductHotelPricing()
                 ->orderBy('name')
                 ->get(['id', 'name'])
                 ->map(fn (HotelRoomType $roomType): array => [
@@ -223,17 +232,8 @@ class ContentController extends Controller
                 ])
                 ->values()
                 ->all(),
-            'hotel_currency_options' => Currency::query()
-                ->where('is_active', true)
-                ->orderBy('code')
-                ->get(['code', 'name'])
-                ->map(fn (Currency $currency): array => [
-                    'code' => $currency->code,
-                    'name' => $currency->name,
-                ])
-                ->values()
-                ->all(),
-            'hotel_master' => [
+            'hotel_currency_options' => $currencyOptions,
+            'product_category_hotel' => [
                 'hotels' => Hotel::query()
                     ->with(['country:id,name', 'city:id,name', 'product:id,code', 'prices.roomType:id,name'])
                     ->where('is_active', true)
@@ -265,16 +265,20 @@ class ContentController extends Controller
                             'country_name' => $hotel->country?->name,
                             'city_name' => $hotel->city?->name,
                             'product_code' => $hotel->product?->code,
-                            'prices' => $hotel->prices->map(fn ($price): array => [
-                                'id' => $price->id,
-                                'broker_key' => $price->broker_key,
-                                'broker_name' => $price->broker_name,
-                                'room_type_id' => $price->room_type_id,
-                                'room_type_name' => $price->roomType?->name,
-                                'period_start' => $price->period_start?->toDateString(),
-                                'period_end' => $price->period_end?->toDateString(),
-                                'price' => $price->price,
-                            ])->values()->all(),
+                            'prices' => $hotel->prices
+                                ->filter(fn ($price): bool => HotelRoomType::isProductHotelPricingName($price->roomType?->name))
+                                ->map(fn ($price): array => [
+                                    'id' => $price->id,
+                                    'broker_key' => $price->broker_key,
+                                    'broker_name' => $price->broker_name,
+                                    'room_type_id' => $price->room_type_id,
+                                    'room_type_name' => $price->roomType?->name,
+                                    'period_start' => $price->period_start?->toDateString(),
+                                    'period_end' => $price->period_end?->toDateString(),
+                                    'price' => $price->price,
+                                ])
+                                ->values()
+                                ->all(),
                         ];
                     }),
                 'filters' => [
@@ -317,6 +321,7 @@ class ContentController extends Controller
                     ->values()
                     ->all(),
                 'roomTypeOptions' => HotelRoomType::query()
+                    ->forProductHotelPricing()
                     ->orderBy('name')
                     ->get(['id', 'name'])
                     ->map(fn (HotelRoomType $roomType): array => [
@@ -325,16 +330,7 @@ class ContentController extends Controller
                     ])
                     ->values()
                     ->all(),
-                'currencyOptions' => Currency::query()
-                    ->where('is_active', true)
-                    ->orderBy('code')
-                    ->get(['code', 'name'])
-                    ->map(fn (Currency $currency): array => [
-                        'code' => $currency->code,
-                        'name' => $currency->name,
-                    ])
-                    ->values()
-                    ->all(),
+                'currencyOptions' => $currencyOptions,
             ],
         ]);
     }
@@ -384,11 +380,11 @@ class ContentController extends Controller
     {
         return $this->renderContentPage(
             heading: 'Package Management',
-            description: 'Kelola package umroh beserta jadwal keberangkatan dan relasi product.',
+            description: 'Kelola package umroh beserta keberangkatan, kapasitas, dan relasi product.',
             breadcrumbHref: '/admin/product-management/packages',
             menuKey: 'package',
             pages: [],
-            resources: ['packages', 'schedules'],
+            resources: ['packages'],
         );
     }
 
@@ -448,7 +444,7 @@ class ContentController extends Controller
         $model = $definition['model']::query()->findOrFail($id);
         $payload = $this->requestPayload($request);
         $payload = $this->applyResourceUploads($request, $resource, $model, $payload);
-        $model->fill($this->normalizePayload($resource, $payload));
+        $model->fill($this->normalizePayload($resource, $payload, $model));
         $model->save();
         $this->afterResourceSaved($resource, $model, $payload);
 
@@ -587,9 +583,8 @@ class ContentController extends Controller
     {
         return TravelPackage::query()
             ->where('is_active', true)
-            ->whereHas('schedules', fn ($query) => $query
-                ->where('is_active', true)
-                ->whereDate('departure_date', '>=', now()->toDateString()))
+            ->where('booking_status', 'open')
+            ->whereDate('start_date', '>=', now()->toDateString())
             ->orderByDesc('is_featured')
             ->orderBy('price')
             ->limit(3)
@@ -1723,7 +1718,7 @@ class ContentController extends Controller
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
-    private function normalizePayload(string $resource, array $payload): array
+    private function normalizePayload(string $resource, array $payload, ?Model $existing = null): array
     {
         return match ($resource) {
             'product_categories' => [
@@ -1733,20 +1728,7 @@ class ContentController extends Controller
                 'sort_order' => (int) ($payload['sort_order'] ?? 0),
                 'is_active' => (bool) ($payload['is_active'] ?? true),
             ],
-            'products' => [
-                'code' => (string) ($payload['code'] ?? ''),
-                'slug' => (string) ($payload['slug'] ?? ''),
-                'name' => $this->localizedValue($payload['name'] ?? []),
-                'product_type' => (string) ($payload['product_type'] ?? ''),
-                'description' => $this->localizedValue($payload['description'] ?? []),
-                'content' => [
-                    'price' => is_array($payload['content'] ?? null) && ($payload['content']['price'] ?? '') !== ''
-                        ? (int) $payload['content']['price']
-                        : null,
-                    'currency' => (string) data_get($payload, 'content.currency', 'IDR'),
-                ],
-                'is_active' => (bool) ($payload['is_active'] ?? true),
-            ],
+            'products' => $this->normalizeProductPayload($payload, $existing instanceof TravelProduct ? $existing : null),
             'packages' => $this->normalizePackagePayload($payload),
             'schedules' => [
                 'travel_package_id' => TravelPackage::query()->where('code', (string) ($payload['travel_package_code'] ?? ''))->value('id'),
@@ -1846,6 +1828,53 @@ class ContentController extends Controller
             'summary' => $this->localizedValue($payload['summary'] ?? []),
             'content' => is_array($payload['content'] ?? null) ? $payload['content'] : [],
             'is_featured' => (bool) ($payload['is_featured'] ?? false),
+            'is_active' => (bool) ($payload['is_active'] ?? true),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function normalizeProductPayload(array $payload, ?TravelProduct $existing = null): array
+    {
+        $currencyCode = strtoupper((string) data_get($payload, 'content.currency', 'IDR'));
+        $manualRate = data_get($payload, 'content.currency_rate_to_idr');
+        $existingSnapshot = data_get($existing?->content, 'currency_rate_snapshot');
+
+        if (is_numeric($manualRate) && (float) $manualRate > 0) {
+            $currencyRate = [
+                'rate_to_idr' => (float) $manualRate,
+                'source' => 'manual',
+                'fetched_at' => null,
+            ];
+        } elseif ($existing !== null && ! data_get($payload, 'content.refresh_currency_rate', false)) {
+            $currencyRate = is_array($existingSnapshot) ? $existingSnapshot : [
+                'rate_to_idr' => $currencyCode === 'IDR' ? 1 : 0,
+                'source' => $currencyCode === 'IDR' ? 'identity' : 'unavailable',
+                'fetched_at' => null,
+            ];
+        } else {
+            $currencyRate = $this->liveCurrencyRateService->rateFor($currencyCode);
+        }
+
+        return [
+            'code' => (string) ($payload['code'] ?? ''),
+            'slug' => (string) ($payload['slug'] ?? ''),
+            'name' => $this->localizedValue($payload['name'] ?? []),
+            'product_type' => (string) ($payload['product_type'] ?? ''),
+            'description' => $this->localizedValue($payload['description'] ?? []),
+            'content' => [
+                'price' => is_array($payload['content'] ?? null) && ($payload['content']['price'] ?? '') !== ''
+                    ? (int) $payload['content']['price']
+                    : null,
+                'currency' => $currencyCode,
+                'currency_rate_snapshot' => [
+                    'rate_to_idr' => $currencyRate['rate_to_idr'],
+                    'source' => $currencyRate['source'],
+                    'fetched_at' => $currencyRate['fetched_at'],
+                ],
+            ],
             'is_active' => (bool) ($payload['is_active'] ?? true),
         ];
     }

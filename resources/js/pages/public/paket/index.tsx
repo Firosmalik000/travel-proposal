@@ -106,17 +106,18 @@ export default function Paket() {
     const locale: 'id' | 'en' = 'id';
     const publicData = usePublicData();
     const paketPage = usePublicPageContent('paket-umroh');
-    const { seoSettings } = usePage<SharedData>().props;
+    const page = usePage<SharedData>();
+    const { seoSettings } = page.props;
+    const referralCode = new URLSearchParams(page.url.split('?')[1] ?? '').get(
+        'ref',
+    );
     const seo = (seoSettings as Record<string, any>) ?? {};
     const t = content[locale];
     const whatsappLink = whatsappLinkFromSeo(seo);
 
     const packages: PackageCard[] = Array.isArray(publicData.packages)
         ? publicData.packages.map((item: Record<string, any>) => {
-              const firstSchedule = Array.isArray(item.schedules)
-                  ? item.schedules[0]
-                  : null;
-              const departureDate = String(firstSchedule?.departure_date ?? '');
+              const departureDate = String(item.start_date ?? '');
               const fallbackHotel = localize(
                   item.content?.hotel,
                   locale,
@@ -496,7 +497,7 @@ export default function Paket() {
                                                 <Link
                                                     href={
                                                         item.slug
-                                                            ? `/paket-umroh/${item.slug}`
+                                                            ? `/paket-umroh/${item.slug}${referralCode ? `?ref=${encodeURIComponent(referralCode)}` : ''}`
                                                             : '/paket-umroh'
                                                     }
                                                     className="flex-1 rounded-xl border border-border py-2.5 text-center text-xs font-semibold text-foreground transition hover:bg-muted"

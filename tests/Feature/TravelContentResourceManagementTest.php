@@ -154,6 +154,31 @@ class TravelContentResourceManagementTest extends TestCase
         $this->assertTrue(TravelService::query()->where('sort_order', 2)->exists());
     }
 
+    public function test_it_can_store_a_product_category_from_content_management(): void
+    {
+        $user = User::factory()->create();
+
+        $payload = [
+            'key' => 'administrasi',
+            'name' => ['id' => 'Administrasi', 'en' => 'Administration'],
+            'description' => ['id' => 'Kategori administrasi', 'en' => 'Administration category'],
+            'sort_order' => 4,
+            'is_active' => true,
+        ];
+
+        $this->actingAs($user)
+            ->post(route('content.resources.store', ['resource' => 'product_categories']), [
+                'payload_json' => json_encode($payload, JSON_THROW_ON_ERROR),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('product_categories', [
+            'key' => 'administrasi',
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+    }
+
     public function test_it_can_store_a_product_from_content_management(): void
     {
         $user = User::factory()->create();

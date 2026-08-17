@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Booking;
-use App\Models\DepartureSchedule;
 use App\Models\HotelAssignment;
 use App\Models\HotelRoomType;
 use Illuminate\Support\Facades\DB;
@@ -18,14 +17,14 @@ class HotelAssignmentService
     {
         return DB::transaction(function () use ($payload, $rooms): HotelAssignment {
             $this->validateCapacity(
-                departureScheduleId: (int) $payload['departure_schedule_id'],
+                packageId: (int) $payload['package_id'],
                 rooms: $rooms,
             );
 
             $assignment = HotelAssignment::query()->create($payload);
             $assignment->rooms()->createMany($this->roomPayload($rooms));
 
-            return $assignment->load(['package', 'departureSchedule', 'hotel', 'rooms.roomType']);
+            return $assignment->load(['package', 'hotel', 'rooms.roomType']);
         });
     }
 
@@ -36,7 +35,7 @@ class HotelAssignmentService
     {
         return DB::transaction(function () use ($assignment, $payload, $rooms): HotelAssignment {
             $this->validateCapacity(
-                departureScheduleId: (int) $payload['departure_schedule_id'],
+                packageId: (int) $payload['package_id'],
                 rooms: $rooms,
             );
 
@@ -44,7 +43,7 @@ class HotelAssignmentService
             $assignment->rooms()->delete();
             $assignment->rooms()->createMany($this->roomPayload($rooms));
 
-            return $assignment->load(['package', 'departureSchedule', 'hotel', 'rooms.roomType']);
+            return $assignment->load(['package', 'hotel', 'rooms.roomType']);
         });
     }
 
@@ -84,13 +83,11 @@ class HotelAssignmentService
     /**
      * @param  array<int, array{room_type_id:int,room_count:int}>  $rooms
      */
-    private function validateCapacity(int $departureScheduleId, array $rooms): void
+    private function validateCapacity(int $packageId, array $rooms): void
     {
-        $schedule = DepartureSchedule::query()->findOrFail($departureScheduleId);
-
         $customerCount = (int) Booking::query()
-            ->where('status', 'registered')
-            ->where('departure_schedule_id', $schedule->id)
+            ->whereIn('status', ['pending', 'registered'])
+            ->where('package_id', $packageId)
             ->sum('passenger_count');
 
         $roomTypes = HotelRoomType::query()

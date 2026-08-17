@@ -163,11 +163,20 @@ class MenuSeeder extends Seeder
                         'children' => null,
                     ],
                     [
+                        'name' => 'Data Customer',
+                        'menu_key' => 'booking_customer_data',
+                        'path' => '/dashboard/booking-management/customer-data',
+                        'icon' => 'Users',
+                        'order' => 3,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
                         'name' => 'Custom Requests',
                         'menu_key' => 'booking_custom_requests',
                         'path' => '/dashboard/booking-management/custom-requests',
                         'icon' => 'MessageSquare',
-                        'order' => 3,
+                        'order' => 4,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -176,7 +185,7 @@ class MenuSeeder extends Seeder
                         'menu_key' => 'booking_hotel_assignment',
                         'path' => '/dashboard/booking-management/hotel-assignment',
                         'icon' => 'Building2',
-                        'order' => 4,
+                        'order' => 5,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -228,15 +237,6 @@ class MenuSeeder extends Seeder
                         'is_active' => true,
                         'children' => null,
                     ],
-                    [
-                        'name' => 'Master Currency',
-                        'menu_key' => 'master_currency',
-                        'path' => '/dashboard/master-data/currencies',
-                        'icon' => 'Coins',
-                        'order' => 6,
-                        'is_active' => true,
-                        'children' => null,
-                    ],
                 ],
                 'order' => 5,
                 'is_active' => true,
@@ -281,6 +281,20 @@ class MenuSeeder extends Seeder
             ],
 
             [
+                'name' => 'Agent Management',
+                'menu_key' => 'agent_management',
+                'path' => '/dashboard/agent-management',
+                'icon' => 'Handshake',
+                'children' => [
+                    ['name' => 'Agents', 'menu_key' => 'agents', 'path' => '/dashboard/agent-management/agents', 'icon' => 'Users', 'order' => 1, 'is_active' => true, 'children' => null],
+                    ['name' => 'Fee per Package', 'menu_key' => 'agent_fees', 'path' => '/dashboard/agent-management/fees', 'icon' => 'BadgeDollarSign', 'order' => 2, 'is_active' => true, 'children' => null],
+                    ['name' => 'Commissions', 'menu_key' => 'agent_commissions', 'path' => '/dashboard/agent-management/commissions', 'icon' => 'HandCoins', 'order' => 3, 'is_active' => true, 'children' => null],
+                ],
+                'order' => 8,
+                'is_active' => true,
+            ],
+
+            [
                 'name' => 'Activity',
                 'menu_key' => 'activity_management',
                 'path' => '/dashboard/activity',
@@ -296,7 +310,7 @@ class MenuSeeder extends Seeder
                         'children' => null,
                     ],
                 ],
-                'order' => 8,
+                'order' => 9,
                 'is_active' => true,
             ],
 
@@ -335,7 +349,7 @@ class MenuSeeder extends Seeder
                         'children' => null,
                     ],
                 ],
-                'order' => 9,
+                'order' => 10,
                 'is_active' => true,
             ],
         ];
@@ -348,7 +362,7 @@ class MenuSeeder extends Seeder
         $this->command->info('  - Dashboard: Direct navigation');
         $this->command->info('  - Website Management: landing, schedules, SEO, branding');
         $this->command->info('  - Product Management: 4 submenus (product category, product, package, activity)');
-        $this->command->info('  - Booking: 4 submenus (register, listing, custom requests, hotel assignment)');
+        $this->command->info('  - Booking: 5 submenus (register, listing, data customer, custom requests, hotel assignment)');
         $this->command->info('  - Master Data: inventory');
         $this->command->info('  - Financial Management: financial report, cashflow, hpp package');
         $this->command->info('  - Activity: activity log');

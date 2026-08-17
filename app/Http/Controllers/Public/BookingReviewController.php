@@ -15,8 +15,7 @@ class BookingReviewController extends Controller
     public function show(Booking $booking): Response
     {
         $booking->loadMissing([
-            'package:id,code,slug,name',
-            'departureSchedule:id,package_id,departure_date,departure_city',
+            'package:id,code,slug,name,start_date,departure_city',
         ]);
 
         return Inertia::render('public/booking/review', [
@@ -33,9 +32,9 @@ class BookingReviewController extends Controller
                     'name' => $booking->package?->name,
                 ],
                 'departure_schedule' => [
-                    'id' => $booking->departureSchedule?->id,
-                    'departure_date' => $booking->departureSchedule?->departure_date?->toDateString(),
-                    'departure_city' => $booking->departureSchedule?->departure_city,
+                    'id' => null,
+                    'departure_date' => $booking->package?->start_date?->toDateString(),
+                    'departure_city' => $booking->package?->departure_city,
                 ],
             ],
             'existing' => Testimonial::query()
@@ -77,7 +76,7 @@ class BookingReviewController extends Controller
             ['booking_id' => $booking->id],
             [
                 'package_id' => $booking->package_id,
-                'departure_schedule_id' => $booking->departure_schedule_id,
+                'departure_schedule_id' => null,
                 'name' => $request->string('name')->value(),
                 'origin_city' => $request->filled('origin_city')
                     ? $request->string('origin_city')->value()

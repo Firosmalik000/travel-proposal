@@ -14,14 +14,20 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { CurrencyOption, ProductOption } from './types';
+import type {
+    CurrencyOption,
+    ProductCategoryOption,
+    ProductOption,
+} from './types';
 
 type Props = {
     options: ProductOption[];
+    categories: ProductCategoryOption[];
     currencies: CurrencyOption[];
     selected: number[];
     productMultipliers: Record<string, number>;
     hotelBrokerSelections: Record<string, string>;
+    lockedCategoryKeys: string[];
     locale: 'id' | 'en';
     onChange: (
         ids: number[],
@@ -67,6 +73,14 @@ const defaultAccentClass =
 
 function normalizeType(productType?: string | null): string {
     return productType?.trim() ? productType : 'lainnya';
+}
+
+function resolveCategoryName(category: ProductCategoryOption): string {
+    if (typeof category.name === 'string') {
+        return category.name;
+    }
+
+    return category.name.id || category.name.en || category.key;
 }
 
 function formatCurrencyIDR(value?: number | string | null): string {
@@ -163,71 +177,105 @@ function groupHotelPricingByBroker(
         {} as Record<string, HotelPricingSession[]>,
     );
 
-    const preferredRoomTypeOrder = ['DBL', 'TRPL', 'QUAD', 'QUINT'];
+    const preferredRoomTypeOrder = ['DBL', 'TRPL', 'QUAD'];
 
-    return Object.entries(grouped).map(([brokerName, sessions]) => {
-        const normalizedSessions = sessions.map((session) => ({
-            ...session,
-            normalizedRoomType: (session.room_type || 'ROOM')
-                .trim()
-                .toUpperCase(),
-        }));
-
-        const roomTypes = [
-            ...new Set(
-                normalizedSessions.map((session) => session.normalizedRoomType),
-            ),
-        ].sort((left, right) => {
-            const leftIndex = preferredRoomTypeOrder.indexOf(left);
-            const rightIndex = preferredRoomTypeOrder.indexOf(right);
-
-            if (leftIndex !== -1 || rightIndex !== -1) {
-                return (
-                    (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) -
-                    (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex)
-                );
-            }
-
-            return left.localeCompare(right);
-        });
-
-        const sessionMap = normalizedSessions.reduce(
-            (carry, session) => {
-                const periodLabel = formatPeriod(
-                    session.period_start,
-                    session.period_end,
+    return Object.entries(grouped)
+        .map(([brokerName, sessions]) => {
+            const normalizedSessions = sessions.flatMap((session) => {
+                const normalizedRoomType = normalizeProductHotelRoomType(
+                    session.room_type,
                 );
 
-                if (!carry[periodLabel]) {
-                    carry[periodLabel] = {};
+                return normalizedRoomType
+                    ? [{ ...session, normalizedRoomType }]
+                    : [];
+            });
+
+            const roomTypes = [
+                ...new Set(
+                    normalizedSessions.map(
+                        (session) => session.normalizedRoomType,
+                    ),
+                ),
+            ].sort((left, right) => {
+                const leftIndex = preferredRoomTypeOrder.indexOf(left);
+                const rightIndex = preferredRoomTypeOrder.indexOf(right);
+
+                if (leftIndex !== -1 || rightIndex !== -1) {
+                    return (
+                        (leftIndex === -1
+                            ? Number.MAX_SAFE_INTEGER
+                            : leftIndex) -
+                        (rightIndex === -1
+                            ? Number.MAX_SAFE_INTEGER
+                            : rightIndex)
+                    );
                 }
 
-                carry[periodLabel][session.normalizedRoomType] = session.price;
+                return left.localeCompare(right);
+            });
 
-                return carry;
-            },
-            {} as Record<string, Record<string, number | string | null>>,
-        );
+            const sessionMap = normalizedSessions.reduce(
+                (carry, session) => {
+                    const periodLabel = formatPeriod(
+                        session.period_start,
+                        session.period_end,
+                    );
 
-        return {
-            brokerName,
-            roomTypes,
-            sessions: Object.entries(sessionMap).map(
-                ([periodLabel, pricesByRoomType]) => ({
-                    periodLabel,
-                    pricesByRoomType,
-                }),
-            ),
-        };
-    });
+                    if (!carry[periodLabel]) {
+                        carry[periodLabel] = {};
+                    }
+
+                    carry[periodLabel][session.normalizedRoomType] =
+                        session.price;
+
+                    return carry;
+                },
+                {} as Record<string, Record<string, number | string | null>>,
+            );
+
+            return {
+                brokerName,
+                roomTypes,
+                sessions: Object.entries(sessionMap).map(
+                    ([periodLabel, pricesByRoomType]) => ({
+                        periodLabel,
+                        pricesByRoomType,
+                    }),
+                ),
+            };
+        })
+        .filter((group) => group.roomTypes.length > 0);
+}
+
+function normalizeProductHotelRoomType(
+    roomType: string | null | undefined,
+): 'DBL' | 'TRPL' | 'QUAD' | null {
+    const normalized = (roomType ?? '').trim().toUpperCase();
+
+    if (normalized === 'DBL' || normalized === 'DOUBLE') {
+        return 'DBL';
+    }
+
+    if (normalized === 'TRPL' || normalized === 'TRIPLE') {
+        return 'TRPL';
+    }
+
+    if (normalized === 'QUAD' || normalized === 'QUADRUPLE') {
+        return 'QUAD';
+    }
+
+    return null;
 }
 
 export function ProductSelector({
     options,
+    categories,
     currencies,
     selected,
     productMultipliers,
     hotelBrokerSelections,
+    lockedCategoryKeys,
     locale,
     onChange,
 }: Props) {
@@ -275,11 +323,15 @@ export function ProductSelector({
 
         const currency = currencyMap[normalizedCurrency];
 
-        if (!currency || !Number.isFinite(currency.conversion_rate)) {
+        const effectiveRate = Number(
+            currency?.live_conversion_rate ?? currency?.conversion_rate,
+        );
+
+        if (!currency || !Number.isFinite(effectiveRate)) {
             return null;
         }
 
-        return Number(numericValue) * Number(currency.conversion_rate);
+        return Number(numericValue) * effectiveRate;
     }
 
     function renderConvertedIdr(
@@ -300,16 +352,30 @@ export function ProductSelector({
     }
 
     const availableTypes = useMemo(() => {
-        return [
-            ...new Set(
-                options.map((product) => normalizeType(product.product_type)),
-            ),
-        ].sort((left, right) =>
-            (typeConfig[left]?.label ?? left).localeCompare(
-                typeConfig[right]?.label ?? right,
-            ),
+        const categoryKeys = categories.map((category) => category.key);
+        const optionKeys = options.map((product) =>
+            normalizeType(product.product_type),
         );
-    }, [options]);
+        const mergedKeys = [...categoryKeys, ...optionKeys].filter(
+            (key, index, array) => array.indexOf(key) === index,
+        );
+
+        return mergedKeys.sort((left, right) => {
+            const leftIndex = categoryKeys.indexOf(left);
+            const rightIndex = categoryKeys.indexOf(right);
+
+            if (leftIndex !== -1 || rightIndex !== -1) {
+                return (
+                    (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) -
+                    (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex)
+                );
+            }
+
+            return (typeConfig[left]?.label ?? left).localeCompare(
+                typeConfig[right]?.label ?? right,
+            );
+        });
+    }, [categories, options]);
 
     const resolvedActiveType =
         availableTypes.length === 0
@@ -334,6 +400,17 @@ export function ProductSelector({
             {} as Record<string, ProductOption[]>,
         );
     }, [options]);
+
+    const categoryLabelMap = useMemo(() => {
+        return categories.reduce(
+            (carry, category) => {
+                carry[category.key] = resolveCategoryName(category);
+
+                return carry;
+            },
+            {} as Record<string, string>,
+        );
+    }, [categories]);
 
     const selectedProducts = useMemo(
         () => options.filter((product) => selected.includes(product.id)),
@@ -380,6 +457,13 @@ export function ProductSelector({
         const selectedProduct = options.find(
             (product) => product.id === productId,
         );
+
+        if (
+            selectedProduct &&
+            lockedCategoryKeys.includes(selectedProduct.product_type)
+        ) {
+            return;
+        }
 
         if (selectedProduct?.product_type === 'hotel') {
             const brokerGroups = groupHotelPricingByBroker(
@@ -460,11 +544,13 @@ export function ProductSelector({
 
     return (
         <div className="space-y-4">
-            <div className="rounded-2xl border bg-muted/20 px-4 py-3 text-sm">
-                <span className="font-medium text-foreground">
+            <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">
+                    Produk yang sudah dipilih
+                </span>
+                <span className="font-semibold text-foreground">
                     {selectedProducts.length}
-                </span>{' '}
-                produk dipilih untuk package ini.
+                </span>
             </div>
 
             <Tabs
@@ -472,11 +558,16 @@ export function ProductSelector({
                 onValueChange={setActiveType}
                 className="w-full"
             >
-                <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-2xl bg-muted/50 p-2 md:grid-cols-4">
+                <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/50 p-1 md:grid-cols-4">
                     {availableTypes.map((typeKey) => {
-                        const cfg = typeConfig[typeKey] ?? {
-                            label: typeKey,
-                            accent: defaultAccentClass,
+                        const cfg = {
+                            label:
+                                categoryLabelMap[typeKey] ??
+                                typeConfig[typeKey]?.label ??
+                                typeKey,
+                            accent:
+                                typeConfig[typeKey]?.accent ??
+                                defaultAccentClass,
                         };
                         const totalSelected =
                             selectedProductsByType[typeKey]?.length ?? 0;
@@ -485,7 +576,7 @@ export function ProductSelector({
                             <TabsTrigger
                                 key={typeKey}
                                 value={typeKey}
-                                className="flex h-auto items-center justify-between rounded-xl px-3 py-2 text-left"
+                                className="flex h-auto items-center justify-between rounded-lg px-3 py-2 text-left"
                             >
                                 <span className="truncate text-xs font-semibold">
                                     {cfg.label}
@@ -501,9 +592,13 @@ export function ProductSelector({
                 </TabsList>
 
                 {availableTypes.map((typeKey) => {
-                    const cfg = typeConfig[typeKey] ?? {
-                        label: typeKey,
-                        accent: defaultAccentClass,
+                    const cfg = {
+                        label:
+                            categoryLabelMap[typeKey] ??
+                            typeConfig[typeKey]?.label ??
+                            typeKey,
+                        accent:
+                            typeConfig[typeKey]?.accent ?? defaultAccentClass,
                     };
                     const search = searchByType[typeKey] ?? '';
                     const normalizedSearch = search.trim().toLowerCase();
@@ -530,6 +625,8 @@ export function ProductSelector({
                     });
                     const selectedProductsInType =
                         selectedProductsByType[typeKey] ?? [];
+                    const isCoveredByAllIn =
+                        lockedCategoryKeys.includes(typeKey);
 
                     return (
                         <TabsContent
@@ -537,99 +634,131 @@ export function ProductSelector({
                             value={typeKey}
                             className="space-y-4"
                         >
-                            <div className="rounded-2xl border bg-background p-4">
-                                <div className="space-y-2">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Combo box
-                                    </p>
-                                    <Select
-                                        value=""
-                                        onValueChange={(value) => {
-                                            if (value === '__empty__') {
-                                                return;
-                                            }
-
-                                            addProduct(Number(value));
-                                            updateSearch(typeKey, '');
-                                        }}
-                                    >
-                                        <SelectTrigger className="h-10 w-full text-sm">
-                                            <SelectValue
-                                                placeholder={`Pilih ${cfg.label.toLowerCase()}`}
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent className="max-h-80">
-                                            <div className="sticky top-0 z-10 border-b bg-background p-2">
-                                                <div className="relative">
-                                                    <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                                                    <Input
-                                                        className="h-9 pl-8 text-sm"
-                                                        placeholder={`Cari ${cfg.label.toLowerCase()}...`}
-                                                        value={search}
-                                                        onChange={(event) =>
-                                                            updateSearch(
-                                                                typeKey,
-                                                                event.target
-                                                                    .value,
-                                                            )
-                                                        }
-                                                        onKeyDown={(event) => {
-                                                            event.stopPropagation();
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            {filteredProducts.length === 0 ? (
-                                                <div className="px-3 py-3 text-sm text-muted-foreground">
-                                                    Tidak ada option yang cocok.
-                                                </div>
-                                            ) : (
-                                                filteredProducts.map(
-                                                    (product) => (
-                                                        <SelectItem
-                                                            key={product.id}
-                                                            value={String(
-                                                                product.id,
-                                                            )}
-                                                        >
-                                                            {`${productDisplayName(product)}${
-                                                                product.price
-                                                                    ? ` - ${formatCurrencyValue(
-                                                                          product.price,
-                                                                          product.currency ||
-                                                                              'IDR',
-                                                                      )}${
-                                                                          renderConvertedIdr(
-                                                                              product.price,
-                                                                              product.currency,
-                                                                          )
-                                                                              ? ` (${renderConvertedIdr(
-                                                                                    product.price,
-                                                                                    product.currency,
-                                                                                )})`
-                                                                              : ''
-                                                                      }`
-                                                                    : ''
-                                                            }`}
-                                                        </SelectItem>
-                                                    ),
-                                                )
-                                            )}
-                                        </SelectContent>
-                                    </Select>
+                            {isCoveredByAllIn ? (
+                                <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200">
+                                    Kategori {cfg.label} sudah ditanggung vendor
+                                    melalui Paket All In. Produk kategori ini
+                                    tidak perlu dipilih lagi.
                                 </div>
+                            ) : null}
+                            <div className="space-y-2">
+                                <p className="text-sm font-semibold text-foreground">
+                                    Pilih produk {cfg.label}
+                                </p>
+                                <Select
+                                    value=""
+                                    disabled={isCoveredByAllIn}
+                                    onValueChange={(value) => {
+                                        if (value === '__empty__') {
+                                            return;
+                                        }
+
+                                        addProduct(Number(value));
+                                        updateSearch(typeKey, '');
+                                    }}
+                                >
+                                    <SelectTrigger className="h-10 w-full text-sm">
+                                        <SelectValue
+                                            placeholder={`Pilih ${cfg.label.toLowerCase()}`}
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent className="max-h-80">
+                                        <div className="sticky top-0 z-10 border-b bg-background p-2">
+                                            <div className="relative">
+                                                <Search className="absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                                <Input
+                                                    className="h-9 pl-8 text-sm"
+                                                    placeholder={
+                                                        typeKey === 'hotel'
+                                                            ? 'Cari hotel, kota, atau negara...'
+                                                            : `Cari ${cfg.label.toLowerCase()}...`
+                                                    }
+                                                    value={search}
+                                                    onChange={(event) =>
+                                                        updateSearch(
+                                                            typeKey,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    onKeyDown={(event) => {
+                                                        event.stopPropagation();
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                        {filteredProducts.length === 0 ? (
+                                            <div className="px-3 py-3 text-sm text-muted-foreground">
+                                                Tidak ada option yang cocok.
+                                            </div>
+                                        ) : (
+                                            filteredProducts.map((product) => (
+                                                <SelectItem
+                                                    key={product.id}
+                                                    value={String(product.id)}
+                                                    className="group items-start rounded-xl px-3 py-2.5 text-foreground data-[highlighted]:border-primary data-[highlighted]:bg-primary data-[highlighted]:text-primary-foreground"
+                                                >
+                                                    <div className="flex flex-col gap-0.5 py-0.5 text-left">
+                                                        <span className="text-sm leading-5 font-medium text-foreground group-data-[highlighted]:text-primary-foreground group-data-[highlighted]:text-white">
+                                                            {productDisplayName(
+                                                                product,
+                                                            )}
+                                                        </span>
+                                                        {typeKey === 'hotel' &&
+                                                        (product.hotel_info
+                                                            ?.city ||
+                                                            product.hotel_info
+                                                                ?.country) ? (
+                                                            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground group-data-[highlighted]:text-primary-foreground/90 group-data-[highlighted]:text-white/90">
+                                                                <MapPin className="h-3 w-3" />
+                                                                <span>
+                                                                    {[
+                                                                        product
+                                                                            .hotel_info
+                                                                            ?.city,
+                                                                        product
+                                                                            .hotel_info
+                                                                            ?.country,
+                                                                    ]
+                                                                        .filter(
+                                                                            Boolean,
+                                                                        )
+                                                                        .join(
+                                                                            ', ',
+                                                                        )}
+                                                                </span>
+                                                            </span>
+                                                        ) : null}
+                                                        {product.price ? (
+                                                            <span className="text-[11px] text-muted-foreground group-data-[highlighted]:text-primary-foreground/90 group-data-[highlighted]:text-white/90">
+                                                                {formatCurrencyValue(
+                                                                    product.price,
+                                                                    product.currency ||
+                                                                        'IDR',
+                                                                )}
+                                                                {renderConvertedIdr(
+                                                                    product.price,
+                                                                    product.currency,
+                                                                )
+                                                                    ? ` (${renderConvertedIdr(
+                                                                          product.price,
+                                                                          product.currency,
+                                                                      )})`
+                                                                    : ''}
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
                             </div>
 
-                            <div className="rounded-2xl border bg-muted/20 p-4">
+                            <div className="border-t border-border/70 pt-4">
                                 <div className="mb-3 flex items-center justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-foreground">
-                                            Product terpilih {cfg.label}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Dipisah per tab category.
-                                        </p>
-                                    </div>
+                                    <p className="text-sm font-semibold text-foreground">
+                                        Produk terpilih {cfg.label}
+                                    </p>
                                     <span
                                         className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${cfg.accent}`}
                                     >
@@ -640,7 +769,10 @@ export function ProductSelector({
                                 {selectedProductsInType.length === 0 ? (
                                     <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
                                         Belum ada product{' '}
-                                        {cfg.label.toLowerCase()} yang dipilih.
+                                        {cfg.label.toLowerCase()}{' '}
+                                        {isCoveredByAllIn
+                                            ? 'karena sudah ditanggung Paket All In.'
+                                            : 'yang dipilih.'}
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
@@ -953,11 +1085,6 @@ export function ProductSelector({
                                                                         product,
                                                                     )}
                                                                 </p>
-                                                                <p className="text-xs text-muted-foreground">
-                                                                    {
-                                                                        product.code
-                                                                    }
-                                                                </p>
                                                                 <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                                                                     <p>
                                                                         Harga:{' '}
@@ -998,9 +1125,23 @@ export function ProductSelector({
                                                             </div>
                                                             <div className="flex items-center gap-2">
                                                                 <div className="flex items-center gap-2 rounded-lg border px-2 py-1">
-                                                                    <span className="text-[11px] font-medium text-muted-foreground">
-                                                                        x / pax
-                                                                    </span>
+                                                                    <div className="flex flex-col items-start gap-0.5">
+                                                                        <span className="text-[11px] font-medium text-muted-foreground">
+                                                                            {product.product_type ===
+                                                                            'hotel'
+                                                                                ? 'x / hari'
+                                                                                : 'x / pax'}
+                                                                        </span>
+                                                                        {product.product_type ===
+                                                                        'hotel' ? (
+                                                                            <span className="text-[10px] leading-3 text-muted-foreground">
+                                                                                Durasi
+                                                                                hotel
+                                                                                per
+                                                                                pax
+                                                                            </span>
+                                                                        ) : null}
+                                                                    </div>
                                                                     <Input
                                                                         type="number"
                                                                         min={1}

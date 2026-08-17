@@ -40,13 +40,13 @@ import { toast } from 'sonner';
 type Assignment = {
     id: number;
     travel_package_id: number;
-    departure_schedule_id: number;
     hotel_id: number;
     status: string;
     notes: string | null;
     package_name: string;
     package_code: string;
-    departure_date: string | null;
+    package_start_date: string | null;
+    package_end_date: string | null;
     departure_city: string | null;
     hotel_name: string | null;
     total_rooms: number;
@@ -60,19 +60,16 @@ type Assignment = {
     }>;
 };
 
-type Option = { id: number; name: string; code?: string; product_id?: number };
-type ScheduleOption = {
+type Option = {
     id: number;
-    travel_package_id: number;
-    departure_date: string | null;
-    departure_city: string | null;
+    name: string;
+    code?: string;
+    departure_city?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
+    product_id?: number;
 };
-type ScheduleStat = {
-    travel_package_id: number;
-    departure_schedule_id: number;
-    total_bookings: number;
-    total_customers: number;
-};
+
 type PackageStat = {
     travel_package_id: number;
     total_bookings: number;
@@ -81,7 +78,6 @@ type PackageStat = {
 
 type FormData = {
     travel_package_id: string;
-    departure_schedule_id: string;
     hotel_id: string;
     status: 'draft' | 'confirmed';
     notes: string;
@@ -91,17 +87,14 @@ type FormData = {
 type Props = {
     assignments: Assignment[];
     packages: Option[];
-    schedules: ScheduleOption[];
     hotels: Option[];
     roomTypes: Option[];
     filters: {
         travel_package_id: number | null;
-        departure_schedule_id: number | null;
         hotel_id: number | null;
         status: string;
     };
     bookingSummary: { total_bookings: number; total_customers: number };
-    bookingStatsBySchedule: ScheduleStat[];
     bookingStatsByPackage: PackageStat[];
     packageHotelOptions: Array<{
         travel_package_id: number;
@@ -111,15 +104,19 @@ type Props = {
 
 const roomCapacityByName = (name: string): number => {
     const normalized = name.toUpperCase();
+
     if (normalized.includes('DBL') || normalized.includes('DOUBLE')) {
         return 2;
     }
+
     if (normalized.includes('TRPL') || normalized.includes('TRIPLE')) {
         return 3;
     }
+
     if (normalized.includes('QUAD')) {
         return 4;
     }
+
     return 1;
 };
 
@@ -133,12 +130,22 @@ const buildBlankRooms = (
 
 const blankForm = (roomTypes: Option[]): FormData => ({
     travel_package_id: '',
-    departure_schedule_id: '',
     hotel_id: '',
     status: 'draft',
     notes: '',
     rooms: buildBlankRooms(roomTypes),
 });
+
+const formatDateRange = (
+    startDate: string | null | undefined,
+    endDate: string | null | undefined,
+): string => {
+    if (startDate && endDate) {
+        return `${startDate} - ${endDate}`;
+    }
+
+    return startDate ?? endDate ?? '-';
+};
 
 const flattenErrorMessages = (input: unknown): string[] => {
     if (typeof input === 'string') {
@@ -161,41 +168,25 @@ const flattenErrorMessages = (input: unknown): string[] => {
 export default function HotelAssignmentIndex({
     assignments,
     packages,
-    schedules,
     hotels,
     roomTypes,
     filters,
     bookingSummary,
-    bookingStatsBySchedule,
     bookingStatsByPackage,
     packageHotelOptions,
 }: Props) {
     const { can } = usePermission('booking_hotel_assignment');
+    const canCreate = can('create');
+    const canEdit = can('edit');
     const [editing, setEditing] = useState<Assignment | 'new' | null>(null);
     const [filterPackageId, setFilterPackageId] = useState(
         filters.travel_package_id ? String(filters.travel_package_id) : 'all',
-    );
-    const [filterScheduleId, setFilterScheduleId] = useState(
-        filters.departure_schedule_id
-            ? String(filters.departure_schedule_id)
-            : 'all',
     );
     const [filterHotelId, setFilterHotelId] = useState(
         filters.hotel_id ? String(filters.hotel_id) : 'all',
     );
     const [filterStatus, setFilterStatus] = useState(filters.status || 'all');
     const form = useForm<FormData>(blankForm(roomTypes));
-
-    const filteredScheduleOptions = useMemo(() => {
-        if (form.data.travel_package_id === '') {
-            return schedules;
-        }
-        return schedules.filter(
-            (schedule) =>
-                schedule.travel_package_id ===
-                Number(form.data.travel_package_id),
-        );
-    }, [form.data.travel_package_id, schedules]);
 
     const selectedPackageStat = useMemo(
         () =>
@@ -207,18 +198,9 @@ export default function HotelAssignmentIndex({
         [bookingStatsByPackage, form.data.travel_package_id],
     );
 
-    const selectedScheduleStat = useMemo(
-        () =>
-            bookingStatsBySchedule.find(
-                (item) =>
-                    item.departure_schedule_id ===
-                    Number(form.data.departure_schedule_id),
-            ),
-        [bookingStatsBySchedule, form.data.departure_schedule_id],
-    );
-
     const filteredHotelOptions = useMemo(() => {
         const selectedPackageId = Number(form.data.travel_package_id);
+
         if (!selectedPackageId) {
             return hotels;
         }
@@ -227,18 +209,15 @@ export default function HotelAssignmentIndex({
             (item) => item.travel_package_id === selectedPackageId,
         );
 
-        if (!mappedHotels) {
-            return [];
-        }
-
-        return mappedHotels.hotels;
+        return mappedHotels?.hotels ?? [];
     }, [form.data.travel_package_id, hotels, packageHotelOptions]);
 
-    const autoSelectedHotel = filteredHotelOptions[0] ?? null;
     const selectedHotelOption =
         filteredHotelOptions.find(
             (item) => String(item.id) === form.data.hotel_id,
-        ) ?? autoSelectedHotel;
+        ) ??
+        filteredHotelOptions[0] ??
+        null;
 
     const estimatedCapacity = useMemo(() => {
         return form.data.rooms.reduce((total, room) => {
@@ -246,11 +225,13 @@ export default function HotelAssignmentIndex({
                 (item) => String(item.id) === room.room_type_id,
             );
             const roomCapacity = roomCapacityByName(roomType?.name ?? '');
+
             return total + Number(room.room_count || 0) * roomCapacity;
         }, 0);
     }, [form.data.rooms, roomTypes]);
 
-    const selectedCustomerTarget = selectedScheduleStat?.total_customers ?? 0;
+    const selectedCustomerTarget = selectedPackageStat?.total_customers ?? 0;
+
     const selectedRoomAllocations = useMemo(
         () =>
             form.data.rooms
@@ -271,6 +252,7 @@ export default function HotelAssignmentIndex({
                 .filter((item) => item.roomCount > 0),
         [form.data.rooms, roomTypes],
     );
+
     const validationErrors = useMemo(() => {
         return Object.values(form.errors)
             .flatMap((value) => (Array.isArray(value) ? value : [value]))
@@ -283,8 +265,6 @@ export default function HotelAssignmentIndex({
             {
                 travel_package_id:
                     filterPackageId === 'all' ? undefined : filterPackageId,
-                departure_schedule_id:
-                    filterScheduleId === 'all' ? undefined : filterScheduleId,
                 hotel_id: filterHotelId === 'all' ? undefined : filterHotelId,
                 status: filterStatus === 'all' ? undefined : filterStatus,
             },
@@ -292,22 +272,15 @@ export default function HotelAssignmentIndex({
         );
     }
 
-    function openCreate(): void {
-        form.setData(blankForm(roomTypes));
-        form.clearErrors();
-        setEditing('new');
-    }
-
-    function openCreateFromScheduleStat(stat: ScheduleStat): void {
+    function openCreate(packageId?: number): void {
         const mappedHotels =
             packageHotelOptions.find(
-                (item) => item.travel_package_id === stat.travel_package_id,
+                (item) => item.travel_package_id === packageId,
             )?.hotels ?? [];
 
         form.setData({
             ...blankForm(roomTypes),
-            travel_package_id: String(stat.travel_package_id),
-            departure_schedule_id: String(stat.departure_schedule_id),
+            travel_package_id: packageId ? String(packageId) : '',
             hotel_id: mappedHotels[0] ? String(mappedHotels[0].id) : '',
         });
         form.clearErrors();
@@ -324,7 +297,6 @@ export default function HotelAssignmentIndex({
 
         form.setData({
             travel_package_id: String(assignment.travel_package_id),
-            departure_schedule_id: String(assignment.departure_schedule_id),
             hotel_id: String(assignment.hotel_id),
             status: assignment.status === 'confirmed' ? 'confirmed' : 'draft',
             notes: assignment.notes ?? '',
@@ -347,6 +319,15 @@ export default function HotelAssignmentIndex({
             ),
         };
 
+        if (!payload.travel_package_id) {
+            toast.error('Pilih package terlebih dahulu.');
+            form.setError(
+                'travel_package_id',
+                'Pilih package terlebih dahulu.',
+            );
+            return;
+        }
+
         if (!payload.hotel_id) {
             toast.error('Hotel belum tersedia untuk package ini.');
             form.setError(
@@ -362,44 +343,44 @@ export default function HotelAssignmentIndex({
             return;
         }
 
+        const options = {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(
+                    editing === 'new'
+                        ? 'Hotel assignment berhasil disimpan.'
+                        : 'Hotel assignment berhasil diperbarui.',
+                );
+                setEditing(null);
+            },
+            onError: (errors: Record<string, unknown>) => {
+                const firstError = flattenErrorMessages(errors)[0];
+                toast.error(
+                    firstError ??
+                        'Gagal menyimpan hotel assignment. Periksa data alokasi.',
+                );
+            },
+        };
+
         if (editing === 'new') {
-            router.post('/admin/booking-management/hotel-assignment', payload, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    toast.success('Hotel assignment berhasil disimpan.');
-                    setEditing(null);
-                },
-                onError: (errors) => {
-                    const firstError = flattenErrorMessages(errors)[0];
-                    toast.error(
-                        firstError ??
-                            'Gagal menyimpan hotel assignment. Periksa data alokasi.',
-                    );
-                },
-            });
+            router.post(
+                '/admin/booking-management/hotel-assignment',
+                payload,
+                options,
+            );
             return;
         }
+
         if (editing) {
             router.put(
                 `/admin/booking-management/hotel-assignment/${editing.id}`,
                 payload,
-                {
-                    preserveScroll: true,
-                    onSuccess: () => {
-                        toast.success('Hotel assignment berhasil diperbarui.');
-                        setEditing(null);
-                    },
-                    onError: (errors) => {
-                        const firstError = flattenErrorMessages(errors)[0];
-                        toast.error(
-                            firstError ??
-                                'Gagal update hotel assignment. Periksa data alokasi.',
-                        );
-                    },
-                },
+                options,
             );
         }
     }
+
+    const packageLookup = new Map(packages.map((item) => [item.id, item]));
 
     return (
         <AppSidebarLayout
@@ -415,17 +396,24 @@ export default function HotelAssignmentIndex({
             ]}
         >
             <Head title="Hotel Assignment" />
+
             <div className="space-y-4 p-4 md:p-5">
                 <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                             Hotel Assignment
                         </h1>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Semua alokasi hotel mengikuti tanggal berangkat di
+                            package.
+                        </p>
                     </div>
-                    <Button onClick={openCreate}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Tambah
-                    </Button>
+                    {canCreate && (
+                        <Button onClick={() => openCreate()}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Tambah
+                        </Button>
+                    )}
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
@@ -449,7 +437,7 @@ export default function HotelAssignmentIndex({
 
                 <div className="space-y-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
                     <div className="grid gap-4 lg:grid-cols-12">
-                        <div className="lg:col-span-3">
+                        <div className="lg:col-span-4">
                             <Select
                                 value={filterPackageId}
                                 onValueChange={setFilterPackageId}
@@ -472,31 +460,7 @@ export default function HotelAssignmentIndex({
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="lg:col-span-3">
-                            <Select
-                                value={filterScheduleId}
-                                onValueChange={setFilterScheduleId}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih jadwal" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        Semua jadwal
-                                    </SelectItem>
-                                    {schedules.map((item) => (
-                                        <SelectItem
-                                            key={item.id}
-                                            value={String(item.id)}
-                                        >
-                                            {item.departure_date} -{' '}
-                                            {item.departure_city}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="lg:col-span-3">
+                        <div className="lg:col-span-4">
                             <Select
                                 value={filterHotelId}
                                 onValueChange={setFilterHotelId}
@@ -519,7 +483,7 @@ export default function HotelAssignmentIndex({
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="lg:col-span-3">
+                        <div className="lg:col-span-4">
                             <Select
                                 value={filterStatus}
                                 onValueChange={setFilterStatus}
@@ -539,13 +503,13 @@ export default function HotelAssignmentIndex({
                             </Select>
                         </div>
                     </div>
+
                     <div className="flex items-center justify-end gap-2">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={() => {
                                 setFilterPackageId('all');
-                                setFilterScheduleId('all');
                                 setFilterHotelId('all');
                                 setFilterStatus('all');
                                 router.get(
@@ -568,7 +532,7 @@ export default function HotelAssignmentIndex({
 
                 <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
                     <div className="overflow-x-auto">
-                        <Table className="min-w-[1100px]">
+                        <Table className="min-w-[980px]">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-14 text-center">
@@ -578,7 +542,7 @@ export default function HotelAssignmentIndex({
                                         Aksi
                                     </TableHead>
                                     <TableHead>Package</TableHead>
-                                    <TableHead>Jadwal</TableHead>
+                                    <TableHead>Keberangkatan</TableHead>
                                     <TableHead>Total Booking</TableHead>
                                     <TableHead>Total Customer</TableHead>
                                     <TableHead>Hotel Assigned</TableHead>
@@ -587,157 +551,154 @@ export default function HotelAssignmentIndex({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {bookingStatsBySchedule.length === 0 ? (
+                                {bookingStatsByPackage.length === 0 ? (
                                     <TableRow>
                                         <TableCell
                                             colSpan={9}
                                             className="py-12 text-center text-muted-foreground"
                                         >
-                                            Belum ada booking dengan package +
-                                            jadwal.
+                                            Belum ada booking dengan package
+                                            aktif.
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    bookingStatsBySchedule.map(
-                                        (stat, index) => {
-                                            const pkg = packages.find(
-                                                (item) =>
-                                                    item.id ===
+                                    bookingStatsByPackage.map((stat, index) => {
+                                        const pkg = packageLookup.get(
+                                            stat.travel_package_id,
+                                        );
+                                        const relatedAssignments =
+                                            assignments.filter(
+                                                (assignment) =>
+                                                    assignment.travel_package_id ===
                                                     stat.travel_package_id,
                                             );
-                                            const sch = schedules.find(
-                                                (item) =>
-                                                    item.id ===
-                                                    stat.departure_schedule_id,
+                                        const assignedHotelCount =
+                                            relatedAssignments.length;
+                                        const assignedRoomTotal =
+                                            relatedAssignments.reduce(
+                                                (total, assignment) =>
+                                                    total +
+                                                    assignment.total_rooms,
+                                                0,
                                             );
-                                            const relatedAssignments =
-                                                assignments.filter(
-                                                    (assignment) =>
-                                                        assignment.travel_package_id ===
-                                                            stat.travel_package_id &&
-                                                        assignment.departure_schedule_id ===
-                                                            stat.departure_schedule_id,
-                                                );
-                                            const assignedHotelCount =
-                                                relatedAssignments.length;
-                                            const assignedRoomTotal =
-                                                relatedAssignments.reduce(
-                                                    (total, assignment) =>
-                                                        total +
-                                                        assignment.total_rooms,
-                                                    0,
-                                                );
-                                            const assignedCapacityTotal =
-                                                relatedAssignments.reduce(
-                                                    (total, assignment) =>
-                                                        total +
-                                                        assignment.total_capacity,
-                                                    0,
-                                                );
+                                        const assignedCapacityTotal =
+                                            relatedAssignments.reduce(
+                                                (total, assignment) =>
+                                                    total +
+                                                    assignment.total_capacity,
+                                                0,
+                                            );
 
-                                            return (
-                                                <TableRow
-                                                    key={`${stat.travel_package_id}-${stat.departure_schedule_id}`}
-                                                >
-                                                    <TableCell className="text-center text-sm text-muted-foreground">
-                                                        {index + 1}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        {relatedAssignments.length ===
-                                                        0 ? (
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() =>
-                                                                    openCreateFromScheduleStat(
-                                                                        stat,
-                                                                    )
-                                                                }
+                                        return (
+                                            <TableRow
+                                                key={stat.travel_package_id}
+                                            >
+                                                <TableCell className="text-center text-sm text-muted-foreground">
+                                                    {index + 1}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {relatedAssignments.length ===
+                                                    0 ? (
+                                                        <Button
+                                                            size="sm"
+                                                            disabled={
+                                                                !canCreate
+                                                            }
+                                                            onClick={() =>
+                                                                openCreate(
+                                                                    stat.travel_package_id,
+                                                                )
+                                                            }
+                                                        >
+                                                            Assign
+                                                        </Button>
+                                                    ) : (
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
+                                                                asChild
                                                             >
-                                                                Assign
-                                                            </Button>
-                                                        ) : (
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger
-                                                                    asChild
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="icon"
+                                                                    className="ml-auto"
                                                                 >
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="icon"
-                                                                        className="ml-auto"
-                                                                    >
-                                                                        <MoreHorizontal className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                    {relatedAssignments.map(
-                                                                        (
-                                                                            assignment,
-                                                                        ) => (
-                                                                            <DropdownMenuItem
-                                                                                key={
-                                                                                    assignment.id
-                                                                                }
-                                                                                onClick={() =>
-                                                                                    openEdit(
-                                                                                        assignment,
-                                                                                    )
-                                                                                }
-                                                                            >
-                                                                                <SquarePen className="mr-2 h-4 w-4" />
-                                                                                Edit
-                                                                            </DropdownMenuItem>
-                                                                        ),
-                                                                    )}
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end">
+                                                                {relatedAssignments.map(
+                                                                    (
+                                                                        assignment,
+                                                                    ) => (
+                                                                        <DropdownMenuItem
+                                                                            key={
+                                                                                assignment.id
+                                                                            }
+                                                                            onClick={() =>
+                                                                                canEdit &&
+                                                                                openEdit(
+                                                                                    assignment,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <SquarePen className="mr-2 h-4 w-4" />
+                                                                            Edit
+                                                                        </DropdownMenuItem>
+                                                                    ),
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <p className="font-medium">
+                                                        {pkg?.name ?? '-'}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {pkg?.code ?? '-'}
+                                                    </p>
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    <div className="font-medium text-foreground">
+                                                        {formatDateRange(
+                                                            pkg?.start_date ??
+                                                                null,
+                                                            pkg?.end_date ??
+                                                                null,
                                                         )}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <p className="font-medium">
-                                                            {pkg?.name ?? '-'}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {pkg?.code ?? '-'}
-                                                        </p>
-                                                    </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {sch?.departure_date ??
-                                                            '-'}{' '}
-                                                        -{' '}
-                                                        {sch?.departure_city ??
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {pkg?.departure_city ??
                                                             '-'}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {stat.total_bookings}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {stat.total_customers}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {assignedHotelCount ===
-                                                        0 ? (
-                                                            <span className="text-xs text-muted-foreground">
-                                                                Belum ada
-                                                                assignment
-                                                            </span>
-                                                        ) : (
-                                                            <span>
-                                                                {
-                                                                    assignedHotelCount
-                                                                }
-                                                            </span>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {assignedRoomTotal}
-                                                    </TableCell>
-                                                    <TableCell className="text-sm text-muted-foreground">
-                                                        {assignedCapacityTotal}
-                                                    </TableCell>
-                                                </TableRow>
-                                            );
-                                        },
-                                    )
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {stat.total_bookings}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {stat.total_customers}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {assignedHotelCount ===
+                                                    0 ? (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            Belum ada assignment
+                                                        </span>
+                                                    ) : (
+                                                        <span>
+                                                            {assignedHotelCount}
+                                                        </span>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {assignedRoomTotal}
+                                                </TableCell>
+                                                <TableCell className="text-sm text-muted-foreground">
+                                                    {assignedCapacityTotal}
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })
                                 )}
                             </TableBody>
                         </Table>
@@ -762,22 +723,20 @@ export default function HotelAssignmentIndex({
                             <Select
                                 value={form.data.travel_package_id}
                                 onValueChange={(value) => {
-                                    form.setData((prev) => ({
-                                        ...prev,
+                                    const mappedHotels =
+                                        packageHotelOptions.find(
+                                            (item) =>
+                                                item.travel_package_id ===
+                                                Number(value),
+                                        )?.hotels ?? [];
+
+                                    form.setData({
+                                        ...form.data,
                                         travel_package_id: value,
-                                        departure_schedule_id: '',
-                                        hotel_id: (() => {
-                                            const firstHotel =
-                                                packageHotelOptions.find(
-                                                    (item) =>
-                                                        item.travel_package_id ===
-                                                        Number(value),
-                                                )?.hotels[0];
-                                            return firstHotel
-                                                ? String(firstHotel.id)
-                                                : '';
-                                        })(),
-                                    }));
+                                        hotel_id: mappedHotels[0]
+                                            ? String(mappedHotels[0].id)
+                                            : '',
+                                    });
                                 }}
                             >
                                 <SelectTrigger>
@@ -794,30 +753,39 @@ export default function HotelAssignmentIndex({
                                     ))}
                                 </SelectContent>
                             </Select>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>Jadwal Keberangkatan</Label>
-                            <Select
-                                value={form.data.departure_schedule_id}
-                                onValueChange={(value) =>
-                                    form.setData('departure_schedule_id', value)
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih jadwal" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {filteredScheduleOptions.map((item) => (
-                                        <SelectItem
-                                            key={item.id}
-                                            value={String(item.id)}
-                                        >
-                                            {item.departure_date} -{' '}
-                                            {item.departure_city}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            {form.data.travel_package_id !== '' && (
+                                <div className="rounded-xl border border-dashed border-border/70 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+                                    {(() => {
+                                        const selectedPackage = packages.find(
+                                            (item) =>
+                                                String(item.id) ===
+                                                form.data.travel_package_id,
+                                        );
+
+                                        if (!selectedPackage) {
+                                            return null;
+                                        }
+
+                                        return (
+                                            <div className="space-y-1">
+                                                <div className="font-medium text-foreground">
+                                                    {selectedPackage.code} -{' '}
+                                                    {selectedPackage.name}
+                                                </div>
+                                                <div>
+                                                    {formatDateRange(
+                                                        selectedPackage.start_date,
+                                                        selectedPackage.end_date,
+                                                    )}
+                                                    {selectedPackage.departure_city
+                                                        ? ` · ${selectedPackage.departure_city}`
+                                                        : ''}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
                         </div>
                         <div className="grid gap-2">
                             <Label>Hotel</Label>
@@ -954,7 +922,7 @@ export default function HotelAssignmentIndex({
                                     <AlertDescription>
                                         Warning: kapasitas kamar (
                                         {estimatedCapacity}) masih kurang dari
-                                        total customer jadwal ini (
+                                        total customer package ini (
                                         {selectedCustomerTarget}).
                                     </AlertDescription>
                                 </Alert>

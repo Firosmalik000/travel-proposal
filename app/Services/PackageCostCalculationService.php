@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Booking;
-use App\Models\DepartureSchedule;
 use App\Models\PackageCostCalculation;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
@@ -13,8 +12,10 @@ use Illuminate\Support\Facades\DB;
 
 class PackageCostCalculationService
 {
+    private const PRODUCT_HOTEL_ROOM_TYPES = ['double', 'triple', 'quad'];
+
     public function __construct(
-        private readonly CurrencyConversionService $currencyConversionService,
+        private readonly PackageCurrencySnapshotService $packageCurrencySnapshotService,
     ) {}
 
     public const MODE_LEGACY_ASSIGNMENT = 'legacy_assignment';
@@ -79,7 +80,7 @@ class PackageCostCalculationService
         return DB::transaction(function () use ($calculation): PackageCostCalculation {
             $payload = $this->calculatePayload(
                 packageId: (int) $calculation->package_id,
-                departureScheduleId: $calculation->departure_schedule_id ? (int) $calculation->departure_schedule_id : null,
+                departureScheduleId: null,
                 manualAdjustment: (int) $calculation->manual_adjustment,
                 calculationMode: (string) ($calculation->calculation_mode ?: self::MODE_LEGACY_ASSIGNMENT),
             );
@@ -179,17 +180,14 @@ class PackageCostCalculationService
         string $calculationMode,
     ): array {
         $package = TravelPackage::query()
-            ->with(['products:id,code,name,product_type,content'])
+            ->with(['products:id,code,name,product_type,content', 'allInConfig'])
             ->findOrFail($packageId);
-
-        $schedule = $departureScheduleId
-            ? DepartureSchedule::query()->findOrFail($departureScheduleId)
-            : null;
+        $packageCurrency = strtoupper((string) ($package->currency ?: 'IDR'));
+        $packageCurrencyDetails = $this->packageCurrencySnapshotService->detailsFor($package, null, $packageCurrency);
 
         $bookingBaseQuery = Booking::query()
             ->where('package_id', $packageId)
-            ->whereIn('status', ['pending', 'registered'])
-            ->when($departureScheduleId !== null, fn ($query) => $query->where('departure_schedule_id', $departureScheduleId));
+            ->where('status', 'registered');
 
         $bookingCount = (int) (clone $bookingBaseQuery)->count();
         $customerCount = (int) (clone $bookingBaseQuery)->sum('passenger_count');
@@ -202,7 +200,7 @@ class PackageCostCalculationService
         $hotelPayload = $this->buildHotelBreakdown(
             $package,
             $bookings,
-            $schedule?->departure_date?->toDateString(),
+            $package->start_date?->toDateString(),
         );
 
         $productPayload = $this->buildProductBreakdown(
@@ -210,37 +208,44 @@ class PackageCostCalculationService
             $customerCount,
             $calculationMode,
         );
+        $allInPayload = $this->buildAllInBreakdown($package, $customerCount);
 
         $warnings = [
             ...$hotelPayload['warnings'],
             ...$productPayload['warnings'],
+            ...$allInPayload['warnings'],
         ];
 
         $grandTotal = max(
-            $hotelPayload['total'] + $productPayload['total'] + $manualAdjustment,
+            $hotelPayload['total'] + $productPayload['total'] + $allInPayload['total'] + $manualAdjustment,
             0,
         );
 
         return [
             'package_id' => $packageId,
-            'departure_schedule_id' => $departureScheduleId,
+            'departure_schedule_id' => null,
             'calculation_mode' => $calculationMode,
             'calculation_date' => Carbon::today()->toDateString(),
             'booking_count' => $bookingCount,
             'customer_count' => $customerCount,
             'hotel_total' => $hotelPayload['total'],
-            'product_total' => $productPayload['total'],
+            'product_total' => $productPayload['total'] + $allInPayload['total'],
             'manual_adjustment' => $manualAdjustment,
             'tour_leader_fee' => null,
             'muthawwif_fee' => null,
             'grand_total' => $grandTotal,
             'hpp_per_customer' => $customerCount > 0 ? (int) floor($grandTotal / $customerCount) : null,
             'currency' => 'IDR',
+            'package_currency' => $packageCurrency,
+            'package_conversion_rate_to_idr' => $packageCurrencyDetails['rate_to_idr'],
+            'package_conversion_rate_source' => $packageCurrencyDetails['source'],
+            'package_conversion_rate_fetched_at' => $packageCurrencyDetails['fetched_at'],
             'warnings' => array_values(array_unique($warnings)),
             'calculated_at' => now(),
             'items' => [
                 ...$hotelPayload['items'],
                 ...$productPayload['items'],
+                ...$allInPayload['items'],
             ],
         ];
     }
@@ -258,10 +263,22 @@ class PackageCostCalculationService
         $hotelTotal = 0;
 
         $hotelProducts = $package->products->filter(
-            fn (TravelProduct $product): bool => $product->product_type === 'hotel',
+            fn (TravelProduct $product): bool => $product->product_type === 'hotel'
+                && ! $this->isCoveredByAllIn($package, $product),
         );
         $roomTotals = $this->aggregateRoomConfigurationTotals($bookings);
+        $productHotelRoomTotals = collect(self::PRODUCT_HOTEL_ROOM_TYPES)
+            ->mapWithKeys(fn (string $roomType): array => [$roomType => (int) ($roomTotals[$roomType] ?? 0)])
+            ->all();
         $selectedBrokers = data_get($package->content, 'hotel_product_brokers', []);
+        $hasUnsupportedRoomConfigurations = $bookings->contains(function (Booking $booking): bool {
+            $configuration = is_array($booking->room_configuration) ? $booking->room_configuration : [];
+
+            return collect($configuration)->contains(
+                fn (mixed $roomCount, mixed $roomType): bool => ! in_array((string) $roomType, self::PRODUCT_HOTEL_ROOM_TYPES, true)
+                    && (int) $roomCount > 0,
+            );
+        });
         $hasMissingRoomConfigurations = $bookings->contains(function (Booking $booking): bool {
             $configuration = $this->normalizeRoomConfiguration(
                 is_array($booking->room_configuration) ? $booking->room_configuration : null,
@@ -274,6 +291,10 @@ class PackageCostCalculationService
             $warnings[] = 'Ada booking yang belum memiliki komposisi kamar, sehingga HPP hotel bisa belum lengkap.';
         }
 
+        if ($hasUnsupportedRoomConfigurations) {
+            $warnings[] = 'Ada konfigurasi kamar di luar Double, Triple, dan Quad yang tidak didukung pricing Product Hotel.';
+        }
+
         foreach ($hotelProducts as $product) {
             $pricingRows = collect(data_get($product->content, 'pricing', []))
                 ->filter(fn ($row): bool => is_array($row))
@@ -283,8 +304,9 @@ class PackageCostCalculationService
                 ? ($selectedBrokers[(string) $product->id] ?? $selectedBrokers[$product->id] ?? null)
                 : null;
             $productCurrency = strtoupper((string) data_get($product->content, 'currency', 'IDR'));
+            $currencyDetails = $this->packageCurrencySnapshotService->detailsFor($package, $product, $productCurrency);
 
-            foreach ($roomTotals as $roomType => $roomCount) {
+            foreach ($productHotelRoomTotals as $roomType => $roomCount) {
                 if ($roomCount < 1) {
                     continue;
                 }
@@ -306,9 +328,9 @@ class PackageCostCalculationService
                 }
 
                 $originalUnitPrice = (int) data_get($matchedPrice, 'price', 0);
-                $unitPrice = $this->currencyConversionService->convertToIdr(
+                $unitPrice = $this->packageCurrencySnapshotService->convertToIdr(
                     $originalUnitPrice,
-                    $productCurrency,
+                    $currencyDetails,
                 );
 
                 if ($unitPrice === null) {
@@ -342,7 +364,10 @@ class PackageCostCalculationService
                         'product_type' => $product->product_type,
                         'original_currency' => $productCurrency,
                         'original_unit_price' => $originalUnitPrice,
-                        'conversion_rate_to_idr' => $this->currencyConversionService->rateFor($productCurrency),
+                        'conversion_rate_to_idr' => $currencyDetails['rate_to_idr'],
+                        'conversion_rate_source' => $currencyDetails['source'],
+                        'conversion_rate_fetched_at' => $currencyDetails['fetched_at'],
+                        'conversion_rate_snapshot_scope' => $currencyDetails['snapshot_scope'],
                         'room_type' => $roomType,
                         'room_count' => $roomCount,
                         'multiplier_per_pax' => $multiplierPerPax,
@@ -364,7 +389,7 @@ class PackageCostCalculationService
             ];
         }
 
-        if (array_sum($roomTotals) === 0) {
+        if (array_sum($productHotelRoomTotals) === 0) {
             $warnings[] = 'Belum ada komposisi kamar customer untuk menghitung HPP hotel.';
         }
 
@@ -389,19 +414,20 @@ class PackageCostCalculationService
 
         /** @var TravelProduct $product */
         foreach ($package->products as $product) {
-            if ($product->product_type === 'hotel') {
+            if ($product->product_type === 'hotel' || $this->isCoveredByAllIn($package, $product)) {
                 continue;
             }
 
             $originalPrice = (int) data_get($product->content, 'price', 0);
             $productCurrency = strtoupper((string) data_get($product->content, 'currency', 'IDR'));
+            $currencyDetails = $this->packageCurrencySnapshotService->detailsFor($package, $product, $productCurrency);
             if ($originalPrice <= 0) {
                 $warnings[] = sprintf('Harga product belum lengkap: %s', (string) ($product->name ?? $product->code));
             }
 
-            $price = $this->currencyConversionService->convertToIdr(
+            $price = $this->packageCurrencySnapshotService->convertToIdr(
                 $originalPrice,
-                $productCurrency,
+                $currencyDetails,
             );
 
             if ($price === null) {
@@ -434,7 +460,10 @@ class PackageCostCalculationService
                     'product_type' => $product->product_type,
                     'original_currency' => $productCurrency,
                     'original_unit_price' => $originalPrice,
-                    'conversion_rate_to_idr' => $this->currencyConversionService->rateFor($productCurrency),
+                    'conversion_rate_to_idr' => $currencyDetails['rate_to_idr'],
+                    'conversion_rate_source' => $currencyDetails['source'],
+                    'conversion_rate_fetched_at' => $currencyDetails['fetched_at'],
+                    'conversion_rate_snapshot_scope' => $currencyDetails['snapshot_scope'],
                     'customer_count' => $customerCount,
                     'multiplier_per_pax' => $multiplierPerPax,
                     'calculation_mode' => $calculationMode,
@@ -450,7 +479,69 @@ class PackageCostCalculationService
     }
 
     /**
-     * @return array{single:int,double:int,triple:int,quad:int}
+     * @return array{items: array<int, array<string, mixed>>, total: int, warnings: array<int, string>}
+     */
+    private function buildAllInBreakdown(TravelPackage $package, int $customerCount): array
+    {
+        $configuration = $package->allInConfig;
+        if ($configuration === null) {
+            return ['items' => [], 'total' => 0, 'warnings' => []];
+        }
+
+        $currency = strtoupper((string) $configuration->currency);
+        $currencyDetails = $this->packageCurrencySnapshotService->detailsFor($package, null, $currency);
+        $originalUnitPrice = (float) $configuration->price_per_pax;
+        $unitPrice = $this->packageCurrencySnapshotService->convertToIdr($originalUnitPrice, $currencyDetails);
+        $warnings = [];
+
+        if ($unitPrice === null) {
+            $warnings[] = sprintf('Currency %s untuk Paket All In belum punya converter aktif ke IDR.', $currency);
+            $unitPrice = 0;
+        }
+
+        $total = $unitPrice * max($customerCount, 0);
+
+        return [
+            'items' => [[
+                'cost_type' => 'all_in',
+                'reference_type' => 'package_vendor',
+                'reference_id' => $configuration->package_vendor_id,
+                'label' => sprintf('All In %s - %s', $configuration->vendor_name_snapshot, $configuration->broker_package_name),
+                'description' => sprintf(
+                    '%s, %s sampai %s',
+                    $configuration->period_label_snapshot,
+                    $configuration->period_start_snapshot?->format('d M Y'),
+                    $configuration->period_end_snapshot?->format('d M Y'),
+                ),
+                'quantity' => max($customerCount, 0),
+                'unit_price' => $unitPrice,
+                'total_price' => $total,
+                'meta' => [
+                    'vendor_id' => $configuration->package_vendor_id,
+                    'period_id' => $configuration->vendor_price_period_id,
+                    'included_category_keys' => implode(', ', $configuration->included_category_keys ?? []),
+                    'original_currency' => $currency,
+                    'original_unit_price' => $originalUnitPrice,
+                    'conversion_rate_to_idr' => $currencyDetails['rate_to_idr'],
+                    'conversion_rate_source' => $currencyDetails['source'],
+                    'conversion_rate_fetched_at' => $currencyDetails['fetched_at'],
+                    'conversion_rate_snapshot_scope' => $currencyDetails['snapshot_scope'],
+                    'calculation_mode' => 'all_in_per_pax',
+                ],
+            ]],
+            'total' => $total,
+            'warnings' => $warnings,
+        ];
+    }
+
+    private function isCoveredByAllIn(TravelPackage $package, TravelProduct $product): bool
+    {
+        return $package->allInConfig !== null
+            && in_array($product->product_type, $package->allInConfig->included_category_keys ?? [], true);
+    }
+
+    /**
+     * @return array{double:int,triple:int,quad:int}
      */
     private function aggregateRoomConfigurationTotals(Collection $bookings): array
     {
@@ -467,7 +558,6 @@ class PackageCostCalculationService
                 return $carry;
             },
             [
-                'single' => 0,
                 'double' => 0,
                 'triple' => 0,
                 'quad' => 0,
@@ -477,12 +567,11 @@ class PackageCostCalculationService
 
     /**
      * @param  array<string, mixed>|null  $configuration
-     * @return array{single:int,double:int,triple:int,quad:int}
+     * @return array{double:int,triple:int,quad:int}
      */
     private function normalizeRoomConfiguration(?array $configuration): array
     {
         return [
-            'single' => max(0, (int) data_get($configuration, 'single', 0)),
             'double' => max(0, (int) data_get($configuration, 'double', 0)),
             'triple' => max(0, (int) data_get($configuration, 'triple', 0)),
             'quad' => max(0, (int) data_get($configuration, 'quad', 0)),
@@ -492,7 +581,6 @@ class PackageCostCalculationService
     private function hotelRoomLabel(string $roomType): string
     {
         return match ($roomType) {
-            'single' => 'Single',
             'double' => 'Double',
             'triple' => 'Triple',
             'quad' => 'Quad',
@@ -552,7 +640,6 @@ class PackageCostCalculationService
         $normalized = strtolower(trim($value));
 
         return match ($normalized) {
-            'sgl', 'single' => 'single',
             'dbl', 'double' => 'double',
             'trpl', 'triple' => 'triple',
             'quad', 'quadruple' => 'quad',

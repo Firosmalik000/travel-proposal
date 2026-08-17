@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers\Administrator;
 
+use App\Actions\Package\SyncPackageAllInConfig;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\StorePackageRequest;
-use App\Http\Requests\Administrator\StoreScheduleRequest;
 use App\Models\Activity;
-use App\Models\Currency;
-use App\Models\DepartureSchedule;
 use App\Models\PackageItinerary;
+use App\Models\PackageVendor;
+use App\Models\ProductCategory;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
+use App\Models\VendorPricePeriod;
+use App\Services\LiveCurrencyRateService;
+use App\Services\PackageCurrencySnapshotService;
+use App\Services\PackageHppEstimateService;
 use App\Support\ParticipantUploadLimit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,37 +25,48 @@ use Inertia\Response;
 
 class PackageController extends Controller
 {
+    public function __construct(
+        private readonly PackageHppEstimateService $hppEstimateService,
+        private readonly LiveCurrencyRateService $liveCurrencyRateService,
+        private readonly PackageCurrencySnapshotService $packageCurrencySnapshotService,
+        private readonly SyncPackageAllInConfig $syncPackageAllInConfig,
+    ) {}
+
     public function index(): Response
     {
         $packages = TravelPackage::query()
-            ->with([
-                'products:id,code,name,product_type',
-                'schedules' => fn ($query) => $query->withSum(
-                    ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
-                    'passenger_count',
-                ),
-                'testimonials',
-                'itineraries.activity:id,code,name,description,sort_order,is_active',
-                'itineraries.products:id,code,name,product_type',
-            ])
+            ->with($this->packageRelations())
             ->orderBy('code')
             ->get()
             ->map(fn (TravelPackage $pkg) => $this->serializePackage($pkg));
 
         return Inertia::render('Dashboard/ProductManagement/Packages/Index', [
             'packages' => $packages,
-            'productOptions' => $this->productOptions(),
-            'currencies' => $this->currencyOptions(),
-            'activityOptions' => $this->activityOptions(),
-            'packageImageUploadMaxKilobytes' => ParticipantUploadLimit::kilobytes(4096),
         ]);
+    }
+
+    public function create(): Response
+    {
+        return $this->renderPackagePage('create');
+    }
+
+    public function show(TravelPackage $package): Response
+    {
+        return $this->renderPackagePage('detail', $package);
+    }
+
+    public function edit(TravelPackage $package): Response
+    {
+        return $this->renderPackagePage('edit', $package);
     }
 
     public function store(StorePackageRequest $request): RedirectResponse
     {
+        $this->removeAllInCoveredProducts($request);
         $package = TravelPackage::query()->create(
             $this->packagePayload($request)
         );
+        $package->syncSeatAvailability();
 
         $this->syncProducts(
             $package,
@@ -59,19 +74,23 @@ class PackageController extends Controller
             $request->input('product_multipliers', []),
         );
         $this->syncItineraries($package, $request->validated('itineraries', []));
+        $this->syncPackageAllInConfig->handle($package, $request->input('all_in'));
 
         return back()->with('success', 'Package berhasil ditambahkan.');
     }
 
     public function update(StorePackageRequest $request, TravelPackage $package): RedirectResponse
     {
+        $this->removeAllInCoveredProducts($request);
         $package->update($this->packagePayload($request, $package));
+        $package->syncSeatAvailability();
         $this->syncProducts(
             $package,
             $request->input('product_ids', []),
             $request->input('product_multipliers', []),
         );
         $this->syncItineraries($package, $request->validated('itineraries', []));
+        $this->syncPackageAllInConfig->handle($package, $request->input('all_in'));
 
         return back()->with('success', 'Package berhasil diperbarui.');
     }
@@ -89,39 +108,6 @@ class PackageController extends Controller
         $package->delete();
 
         return back()->with('success', 'Package berhasil dihapus.');
-    }
-
-    public function storeSchedule(StoreScheduleRequest $request, TravelPackage $package): RedirectResponse
-    {
-        $schedule = $package->schedules()->create([
-            ...$request->validated(),
-            'seats_available' => $request->integer('seats_total'),
-        ]);
-        $schedule->syncSeatAvailability();
-
-        return back()->with('success', 'Jadwal berhasil ditambahkan.');
-    }
-
-    public function updateSchedule(StoreScheduleRequest $request, TravelPackage $package, DepartureSchedule $schedule): RedirectResponse
-    {
-        abort_if($schedule->package_id !== $package->id, 403);
-
-        $schedule->update([
-            ...$request->validated(),
-            'seats_available' => $schedule->availableSeatsCount(),
-        ]);
-        $schedule->syncSeatAvailability();
-
-        return back()->with('success', 'Jadwal berhasil diperbarui.');
-    }
-
-    public function destroySchedule(TravelPackage $package, DepartureSchedule $schedule): RedirectResponse
-    {
-        abort_if($schedule->package_id !== $package->id, 403);
-
-        $schedule->delete();
-
-        return back()->with('success', 'Jadwal berhasil dihapus.');
     }
 
     public function storeItinerary(Request $request, TravelPackage $package): RedirectResponse
@@ -268,6 +254,111 @@ class PackageController extends Controller
             $sellingPrice,
         );
 
+        $currencyCode = strtoupper($request->string('currency', 'IDR')->value());
+        $submittedSnapshots = collect(data_get($content, 'hpp_currency_snapshots', []))
+            ->filter(fn (mixed $snapshot): bool => is_array($snapshot) && (float) data_get($snapshot, 'rate_to_idr', 0) > 0)
+            ->mapWithKeys(function (array $snapshot, string $code): array {
+                $currency = strtoupper(trim($code));
+
+                return [$currency => [
+                    'currency' => $currency,
+                    'rate_to_idr' => (float) data_get($snapshot, 'rate_to_idr'),
+                    'source' => (string) data_get($snapshot, 'source', 'manual'),
+                    'fetched_at' => data_get($snapshot, 'fetched_at'),
+                ]];
+            })
+            ->all();
+        $additionalCurrencyCodes = collect($this->operationalCurrencyCodes($content))
+            ->when(
+                $request->boolean('all_in.enabled'),
+                fn ($currencies) => $currencies->push((string) $request->input('all_in.currency')),
+            )
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($existing === null || $request->boolean('refresh_currency_rates')) {
+            $currencySnapshots = array_replace(
+                $this->packageCurrencySnapshotService->capture(
+                    $request->input('product_ids', []),
+                    $currencyCode,
+                    $additionalCurrencyCodes,
+                ),
+                $submittedSnapshots,
+            );
+        } else {
+            $currencySnapshots = array_replace(
+                $this->packageCurrencySnapshotService->capture(
+                    $request->input('product_ids', []),
+                    $currencyCode,
+                    $additionalCurrencyCodes,
+                ),
+                is_array(data_get($existing->content, 'hpp_currency_snapshots'))
+                    ? data_get($existing->content, 'hpp_currency_snapshots')
+                    : [],
+                $submittedSnapshots,
+            );
+        }
+
+        $currencyRate = $currencySnapshots[$currencyCode]
+            ?? data_get($existing?->content, 'currency_rate_snapshot')
+            ?? ($existing === null ? $this->liveCurrencyRateService->rateFor($currencyCode) : [
+                'rate_to_idr' => 0,
+                'source' => 'unavailable',
+                'fetched_at' => null,
+            ]);
+        $content['hpp_currency_snapshots'] = $currencySnapshots;
+        $content['currency_rate_snapshot'] = [
+            'currency' => $currencyCode,
+            'rate_to_idr' => $currencyRate['rate_to_idr'],
+            'source' => $currencyRate['source'],
+            'fetched_at' => $currencyRate['fetched_at'],
+        ];
+
+        if (is_array(data_get($content, 'hpp_estimate'))) {
+            $selectedProductIds = collect($request->input('product_ids', []))
+                ->filter(fn (mixed $productId): bool => is_numeric($productId))
+                ->map(fn (mixed $productId): int => (int) $productId)
+                ->values();
+            $selectedProducts = TravelProduct::query()
+                ->whereIn('id', $selectedProductIds)
+                ->get()
+                ->sortBy(fn (TravelProduct $product): int => $selectedProductIds->search($product->id))
+                ->values();
+            $estimatePayload = data_get($content, 'hpp_estimate', []);
+            $hasManualCustomerAssumption = (bool) data_get($estimatePayload, 'customers_is_manual', false);
+            $estimatedCustomerCount = collect(data_get($estimatePayload, 'customers', []))
+                ->filter(fn (mixed $count): bool => is_numeric($count))
+                ->sum(fn (mixed $count): int => max(0, (int) $count));
+
+            if (! $hasManualCustomerAssumption && $estimatedCustomerCount === 0) {
+                $estimatePayload['customers'] = [
+                    'single' => 0,
+                    'dbl' => $request->integer('seats_total'),
+                    'trpl' => 0,
+                    'quad' => 0,
+                ];
+                $estimatePayload['customers_is_manual'] = false;
+            }
+
+            $content['hpp_estimate'] = $this->hppEstimateService->calculate(
+                $estimatePayload,
+                (int) round($sellingPrice),
+                data_get($content, 'room_prices', []),
+                $currencyRate['rate_to_idr'],
+                $currencyCode,
+                $currencyRate['source'],
+                $currencyRate['fetched_at'],
+                $selectedProducts,
+                $request->input('product_multipliers', []),
+                $request->date('start_date')?->toDateString(),
+                data_get($content, 'hotel_product_brokers', []),
+                $currencySnapshots,
+                $this->allInEstimatePayload($request),
+            );
+        }
+
         // Add gallery to content
         $content['gallery'] = $gallery;
 
@@ -281,12 +372,20 @@ class PackageController extends Controller
             'name' => $name,
             'package_type' => $request->string('package_type')->value(),
             'departure_city' => $request->string('departure_city')->value(),
+            'start_date' => $request->date('start_date')?->toDateString(),
+            'end_date' => $request->date('end_date')?->toDateString(),
+            'seats_total' => $request->integer('seats_total'),
+            'seats_available' => $existing
+                ? max($request->integer('seats_total') - $existing->bookedPassengerCount(), 0)
+                : $request->integer('seats_total'),
+            'booking_status' => $request->string('booking_status')->value(),
+            'departure_notes' => $request->filled('departure_notes') ? $request->string('departure_notes')->value() : null,
             'duration_days' => $request->integer('duration_days'),
             'price' => $sellingPrice,
             'original_price' => $originalPrice,
             'discount_label' => $request->filled('discount_label') ? $request->string('discount_label')->value() : null,
             'discount_ends_at' => $request->filled('discount_ends_at') ? $request->input('discount_ends_at') : null,
-            'currency' => $request->string('currency', 'IDR')->value(),
+            'currency' => $currencyCode,
             'image_path' => $imagePath,
             'summary' => $summary,
             'content' => $content,
@@ -438,20 +537,40 @@ class PackageController extends Controller
             ->all();
     }
 
-    /** @return array<int, array{code:string,name:string,conversion_rate:float}> */
+    private function renderPackagePage(string $mode, ?TravelPackage $package = null): Response
+    {
+        if ($package !== null) {
+            $package->load($this->packageRelations());
+        }
+
+        return Inertia::render('Dashboard/ProductManagement/Packages/Page', [
+            'mode' => $mode,
+            'package' => $package !== null ? $this->serializePackage($package) : null,
+            'productOptions' => $this->productOptions(),
+            'currencies' => $this->currencyOptions(),
+            'activityOptions' => $this->activityOptions(),
+            'productCategories' => $this->productCategoryOptions(),
+            'vendors' => $this->vendorOptions(),
+            'packageImageUploadMaxKilobytes' => ParticipantUploadLimit::kilobytes(4096),
+        ]);
+    }
+
+    /** @return array<int, string> */
+    private function packageRelations(): array
+    {
+        return [
+            'products:id,code,name,product_type',
+            'allInConfig',
+            'testimonials',
+            'itineraries.activity:id,code,name,description,sort_order,is_active',
+            'itineraries.products:id,code,name,product_type',
+        ];
+    }
+
+    /** @return array<int, array{code:string,name:string,conversion_rate:float,live_conversion_rate:float,rate_source:string,rate_fetched_at:?string,is_live:bool}> */
     private function currencyOptions(): array
     {
-        return Currency::query()
-            ->where('is_active', true)
-            ->orderBy('code')
-            ->get(['code', 'name', 'conversion_rate'])
-            ->map(fn (Currency $currency): array => [
-                'code' => $currency->code,
-                'name' => $currency->name,
-                'conversion_rate' => (float) $currency->conversion_rate,
-            ])
-            ->values()
-            ->all();
+        return $this->liveCurrencyRateService->options();
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -483,6 +602,12 @@ class PackageController extends Controller
             'name' => $pkg->name,
             'package_type' => $pkg->package_type,
             'departure_city' => $pkg->departure_city,
+            'start_date' => $pkg->start_date?->toDateString(),
+            'end_date' => $pkg->end_date?->toDateString(),
+            'seats_total' => (int) $pkg->seats_total,
+            'seats_available' => $pkg->availableSeatsCount(),
+            'booking_status' => $pkg->booking_status,
+            'departure_notes' => $pkg->departure_notes,
             'duration_days' => $pkg->duration_days,
             'price' => (float) $pkg->price,
             'original_price' => $pkg->original_price ? (float) $pkg->original_price : null,
@@ -497,6 +622,27 @@ class PackageController extends Controller
             ]),
             'summary' => $pkg->summary,
             'content' => $pkg->content ?? [],
+            'all_in' => $pkg->allInConfig ? [
+                'enabled' => true,
+                'vendor_id' => $pkg->allInConfig->package_vendor_id,
+                'period_id' => $pkg->allInConfig->vendor_price_period_id,
+                'broker_package_name' => $pkg->allInConfig->broker_package_name,
+                'currency' => $pkg->allInConfig->currency,
+                'price_per_pax' => (float) $pkg->allInConfig->price_per_pax,
+                'included_category_keys' => $pkg->allInConfig->included_category_keys ?? [],
+                'vendor_name_snapshot' => $pkg->allInConfig->vendor_name_snapshot,
+                'period_label_snapshot' => $pkg->allInConfig->period_label_snapshot,
+                'period_start_snapshot' => $pkg->allInConfig->period_start_snapshot?->toDateString(),
+                'period_end_snapshot' => $pkg->allInConfig->period_end_snapshot?->toDateString(),
+            ] : [
+                'enabled' => false,
+                'vendor_id' => null,
+                'period_id' => null,
+                'broker_package_name' => '',
+                'currency' => 'IDR',
+                'price_per_pax' => null,
+                'included_category_keys' => [],
+            ],
             'is_featured' => $pkg->is_featured,
             'is_active' => $pkg->is_active,
             'product_ids' => $pkg->products->pluck('id')->values()->all(),
@@ -505,17 +651,6 @@ class PackageController extends Controller
                     (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
                 ])
                 ->all(),
-            'schedules' => $pkg->schedules->map(fn (DepartureSchedule $s) => [
-                'id' => $s->id,
-                'departure_date' => $s->departure_date->toDateString(),
-                'return_date' => $s->return_date?->toDateString(),
-                'departure_city' => $s->departure_city,
-                'seats_total' => $s->seats_total,
-                'seats_available' => $s->availableSeatsCount(),
-                'status' => $s->status,
-                'notes' => $s->notes,
-                'is_active' => $s->is_active,
-            ])->values()->all(),
             'rating_avg' => $pkg->testimonials->where('is_active', true)->avg('rating')
                 ? round($pkg->testimonials->where('is_active', true)->avg('rating'), 1)
                 : null,
@@ -552,6 +687,108 @@ class PackageController extends Controller
                     ])->values()->all(),
                 ];
             })->values()->all(),
+        ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function vendorOptions(): array
+    {
+        return PackageVendor::query()
+            ->with(['pricePeriods' => fn ($query) => $query->orderBy('start_date')])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (PackageVendor $vendor): array => [
+                'id' => $vendor->id,
+                'name' => $vendor->name,
+                'phone' => $vendor->phone,
+                'periods' => $vendor->pricePeriods->map(fn ($period): array => [
+                    'id' => $period->id,
+                    'label' => $period->label,
+                    'start_date' => $period->start_date?->toDateString(),
+                    'end_date' => $period->end_date?->toDateString(),
+                    'currency' => $period->currency,
+                    'price_per_pax' => (float) $period->price_per_pax,
+                    'notes' => $period->notes,
+                    'is_active' => $period->is_active,
+                ])->values()->all(),
+            ])->values()->all();
+    }
+
+    /** @return array<int, array{id:int,key:string,name:mixed}> */
+    private function productCategoryOptions(): array
+    {
+        return ProductCategory::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'key', 'name'])
+            ->map(fn (ProductCategory $category): array => [
+                'id' => $category->id,
+                'key' => $category->key,
+                'name' => $category->name,
+            ])->values()->all();
+    }
+
+    private function removeAllInCoveredProducts(StorePackageRequest $request): void
+    {
+        if (! $request->boolean('all_in.enabled')) {
+            return;
+        }
+
+        $coveredCategoryKeys = collect($request->input('all_in.included_category_keys', []));
+        $requestedProductIds = collect($request->input('product_ids', []))
+            ->filter(fn (mixed $productId): bool => is_numeric($productId))
+            ->map(fn (mixed $productId): int => (int) $productId)
+            ->unique()
+            ->values();
+        $productsById = TravelProduct::query()
+            ->whereIn('id', $requestedProductIds)
+            ->get(['id', 'product_type'])
+            ->keyBy('id');
+        $allowedProductIds = $requestedProductIds
+            ->filter(function (int $productId) use ($productsById, $coveredCategoryKeys): bool {
+                $product = $productsById->get($productId);
+
+                return $product !== null && ! $coveredCategoryKeys->contains($product->product_type);
+            })
+            ->all();
+        $content = $request->input('content', []);
+
+        if (is_array($content)) {
+            data_set(
+                $content,
+                'hotel_product_brokers',
+                collect(data_get($content, 'hotel_product_brokers', []))
+                    ->only(array_map('strval', $allowedProductIds))
+                    ->all(),
+            );
+        }
+
+        $request->merge([
+            'product_ids' => $allowedProductIds,
+            'product_multipliers' => collect($request->input('product_multipliers', []))
+                ->only(array_map('strval', $allowedProductIds))
+                ->all(),
+            'content' => $content,
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function allInEstimatePayload(StorePackageRequest $request): array
+    {
+        $configuration = $request->input('all_in', []);
+        if (! $request->boolean('all_in.enabled')) {
+            return is_array($configuration) ? $configuration : [];
+        }
+
+        $vendor = PackageVendor::query()->find($request->integer('all_in.vendor_id'));
+        $period = VendorPricePeriod::query()->find($request->integer('all_in.period_id'));
+
+        return [
+            ...(is_array($configuration) ? $configuration : []),
+            'vendor_name_snapshot' => $vendor?->name,
+            'period_label_snapshot' => $period?->label,
+            'period_start_snapshot' => $period?->start_date?->toDateString(),
+            'period_end_snapshot' => $period?->end_date?->toDateString(),
         ];
     }
 
@@ -654,6 +891,33 @@ class PackageController extends Controller
         }
 
         return trim((string) ($value['id'] ?? $value['en'] ?? ''));
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @return array<int, string>
+     */
+    private function operationalCurrencyCodes(array $content): array
+    {
+        $configuration = data_get($content, 'hpp_estimate.operational_costs');
+        if (! is_array($configuration)) {
+            return [];
+        }
+
+        return collect([
+            data_get($configuration, 'muthawwif.currency'),
+            ...collect(data_get($configuration, 'guide_tips', []))
+                ->pluck('currency')
+                ->all(),
+            ...collect(data_get($configuration, 'driver_tips', []))
+                ->pluck('currency')
+                ->all(),
+        ])
+            ->filter(fn (mixed $currency): bool => is_string($currency) && trim($currency) !== '')
+            ->map(fn (string $currency): string => strtoupper(trim($currency)))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /** @return array<int, array<string, mixed>> */

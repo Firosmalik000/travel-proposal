@@ -4,16 +4,19 @@ namespace Tests\Feature;
 
 use App\Models\Activity;
 use App\Models\Booking;
-use App\Models\Currency;
-use App\Models\DepartureSchedule;
 use App\Models\PackageItinerary;
+use App\Models\PackageVendor;
 use App\Models\ProductCategory;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use App\Models\User;
+use App\Models\VendorPricePeriod;
 use App\Support\ParticipantUploadLimit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -30,6 +33,11 @@ class PackageManagementTest extends TestCase
             'name' => ['id' => 'Umroh Test', 'en' => 'Test Umrah'],
             'package_type' => 'reguler',
             'departure_city' => 'Jakarta',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-10',
+            'seats_total' => 45,
+            'seats_available' => 45,
+            'booking_status' => 'open',
             'duration_days' => 10,
             'price' => 34900000,
             'currency' => 'IDR',
@@ -53,13 +61,45 @@ class PackageManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/ProductManagement/Packages/Index')
                 ->has('packages', 1)
-                ->has('productOptions')
-                ->has('activityOptions')
-                ->where('packageImageUploadMaxKilobytes', ParticipantUploadLimit::kilobytes(4096))
                 ->where('packages.0.code', 'ASF-TEST-10')
                 ->where('packages.0.images.0', '/storage/packages/cover.jpg')
                 ->where('packages.0.images.1', '/storage/packages/gallery-1.jpg')
             );
+    }
+
+    public function test_it_uses_sub_pages_for_create_edit_and_detail(): void
+    {
+        $user = User::factory()->create();
+        $package = $this->makePackage();
+
+        $this->actingAs($user)
+            ->get(route('packages.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/ProductManagement/Packages/Page')
+                ->where('mode', 'create')
+                ->where('package', null)
+                ->has('productOptions')
+                ->has('activityOptions')
+                ->has('productCategories')
+                ->has('vendors')
+                ->where('packageImageUploadMaxKilobytes', ParticipantUploadLimit::kilobytes(4096)));
+
+        $this->actingAs($user)
+            ->get(route('packages.show', $package))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/ProductManagement/Packages/Page')
+                ->where('mode', 'detail')
+                ->where('package.id', $package->id));
+
+        $this->actingAs($user)
+            ->get(route('packages.edit', $package))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/ProductManagement/Packages/Page')
+                ->where('mode', 'edit')
+                ->where('package.id', $package->id));
     }
 
     public function test_it_shows_discount_percent_when_original_price_set(): void
@@ -84,30 +124,307 @@ class PackageManagementTest extends TestCase
             );
     }
 
+    public function test_it_stores_all_in_snapshot_and_removes_covered_products(): void
+    {
+        $user = User::factory()->create();
+        ProductCategory::query()->updateOrCreate(['key' => 'hotel'], [
+            'name' => ['id' => 'Hotel', 'en' => 'Hotel'],
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+        ProductCategory::query()->updateOrCreate(['key' => 'tiket'], [
+            'name' => ['id' => 'Tiket', 'en' => 'Ticket'],
+            'sort_order' => 2,
+            'is_active' => true,
+        ]);
+        $hotel = TravelProduct::query()->create([
+            'code' => 'HTL-ALL-IN',
+            'slug' => 'hotel-all-in',
+            'name' => 'Hotel All In',
+            'product_type' => 'hotel',
+            'is_active' => true,
+        ]);
+        $ticket = TravelProduct::query()->create([
+            'code' => 'PRD-TIKET-MANDIRI',
+            'slug' => 'tiket-mandiri',
+            'name' => 'Tiket Mandiri',
+            'product_type' => 'tiket',
+            'content' => ['price' => 5_000_000, 'currency' => 'IDR'],
+            'is_active' => true,
+        ]);
+        $vendor = PackageVendor::factory()->create(['name' => 'Vendor Nusantara']);
+        $period = VendorPricePeriod::factory()->create([
+            'package_vendor_id' => $vendor->id,
+            'label' => 'Agustus 2026',
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-31',
+            'currency' => 'IDR',
+            'price_per_pax' => 12_000_000,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'package-all-in',
+                'name' => 'Package All In',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-08-10',
+                'end_date' => '2026-08-19',
+                'seats_total' => 40,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 30_000_000,
+                'currency' => 'IDR',
+                'product_ids' => [$hotel->id, $ticket->id],
+                'product_multipliers' => [
+                    (string) $hotel->id => 3,
+                    (string) $ticket->id => 1,
+                ],
+                'all_in' => [
+                    'enabled' => true,
+                    'vendor_id' => $vendor->id,
+                    'period_id' => $period->id,
+                    'broker_package_name' => 'Land Arrangement 10 Hari',
+                    'currency' => 'IDR',
+                    'price_per_pax' => 12_000_000,
+                    'included_category_keys' => ['hotel'],
+                ],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $package = TravelPackage::query()->where('slug', 'package-all-in')->firstOrFail();
+        $this->assertSame([$ticket->id], $package->products()->pluck('products.id')->all());
+        $this->assertDatabaseHas('package_all_in_configs', [
+            'package_id' => $package->id,
+            'package_vendor_id' => $vendor->id,
+            'vendor_price_period_id' => $period->id,
+            'vendor_name_snapshot' => 'Vendor Nusantara',
+            'period_label_snapshot' => 'Agustus 2026',
+            'price_per_pax' => 12_000_000,
+        ]);
+
+        $vendor->update(['name' => 'Nama Vendor Baru']);
+        $period->update([
+            'label' => 'Periode Master Berubah',
+            'start_date' => '2026-09-01',
+            'end_date' => '2026-09-30',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.update', $package), [
+                'slug' => $package->slug,
+                'name' => 'Package All In Diperbarui',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-08-10',
+                'end_date' => '2026-08-19',
+                'seats_total' => 40,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 30_000_000,
+                'currency' => 'IDR',
+                'product_ids' => [$ticket->id],
+                'all_in' => [
+                    'enabled' => true,
+                    'vendor_id' => $vendor->id,
+                    'period_id' => $period->id,
+                    'broker_package_name' => 'Land Arrangement 10 Hari',
+                    'currency' => 'IDR',
+                    'price_per_pax' => 12_000_000,
+                    'included_category_keys' => ['hotel'],
+                ],
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('package_all_in_configs', [
+            'package_id' => $package->id,
+            'vendor_name_snapshot' => 'Vendor Nusantara',
+            'period_label_snapshot' => 'Agustus 2026',
+            'period_start_snapshot' => '2026-08-01',
+            'period_end_snapshot' => '2026-08-31',
+        ]);
+    }
+
+    public function test_it_allows_all_in_disabled_without_included_categories(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'all-in-off',
+                'name' => 'All In Off',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-08-10',
+                'end_date' => '2026-08-19',
+                'seats_total' => 40,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 30_000_000,
+                'currency' => 'IDR',
+                'all_in' => [
+                    'enabled' => false,
+                    'vendor_id' => null,
+                    'period_id' => null,
+                    'broker_package_name' => '',
+                    'currency' => 'IDR',
+                    'price_per_pax' => null,
+                    'included_category_keys' => [],
+                ],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $package = TravelPackage::query()->where('slug', 'all-in-off')->firstOrFail();
+        $this->assertDatabaseMissing('package_all_in_configs', [
+            'package_id' => $package->id,
+        ]);
+    }
+
+    public function test_it_rejects_all_in_period_that_does_not_cover_package_dates(): void
+    {
+        $user = User::factory()->create();
+        ProductCategory::query()->updateOrCreate(['key' => 'hotel'], [
+            'name' => 'Hotel',
+            'is_active' => true,
+        ]);
+        $vendor = PackageVendor::factory()->create();
+        $period = VendorPricePeriod::factory()->create([
+            'package_vendor_id' => $vendor->id,
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-05',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'period-tidak-cukup',
+                'name' => 'Periode Tidak Cukup',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-08-10',
+                'end_date' => '2026-08-19',
+                'seats_total' => 40,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 30_000_000,
+                'currency' => 'IDR',
+                'all_in' => [
+                    'enabled' => true,
+                    'vendor_id' => $vendor->id,
+                    'period_id' => $period->id,
+                    'broker_package_name' => 'Land Arrangement',
+                    'currency' => 'SAR',
+                    'price_per_pax' => 4_000,
+                    'included_category_keys' => ['hotel'],
+                ],
+            ])
+            ->assertSessionHasErrors('all_in.period_id');
+    }
+
+    public function test_it_manages_package_vendor_and_price_period_crud(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('package-vendors.store'), [
+                'name' => 'Alreda International',
+                'phone' => '+966 54 000 0000',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $vendor = PackageVendor::query()->where('name', 'Alreda International')->firstOrFail();
+        $this->actingAs($user)
+            ->post(route('package-vendors.periods.store', $vendor), [
+                'label' => 'Musim Umroh 1448 H',
+                'start_date' => '2026-08-01',
+                'end_date' => '2026-12-15',
+                'currency' => 'SAR',
+                'price_per_pax' => 4_500,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $period = $vendor->pricePeriods()->firstOrFail();
+        $this->actingAs($user)
+            ->put(route('package-vendors.periods.update', [$vendor, $period]), [
+                'label' => 'Musim Umroh 1448 H Revisi',
+                'start_date' => '2026-08-01',
+                'end_date' => '2026-12-31',
+                'currency' => 'SAR',
+                'price_per_pax' => 4_750,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('vendor_price_periods', [
+            'id' => $period->id,
+            'label' => 'Musim Umroh 1448 H Revisi',
+            'price_per_pax' => 4_750,
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('package-vendors.periods.destroy', [$vendor, $period]))
+            ->assertRedirect();
+        $this->actingAs($user)
+            ->delete(route('package-vendors.destroy', $vendor))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('package_vendors', ['id' => $vendor->id]);
+    }
+
+    public function test_package_vendor_requires_only_name_and_phone(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('package-vendors.store'), [
+                'name' => '',
+                'phone' => '',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors(['name', 'phone']);
+
+        $this->actingAs($user)
+            ->post(route('package-vendors.store'), [
+                'name' => '  Vendor Ringkas  ',
+                'phone' => '  +62 812 3456 7890  ',
+                'email' => 'field-tidak-digunakan@example.com',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('package_vendors', [
+            'name' => 'Vendor Ringkas',
+            'phone' => '+62 812 3456 7890',
+        ]);
+    }
+
     public function test_it_serializes_product_option_prices_and_hotel_pricing(): void
     {
         $user = User::factory()->create();
         $this->makePackage();
-        ProductCategory::query()->create([
-            'key' => 'perlengkapan',
+        ProductCategory::query()->updateOrCreate(['key' => 'perlengkapan'], [
             'name' => ['id' => 'Perlengkapan', 'en' => 'Equipment'],
             'is_active' => true,
         ]);
-        ProductCategory::query()->create([
-            'key' => 'hotel',
+        ProductCategory::query()->updateOrCreate(['key' => 'hotel'], [
             'name' => ['id' => 'Hotel', 'en' => 'Hotel'],
             'is_active' => true,
         ]);
-        Currency::factory()->create([
-            'code' => 'IDR',
-            'conversion_rate' => 1,
-            'is_active' => true,
-        ]);
-        Currency::factory()->create([
-            'code' => 'SAR',
-            'conversion_rate' => 4300,
-            'is_active' => true,
-        ]);
+        config()->set('services.currency.live.enabled', true);
+        Http::fake(['*' => Http::response([
+            'result' => 'success',
+            'rates' => ['IDR' => 1, 'SAR' => 0.0002],
+        ])]);
+        Cache::flush();
 
         TravelProduct::query()->create([
             'code' => 'PRD-VISA',
@@ -143,19 +460,19 @@ class PackageManagementTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('packages.index'))
+            ->get(route('packages.create'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('productOptions', 2)
-                ->where('productOptions.0.price', 2500000)
-                ->where('productOptions.0.currency', 'IDR')
-                ->where('productOptions.1.hotel_info.city', 'Makkah')
-                ->where('productOptions.1.currency', 'SAR')
-                ->where('productOptions.1.hotel_info.pricing.0.broker_name', 'Broker A')
-                ->where('productOptions.1.hotel_info.pricing.0.price', 1450.0)
+                ->where('productOptions.0.hotel_info.city', 'Makkah')
+                ->where('productOptions.0.currency', 'SAR')
+                ->where('productOptions.0.hotel_info.pricing.0.broker_name', 'Broker A')
+                ->where('productOptions.0.hotel_info.pricing.0.price', 1450)
+                ->where('productOptions.1.price', 2500000)
+                ->where('productOptions.1.currency', 'IDR')
                 ->where('currencies.0.code', 'IDR')
                 ->where('currencies.1.code', 'SAR')
-                ->where('currencies.1.conversion_rate', 4300.0)
+                ->where('currencies.1.conversion_rate', 5000)
             );
     }
 
@@ -164,13 +481,11 @@ class PackageManagementTest extends TestCase
         $user = User::factory()->create();
         $this->makePackage();
 
-        ProductCategory::query()->create([
-            'key' => 'hotel',
+        ProductCategory::query()->updateOrCreate(['key' => 'hotel'], [
             'name' => ['id' => 'Hotel', 'en' => 'Hotel'],
             'is_active' => true,
         ]);
-        ProductCategory::query()->create([
-            'key' => 'merchandise',
+        ProductCategory::query()->updateOrCreate(['key' => 'merchandise'], [
             'name' => ['id' => 'Merchandise', 'en' => 'Merchandise'],
             'is_active' => false,
         ]);
@@ -194,7 +509,7 @@ class PackageManagementTest extends TestCase
         ]);
 
         $this->actingAs($user)
-            ->get(route('packages.index'))
+            ->get(route('packages.create'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->has('productOptions', 1)
@@ -220,6 +535,306 @@ class PackageManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertTrue(TravelPackage::query()->where('code', 'ASF-UMROH-BARU-10')->exists());
+    }
+
+    public function test_it_snapshots_live_rates_for_non_idr_products_when_the_package_is_saved(): void
+    {
+        $user = User::factory()->create();
+        config()->set('services.currency.live.enabled', true);
+        config()->set('services.currency.live.endpoint', 'https://rates.test/latest/IDR');
+        Cache::flush();
+        Http::fakeSequence()
+            ->push([
+                'result' => 'success',
+                'rates' => ['IDR' => 1, 'SAR' => 0.0002],
+            ])
+            ->push([
+                'result' => 'success',
+                'rates' => ['IDR' => 1, 'SAR' => 0.00025],
+            ]);
+        $product = TravelProduct::factory()->make([
+            'code' => 'PRD-SNAPSHOT-SAR',
+            'slug' => 'snapshot-sar',
+            'name' => 'Product SAR',
+            'product_type' => 'perlengkapan',
+            'content' => ['price' => 200, 'currency' => 'SAR'],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'package-snapshot-sar',
+                'name' => 'Package Snapshot SAR',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'duration_days' => 9,
+                'price' => 35_000_000,
+                'currency' => 'IDR',
+                'product_ids' => [$product->id],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $package = TravelPackage::query()->where('slug', 'package-snapshot-sar')->firstOrFail();
+
+        $this->assertSame(5000, data_get($package->content, 'hpp_currency_snapshots.SAR.rate_to_idr'));
+        $this->assertSame('live', data_get($package->content, 'hpp_currency_snapshots.SAR.source'));
+
+        Cache::flush();
+
+        $this->actingAs($user)
+            ->post(route('packages.update', $package), [
+                'slug' => $package->slug,
+                'name' => $package->name,
+                'package_type' => $package->package_type,
+                'departure_city' => $package->departure_city,
+                'duration_days' => $package->duration_days,
+                'price' => $package->price,
+                'currency' => $package->currency,
+                'product_ids' => [$product->id],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(5000, data_get($package->fresh()->content, 'hpp_currency_snapshots.SAR.rate_to_idr'));
+        Http::assertSentCount(1);
+    }
+
+    public function test_it_stores_server_calculated_hpp_estimate_with_the_package(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'umroh-estimasi-10',
+                'name' => ['id' => 'Umroh Estimasi', 'en' => 'Estimated Umrah'],
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-09-16',
+                'end_date' => '2026-09-25',
+                'seats_total' => 45,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 35_200_000,
+                'original_price' => 40_000_000,
+                'currency' => 'IDR',
+                'content' => [
+                    'room_original_prices' => [
+                        'dbl' => 39_000_000,
+                        'trpl' => 38_000_000,
+                        'quad' => 37_000_000,
+                    ],
+                    'hpp_estimate' => [
+                        'customers' => ['single' => 1, 'dbl' => 2, 'trpl' => 2, 'quad' => 3],
+                        'product_cost_per_customer' => 2_000_000,
+                        'hotel_total' => 10_000_000,
+                        'tour_leader_fee' => 3_000_000,
+                        'muthawwif_fee' => 2_000_000,
+                        'other_cost' => 1_000_000,
+                    ],
+                ],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $estimate = TravelPackage::query()
+            ->where('slug', 'umroh-estimasi-10')
+            ->firstOrFail()
+            ->content['hpp_estimate'];
+
+        $this->assertSame(8, $estimate['customer_count']);
+        $this->assertSame(32_000_000, $estimate['grand_total']);
+        $this->assertSame(268_400_000, $estimate['revenue_total']);
+        $this->assertSame(236_400_000, $estimate['estimated_profit']);
+    }
+
+    public function test_it_stores_and_calculates_package_operational_costs(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'package-operasional-test',
+                'name' => 'Package Operasional Test',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-10-01',
+                'end_date' => '2026-10-10',
+                'seats_total' => 4,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 1_000_000,
+                'currency' => 'IDR',
+                'content' => [
+                    'hpp_estimate' => [
+                        'customers' => ['single' => 0, 'dbl' => 0, 'trpl' => 0, 'quad' => 4],
+                        'customers_is_manual' => true,
+                        'operational_costs' => [
+                            'overhead' => ['amount' => 100, 'mode' => 'total'],
+                            'photographer' => ['count' => 1, 'daily_salary' => 20, 'days' => 2],
+                            'human_resources' => [[
+                                'id' => 'admin-extra',
+                                'name' => 'Admin Tambahan',
+                                'salary' => 30,
+                            ]],
+                            'tour_leader' => [
+                                'count' => 1,
+                                'salary_per_trip' => 50,
+                                'include_hotel' => false,
+                                'include_ticket_and_visa' => false,
+                            ],
+                            'muthawwif' => [
+                                'count' => 1,
+                                'daily_salary' => 10,
+                                'days' => 2,
+                                'currency' => 'IDR',
+                                'include_hotel' => false,
+                            ],
+                            'marketing' => ['amount_per_pax' => 5],
+                            'guide_tips' => [[
+                                'id' => 'guide-local',
+                                'country' => 'Indonesia',
+                                'amount_per_day' => 2,
+                                'days' => 3,
+                                'currency' => 'IDR',
+                                'mode' => 'per_pax',
+                            ]],
+                            'driver_tips' => [[
+                                'id' => 'driver-local',
+                                'country' => 'Indonesia',
+                                'amount' => 6,
+                                'currency' => 'IDR',
+                            ]],
+                        ],
+                    ],
+                ],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect();
+
+        $package = TravelPackage::query()->where('slug', 'package-operasional-test')->firstOrFail();
+
+        $this->assertSame(275, data_get($package->content, 'hpp_estimate.operational_total'));
+        $this->assertSame(275, data_get($package->content, 'hpp_estimate.grand_total'));
+        $this->assertSame(68, data_get($package->content, 'hpp_estimate.hpp_per_customer'));
+        $this->assertSame('Admin Tambahan', data_get($package->content, 'hpp_estimate.operational_costs.human_resources.0.name'));
+    }
+
+    public function test_it_validates_managed_operational_cost_rows(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->from(route('packages.create'))
+            ->post(route('packages.store'), [
+                'slug' => 'invalid-operational-package',
+                'name' => 'Invalid Operational Package',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-10-01',
+                'end_date' => '2026-10-10',
+                'seats_total' => 4,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 1_000_000,
+                'currency' => 'IDR',
+                'content' => [
+                    'hpp_estimate' => [
+                        'operational_costs' => [
+                            'human_resources' => [[
+                                'id' => 'missing-name',
+                                'name' => '',
+                                'salary' => 500_000,
+                            ]],
+                        ],
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('packages.create'))
+            ->assertSessionHasErrors('content.hpp_estimate.operational_costs.human_resources.0.name');
+    }
+
+    public function test_it_stores_product_and_hotel_breakdown_for_package_hpp_estimate(): void
+    {
+        $user = User::factory()->create();
+        $product = new TravelProduct;
+        $product->forceFill([
+            'code' => 'PRD-ESTIMATE',
+            'slug' => 'prd-estimate',
+            'name' => 'Visa Estimate',
+            'product_type' => 'visa',
+            'content' => ['price' => 100_000, 'currency' => 'IDR'],
+            'is_active' => true,
+        ])->save();
+        $hotel = new TravelProduct;
+        $hotel->forceFill([
+            'code' => 'HTL-ESTIMATE',
+            'slug' => 'htl-estimate',
+            'name' => 'Hotel Estimate',
+            'product_type' => 'hotel',
+            'content' => [
+                'currency' => 'IDR',
+                'pricing' => [
+                    ['broker_name' => 'Broker A', 'room_type' => 'DBL', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1_000_000],
+                    ['broker_name' => 'Broker A', 'room_type' => 'TRPL', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1_200_000],
+                    ['broker_name' => 'Broker A', 'room_type' => 'QUAD', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1_800_000],
+                ],
+            ],
+            'is_active' => true,
+        ])->save();
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'package-breakdown-estimate',
+                'name' => 'Package Breakdown Estimate',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-09-16',
+                'end_date' => '2026-09-25',
+                'seats_total' => 8,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 10_000_000,
+                'currency' => 'IDR',
+                'product_ids' => [$product->id, $hotel->id],
+                'product_multipliers' => [
+                    (string) $product->id => 2,
+                    (string) $hotel->id => 1,
+                ],
+                'content' => [
+                    'hotel_product_brokers' => [
+                        (string) $hotel->id => 'Broker A',
+                    ],
+                    'hpp_estimate' => [],
+                ],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $estimate = TravelPackage::query()
+            ->where('slug', 'package-breakdown-estimate')
+            ->firstOrFail()
+            ->content['hpp_estimate'];
+
+        $this->assertSame(16, data_get($estimate, 'product_quantities.'.$product->id));
+        $this->assertSame(8, data_get($estimate, 'customers.dbl'));
+        $this->assertFalse(data_get($estimate, 'customers_is_manual'));
+        $this->assertSame('rooms', data_get($estimate, 'hotel_allocations_unit'));
+        $this->assertSame(2, data_get($estimate, 'hotel_allocations.'.$hotel->id.'.quad'));
+        $this->assertSame(1_600_000, $estimate['product_total']);
+        $this->assertSame(3_600_000, $estimate['hotel_total']);
+        $this->assertSame(10_000_000, $estimate['tour_leader_fee']);
+        $this->assertSame(450_000, $estimate['muthawwif_fee']);
+        $this->assertCount(4, $estimate['items']);
     }
 
     public function test_it_stores_selected_hotel_brokers_in_package_content(): void
@@ -731,44 +1346,23 @@ class PackageManagementTest extends TestCase
         $this->assertNull(TravelPackage::query()->find($pkg->id));
     }
 
-    public function test_it_stores_a_schedule_for_a_package(): void
+    public function test_it_stores_departure_data_directly_on_a_package(): void
     {
-        $user = User::factory()->create();
         $pkg = $this->makePackage();
 
-        $this->actingAs($user)
-            ->post(route('packages.schedules.store', $pkg), [
-                'departure_date' => '2026-08-01',
-                'return_date' => '2026-08-10',
-                'departure_city' => 'Jakarta',
-                'seats_total' => 45,
-                'status' => 'open',
-                'is_active' => true,
-            ])
-            ->assertRedirect();
-
-        $this->assertEquals(1, $pkg->schedules()->count());
-        $this->assertEquals(45, $pkg->schedules()->first()?->seats_available);
+        $this->assertSame('2026-08-01', $pkg->start_date?->toDateString());
+        $this->assertSame('2026-08-10', $pkg->end_date?->toDateString());
+        $this->assertSame(45, $pkg->seats_total);
+        $this->assertFalse(Route::has('packages.schedules.store'));
     }
 
-    public function test_it_computes_available_schedule_seats_from_related_bookings(): void
+    public function test_it_computes_available_package_seats_from_related_bookings(): void
     {
         $user = User::factory()->create();
         $pkg = $this->makePackage();
-        $schedule = DepartureSchedule::query()->create([
-            'package_id' => $pkg->id,
-            'departure_date' => '2026-08-01',
-            'return_date' => '2026-08-10',
-            'departure_city' => 'Jakarta',
-            'seats_total' => 45,
-            'seats_available' => 45,
-            'status' => 'open',
-            'is_active' => true,
-        ]);
 
         Booking::query()->create([
             'package_id' => $pkg->id,
-            'departure_schedule_id' => $schedule->id,
             'booking_code' => 'BK-TEST-001',
             'booking_type' => 'package',
             'full_name' => 'Ahmad Fauzi',
@@ -781,7 +1375,6 @@ class PackageManagementTest extends TestCase
 
         Booking::query()->create([
             'package_id' => $pkg->id,
-            'departure_schedule_id' => $schedule->id,
             'booking_code' => 'BK-TEST-002',
             'booking_type' => 'package',
             'full_name' => 'Siti Aminah',
@@ -794,7 +1387,6 @@ class PackageManagementTest extends TestCase
 
         Booking::query()->create([
             'package_id' => $pkg->id,
-            'departure_schedule_id' => $schedule->id,
             'booking_code' => 'BK-TEST-003',
             'booking_type' => 'package',
             'full_name' => 'Budi Santoso',
@@ -809,58 +1401,19 @@ class PackageManagementTest extends TestCase
             ->get(route('packages.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('packages.0.schedules.0.seats_total', 45)
-                ->where('packages.0.schedules.0.seats_available', 42)
+                ->where('packages.0.seats_total', 45)
+                ->where('packages.0.seats_available', 42)
             );
     }
 
-    public function test_it_prevents_updating_schedule_of_different_package(): void
+    public function test_it_does_not_expose_schedule_update_routes(): void
     {
-        $user = User::factory()->create();
-        $pkg1 = $this->makePackage(['code' => 'PKG-1', 'slug' => 'pkg-1']);
-        $pkg2 = $this->makePackage(['code' => 'PKG-2', 'slug' => 'pkg-2']);
-
-        $schedule = DepartureSchedule::query()->create([
-            'package_id' => $pkg1->id,
-            'departure_date' => '2026-08-01',
-            'departure_city' => 'Jakarta',
-            'seats_total' => 45,
-            'seats_available' => 45,
-            'status' => 'open',
-            'is_active' => true,
-        ]);
-
-        $this->actingAs($user)
-            ->post(route('packages.schedules.update', [$pkg2, $schedule]), [
-                'departure_date' => '2026-09-01',
-                'departure_city' => 'Surabaya',
-                'seats_total' => 30,
-                'status' => 'open',
-                'is_active' => true,
-            ])
-            ->assertForbidden();
+        $this->assertFalse(Route::has('packages.schedules.update'));
     }
 
-    public function test_it_deletes_a_schedule(): void
+    public function test_it_does_not_expose_schedule_delete_routes(): void
     {
-        $user = User::factory()->create();
-        $pkg = $this->makePackage();
-
-        $schedule = DepartureSchedule::query()->create([
-            'package_id' => $pkg->id,
-            'departure_date' => '2026-08-01',
-            'departure_city' => 'Jakarta',
-            'seats_total' => 45,
-            'seats_available' => 45,
-            'status' => 'open',
-            'is_active' => true,
-        ]);
-
-        $this->actingAs($user)
-            ->delete(route('packages.schedules.destroy', [$pkg, $schedule]))
-            ->assertRedirect();
-
-        $this->assertNull(DepartureSchedule::query()->find($schedule->id));
+        $this->assertFalse(Route::has('packages.schedules.destroy'));
     }
 
     public function test_it_stores_and_updates_itinerary_via_nested_routes(): void
@@ -943,6 +1496,9 @@ class PackageManagementTest extends TestCase
         $pkg = $this->makePackage();
 
         $this->get(route('packages.index'))->assertRedirect(route('login'));
+        $this->get(route('packages.create'))->assertRedirect(route('login'));
+        $this->get(route('packages.show', $pkg))->assertRedirect(route('login'));
+        $this->get(route('packages.edit', $pkg))->assertRedirect(route('login'));
         $this->post(route('packages.store'))->assertRedirect(route('login'));
         $this->post(route('packages.update', $pkg))->assertRedirect(route('login'));
         $this->delete(route('packages.destroy', $pkg))->assertRedirect(route('login'));
@@ -1069,32 +1625,11 @@ class PackageManagementTest extends TestCase
         Storage::disk('public')->assertMissing('packages/gallery-1.jpg');
     }
 
-    public function test_it_updates_schedule_active_flag(): void
+    public function test_it_uses_package_booking_status_instead_of_schedule_active_flag(): void
     {
-        $user = User::factory()->create();
         $pkg = $this->makePackage();
-        $schedule = DepartureSchedule::query()->create([
-            'package_id' => $pkg->id,
-            'departure_date' => '2026-08-01',
-            'return_date' => '2026-08-10',
-            'departure_city' => 'Jakarta',
-            'seats_total' => 45,
-            'seats_available' => 45,
-            'status' => 'open',
-            'is_active' => true,
-        ]);
+        $pkg->update(['booking_status' => 'closed']);
 
-        $this->actingAs($user)
-            ->post(route('packages.schedules.update', [$pkg, $schedule]), [
-                'departure_date' => '2026-08-01',
-                'return_date' => '2026-08-10',
-                'departure_city' => 'Jakarta',
-                'seats_total' => 45,
-                'status' => 'open',
-                'is_active' => false,
-            ])
-            ->assertRedirect();
-
-        $this->assertFalse((bool) $schedule->fresh()?->is_active);
+        $this->assertSame('closed', $pkg->fresh()?->booking_status);
     }
 }

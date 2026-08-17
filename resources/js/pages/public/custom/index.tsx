@@ -51,7 +51,7 @@ const content = {
                 'Data ini dipakai admin untuk follow up. Setelah disetujui, request akan diproses jadi booking.',
             fullName: 'Nama PIC',
             whatsapp: 'Nomor WhatsApp',
-            email: 'Email (opsional)',
+            email: 'Email',
             groupType: 'Jenis Rombongan',
             groupOptions: [
                 'Keluarga',
@@ -119,7 +119,7 @@ const content = {
                 'We will use this to follow up. Once approved, the request will be processed into a booking.',
             fullName: 'Contact Name',
             whatsapp: 'WhatsApp Number',
-            email: 'Email (optional)',
+            email: 'Email',
             groupType: 'Group Type',
             groupOptions: [
                 'Family',
@@ -335,10 +335,7 @@ export default function Custom() {
                                     {
                                         full_name: fullName.trim(),
                                         phone: sanitizedWhatsapp,
-                                        email:
-                                            email.trim() === ''
-                                                ? null
-                                                : email.trim(),
+                                        email: email.trim(),
                                         origin_city: city.trim(),
                                         passenger_count: pilgrims,
                                         group_type: groupType,
@@ -435,6 +432,7 @@ export default function Custom() {
                                                     type="email"
                                                     placeholder="opsional"
                                                     value={email}
+                                                    required
                                                     onChange={(event) =>
                                                         setEmail(
                                                             event.target.value,

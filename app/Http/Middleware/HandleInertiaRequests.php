@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Http\Controllers\Administrator\SeoController;
 use App\Models\Article;
 use App\Models\CareerOpening;
-use App\Models\DepartureSchedule;
 use App\Models\Faq;
 use App\Models\GalleryItem;
 use App\Models\LegalDocument;
@@ -185,22 +184,13 @@ class HandleInertiaRequests extends Middleware
             'packages' => TravelPackage::query()
                 ->with([
                     'products:id,name,slug',
-                    'schedules' => fn ($query) => $query
-                        ->where('is_active', true)
-                        ->whereDate('departure_date', '>=', Carbon::today())
-                        ->orderBy('departure_date')
-                        ->withSum(
-                            ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
-                            'passenger_count',
-                        ),
                     'testimonials' => fn ($query) => $query
                         ->where('is_active', true)
                         ->select(['id', 'package_id', 'rating']),
                 ])
                 ->where('is_active', true)
-                ->whereHas('schedules', fn ($query) => $query
-                    ->where('is_active', true)
-                    ->whereDate('departure_date', '>=', Carbon::today()))
+                ->where('booking_status', 'open')
+                ->whereDate('start_date', '>=', Carbon::today())
                 ->orderByDesc('is_featured')
                 ->orderBy('price')
                 ->get()
@@ -211,6 +201,11 @@ class HandleInertiaRequests extends Middleware
                     'name' => $package->name,
                     'package_type' => $package->package_type,
                     'departure_city' => $package->departure_city,
+                    'start_date' => $package->start_date?->toDateString(),
+                    'end_date' => $package->end_date?->toDateString(),
+                    'seats_total' => (int) $package->seats_total,
+                    'seats_available' => $package->availableSeatsCount(),
+                    'booking_status' => $package->booking_status,
                     'duration_days' => $package->duration_days,
                     'price' => $package->price,
                     'original_price' => $package->original_price,
@@ -229,41 +224,28 @@ class HandleInertiaRequests extends Middleware
                         'name' => $product->name,
                         'slug' => $product->slug,
                     ])->values()->all(),
-                    'schedules' => $package->schedules->map(fn (DepartureSchedule $schedule): array => [
-                        'departure_date' => $schedule->departure_date?->toDateString(),
-                        'return_date' => $schedule->return_date?->toDateString(),
-                        'departure_city' => $schedule->departure_city,
-                        'seats_total' => $schedule->seats_total,
-                        'seats_available' => $schedule->availableSeatsCount(),
-                        'status' => $schedule->status,
-                        'notes' => $schedule->notes,
-                    ])->values()->all(),
                 ])
                 ->values()
                 ->all(),
-            'schedules' => DepartureSchedule::query()
-                ->withSum(
-                    ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
-                    'passenger_count',
-                )
-                ->with('travelPackage:id,slug,name,duration_days,price,currency')
+            'schedules' => TravelPackage::query()
                 ->where('is_active', true)
-                ->orderBy('departure_date')
+                ->whereDate('start_date', '>=', Carbon::today())
+                ->orderBy('start_date')
                 ->get()
-                ->map(fn (DepartureSchedule $schedule): array => [
-                    'departure_date' => $schedule->departure_date?->toDateString(),
-                    'return_date' => $schedule->return_date?->toDateString(),
-                    'departure_city' => $schedule->departure_city,
-                    'seats_total' => $schedule->seats_total,
-                    'seats_available' => $schedule->availableSeatsCount(),
-                    'status' => $schedule->status,
-                    'notes' => $schedule->notes,
+                ->map(fn (TravelPackage $package): array => [
+                    'departure_date' => $package->start_date?->toDateString(),
+                    'return_date' => $package->end_date?->toDateString(),
+                    'departure_city' => $package->departure_city,
+                    'seats_total' => (int) $package->seats_total,
+                    'seats_available' => $package->availableSeatsCount(),
+                    'status' => $package->booking_status,
+                    'notes' => $package->departure_notes,
                     'package' => [
-                        'slug' => $schedule->travelPackage?->slug,
-                        'name' => $schedule->travelPackage?->name,
-                        'duration_days' => $schedule->travelPackage?->duration_days,
-                        'price' => $schedule->travelPackage?->price,
-                        'currency' => $schedule->travelPackage?->currency,
+                        'slug' => $package->slug,
+                        'name' => $package->name,
+                        'duration_days' => $package->duration_days,
+                        'price' => $package->price,
+                        'currency' => $package->currency,
                     ],
                 ])
                 ->values()

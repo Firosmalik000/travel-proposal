@@ -176,6 +176,11 @@ class CheckMenuPermission
             $paths[] = '/dashboard/website-management/products';
         }
 
+        if (str_starts_with($dashboardPath, '/dashboard/product-management/products/hotels')) {
+            $paths[] = '/dashboard/product-management/products';
+            $paths[] = '/admin/product-management/products';
+        }
+
         if ($dashboardPath === '/dashboard/product-management/categories') {
             $paths[] = '/dashboard/product-management/products';
         }

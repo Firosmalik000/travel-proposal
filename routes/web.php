@@ -2,18 +2,19 @@
 
 use App\Http\Controllers\Administrator\ActivityController;
 use App\Http\Controllers\Administrator\ActivityLogController;
+use App\Http\Controllers\Administrator\AgentManagementController;
 use App\Http\Controllers\Administrator\ArticleController as AdministratorArticleController;
+use App\Http\Controllers\Administrator\BookingCustomerDataController;
+use App\Http\Controllers\Administrator\BookingPaymentController;
 use App\Http\Controllers\Administrator\BookingRegisterController;
 use App\Http\Controllers\Administrator\BrandingController;
 use App\Http\Controllers\Administrator\CashflowController;
 use App\Http\Controllers\Administrator\ContentController;
-use App\Http\Controllers\Administrator\CurrencyController;
 use App\Http\Controllers\Administrator\CustomBookingController;
 use App\Http\Controllers\Administrator\CustomUmrohRequestController;
 use App\Http\Controllers\Administrator\FinancialReportController;
 use App\Http\Controllers\Administrator\GalleryController;
 use App\Http\Controllers\Administrator\HotelAssignmentController;
-use App\Http\Controllers\Administrator\HotelController;
 use App\Http\Controllers\Administrator\HotelReferenceController;
 use App\Http\Controllers\Administrator\ImpersonationController;
 use App\Http\Controllers\Administrator\InventoryController;
@@ -21,10 +22,17 @@ use App\Http\Controllers\Administrator\InvitationController;
 use App\Http\Controllers\Administrator\MenuController;
 use App\Http\Controllers\Administrator\PackageController;
 use App\Http\Controllers\Administrator\PackageCostCalculationController;
+use App\Http\Controllers\Administrator\PackageVendorController;
+use App\Http\Controllers\Administrator\ProductManagement\ProductCategoryHotelController;
 use App\Http\Controllers\Administrator\RoleManagementController;
 use App\Http\Controllers\Administrator\SeoController;
 use App\Http\Controllers\Administrator\UserManagementController;
+use App\Http\Controllers\Administrator\VendorPricePeriodController;
+use App\Http\Controllers\Agent\PortalController as AgentPortalController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
+use App\Http\Controllers\Customer\AccountController as CustomerAccountController;
+use App\Http\Controllers\Customer\BookingParticipantController as CustomerBookingParticipantController;
+use App\Http\Controllers\Customer\PortalController as CustomerPortalController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PackageRegistrationController;
 use App\Http\Controllers\Public\ArticleController as PublicArticleController;
@@ -64,11 +72,6 @@ Route::get('/landing/{package}', function (string $package) {
         })
         ->with([
             'products:id,name,product_type,slug',
-            'schedules' => fn ($query) => $query
-                ->withSum(['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')], 'passenger_count')
-                ->where('is_active', true)
-                ->whereDate('departure_date', '>=', now()->toDateString())
-                ->orderBy('departure_date'),
             'testimonials.departureSchedule:id,departure_date,departure_city',
             'itineraries.activity:id,code,name,description,sort_order,is_active',
             'itineraries.products:id,name,product_type',
@@ -101,16 +104,16 @@ Route::get('/landing/{package}', function (string $package) {
                 'product_type' => $product->product_type,
                 'slug' => $product->slug,
             ])->values()->all(),
-            'schedules' => $travelPackage->schedules->map(fn ($schedule): array => [
-                'id' => $schedule->id,
-                'departure_date' => $schedule->departure_date?->toDateString(),
-                'return_date' => $schedule->return_date?->toDateString(),
-                'departure_city' => $schedule->departure_city,
-                'seats_total' => $schedule->seats_total,
-                'seats_available' => $schedule->availableSeatsCount(),
-                'status' => $schedule->status,
-                'notes' => $schedule->notes,
-            ])->values()->all(),
+            'schedules' => $travelPackage->start_date ? [[
+                'id' => $travelPackage->id,
+                'departure_date' => $travelPackage->start_date->toDateString(),
+                'return_date' => $travelPackage->end_date?->toDateString(),
+                'departure_city' => $travelPackage->departure_city,
+                'seats_total' => (int) $travelPackage->seats_total,
+                'seats_available' => $travelPackage->availableSeatsCount(),
+                'status' => $travelPackage->booking_status,
+                'notes' => $travelPackage->departure_notes,
+            ]] : [],
             'testimonials' => $travelPackage->testimonials->where('is_active', true)->map(fn ($testimonial): array => [
                 'name' => $testimonial->name,
                 'origin_city' => $testimonial->origin_city,
@@ -153,9 +156,9 @@ Route::get('paket-umroh', function () {
     return Inertia::render('public/paket/index');
 })->name('public.paket');
 Route::get('paket-umroh/{travelPackage:slug}', function (TravelPackage $travelPackage) {
-    $travelPackage->load(['products:id,name,product_type',         'schedules' => fn ($query) => $query->withSum(['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')], 'passenger_count')->whereDate('departure_date', '>=', now()->toDateString())->orderBy('departure_date'),         'testimonials.departureSchedule:id,departure_date,departure_city',         'itineraries.activity:id,code,name,description,sort_order,is_active',         'itineraries.products:id,name,product_type']);
+    $travelPackage->load(['products:id,name,product_type', 'testimonials.departureSchedule:id,departure_date,departure_city', 'itineraries.activity:id,code,name,description,sort_order,is_active', 'itineraries.products:id,name,product_type']);
 
-    return Inertia::render('public/paket/detail/index', ['travelPackage' => ['id' => $travelPackage->id,             'code' => $travelPackage->code,             'slug' => $travelPackage->slug,             'name' => $travelPackage->name,             'package_type' => $travelPackage->package_type,             'departure_city' => $travelPackage->departure_city,             'duration_days' => $travelPackage->duration_days,             'price' => (float) $travelPackage->price,             'original_price' => $travelPackage->original_price ? (float) $travelPackage->original_price : null,             'discount_label' => $travelPackage->discount_label,             'discount_percent' => $travelPackage->discountPercent(),             'discount_ends_at' => $travelPackage->discount_ends_at?->toDateTimeString(),             'currency' => $travelPackage->currency,             'image_path' => $travelPackage->image_path,             'summary' => $travelPackage->summary,             'content' => $travelPackage->content,             'is_featured' => $travelPackage->is_featured,             'rating_avg' => $travelPackage->testimonials->avg('rating') ? round($travelPackage->testimonials->avg('rating'), 1) : null,             'rating_count' => $travelPackage->testimonials->count(),             'products' => $travelPackage->products->map(fn ($p) => ['name' => $p->name,                 'product_type' => $p->product_type])->values()->all(),             'schedules' => $travelPackage->schedules->map(fn ($s) => ['id' => $s->id,                 'departure_date' => $s->departure_date?->toDateString(),                 'return_date' => $s->return_date?->toDateString(),                 'departure_city' => $s->departure_city,                 'seats_total' => $s->seats_total,                 'seats_available' => $s->availableSeatsCount(),                 'status' => $s->status,                 'notes' => $s->notes])->values()->all(),             'testimonials' => $travelPackage->testimonials->where('is_active', true)->map(fn ($t) => ['name' => $t->name,                 'origin_city' => $t->origin_city,                 'quote' => $t->quote,                 'rating' => $t->rating,                 'departure_schedule' => $t->departureSchedule ? ['departure_date' => $t->departureSchedule->departure_date?->toDateString(),                         'departure_city' => $t->departureSchedule->departure_city] : null,                 'photos' => $t->photos ?? []])->values()->all(),             'itineraries' => $travelPackage->itineraries->map(function ($itinerary) {
+    return Inertia::render('public/paket/detail/index', ['travelPackage' => ['id' => $travelPackage->id,             'code' => $travelPackage->code,             'slug' => $travelPackage->slug,             'name' => $travelPackage->name,             'package_type' => $travelPackage->package_type,             'departure_city' => $travelPackage->departure_city,             'duration_days' => $travelPackage->duration_days,             'price' => (float) $travelPackage->price,             'original_price' => $travelPackage->original_price ? (float) $travelPackage->original_price : null,             'discount_label' => $travelPackage->discount_label,             'discount_percent' => $travelPackage->discountPercent(),             'discount_ends_at' => $travelPackage->discount_ends_at?->toDateTimeString(),             'currency' => $travelPackage->currency,             'image_path' => $travelPackage->image_path,             'summary' => $travelPackage->summary,             'content' => $travelPackage->content,             'is_featured' => $travelPackage->is_featured,             'rating_avg' => $travelPackage->testimonials->avg('rating') ? round($travelPackage->testimonials->avg('rating'), 1) : null,             'rating_count' => $travelPackage->testimonials->count(),             'products' => $travelPackage->products->map(fn ($p) => ['name' => $p->name,                 'product_type' => $p->product_type])->values()->all(),             'schedules' => $travelPackage->start_date ? [['id' => $travelPackage->id,                 'departure_date' => $travelPackage->start_date->toDateString(),                 'return_date' => $travelPackage->end_date?->toDateString(),                 'departure_city' => $travelPackage->departure_city,                 'seats_total' => (int) $travelPackage->seats_total,                 'seats_available' => $travelPackage->availableSeatsCount(),                 'status' => $travelPackage->booking_status,                 'notes' => $travelPackage->departure_notes]] : [],             'testimonials' => $travelPackage->testimonials->where('is_active', true)->map(fn ($t) => ['name' => $t->name,                 'origin_city' => $t->origin_city,                 'quote' => $t->quote,                 'rating' => $t->rating,                 'departure_schedule' => $t->departureSchedule ? ['departure_date' => $t->departureSchedule->departure_date?->toDateString(),                         'departure_city' => $t->departureSchedule->departure_city] : null,                 'photos' => $t->photos ?? []])->values()->all(),             'itineraries' => $travelPackage->itineraries->map(function ($itinerary) {
         $activityIds = collect($itinerary->activity_ids ?? [])->filter(fn ($activityId) => is_numeric($activityId))->map(fn ($activityId) => (int) $activityId)->values();
         if ($activityIds->isEmpty() && $itinerary->activity_id) {
             $activityIds = collect([(int) $itinerary->activity_id]);
@@ -228,7 +231,22 @@ Route::middleware('guest')->group(function () {
     Route::post('invitation/{token}', [AcceptInvitationController::class, 'store'])->name('invitations.store');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {     /* Get user menus (for sidebar) */ Route::get('api/user-menus', [MenuController::class, 'getUserMenus'])->name('user.menus');
+Route::middleware(['auth', 'customer'])->prefix('customer')->name('customer.')->group(function (): void {
+    Route::get('', [CustomerPortalController::class, 'index'])->name('dashboard');
+    Route::get('password', [CustomerAccountController::class, 'editPassword'])->name('password.edit');
+    Route::put('password', [CustomerAccountController::class, 'updatePassword'])->middleware('throttle:6,1')->name('password.update');
+    Route::get('bookings/{booking:booking_code}', [CustomerPortalController::class, 'show'])->name('bookings.show');
+    Route::post('bookings/{booking}/participants', [CustomerBookingParticipantController::class, 'store'])->name('participants.store');
+    Route::post('bookings/{booking}/participants/{participant}', [CustomerBookingParticipantController::class, 'update'])->name('participants.update');
+    Route::delete('bookings/{booking}/participants/{participant}', [CustomerBookingParticipantController::class, 'destroy'])->name('participants.destroy');
+    Route::get('bookings/{booking}/participants/{participant}/documents/{document}', [CustomerBookingParticipantController::class, 'download'])->name('participants.documents.download');
+});
+
+Route::middleware(['auth', 'agent'])->prefix('agent')->name('agent.')->group(function (): void {
+    Route::get('', [AgentPortalController::class, 'index'])->name('dashboard');
+});
+
+Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {     /* Get user menus (for sidebar) */ Route::get('api/user-menus', [MenuController::class, 'getUserMenus'])->name('user.menus');
     $registerAdminPortalRoutes = function (string $prefix, bool $withNames = true): void {
         $nameRoute = static function ($route, string $name) use ($withNames) {
             if ($withNames) {
@@ -259,7 +277,6 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::get('portal-content', [ContentController::class, 'portalContent'])->middleware('check.menu.permission:view'), 'portal-content.index');
             $nameRoute(Route::get('landing', [ContentController::class, 'landing'])->middleware('check.menu.permission:view'), 'landing.index');
             $nameRoute(Route::get('website', [ContentController::class, 'website'])->middleware('check.menu.permission:view'), 'website.index');
-            $nameRoute(Route::redirect('schedules', '/admin/product-management/packages'), 'schedules.index');
             $nameRoute(Route::get('gallery', [GalleryController::class, 'index'])->middleware('check.menu.permission:view'), 'gallery.index');
             $nameRoute(Route::post('gallery', [GalleryController::class, 'store'])->middleware('check.menu.permission:create'), 'gallery.store');
             $nameRoute(Route::patch('gallery/{galleryItem}', [GalleryController::class, 'update'])->middleware('check.menu.permission:edit'), 'gallery.update');
@@ -278,17 +295,28 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
         Route::prefix($prefix.'/product-management')->group(function () use ($nameRoute) {
             $nameRoute(Route::get('categories', [ContentController::class, 'productCategories']), 'product-categories.index');
             $nameRoute(Route::get('products', [ContentController::class, 'products']), 'products.index');
+            $nameRoute(Route::post('products/hotels', [ProductCategoryHotelController::class, 'store'])->middleware('check.menu.permission:create'), 'products.hotels.store');
+            $nameRoute(Route::post('products/hotels/bulk', [ProductCategoryHotelController::class, 'bulkStore'])->middleware('check.menu.permission:create'), 'products.hotels.bulk-store');
+            $nameRoute(Route::post('products/hotels/bulk-delete', [ProductCategoryHotelController::class, 'bulkDelete'])->middleware('check.menu.permission:delete'), 'products.hotels.bulk-delete');
+            $nameRoute(Route::put('products/hotels/{hotel}', [ProductCategoryHotelController::class, 'update'])->middleware('check.menu.permission:edit'), 'products.hotels.update');
+            $nameRoute(Route::delete('products/hotels/{hotel}', [ProductCategoryHotelController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'products.hotels.destroy');
             $nameRoute(Route::get('activities', [ActivityController::class, 'index'])->middleware('check.menu.permission:view'), 'activities.index');
             $nameRoute(Route::post('activities', [ActivityController::class, 'store'])->middleware('check.menu.permission:create'), 'activities.store');
             $nameRoute(Route::put('activities/{activity}', [ActivityController::class, 'update'])->middleware('check.menu.permission:edit'), 'activities.update');
             $nameRoute(Route::delete('activities/{activity}', [ActivityController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'activities.destroy');
             $nameRoute(Route::get('packages', [PackageController::class, 'index'])->middleware('check.menu.permission:view'), 'packages.index');
+            $nameRoute(Route::get('packages/create', [PackageController::class, 'create'])->middleware('check.menu.permission:create'), 'packages.create');
+            $nameRoute(Route::get('packages/{package}', [PackageController::class, 'show'])->middleware('check.menu.permission:view'), 'packages.show');
+            $nameRoute(Route::get('packages/{package}/edit', [PackageController::class, 'edit'])->middleware('check.menu.permission:edit'), 'packages.edit');
             $nameRoute(Route::post('packages', [PackageController::class, 'store'])->middleware('check.menu.permission:create'), 'packages.store');
             $nameRoute(Route::post('packages/{package}', [PackageController::class, 'update'])->middleware('check.menu.permission:edit'), 'packages.update');
             $nameRoute(Route::delete('packages/{package}', [PackageController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'packages.destroy');
-            $nameRoute(Route::post('packages/{package}/schedules', [PackageController::class, 'storeSchedule'])->middleware('check.menu.permission:create'), 'packages.schedules.store');
-            $nameRoute(Route::post('packages/{package}/schedules/{schedule}', [PackageController::class, 'updateSchedule'])->middleware('check.menu.permission:edit'), 'packages.schedules.update');
-            $nameRoute(Route::delete('packages/{package}/schedules/{schedule}', [PackageController::class, 'destroySchedule'])->middleware('check.menu.permission:delete'), 'packages.schedules.destroy');
+            $nameRoute(Route::post('package-vendors', [PackageVendorController::class, 'store'])->middleware('check.menu.permission:create'), 'package-vendors.store');
+            $nameRoute(Route::put('package-vendors/{vendor}', [PackageVendorController::class, 'update'])->middleware('check.menu.permission:edit'), 'package-vendors.update');
+            $nameRoute(Route::delete('package-vendors/{vendor}', [PackageVendorController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'package-vendors.destroy');
+            $nameRoute(Route::post('package-vendors/{vendor}/periods', [VendorPricePeriodController::class, 'store'])->middleware('check.menu.permission:create'), 'package-vendors.periods.store');
+            $nameRoute(Route::put('package-vendors/{vendor}/periods/{period}', [VendorPricePeriodController::class, 'update'])->middleware('check.menu.permission:edit'), 'package-vendors.periods.update');
+            $nameRoute(Route::delete('package-vendors/{vendor}/periods/{period}', [VendorPricePeriodController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'package-vendors.periods.destroy');
             $nameRoute(Route::post('packages/{package}/itineraries', [PackageController::class, 'storeItinerary'])->middleware('check.menu.permission:create'), 'packages.itineraries.store');
             $nameRoute(Route::post('packages/{package}/itineraries/{itinerary}', [PackageController::class, 'updateItinerary'])->middleware('check.menu.permission:edit'), 'packages.itineraries.update');
             $nameRoute(Route::delete('packages/{package}/itineraries/{itinerary}', [PackageController::class, 'destroyItinerary'])->middleware('check.menu.permission:delete'), 'packages.itineraries.destroy');
@@ -309,6 +337,12 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::post('listing', [BookingRegisterController::class, 'store'])->middleware('check.menu.permission:create'), 'booking.listing.store');
             $nameRoute(Route::put('listing/{registration}', [BookingRegisterController::class, 'update'])->middleware('check.menu.permission:edit'), 'booking.listing.update');
             $nameRoute(Route::delete('listing/{registration}', [BookingRegisterController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'booking.listing.destroy');
+            $nameRoute(Route::get('listing/{booking}/payments', [BookingPaymentController::class, 'index'])->middleware('check.menu.permission:view'), 'booking.payments.index');
+            $nameRoute(Route::post('listing/{booking}/payments', [BookingPaymentController::class, 'store'])->middleware('check.menu.permission:edit'), 'booking.payments.store');
+            $nameRoute(Route::put('listing/{booking}/payments/{payment}', [BookingPaymentController::class, 'update'])->middleware('check.menu.permission:edit'), 'booking.payments.update');
+            $nameRoute(Route::delete('listing/{booking}/payments/{payment}', [BookingPaymentController::class, 'destroy'])->middleware('check.menu.permission:edit'), 'booking.payments.destroy');
+            $nameRoute(Route::get('customer-data', [BookingCustomerDataController::class, 'index'])->middleware('check.menu.permission:view'), 'booking.customer-data.index');
+            $nameRoute(Route::get('customer-data/{travelPackage}', [BookingCustomerDataController::class, 'show'])->middleware('check.menu.permission:view'), 'booking.customer-data.show');
             $nameRoute(Route::get('hotel-assignment', [HotelAssignmentController::class, 'index'])->middleware('check.menu.permission:view'), 'booking.hotel-assignment.index');
             $nameRoute(Route::post('hotel-assignment', [HotelAssignmentController::class, 'store'])->middleware('check.menu.permission:create'), 'booking.hotel-assignment.store');
             $nameRoute(Route::put('hotel-assignment/{assignment}', [HotelAssignmentController::class, 'update'])->middleware('check.menu.permission:edit'), 'booking.hotel-assignment.update');
@@ -337,12 +371,6 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::post('inventory', [InventoryController::class, 'store'])->middleware('check.menu.permission:create'), 'master-data.inventory.store');
             $nameRoute(Route::put('inventory/{inventoryItem}', [InventoryController::class, 'update'])->middleware('check.menu.permission:edit'), 'master-data.inventory.update');
             $nameRoute(Route::delete('inventory/{inventoryItem}', [InventoryController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'master-data.inventory.destroy');
-            $nameRoute(Route::get('hotels', [HotelController::class, 'index'])->middleware('check.menu.permission:view'), 'master-data.hotels.index');
-            $nameRoute(Route::post('hotels', [HotelController::class, 'store'])->middleware('check.menu.permission:create'), 'master-data.hotels.store');
-            $nameRoute(Route::post('hotels/bulk', [HotelController::class, 'bulkStore'])->middleware('check.menu.permission:create'), 'master-data.hotels.bulk-store');
-            $nameRoute(Route::post('hotels/bulk-deactivate', [HotelController::class, 'bulkDeactivate'])->middleware('check.menu.permission:delete'), 'master-data.hotels.bulk-deactivate');
-            $nameRoute(Route::put('hotels/{hotel}', [HotelController::class, 'update'])->middleware('check.menu.permission:edit'), 'master-data.hotels.update');
-            $nameRoute(Route::delete('hotels/{hotel}', [HotelController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'master-data.hotels.destroy');
             $nameRoute(Route::get('hotel-countries', [HotelReferenceController::class, 'countries'])->middleware('check.menu.permission:view'), 'master-data.hotel-countries.index');
             $nameRoute(Route::post('hotel-countries', [HotelReferenceController::class, 'storeCountry'])->middleware('check.menu.permission:create'), 'master-data.hotel-countries.store');
             $nameRoute(Route::put('hotel-countries/{hotelCountry}', [HotelReferenceController::class, 'updateCountry'])->middleware('check.menu.permission:edit'), 'master-data.hotel-countries.update');
@@ -355,13 +383,18 @@ Route::middleware(['auth', 'verified'])->group(function () {     /* Get user men
             $nameRoute(Route::post('hotel-room-types', [HotelReferenceController::class, 'storeRoomType'])->middleware('check.menu.permission:create'), 'master-data.hotel-room-types.store');
             $nameRoute(Route::put('hotel-room-types/{hotelRoomType}', [HotelReferenceController::class, 'updateRoomType'])->middleware('check.menu.permission:edit'), 'master-data.hotel-room-types.update');
             $nameRoute(Route::delete('hotel-room-types/{hotelRoomType}', [HotelReferenceController::class, 'destroyRoomType'])->middleware('check.menu.permission:delete'), 'master-data.hotel-room-types.destroy');
-            $nameRoute(Route::get('currencies', [CurrencyController::class, 'index'])->middleware('super.admin'), 'master-data.currencies.index');
-            $nameRoute(Route::post('currencies', [CurrencyController::class, 'store'])->middleware('super.admin'), 'master-data.currencies.store');
-            $nameRoute(Route::put('currencies/{currency}', [CurrencyController::class, 'update'])->middleware('super.admin'), 'master-data.currencies.update');
-            $nameRoute(Route::delete('currencies/{currency}', [CurrencyController::class, 'destroy'])->middleware('super.admin'), 'master-data.currencies.destroy');
         });
         Route::prefix($prefix.'/activity')->group(function () use ($nameRoute) {
             $nameRoute(Route::get('logs', [ActivityLogController::class, 'index'])->middleware('check.menu.permission:view'), 'activity.logs.index');
+        });
+        Route::prefix($prefix.'/agent-management')->group(function () use ($nameRoute) {
+            $nameRoute(Route::get('agents', [AgentManagementController::class, 'agents'])->middleware('check.menu.permission:view'), 'agents.index');
+            $nameRoute(Route::post('agents', [AgentManagementController::class, 'storeAgent'])->middleware('check.menu.permission:create'), 'agents.store');
+            $nameRoute(Route::put('agents/{agent}', [AgentManagementController::class, 'updateAgent'])->middleware('check.menu.permission:edit'), 'agents.update');
+            $nameRoute(Route::get('fees', [AgentManagementController::class, 'fees'])->middleware('check.menu.permission:view'), 'agent-fees.index');
+            $nameRoute(Route::put('fees', [AgentManagementController::class, 'updateFee'])->middleware('check.menu.permission:edit'), 'agent-fees.update');
+            $nameRoute(Route::get('commissions', [AgentManagementController::class, 'commissions'])->middleware('check.menu.permission:view'), 'agent-commissions.index');
+            $nameRoute(Route::put('commissions/{commission}', [AgentManagementController::class, 'updateCommission'])->middleware('check.menu.permission:edit'), 'agent-commissions.update');
         });
         Route::prefix($prefix.'/administrator')->group(function () use ($nameRoute) {
             $nameRoute(Route::get('menus', [MenuController::class, 'index'])->middleware('check.menu.permission:view'), 'menus.index');

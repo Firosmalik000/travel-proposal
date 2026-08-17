@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Article;
 use App\Models\Booking;
-use App\Models\DepartureSchedule;
 use App\Models\PageContent;
 use App\Models\Testimonial;
 use App\Models\TravelPackage;
@@ -67,8 +66,8 @@ class DashboardController extends Controller
                 'description' => 'Paket travel aktif',
             ],
             'upcomingDepartures' => [
-                'value' => DepartureSchedule::query()->where('is_active', true)->whereDate('departure_date', '>=', Carbon::today())->count(),
-                'description' => 'Jadwal keberangkatan terjadwal',
+                'value' => TravelPackage::query()->where('is_active', true)->where('booking_status', 'open')->whereDate('start_date', '>=', Carbon::today())->count(),
+                'description' => 'Keberangkatan package mendatang',
             ],
             'estimatedRevenue' => [
                 'value' => $estimatedRevenue,
@@ -98,7 +97,7 @@ class DashboardController extends Controller
             return [
                 'month' => $date->locale('id')->isoFormat('MMM'),
                 'users' => DB::table('users')->whereYear('created_at', $date->year)->whereMonth('created_at', $date->month)->count(),
-                'departures' => DepartureSchedule::query()->whereYear('departure_date', $date->year)->whereMonth('departure_date', $date->month)->count(),
+                'departures' => TravelPackage::query()->whereYear('start_date', $date->year)->whereMonth('start_date', $date->month)->count(),
             ];
         });
 
@@ -200,25 +199,22 @@ class DashboardController extends Controller
     {
         return response()->json([
             ['text' => TravelPackage::query()->where('is_featured', true)->count().' paket unggulan aktif', 'color' => '#0f766e'],
-            ['text' => DepartureSchedule::query()->whereDate('departure_date', '>=', Carbon::today())->count().' jadwal keberangkatan siap dipasarkan', 'color' => '#1d4ed8'],
+            ['text' => TravelPackage::query()->where('booking_status', 'open')->whereDate('start_date', '>=', Carbon::today())->count().' keberangkatan package siap dipasarkan', 'color' => '#1d4ed8'],
             ['text' => Testimonial::query()->where('is_active', true)->count().' testimoni aktif', 'color' => '#d97706'],
         ]);
     }
 
     public function getPendingTasks(): JsonResponse
     {
-        $thinSeatSchedules = DepartureSchedule::query()
-            ->withSum(
-                ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
-                'passenger_count',
-            )
-            ->whereDate('departure_date', '>=', Carbon::today())
+        $thinSeatPackages = TravelPackage::query()
+            ->where('booking_status', 'open')
+            ->whereDate('start_date', '>=', Carbon::today())
             ->get()
-            ->filter(fn (DepartureSchedule $schedule): bool => $schedule->availableSeatsCount() <= 10)
+            ->filter(fn (TravelPackage $package): bool => $package->availableSeatsCount() <= 10)
             ->count();
 
         return response()->json([
-            ['label' => 'Jadwal Seat Menipis', 'value' => $thinSeatSchedules, 'color' => '#0f766e'],
+            ['label' => 'Seat Package Menipis', 'value' => $thinSeatPackages, 'color' => '#0f766e'],
             ['label' => 'Artikel Belum Dipublish', 'value' => Article::query()->whereNull('published_at')->count(), 'color' => '#1d4ed8'],
             ['label' => 'Konten Belum Aktif', 'value' => PageContent::query()->where('is_active', false)->count(), 'color' => '#d97706'],
             ['label' => 'Paket Nonaktif', 'value' => TravelPackage::query()->where('is_active', false)->count(), 'color' => '#475569'],
@@ -243,22 +239,18 @@ class DashboardController extends Controller
 
     public function getBirthdaysThisMonth(): JsonResponse
     {
-        $departures = DepartureSchedule::query()
-            ->withSum(
-                ['registrations as active_booked_pax' => fn ($registrationQuery) => $registrationQuery->where('status', 'registered')],
-                'passenger_count',
-            )
-            ->with('travelPackage:id,name')
+        $departures = TravelPackage::query()
             ->where('is_active', true)
-            ->whereDate('departure_date', '>=', Carbon::today())
-            ->orderBy('departure_date')
+            ->where('booking_status', 'open')
+            ->whereDate('start_date', '>=', Carbon::today())
+            ->orderBy('start_date')
             ->limit(5)
             ->get()
-            ->map(fn (DepartureSchedule $schedule): array => [
-                'title' => (string) ($schedule->travelPackage?->name ?? 'Paket Umroh'),
-                'departure_date' => $schedule->departure_date?->toDateString(),
-                'departure_city' => $schedule->departure_city,
-                'seats_available' => $schedule->availableSeatsCount(),
+            ->map(fn (TravelPackage $package): array => [
+                'title' => (string) ($package->name ?? 'Paket Umroh'),
+                'departure_date' => $package->start_date?->toDateString(),
+                'departure_city' => $package->departure_city,
+                'seats_available' => $package->availableSeatsCount(),
             ]);
 
         return response()->json($departures);

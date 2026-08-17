@@ -1,15 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import packages from '@/routes/packages';
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     CalendarCheck,
     Package2,
@@ -21,21 +15,10 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PackageCard } from './PackageCard';
-import { PackageForm } from './PackageForm';
-import { SchedulePanel } from './SchedulePanel';
-import type {
-    ActivityOption,
-    CurrencyOption,
-    Package,
-    ProductOption,
-} from './types';
+import type { Package } from './types';
 
 type Props = {
     packages: Package[];
-    productOptions: ProductOption[];
-    currencies: CurrencyOption[];
-    activityOptions: ActivityOption[];
-    packageImageUploadMaxKilobytes: number;
 };
 
 function resolvePackageName(
@@ -78,30 +61,14 @@ function resolvePackageName(
     return fallback;
 }
 
-export default function PackagesIndex({
-    packages: packageList,
-    productOptions,
-    currencies,
-    activityOptions,
-    packageImageUploadMaxKilobytes,
-}: Props) {
+export default function PackagesIndex({ packages: packageList }: Props) {
     const locale: 'id' | 'en' = 'id';
     const { can } = usePermission('package');
     const canCreate = can('create');
     const canEdit = can('edit');
     const canDelete = can('delete');
     const safePackageList = Array.isArray(packageList) ? packageList : [];
-    const safeProductOptions = Array.isArray(productOptions)
-        ? productOptions
-        : [];
-    const safeCurrencies = Array.isArray(currencies) ? currencies : [];
-    const safeActivityOptions = Array.isArray(activityOptions)
-        ? activityOptions
-        : [];
     const [search, setSearch] = useState('');
-    const [editingPkg, setEditingPkg] = useState<Package | null | 'new'>(null);
-    const [viewingPkg, setViewingPkg] = useState<Package | null>(null);
-    const [schedulePkgId, setSchedulePkgId] = useState<number | null>(null);
 
     const filtered = safePackageList.filter((pkg) => {
         const localizedName = resolvePackageName(pkg.name, locale, '');
@@ -120,7 +87,7 @@ export default function PackagesIndex({
 
         if (
             !confirm(
-                `Hapus package "${resolvePackageName(pkg.name, locale, pkg.code)}"? Semua jadwal terkait juga akan dihapus.`,
+                `Hapus package "${resolvePackageName(pkg.name, locale, pkg.code)}"?`,
             )
         ) {
             return;
@@ -156,47 +123,15 @@ export default function PackagesIndex({
             bg: 'bg-rose-50 dark:bg-rose-950/40',
         },
         {
-            label: 'Jadwal Open',
-            value: safePackageList.reduce(
-                (total, pkg) =>
-                    total +
-                    (Array.isArray(pkg.schedules) ? pkg.schedules : []).filter(
-                        (schedule) =>
-                            schedule.status === 'open' && schedule.is_active,
-                    ).length,
-                0,
-            ),
+            label: 'Pendaftaran Dibuka',
+            value: safePackageList.filter(
+                (pkg) => pkg.booking_status === 'open' && pkg.is_active,
+            ).length,
             icon: CalendarCheck,
             color: 'text-violet-600 dark:text-violet-400',
             bg: 'bg-violet-50 dark:bg-violet-950/40',
         },
     ];
-
-    const editingPackage = editingPkg === 'new' ? null : editingPkg;
-    const schedulePkg =
-        safePackageList.find((pkg) => pkg.id === schedulePkgId) ?? null;
-    const editingPackageName = editingPackage
-        ? resolvePackageName(editingPackage.name, locale, editingPackage.code)
-        : null;
-    function openCreatePackage(): void {
-        if (!canCreate) {
-            return;
-        }
-
-        setEditingPkg('new');
-    }
-
-    function openEditPackage(pkg: Package): void {
-        if (!canEdit) {
-            return;
-        }
-
-        setEditingPkg(pkg);
-    }
-
-    function openViewPackage(pkg: Package): void {
-        setViewingPkg(pkg);
-    }
 
     return (
         <AppSidebarLayout
@@ -213,13 +148,11 @@ export default function PackagesIndex({
                             Package Management
                         </h1>
                         {canCreate ? (
-                            <Button
-                                size="default"
-                                onClick={openCreatePackage}
-                                className="shrink-0"
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Tambah Package
+                            <Button asChild size="default" className="shrink-0">
+                                <Link href="/admin/product-management/packages/create">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Tambah Package
+                                </Link>
                             </Button>
                         ) : null}
                     </div>
@@ -282,12 +215,11 @@ export default function PackagesIndex({
                         </p>
                         {!search ? (
                             canCreate ? (
-                                <Button
-                                    className="mt-4"
-                                    onClick={openCreatePackage}
-                                >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Tambah Package Pertama
+                                <Button asChild className="mt-4">
+                                    <Link href="/admin/product-management/packages/create">
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Tambah Package Pertama
+                                    </Link>
                                 </Button>
                             ) : null
                         ) : null}
@@ -299,12 +231,7 @@ export default function PackagesIndex({
                                 key={pkg.id}
                                 pkg={pkg}
                                 locale={locale}
-                                onView={openViewPackage}
-                                onEdit={openEditPackage}
                                 onDelete={handleDelete}
-                                onManageSchedules={(selectedPackage) =>
-                                    setSchedulePkgId(selectedPackage.id)
-                                }
                                 canEdit={canEdit}
                                 canDelete={canDelete}
                             />
@@ -312,149 +239,6 @@ export default function PackagesIndex({
                     </div>
                 )}
             </div>
-
-            <Sheet
-                open={editingPkg !== null}
-                onOpenChange={(open) => !open && setEditingPkg(null)}
-            >
-                <SheetContent
-                    side="right"
-                    className="w-full bg-background sm:max-w-4xl"
-                >
-                    <SheetHeader>
-                        <SheetTitle className="text-xl">
-                            {editingPkg === 'new'
-                                ? 'Tambah Package Baru'
-                                : editingPackageName}
-                        </SheetTitle>
-                    </SheetHeader>
-                    <div className="flex-1 overflow-y-auto px-6 py-5">
-                        <PackageForm
-                            pkg={editingPackage}
-                            productOptions={safeProductOptions}
-                            currencies={safeCurrencies}
-                            activityOptions={safeActivityOptions}
-                            packageImageUploadMaxKilobytes={
-                                packageImageUploadMaxKilobytes
-                            }
-                            locale={locale}
-                            onSuccess={() => setEditingPkg(null)}
-                        />
-                    </div>
-                </SheetContent>
-            </Sheet>
-
-            <Sheet
-                open={viewingPkg !== null}
-                onOpenChange={(open) => !open && setViewingPkg(null)}
-            >
-                <SheetContent
-                    side="right"
-                    className="w-full bg-background sm:max-w-2xl"
-                >
-                    <SheetHeader>
-                        <SheetTitle className="text-lg">
-                            Detail Package:{' '}
-                            {viewingPkg
-                                ? resolvePackageName(
-                                      viewingPkg.name,
-                                      locale,
-                                      viewingPkg.code,
-                                  )
-                                : ''}
-                        </SheetTitle>
-                    </SheetHeader>
-                    {viewingPkg ? (
-                        <div className="space-y-4 overflow-y-auto px-6 py-5 text-sm">
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="rounded-lg border p-3">
-                                    <p className="text-xs text-muted-foreground">
-                                        Kode
-                                    </p>
-                                    <p className="font-semibold">
-                                        {viewingPkg.code}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border p-3">
-                                    <p className="text-xs text-muted-foreground">
-                                        Tipe
-                                    </p>
-                                    <p className="font-semibold capitalize">
-                                        {viewingPkg.package_type}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border p-3">
-                                    <p className="text-xs text-muted-foreground">
-                                        Durasi
-                                    </p>
-                                    <p className="font-semibold">
-                                        {viewingPkg.duration_days} hari
-                                    </p>
-                                </div>
-                                <div className="rounded-lg border p-3">
-                                    <p className="text-xs text-muted-foreground">
-                                        Kota Keberangkatan
-                                    </p>
-                                    <p className="font-semibold">
-                                        {viewingPkg.departure_city}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="rounded-lg border p-3">
-                                <p className="text-xs text-muted-foreground">
-                                    Ringkasan
-                                </p>
-                                <p className="mt-1">
-                                    {typeof viewingPkg.summary === 'string'
-                                        ? viewingPkg.summary
-                                        : viewingPkg.summary?.[locale] ||
-                                          viewingPkg.summary?.id ||
-                                          '-'}
-                                </p>
-                            </div>
-
-                            <div className="rounded-lg border p-3">
-                                <p className="text-xs text-muted-foreground">
-                                    Itinerary
-                                </p>
-                                <p className="mt-1 font-semibold">
-                                    {viewingPkg.itineraries?.length ?? 0} hari
-                                    itinerary
-                                </p>
-                            </div>
-                        </div>
-                    ) : null}
-                </SheetContent>
-            </Sheet>
-
-            <Sheet
-                open={schedulePkg !== null}
-                onOpenChange={(open) => !open && setSchedulePkgId(null)}
-            >
-                <SheetContent
-                    side="right"
-                    className="w-full bg-background sm:max-w-xl"
-                >
-                    <SheetHeader>
-                        <SheetTitle className="text-lg">
-                            Jadwal:{' '}
-                            {schedulePkg
-                                ? resolvePackageName(
-                                      schedulePkg.name,
-                                      locale,
-                                      schedulePkg.code,
-                                  )
-                                : ''}
-                        </SheetTitle>
-                    </SheetHeader>
-                    <div className="flex-1 overflow-y-auto px-6 py-5">
-                        {schedulePkg ? (
-                            <SchedulePanel pkg={schedulePkg} />
-                        ) : null}
-                    </div>
-                </SheetContent>
-            </Sheet>
         </AppSidebarLayout>
     );
 }

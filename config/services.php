@@ -48,4 +48,22 @@ return [
         'admin_email' => env('ADMIN_NOTIFICATION_EMAIL', env('BOOKING_NOTIFICATION_EMAIL', env('MAIL_FROM_ADDRESS'))),
     ],
 
+    'currency' => [
+        'supported' => [
+            'IDR' => 'Indonesian Rupiah',
+            'SAR' => 'Saudi Riyal',
+            'USD' => 'US Dollar',
+            'EUR' => 'Euro',
+            'MYR' => 'Malaysian Ringgit',
+            'SGD' => 'Singapore Dollar',
+        ],
+        'live' => [
+            'enabled' => env('CURRENCY_LIVE_ENABLED', true),
+            'endpoint' => env('CURRENCY_LIVE_ENDPOINT', 'https://open.er-api.com/v6/latest/IDR'),
+            'cache_minutes' => env('CURRENCY_LIVE_CACHE_MINUTES', 15),
+            'connect_timeout' => env('CURRENCY_LIVE_CONNECT_TIMEOUT', 2),
+            'timeout' => env('CURRENCY_LIVE_TIMEOUT', 4),
+        ],
+    ],
+
 ];

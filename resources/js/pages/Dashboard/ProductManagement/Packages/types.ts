@@ -20,18 +20,115 @@ export type PackageContent = {
     hotel_product_brokers?: Record<string, string>;
     room_prices?: PackageRoomPrices;
     room_original_prices?: PackageRoomOriginalPrices;
+    hpp_estimate?: PackageHppEstimate;
+    currency_rate_snapshot?: CurrencyRateSnapshot;
+    hpp_currency_snapshots?: Record<string, CurrencyRateSnapshot>;
 };
 
-export type Schedule = {
-    id: number;
-    departure_date: string;
-    return_date: string | null;
-    departure_city: string;
-    seats_total: number;
-    seats_available: number;
-    status: 'open' | 'full' | 'closed';
-    notes: string | null;
-    is_active: boolean;
+export type CurrencyRateSnapshot = {
+    currency: string;
+    rate_to_idr: number;
+    source: string;
+    fetched_at: string | null;
+};
+
+export type PackageHppEstimate = {
+    customers?: {
+        single?: number;
+        dbl?: number;
+        trpl?: number;
+        quad?: number;
+    };
+    customers_is_manual?: boolean;
+    product_quantities?: Record<string, number>;
+    product_quantities_is_manual?: Record<string, boolean>;
+    hotel_allocations?: Record<
+        string,
+        { dbl?: number; trpl?: number; quad?: number }
+    >;
+    hotel_allocations_unit?: 'pax' | 'rooms';
+    hotel_allocations_is_manual?: Record<string, boolean>;
+    product_cost_per_customer?: number;
+    hotel_total?: number;
+    tour_leader_fee?: number;
+    tour_leader_fee_is_manual?: boolean;
+    muthawwif_fee?: number;
+    muthawwif_fee_is_manual?: boolean;
+    other_cost?: number;
+    operational_costs?: PackageOperationalCosts;
+    notes?: string | null;
+    customer_count?: number;
+    product_total?: number;
+    revenue_total?: number;
+    grand_total?: number;
+    operational_total?: number;
+    hpp_per_customer?: number | null;
+    estimated_profit?: number;
+    calculated_at?: string;
+    revenue_original_total?: number;
+    revenue_currency?: string;
+    conversion_rate_to_idr?: number;
+    conversion_rate_source?: string;
+    conversion_rate_fetched_at?: string | null;
+    items?: PackageHppEstimateItem[];
+    warnings?: string[];
+};
+
+export type PackageOperationalCosts = {
+    overhead: {
+        amount: number;
+        mode: 'total' | 'per_pax';
+    };
+    photographer: {
+        count: number;
+        daily_salary: number;
+        days: number;
+    };
+    human_resources: Array<{
+        id: string;
+        name: string;
+        salary: number;
+    }>;
+    tour_leader: {
+        count: number;
+        salary_per_trip: number;
+        include_hotel: boolean;
+        include_ticket_and_visa: boolean;
+    };
+    muthawwif: {
+        count: number;
+        daily_salary: number;
+        days: number;
+        currency: string;
+        include_hotel: boolean;
+    };
+    marketing: {
+        amount_per_pax: number;
+    };
+    guide_tips: Array<{
+        id: string;
+        country: string;
+        amount_per_day: number;
+        days: number;
+        currency: string;
+        mode: 'per_pax' | 'per_group';
+    }>;
+    driver_tips: Array<{
+        id: string;
+        country: string;
+        amount: number;
+        currency: string;
+    }>;
+};
+
+export type PackageHppEstimateItem = {
+    cost_type: 'hotel' | 'product' | 'all_in' | 'fee' | 'other';
+    reference_id?: number | null;
+    label: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    meta?: Record<string, string | number | boolean | null>;
 };
 
 export type Itinerary = {
@@ -55,6 +152,12 @@ export type Package = {
     name: { id: string; en: string } | string;
     package_type: 'reguler' | 'hemat' | 'vip' | 'premium' | 'private';
     departure_city: string;
+    start_date: string | null;
+    end_date: string | null;
+    seats_total: number;
+    seats_available: number;
+    booking_status: 'open' | 'full' | 'closed';
+    departure_notes: string | null;
     duration_days: number;
     price: number;
     original_price: number | null;
@@ -65,15 +168,53 @@ export type Package = {
     image_path: string | null;
     images?: string[];
     summary: { id: string; en: string } | string;
-    content: Record<string, any>;
+    content: PackageContent & Record<string, unknown>;
     is_featured: boolean;
     is_active: boolean;
     product_ids: number[];
     product_multipliers: Record<string, number>;
-    schedules: Schedule[];
     itineraries: Itinerary[];
     rating_avg: number | null;
     rating_count: number;
+    all_in: PackageAllInConfiguration;
+};
+
+export type PackageAllInConfiguration = {
+    enabled: boolean;
+    vendor_id: number | null;
+    period_id: number | null;
+    broker_package_name: string;
+    currency: string;
+    price_per_pax: number | null;
+    included_category_keys: string[];
+    vendor_name_snapshot?: string;
+    period_label_snapshot?: string;
+    period_start_snapshot?: string;
+    period_end_snapshot?: string;
+};
+
+export type ProductCategoryOption = {
+    id: number;
+    key: string;
+    name: { id?: string; en?: string } | string;
+};
+
+export type VendorPricePeriodOption = {
+    id: number;
+    label: string;
+    start_date: string;
+    end_date: string;
+    currency: string;
+    price_per_pax: number;
+    notes: string | null;
+    is_active: boolean;
+};
+
+export type PackageVendorOption = {
+    id: number;
+    name: string;
+    phone: string;
+    periods: VendorPricePeriodOption[];
 };
 
 export type ProductOption = {
@@ -101,6 +242,10 @@ export type CurrencyOption = {
     code: string;
     name: string;
     conversion_rate: number;
+    live_conversion_rate: number;
+    rate_source: string;
+    rate_fetched_at: string | null;
+    is_live: boolean;
 };
 
 export type ActivityOption = {
@@ -117,6 +262,11 @@ export type PackageFormData = {
     'name.en': string;
     package_type: string;
     departure_city: string;
+    start_date: string;
+    end_date: string;
+    seats_total: number;
+    booking_status: 'open' | 'closed';
+    departure_notes: string;
     duration_days: number;
     price: number;
     original_price: number | '';
@@ -133,6 +283,8 @@ export type PackageFormData = {
     product_multipliers: Record<string, number>;
     is_featured: boolean;
     is_active: boolean;
+    refresh_currency_rates?: boolean;
+    all_in: PackageAllInConfiguration;
 };
 
 export type ItineraryInput = {
@@ -147,16 +299,6 @@ export type ItineraryInput = {
 };
 
 export type PackageHighlightInput = PackageHighlightItem;
-
-export type ScheduleFormData = {
-    departure_date: string;
-    return_date: string;
-    departure_city: string;
-    seats_total: number;
-    status: string;
-    notes: string;
-    is_active: boolean;
-};
 
 export const packageImageMimeTypes = [
     'image/png',

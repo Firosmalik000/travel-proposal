@@ -450,7 +450,7 @@ export default function LandingPackageDetail() {
                                 <span>
                                     {departureDate
                                         ? `Berangkat ${formatDate(departureDate)}`
-                                        : 'Jadwal keberangkatan tersedia'}
+                                        : 'Keberangkatan package tersedia'}
                                 </span>
                                 {durationDays > 0 ? (
                                     <span className="rounded-full bg-[#ff9200] px-3 py-1 text-[11px] font-black text-white">

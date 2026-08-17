@@ -9,7 +9,18 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            SqlDumpSeeder::class,
+            MenuSeeder::class,
+            PermissionSeeder::class,
+            RoleSeeder::class,
+            UserSeeder::class,
+            AdminUserSeeder::class,
+            ProductCategorySeeder::class,
+            ActivitySeeder::class,
+            SeoSettingsSeeder::class,
+            TravelContentSeeder::class,
+            HotelRateSeeder::class,
+            InventoryFromProductsSeeder::class,
+            PackageSeeder::class,
         ]);
     }
 }

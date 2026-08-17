@@ -15,6 +15,9 @@ class Booking extends Model
 
     protected $fillable = [
         'booking_code',
+        'customer_id',
+        'agent_profile_id',
+        'referral_code',
         'package_id',
         'departure_schedule_id',
         'booking_type',
@@ -23,6 +26,8 @@ class Booking extends Model
         'custom_unit_price',
         'custom_total_amount',
         'custom_currency',
+        'agreed_total_amount',
+        'agreed_currency',
         'full_name',
         'phone',
         'email',
@@ -31,6 +36,7 @@ class Booking extends Model
         'room_configuration',
         'notes',
         'status',
+        'participant_data_locked_at',
     ];
 
     protected function casts(): array
@@ -42,12 +48,29 @@ class Booking extends Model
             'custom_return_date' => 'date',
             'custom_unit_price' => 'integer',
             'custom_total_amount' => 'integer',
+            'agreed_total_amount' => 'integer',
+            'participant_data_locked_at' => 'datetime',
         ];
     }
 
     public function package(): BelongsTo
     {
         return $this->belongsTo(TravelPackage::class, 'package_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    public function agentProfile(): BelongsTo
+    {
+        return $this->belongsTo(AgentProfile::class);
+    }
+
+    public function agentCommission(): HasOne
+    {
+        return $this->hasOne(AgentCommission::class);
     }
 
     public function departureSchedule(): BelongsTo
@@ -63,5 +86,15 @@ class Booking extends Model
     public function participants(): HasMany
     {
         return $this->hasMany(BookingParticipant::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(BookingPayment::class);
+    }
+
+    public function confirmedPayments(): HasMany
+    {
+        return $this->payments()->where('status', 'confirmed');
     }
 }

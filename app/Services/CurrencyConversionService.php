@@ -2,12 +2,12 @@
 
 namespace App\Services;
 
-use App\Models\Currency;
-
 class CurrencyConversionService
 {
-    /** @var array<string, float>|null */
-    private ?array $rateMap = null;
+    /** @var array<string, array{rate_to_idr: float, source: string, fetched_at: ?string, is_live: bool}> */
+    private array $resolvedRates = [];
+
+    public function __construct(private readonly LiveCurrencyRateService $liveCurrencyRateService) {}
 
     public function convertToIdr(int|float $amount, ?string $currencyCode): ?int
     {
@@ -17,7 +17,7 @@ class CurrencyConversionService
             return (int) round($amount);
         }
 
-        $rate = $this->rateMap()[$normalizedCurrency] ?? null;
+        $rate = $this->detailsFor($normalizedCurrency)['rate_to_idr'];
 
         if ($rate === null || $rate <= 0) {
             return null;
@@ -34,7 +34,7 @@ class CurrencyConversionService
             return true;
         }
 
-        $rate = $this->rateMap()[$normalizedCurrency] ?? null;
+        $rate = $this->detailsFor($normalizedCurrency)['rate_to_idr'];
 
         return $rate !== null && $rate > 0;
     }
@@ -47,26 +47,16 @@ class CurrencyConversionService
             return 1.0;
         }
 
-        return $this->rateMap()[$normalizedCurrency] ?? null;
+        $rate = $this->detailsFor($normalizedCurrency)['rate_to_idr'];
+
+        return $rate > 0 ? $rate : null;
     }
 
-    /** @return array<string, float> */
-    private function rateMap(): array
+    /** @return array{rate_to_idr: float, source: string, fetched_at: ?string, is_live: bool} */
+    public function detailsFor(?string $currencyCode): array
     {
-        if ($this->rateMap !== null) {
-            return $this->rateMap;
-        }
+        $code = strtoupper(trim((string) ($currencyCode ?: 'IDR')));
 
-        $this->rateMap = Currency::query()
-            ->where('is_active', true)
-            ->get(['code', 'conversion_rate'])
-            ->mapWithKeys(fn (Currency $currency): array => [
-                strtoupper((string) $currency->code) => (float) $currency->conversion_rate,
-            ])
-            ->all();
-
-        $this->rateMap['IDR'] = 1.0;
-
-        return $this->rateMap;
+        return $this->resolvedRates[$code] ??= $this->liveCurrencyRateService->rateFor($code);
     }
 }

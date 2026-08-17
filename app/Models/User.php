@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -58,6 +59,26 @@ class User extends Authenticatable
     public function profile(): HasOne
     {
         return $this->hasOne(UserProfile::class);
+    }
+
+    public function customerBookings(): HasMany
+    {
+        return $this->hasMany(Booking::class, 'customer_id');
+    }
+
+    public function agentProfile(): HasOne
+    {
+        return $this->hasOne(AgentProfile::class);
+    }
+
+    public function isAgentOnly(): bool
+    {
+        return $this->hasRole('Agent') && ! $this->roles()->whereNotIn('name', ['Agent', 'Customer'])->exists();
+    }
+
+    public function isCustomerOnly(): bool
+    {
+        return $this->hasRole('Customer') && ! $this->roles()->where('name', '!=', 'Customer')->exists();
     }
 
     public function getAvatarAttribute(): ?string

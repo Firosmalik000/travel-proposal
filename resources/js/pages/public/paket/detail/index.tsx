@@ -284,7 +284,10 @@ export default function PaketDetail() {
         (s: PackageSchedule) => s.status === 'open',
     );
     const nextSchedule = openSchedules[0] ?? null;
-    const registrationLink = `/paket-umroh/${safePackage.slug}/daftar${nextSchedule?.id ? `?schedule=${nextSchedule.id}` : ''}`;
+    const referralCode = new URLSearchParams(page.url.split('?')[1] ?? '').get(
+        'ref',
+    );
+    const registrationLink = `/paket-umroh/${safePackage.slug}/daftar${referralCode ? `?ref=${encodeURIComponent(referralCode)}` : ''}`;
     const packagePdfDownloadUrl = `/paket-umroh/${safePackage.slug}/sk.pdf?download=1`;
 
     const whatsappMsg = `Halo, saya tertarik dengan paket *${name}* (${safePackage.code}). Mohon info lebih lanjut.`;
@@ -669,12 +672,12 @@ export default function PaketDetail() {
                 </MotionCard>
             </MotionSection>
 
-            {/* Jadwal */}
+            {/* Keberangkatan */}
             {upcomingSchedules.length > 0 && (
                 <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
                     <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
                         <CalendarDaysIcon className="h-5 w-5 text-primary" />
-                        Jadwal Keberangkatan
+                        Keberangkatan Package
                     </h2>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {upcomingSchedules.map(

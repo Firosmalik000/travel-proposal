@@ -45,6 +45,8 @@ class CustomUmrohRequestStoreTest extends TestCase
 
         $this->assertSame('new', $request->status);
         $this->assertNotEmpty($request->request_code);
+        $this->assertNotNull($request->customer_id);
+        $this->assertTrue($request->customer->hasRole('Customer'));
 
         $this->assertDatabaseHas('custom_umroh_requests', [
             'id' => $request->id,

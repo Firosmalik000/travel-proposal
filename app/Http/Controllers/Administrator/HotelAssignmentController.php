@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\StoreHotelAssignmentRequest;
 use App\Http\Requests\Administrator\UpdateHotelAssignmentRequest;
 use App\Models\Booking;
-use App\Models\DepartureSchedule;
 use App\Models\Hotel;
 use App\Models\HotelAssignment;
 use App\Models\HotelRoomType;
@@ -26,42 +25,43 @@ class HotelAssignmentController extends Controller
     {
         $filters = [
             'travel_package_id' => $request->integer('travel_package_id') ?: null,
-            'departure_schedule_id' => $request->integer('departure_schedule_id') ?: null,
             'hotel_id' => $request->integer('hotel_id') ?: null,
             'status' => (string) $request->string('status')->value(),
         ];
 
-        $summary = $this->customerSummary($filters['travel_package_id'], $filters['departure_schedule_id']);
-        $scheduleStats = $this->bookingStatsBySchedule();
-        $scheduleStatsMap = $scheduleStats->keyBy('departure_schedule_id');
+        $summary = $this->customerSummary($filters['travel_package_id']);
+        $packageStats = $this->bookingStatsByPackage()->keyBy('travel_package_id');
 
         $assignments = HotelAssignment::query()
-            ->with(['package:id,code,name', 'departureSchedule:id,departure_date,departure_city', 'hotel:id,name,code', 'rooms.roomType:id,name'])
+            ->with([
+                'package:id,code,name,departure_city,start_date,end_date',
+                'hotel:id,name,code',
+                'rooms.roomType:id,name',
+            ])
             ->when($filters['travel_package_id'], fn ($query) => $query->where('package_id', (int) $filters['travel_package_id']))
-            ->when($filters['departure_schedule_id'], fn ($query) => $query->where('departure_schedule_id', (int) $filters['departure_schedule_id']))
             ->when($filters['hotel_id'], fn ($query) => $query->where('hotel_id', (int) $filters['hotel_id']))
             ->when(in_array($filters['status'], ['draft', 'confirmed'], true), fn ($query) => $query->where('status', $filters['status']))
             ->latest()
             ->get()
-            ->map(function (HotelAssignment $assignment) use ($scheduleStatsMap): array {
+            ->map(function (HotelAssignment $assignment) use ($packageStats): array {
                 $totalRooms = $assignment->rooms->sum('room_count');
                 $totalCapacity = $assignment->rooms->sum(fn ($room): int => (int) $room->room_count * (int) $room->room_capacity);
 
                 return [
                     'id' => $assignment->id,
                     'travel_package_id' => $assignment->package_id,
-                    'departure_schedule_id' => $assignment->departure_schedule_id,
                     'hotel_id' => $assignment->hotel_id,
                     'status' => $assignment->status,
                     'notes' => $assignment->notes,
-                    'package_name' => (string) ($assignment->package?->name['id'] ?? $assignment->package?->code ?? '-'),
+                    'package_name' => (string) data_get($assignment->package?->name, 'id', $assignment->package?->code ?? '-'),
                     'package_code' => (string) ($assignment->package?->code ?? '-'),
-                    'departure_date' => $assignment->departureSchedule?->departure_date?->toDateString(),
-                    'departure_city' => $assignment->departureSchedule?->departure_city,
+                    'package_start_date' => $assignment->package?->start_date?->toDateString(),
+                    'package_end_date' => $assignment->package?->end_date?->toDateString(),
+                    'departure_city' => $assignment->package?->departure_city,
                     'hotel_name' => $assignment->hotel?->name,
                     'total_rooms' => (int) $totalRooms,
                     'total_capacity' => (int) $totalCapacity,
-                    'total_customers' => (int) ($scheduleStatsMap->get($assignment->departure_schedule_id)['total_customers'] ?? 0),
+                    'total_customers' => (int) ($packageStats->get($assignment->package_id)['total_customers'] ?? 0),
                     'rooms' => $assignment->rooms->map(fn ($room): array => [
                         'room_type_id' => $room->room_type_id,
                         'room_type_name' => $room->roomType?->name,
@@ -84,27 +84,14 @@ class HotelAssignmentController extends Controller
                         ->distinct();
                 })
                 ->orderBy('code')
-                ->get(['id', 'code', 'name'])
+                ->get(['id', 'code', 'name', 'departure_city', 'start_date', 'end_date'])
                 ->map(fn (TravelPackage $package): array => [
                     'id' => $package->id,
                     'code' => $package->code,
-                    'name' => (string) ($package->name['id'] ?? $package->code ?? '-'),
-                ])->values()->all(),
-            'schedules' => DepartureSchedule::query()
-                ->whereIn('id', function ($query): void {
-                    $query->from('bookings')
-                        ->select('departure_schedule_id')
-                        ->whereIn('status', ['pending', 'registered'])
-                        ->whereNotNull('departure_schedule_id')
-                        ->distinct();
-                })
-                ->orderBy('departure_date')
-                ->get(['id', 'package_id', 'departure_date', 'departure_city'])
-                ->map(fn (DepartureSchedule $schedule): array => [
-                    'id' => $schedule->id,
-                    'travel_package_id' => $schedule->package_id,
-                    'departure_date' => $schedule->departure_date?->toDateString(),
-                    'departure_city' => $schedule->departure_city,
+                    'name' => (string) data_get($package->name, 'id', $package->code ?? '-'),
+                    'departure_city' => $package->departure_city,
+                    'start_date' => $package->start_date?->toDateString(),
+                    'end_date' => $package->end_date?->toDateString(),
                 ])->values()->all(),
             'hotels' => Hotel::query()
                 ->where('is_active', true)
@@ -127,8 +114,7 @@ class HotelAssignmentController extends Controller
                 ])->values()->all(),
             'filters' => $filters,
             'bookingSummary' => $summary,
-            'bookingStatsBySchedule' => $scheduleStats->values()->all(),
-            'bookingStatsByPackage' => $this->bookingStatsByPackage()->values()->all(),
+            'bookingStatsByPackage' => $packageStats->values()->all(),
         ]);
     }
 
@@ -137,7 +123,6 @@ class HotelAssignmentController extends Controller
         $this->hotelAssignmentService->create(
             payload: [
                 'package_id' => $request->integer('travel_package_id'),
-                'departure_schedule_id' => $request->integer('departure_schedule_id'),
                 'hotel_id' => $request->integer('hotel_id'),
                 'status' => (string) $request->string('status')->value(),
                 'notes' => $request->filled('notes') ? trim((string) $request->string('notes')->value()) : null,
@@ -158,7 +143,6 @@ class HotelAssignmentController extends Controller
             assignment: $assignment,
             payload: [
                 'package_id' => $request->integer('travel_package_id'),
-                'departure_schedule_id' => $request->integer('departure_schedule_id'),
                 'hotel_id' => $request->integer('hotel_id'),
                 'status' => (string) $request->string('status')->value(),
                 'notes' => $request->filled('notes') ? trim((string) $request->string('notes')->value()) : null,
@@ -180,7 +164,7 @@ class HotelAssignmentController extends Controller
         return back()->with('success', 'Hotel assignment berhasil dihapus.');
     }
 
-    private function customerSummary(?int $packageId, ?int $scheduleId): array
+    private function customerSummary(?int $packageId): array
     {
         $query = Booking::query()->whereIn('status', ['pending', 'registered']);
 
@@ -188,37 +172,10 @@ class HotelAssignmentController extends Controller
             $query->where('package_id', $packageId);
         }
 
-        if ($scheduleId !== null) {
-            $query->where('departure_schedule_id', $scheduleId);
-        }
-
         return [
             'total_bookings' => (int) (clone $query)->count(),
             'total_customers' => (int) (clone $query)->sum('passenger_count'),
         ];
-    }
-
-    /**
-     * @return Collection<int, array{travel_package_id:int,departure_schedule_id:int,total_bookings:int,total_customers:int}>
-     */
-    private function bookingStatsBySchedule(): Collection
-    {
-        return Booking::query()
-            ->whereIn('status', ['pending', 'registered'])
-            ->whereNotNull('package_id')
-            ->whereNotNull('departure_schedule_id')
-            ->selectRaw('package_id as travel_package_id')
-            ->selectRaw('departure_schedule_id')
-            ->selectRaw('COUNT(id) as total_bookings')
-            ->selectRaw('SUM(passenger_count) as total_customers')
-            ->groupBy('package_id', 'departure_schedule_id')
-            ->get()
-            ->map(fn ($row): array => [
-                'travel_package_id' => (int) $row->travel_package_id,
-                'departure_schedule_id' => (int) $row->departure_schedule_id,
-                'total_bookings' => (int) $row->total_bookings,
-                'total_customers' => (int) $row->total_customers,
-            ]);
     }
 
     /**

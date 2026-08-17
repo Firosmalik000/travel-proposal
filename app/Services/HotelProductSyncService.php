@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Hotel;
+use App\Models\HotelRoomType;
 use App\Models\ProductCategory;
 use App\Models\TravelProduct;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ class HotelProductSyncService
             ['key' => 'hotel'],
             [
                 'name' => 'Hotel',
-                'description' => 'Kategori produk hotel yang disinkronkan dari Master Hotel.',
+                'description' => 'Kategori produk hotel dengan pricing per broker dan periode.',
                 'sort_order' => 6,
                 'is_active' => true,
             ]
@@ -45,6 +46,7 @@ class HotelProductSyncService
                 'city' => $hotel->city?->name,
                 'currency' => $hotel->currency,
                 'pricing' => $hotel->prices
+                    ->filter(fn ($price): bool => HotelRoomType::isProductHotelPricingName($price->roomType?->name))
                     ->sortBy(function ($price): string {
                         return ($price->broker_key ?? $price->broker_name ?? 'Broker 1').'|'.($price->period_start?->format('Y-m-d') ?? '');
                     })

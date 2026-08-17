@@ -22,8 +22,8 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
     return (
         <AuthSimpleLayout
-            title="Portal Admin"
-            description="Akses aman untuk tim internal mengelola operasional harian."
+            title="Portal Akun"
+            description="Masuk sebagai customer atau tim internal untuk mengakses portal Anda."
         >
             <Head title="Masuk" />
 

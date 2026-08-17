@@ -34,6 +34,8 @@ This application is a Laravel application and its main Laravel ecosystems packag
 ## Verification Scripts
 
 - Do not create verification scripts or tinker when tests cover that functionality and prove it works. Unit and feature tests are more important.
+- Never use `php artisan migrate:fresh` as part of routine testing or verification.
+- If a database schema change needs validation, prefer the smallest relevant migration, seed, or feature test against the local testing database instead of resetting everything.
 
 ## Application Structure & Architecture
 
@@ -49,6 +51,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
     - `npm run format:check`
 - Do not run `npm run build`, `npm run build:ssr`, or `npm run format` unless the user explicitly asks for it.
 - Include the checklist status in the final handoff.
+- For every frontend change, verify the layout at `sx`, `xs`, `sm`, `md`, `lg`, `xl`, and `xxl` breakpoints so the UI stays fully responsive.
 
 ## Replies
 

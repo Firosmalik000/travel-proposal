@@ -30,26 +30,55 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
-import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import { Head, router, useForm } from '@inertiajs/react';
-import { Calculator, Eye, MoreHorizontal } from 'lucide-react';
+import { Eye, MoreHorizontal } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
+type HppEstimate = {
+    customers?: Record<string, number>;
+    product_cost_per_customer: number;
+    hotel_total: number;
+    tour_leader_fee: number;
+    muthawwif_fee: number;
+    other_cost: number;
+    notes: string | null;
+    customer_count: number;
+    product_total: number;
+    revenue_total: number;
+    grand_total: number;
+    hpp_per_customer: number | null;
+    estimated_profit: number;
+    calculated_at: string | null;
+    items?: Array<{
+        cost_type: 'hotel' | 'product' | 'all_in' | 'fee' | 'other';
+        reference_id?: number | null;
+        label: string;
+        quantity: number;
+        unit_price: number;
+        total_price: number;
+        meta?: Record<string, unknown>;
+    }>;
+    warnings?: string[];
+};
+
 type Row = {
     id: number;
+    is_saved: boolean;
     travel_package_id: number;
     departure_schedule_id: number | null;
     calculation_mode: string;
     package_name: string;
     package_code: string;
     package_price: number;
+    package_currency: string;
+    package_conversion_rate_to_idr: number;
     package_original_price: number | null;
     package_discount_percent: number | null;
     package_room_prices: Record<string, number | null>;
     package_room_original_prices: Record<string, number | null>;
+    hpp_estimate: HppEstimate | null;
     departure_date: string | null;
     departure_city: string | null;
     booking_count: number;
@@ -81,15 +110,18 @@ type Props = {
     rows: Row[];
     sourceRows: Array<{
         travel_package_id: number;
-        departure_schedule_id: number;
+        departure_schedule_id: number | null;
         calculation_mode?: string;
         package_name: string;
         package_code: string;
         package_price: number;
+        package_currency: string;
+        package_conversion_rate_to_idr: number;
         package_original_price: number | null;
         package_discount_percent: number | null;
         package_room_prices: Record<string, number | null>;
         package_room_original_prices: Record<string, number | null>;
+        hpp_estimate: HppEstimate | null;
         departure_date: string | null;
         departure_city: string | null;
         total_bookings: number;
@@ -97,6 +129,7 @@ type Props = {
         total_hotels_assigned: number;
         latest_calculation: {
             id: number;
+            is_saved: boolean;
             calculation_mode: string;
             calculated_at: string | null;
             hotel_total: number;
@@ -123,23 +156,10 @@ type Props = {
     }>;
     packages: Array<{ id: number; code: string; name: string }>;
     calculationModes: Array<{ value: string; label: string }>;
-    schedules: Array<{
-        id: number;
-        travel_package_id: number;
-        departure_date: string | null;
-        departure_city: string | null;
-    }>;
     filters: {
         travel_package_id: number | null;
         departure_schedule_id: number | null;
     };
-};
-
-type GenerateForm = {
-    travel_package_id: string;
-    departure_schedule_id: string;
-    calculation_mode: string;
-    notes: string;
 };
 
 type FeeForm = {
@@ -210,6 +230,10 @@ const buildHotelMetaRows = (
     const originalCurrency = getMetaString(meta, 'original_currency');
     const originalUnitPrice = getMetaNumber(meta, 'original_unit_price');
     const conversionRate = getMetaNumber(meta, 'conversion_rate_to_idr');
+    const conversionScope = getMetaString(
+        meta,
+        'conversion_rate_snapshot_scope',
+    );
     const brokerName = getMetaString(meta, 'broker_name');
     const roomType = getMetaString(meta, 'room_type');
     const roomCount = getMetaNumber(meta, 'room_count');
@@ -238,7 +262,7 @@ const buildHotelMetaRows = (
         conversionRate !== null
     ) {
         details.push(
-            `Kurs: 1 ${originalCurrency} = ${formatCurrency(conversionRate, 'IDR')}`,
+            `${conversionScope === 'package' ? 'Kurs package tersimpan' : 'Kurs'}: 1 ${originalCurrency} = ${formatCurrency(conversionRate, 'IDR')}`,
         );
     }
 
@@ -269,6 +293,10 @@ const buildProductMetaRows = (
     const originalCurrency = getMetaString(meta, 'original_currency');
     const originalUnitPrice = getMetaNumber(meta, 'original_unit_price');
     const conversionRate = getMetaNumber(meta, 'conversion_rate_to_idr');
+    const conversionScope = getMetaString(
+        meta,
+        'conversion_rate_snapshot_scope',
+    );
     const multiplierPerPax = getMetaNumber(meta, 'multiplier_per_pax');
     const customerCount = getMetaNumber(meta, 'customer_count');
     const details: string[] = [];
@@ -289,7 +317,7 @@ const buildProductMetaRows = (
         conversionRate !== null
     ) {
         details.push(
-            `Kurs: 1 ${originalCurrency} = ${formatCurrency(conversionRate, 'IDR')}`,
+            `${conversionScope === 'package' ? 'Kurs package tersimpan' : 'Kurs'}: 1 ${originalCurrency} = ${formatCurrency(conversionRate, 'IDR')}`,
         );
     }
 
@@ -302,6 +330,7 @@ const buildProductMetaRows = (
 
 const mapSourceToRow = (source: Props['sourceRows'][number]): Row => ({
     id: source.latest_calculation?.id ?? 0,
+    is_saved: source.latest_calculation?.is_saved ?? false,
     travel_package_id: source.travel_package_id,
     departure_schedule_id: source.departure_schedule_id,
     calculation_mode:
@@ -311,10 +340,13 @@ const mapSourceToRow = (source: Props['sourceRows'][number]): Row => ({
     package_name: source.package_name,
     package_code: source.package_code,
     package_price: source.package_price,
+    package_currency: source.package_currency,
+    package_conversion_rate_to_idr: source.package_conversion_rate_to_idr ?? 1,
     package_original_price: source.package_original_price,
     package_discount_percent: source.package_discount_percent,
     package_room_prices: source.package_room_prices ?? {},
     package_room_original_prices: source.package_room_original_prices ?? {},
+    hpp_estimate: source.hpp_estimate ?? null,
     departure_date: source.departure_date,
     departure_city: source.departure_city,
     booking_count: source.total_bookings,
@@ -337,45 +369,21 @@ export default function HppPackageIndex({
     rows: _rows,
     sourceRows,
     packages,
-    calculationModes,
-    schedules,
     filters,
 }: Props) {
-    const { can } = usePermission('hpp_package');
-    const [showCreate, setShowCreate] = useState(false);
     const [viewing, setViewing] = useState<Row | null>(null);
+    const [detailTab, setDetailTab] = useState<
+        'estimate' | 'actual' | 'breakdown'
+    >('estimate');
     const [isFeeSaved, setIsFeeSaved] = useState(false);
     const [packageFilter, setPackageFilter] = useState(
         filters.travel_package_id ? String(filters.travel_package_id) : 'all',
     );
-    const [scheduleFilter, setScheduleFilter] = useState(
-        filters.departure_schedule_id
-            ? String(filters.departure_schedule_id)
-            : 'all',
-    );
 
-    const generateForm = useForm<GenerateForm>({
-        travel_package_id: '',
-        departure_schedule_id: 'all',
-        calculation_mode: 'per_pax_multiplier',
-        notes: '',
-    });
     const feeForm = useForm<FeeForm>({
         tour_leader_fee: '0',
         muthawwif_fee: '0',
     });
-
-    const scheduleOptions = useMemo(() => {
-        if (!generateForm.data.travel_package_id) {
-            return schedules;
-        }
-
-        return schedules.filter(
-            (schedule) =>
-                schedule.travel_package_id ===
-                Number(generateForm.data.travel_package_id),
-        );
-    }, [generateForm.data.travel_package_id, schedules]);
 
     const applyFilters = (): void => {
         router.get(
@@ -383,8 +391,6 @@ export default function HppPackageIndex({
             {
                 travel_package_id:
                     packageFilter === 'all' ? undefined : packageFilter,
-                departure_schedule_id:
-                    scheduleFilter === 'all' ? undefined : scheduleFilter,
             },
             { preserveState: true, preserveScroll: true },
         );
@@ -392,41 +398,11 @@ export default function HppPackageIndex({
 
     const resetFilters = (): void => {
         setPackageFilter('all');
-        setScheduleFilter('all');
 
         router.get(
             '/admin/financial-management/hpp-package',
             {},
             { preserveState: true, preserveScroll: true },
-        );
-    };
-
-    const submitGenerate = (event: React.FormEvent): void => {
-        event.preventDefault();
-
-        if (!generateForm.data.travel_package_id) {
-            toast.error('Pilih package terlebih dahulu.');
-            return;
-        }
-
-        router.post(
-            '/admin/financial-management/hpp-package',
-            {
-                ...generateForm.data,
-                manual_adjustment: 0,
-                departure_schedule_id:
-                    generateForm.data.departure_schedule_id === 'all'
-                        ? null
-                        : generateForm.data.departure_schedule_id,
-            },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    toast.success('HPP package berhasil dibuat.');
-                    setShowCreate(false);
-                    generateForm.reset();
-                },
-            },
         );
     };
 
@@ -436,7 +412,10 @@ export default function HppPackageIndex({
         tourLeaderFee: number;
         muthawwifFee: number;
     } => {
-        const grossRevenue = row.package_price * row.customer_count;
+        const grossRevenue =
+            row.package_price *
+            row.package_conversion_rate_to_idr *
+            row.customer_count;
 
         return {
             tourLeaderFee:
@@ -456,6 +435,7 @@ export default function HppPackageIndex({
         const hasSavedFee = row.tour_leader_fee > 0 || row.muthawwif_fee > 0;
 
         setViewing(row);
+        setDetailTab('estimate');
         setIsFeeSaved(hasSavedFee);
         feeForm.setData({
             tour_leader_fee: String(
@@ -642,7 +622,11 @@ export default function HppPackageIndex({
             return 0;
         }
 
-        return viewing.package_price * viewing.customer_count;
+        return (
+            viewing.package_price *
+            viewing.package_conversion_rate_to_idr *
+            viewing.customer_count
+        );
     }, [viewing]);
     const savedHppPerCustomer = useMemo(() => {
         if (!viewing || viewing.customer_count <= 0) {
@@ -675,6 +659,13 @@ export default function HppPackageIndex({
         () =>
             (viewing?.items ?? []).filter(
                 (item) => item.cost_type === 'product',
+            ),
+        [viewing],
+    );
+    const allInDetailItems = useMemo(
+        () =>
+            (viewing?.items ?? []).filter(
+                (item) => item.cost_type === 'all_in',
             ),
         [viewing],
     );
@@ -738,20 +729,14 @@ export default function HppPackageIndex({
         >
             <Head title="Cost Calculation / HPP Package" />
             <div className="space-y-4 p-3 md:p-4">
-                <div className="flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm">
                     <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                         Cost Calculation / HPP Package
                     </h1>
-                    {can('create') ? (
-                        <Button onClick={() => setShowCreate(true)}>
-                            <Calculator className="mr-2 h-4 w-4" />
-                            Generate HPP
-                        </Button>
-                    ) : null}
                 </div>
 
                 <div className="space-y-3 rounded-2xl border border-border/60 bg-card p-3 shadow-sm">
-                    <div className="grid gap-2 md:grid-cols-2">
+                    <div className="grid gap-2">
                         <div className="grid gap-2">
                             <Label>Package</Label>
                             <Select
@@ -776,57 +761,6 @@ export default function HppPackageIndex({
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="grid gap-2">
-                            <Label>Mode Kalkulasi</Label>
-                            <Select
-                                value={generateForm.data.calculation_mode}
-                                onValueChange={(value) =>
-                                    generateForm.setData(
-                                        'calculation_mode',
-                                        value,
-                                    )
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih mode kalkulasi" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {calculationModes.map((mode) => (
-                                        <SelectItem
-                                            key={mode.value}
-                                            value={mode.value}
-                                        >
-                                            {mode.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>Jadwal</Label>
-                            <Select
-                                value={scheduleFilter}
-                                onValueChange={setScheduleFilter}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Semua jadwal" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        Semua jadwal
-                                    </SelectItem>
-                                    {schedules.map((schedule) => (
-                                        <SelectItem
-                                            key={schedule.id}
-                                            value={String(schedule.id)}
-                                        >
-                                            {schedule.departure_date ?? '-'} -{' '}
-                                            {schedule.departure_city ?? '-'}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
                     </div>
                     <div className="flex flex-wrap justify-end gap-2">
                         <Button
@@ -843,7 +777,7 @@ export default function HppPackageIndex({
                 </div>
 
                 <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
-                    <Table className="min-w-[1200px]">
+                    <Table className="min-w-[1100px]">
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-14 text-center">
@@ -853,22 +787,22 @@ export default function HppPackageIndex({
                                     Aksi
                                 </TableHead>
                                 <TableHead>Package</TableHead>
-                                <TableHead>Jadwal</TableHead>
+                                <TableHead>Keberangkatan</TableHead>
                                 <TableHead>Booking</TableHead>
                                 <TableHead>Jamaah</TableHead>
-                                <TableHead>Total HPP</TableHead>
-                                <TableHead>HPP/Jamaah</TableHead>
+                                <TableHead>HPP Estimasi</TableHead>
+                                <TableHead>HPP Actual</TableHead>
+                                <TableHead>Actual/Jamaah</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {sourceRows.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={12}
+                                        colSpan={9}
                                         className="py-12 text-center text-sm text-muted-foreground"
                                     >
-                                        Belum ada data booking/jadwal untuk
-                                        dihitung.
+                                        Belum ada package keberangkatan.
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -920,14 +854,21 @@ export default function HppPackageIndex({
                                             {source.total_customers}
                                         </TableCell>
                                         <TableCell className="font-semibold">
-                                            {source.latest_calculation
+                                            {source.hpp_estimate
                                                 ? formatCurrency(
-                                                      source.latest_calculation
+                                                      source.hpp_estimate
                                                           .grand_total,
-                                                      source.latest_calculation
-                                                          .currency,
+                                                      'IDR',
                                                   )
                                                 : '-'}
+                                        </TableCell>
+                                        <TableCell className="font-semibold">
+                                            {formatCurrency(
+                                                source.latest_calculation
+                                                    ?.grand_total ?? 0,
+                                                source.latest_calculation
+                                                    ?.currency ?? 'IDR',
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {source.latest_calculation
@@ -950,92 +891,6 @@ export default function HppPackageIndex({
                 </div>
             </div>
 
-            <Sheet open={showCreate} onOpenChange={setShowCreate}>
-                <SheetContent className="w-full overflow-y-auto bg-background sm:max-w-2xl">
-                    <SheetHeader>
-                        <SheetTitle>Generate HPP Package</SheetTitle>
-                    </SheetHeader>
-                    <form className="mt-6 space-y-4" onSubmit={submitGenerate}>
-                        <div className="grid gap-2">
-                            <Label>Package</Label>
-                            <Select
-                                value={generateForm.data.travel_package_id}
-                                onValueChange={(value) =>
-                                    generateForm.setData(
-                                        'travel_package_id',
-                                        value,
-                                    )
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Pilih package" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {packages.map((pkg) => (
-                                        <SelectItem
-                                            key={pkg.id}
-                                            value={String(pkg.id)}
-                                        >
-                                            {pkg.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>Jadwal</Label>
-                            <Select
-                                value={generateForm.data.departure_schedule_id}
-                                onValueChange={(value) =>
-                                    generateForm.setData(
-                                        'departure_schedule_id',
-                                        value,
-                                    )
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Semua jadwal package ini" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        Semua jadwal
-                                    </SelectItem>
-                                    {scheduleOptions.map((schedule) => (
-                                        <SelectItem
-                                            key={schedule.id}
-                                            value={String(schedule.id)}
-                                        >
-                                            {schedule.departure_date ?? '-'} -{' '}
-                                            {schedule.departure_city ?? '-'}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="grid gap-2">
-                            <Label>Catatan</Label>
-                            <Textarea
-                                value={generateForm.data.notes}
-                                onChange={(event) =>
-                                    generateForm.setData(
-                                        'notes',
-                                        event.target.value,
-                                    )
-                                }
-                            />
-                        </div>
-                        <div className="flex justify-end">
-                            <Button
-                                type="submit"
-                                disabled={generateForm.processing}
-                            >
-                                Generate
-                            </Button>
-                        </div>
-                    </form>
-                </SheetContent>
-            </Sheet>
-
             <Sheet
                 open={viewing !== null}
                 onOpenChange={(open) => !open && setViewing(null)}
@@ -1047,20 +902,17 @@ export default function HppPackageIndex({
                     {viewing ? (
                         <div className="mt-6 space-y-4">
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">
-                                    Semua total dihitung dalam IDR
-                                </span>
                                 <span className="rounded-full border border-border/70 bg-muted px-3 py-1 text-[11px] font-medium text-muted-foreground">
-                                    Currency hasil kalkulasi: {viewing.currency}
+                                    {viewing.currency}
                                 </span>
                             </div>
                             {currencyWarnings.length > 0 ? (
                                 <Alert className="border-rose-200 bg-rose-50/90 text-rose-900">
                                     <AlertDescription>
                                         <div className="mb-2 text-sm font-semibold">
-                                            Converter currency belum lengkap.
-                                            Total HPP belum final sebelum semua
-                                            rate tersedia di master currency.
+                                            Kurs konversi belum lengkap. HPP
+                                            Actual belum final sebelum semua
+                                            kurs tersedia pada snapshot package.
                                         </div>
                                         <ul className="list-disc space-y-1 pl-4 text-sm leading-6">
                                             {currencyWarnings.map((warning) => (
@@ -1082,18 +934,32 @@ export default function HppPackageIndex({
                                 </Alert>
                             ) : null}
 
-                            <Tabs defaultValue="summary" className="space-y-4">
-                                <TabsList className="grid w-full grid-cols-2">
-                                    <TabsTrigger value="summary">
-                                        Ringkasan Customer
+                            <Tabs
+                                value={detailTab}
+                                onValueChange={(value) =>
+                                    setDetailTab(
+                                        value as
+                                            | 'estimate'
+                                            | 'actual'
+                                            | 'breakdown',
+                                    )
+                                }
+                                className="space-y-4"
+                            >
+                                <TabsList className="grid w-full grid-cols-3">
+                                    <TabsTrigger value="actual">
+                                        HPP Actual
                                     </TabsTrigger>
                                     <TabsTrigger value="breakdown">
-                                        Breakdown Biaya
+                                        Breakdown Actual
+                                    </TabsTrigger>
+                                    <TabsTrigger value="estimate">
+                                        HPP Estimasi
                                     </TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent
-                                    value="summary"
+                                    value="actual"
                                     className="space-y-4"
                                 >
                                     <div className="overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-muted/20 shadow-sm">
@@ -1127,11 +993,6 @@ export default function HppPackageIndex({
                                                                 viewing.booking_count
                                                             }
                                                         </p>
-                                                        <p className="mt-1 text-xs text-muted-foreground">
-                                                            Total transaksi
-                                                            booking yang
-                                                            dihitung
-                                                        </p>
                                                     </div>
                                                     <div className="rounded-xl border border-border/70 bg-background/80 p-2.5">
                                                         <p className="text-xs text-muted-foreground">
@@ -1142,10 +1003,6 @@ export default function HppPackageIndex({
                                                                 viewing.customer_count
                                                             }
                                                         </p>
-                                                        <p className="mt-1 text-xs text-muted-foreground">
-                                                            Total passenger dari
-                                                            booking valid
-                                                        </p>
                                                     </div>
                                                     <div className="rounded-xl border border-border/70 bg-background/80 p-2.5">
                                                         <p className="text-xs text-muted-foreground">
@@ -1154,7 +1011,7 @@ export default function HppPackageIndex({
                                                         <p className="mt-1 text-lg font-semibold text-foreground">
                                                             {formatCurrency(
                                                                 viewing.package_price,
-                                                                viewing.currency,
+                                                                viewing.package_currency,
                                                             )}
                                                         </p>
                                                     </div>
@@ -1167,7 +1024,7 @@ export default function HppPackageIndex({
                                                             null
                                                                 ? formatCurrency(
                                                                       viewing.package_original_price,
-                                                                      viewing.currency,
+                                                                      viewing.package_currency,
                                                                   )
                                                                 : '-'}
                                                         </p>
@@ -1200,7 +1057,7 @@ export default function HppPackageIndex({
                                                                 ? 'Ada perubahan belum disimpan'
                                                                 : isSavedFeeApplied
                                                                   ? 'Fee tersimpan'
-                                                                  : 'Default aktif'}
+                                                                  : 'Default belum tersimpan'}
                                                         </div>
                                                     </div>
                                                     <div className="grid gap-2 sm:grid-cols-2">
@@ -1281,7 +1138,7 @@ export default function HppPackageIndex({
                                             <div className="space-y-2">
                                                 <div className="min-w-0 rounded-2xl border border-border/70 bg-background p-3 shadow-sm">
                                                     <p className="text-xs leading-tight tracking-wide text-muted-foreground uppercase">
-                                                        HPP Asli
+                                                        HPP Actual Sebelum Fee
                                                     </p>
                                                     <p className="mt-2 text-2xl leading-tight font-semibold break-words text-foreground">
                                                         {formatCurrency(
@@ -1289,14 +1146,11 @@ export default function HppPackageIndex({
                                                             viewing.currency,
                                                         )}
                                                     </p>
-                                                    <p className="mt-1 text-xs leading-snug text-muted-foreground">
-                                                        Sebelum fee TL &amp;
-                                                        Muthawwif
-                                                    </p>
                                                 </div>
                                                 <div className="min-w-0 rounded-2xl border border-border/70 bg-background p-3 shadow-sm">
                                                     <p className="text-xs leading-tight tracking-wide text-muted-foreground uppercase">
-                                                        HPP / Jamaah Asli
+                                                        Actual / Jamaah Sebelum
+                                                        Fee
                                                     </p>
                                                     <p className="mt-2 text-2xl leading-tight font-semibold break-words text-foreground">
                                                         {originalHppPerCustomer !==
@@ -1307,14 +1161,10 @@ export default function HppPackageIndex({
                                                               )
                                                             : '-'}
                                                     </p>
-                                                    <p className="mt-1 text-xs leading-snug text-muted-foreground">
-                                                        Sebelum fee TL &amp;
-                                                        Muthawwif
-                                                    </p>
                                                 </div>
                                                 <div className="min-w-0 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 shadow-sm dark:bg-emerald-500/15">
                                                     <p className="text-xs leading-tight tracking-wide text-emerald-700 uppercase dark:text-emerald-300">
-                                                        Total Keuntungan
+                                                        Keuntungan Actual
                                                     </p>
                                                     <p className="mt-2 text-2xl leading-tight font-semibold break-words text-emerald-800 dark:text-emerald-200">
                                                         {formatCurrency(
@@ -1324,10 +1174,6 @@ export default function HppPackageIndex({
                                                             viewing.currency,
                                                         )}
                                                     </p>
-                                                    <p className="mt-1 text-xs leading-snug text-emerald-700/80 dark:text-emerald-200/80">
-                                                        Omzet kotor dikurangi
-                                                        HPP
-                                                    </p>
                                                 </div>
                                             </div>
 
@@ -1335,7 +1181,8 @@ export default function HppPackageIndex({
                                                 <div className="space-y-2">
                                                     <div className="min-w-0 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 shadow-sm dark:bg-emerald-500/15">
                                                         <p className="text-xs leading-tight tracking-wide text-emerald-700 uppercase dark:text-emerald-300">
-                                                            HPP Setelah Fee
+                                                            HPP Actual Setelah
+                                                            Fee
                                                         </p>
                                                         <p className="mt-2 text-2xl leading-tight font-semibold break-words text-emerald-800 dark:text-emerald-200">
                                                             {formatCurrency(
@@ -1343,15 +1190,11 @@ export default function HppPackageIndex({
                                                                 viewing.currency,
                                                             )}
                                                         </p>
-                                                        <p className="mt-1 text-xs leading-snug text-emerald-700/80 dark:text-emerald-200/80">
-                                                            Setelah fee TL &amp;
-                                                            Muthawwif
-                                                        </p>
                                                     </div>
                                                     <div className="min-w-0 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 shadow-sm dark:bg-emerald-500/15">
                                                         <p className="text-xs leading-tight tracking-wide text-emerald-700 uppercase dark:text-emerald-300">
-                                                            HPP / Jamaah Setelah
-                                                            Fee
+                                                            Actual / Jamaah
+                                                            Setelah Fee
                                                         </p>
                                                         <p className="mt-2 text-2xl leading-tight font-semibold break-words text-emerald-800 dark:text-emerald-200">
                                                             {savedHppPerCustomer !==
@@ -1361,10 +1204,6 @@ export default function HppPackageIndex({
                                                                       viewing.currency,
                                                                   )
                                                                 : '-'}
-                                                        </p>
-                                                        <p className="mt-1 text-xs leading-snug text-emerald-700/80 dark:text-emerald-200/80">
-                                                            Setelah fee TL &amp;
-                                                            Muthawwif
                                                         </p>
                                                     </div>
                                                     <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-2.5 py-2 text-sm text-muted-foreground">
@@ -1390,14 +1229,278 @@ export default function HppPackageIndex({
                                 </TabsContent>
 
                                 <TabsContent
+                                    value="estimate"
+                                    className="space-y-3"
+                                >
+                                    {viewing.hpp_estimate ? (
+                                        <div className="space-y-3 rounded-2xl border border-border/70 bg-card p-3">
+                                            <div className="grid gap-2 sm:grid-cols-3">
+                                                <div className="rounded-xl bg-muted/35 p-3">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Target jamaah
+                                                    </p>
+                                                    <p className="mt-1 text-lg font-semibold">
+                                                        {
+                                                            viewing.hpp_estimate
+                                                                .customer_count
+                                                        }{' '}
+                                                        pax
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-xl bg-muted/35 p-3">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Total HPP estimasi
+                                                    </p>
+                                                    <p className="mt-1 text-lg font-semibold">
+                                                        {formatCurrency(
+                                                            viewing.hpp_estimate
+                                                                .grand_total,
+                                                            'IDR',
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-xl bg-emerald-500/10 p-3">
+                                                    <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                                                        Estimasi keuntungan
+                                                    </p>
+                                                    <p className="mt-1 text-lg font-semibold text-emerald-800 dark:text-emerald-200">
+                                                        {formatCurrency(
+                                                            viewing.hpp_estimate
+                                                                .estimated_profit,
+                                                            'IDR',
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="divide-y divide-border/70 rounded-xl border border-border/70 px-3 text-sm">
+                                                {[
+                                                    [
+                                                        'Produk per jamaah',
+                                                        viewing.hpp_estimate
+                                                            .product_cost_per_customer,
+                                                    ],
+                                                    [
+                                                        'Total produk',
+                                                        viewing.hpp_estimate
+                                                            .product_total,
+                                                    ],
+                                                    [
+                                                        'Total hotel',
+                                                        viewing.hpp_estimate
+                                                            .hotel_total,
+                                                    ],
+                                                    [
+                                                        'Fee Tour Leader',
+                                                        viewing.hpp_estimate
+                                                            .tour_leader_fee,
+                                                    ],
+                                                    [
+                                                        'Fee Muthawwif',
+                                                        viewing.hpp_estimate
+                                                            .muthawwif_fee,
+                                                    ],
+                                                    [
+                                                        'Biaya lainnya',
+                                                        viewing.hpp_estimate
+                                                            .other_cost,
+                                                    ],
+                                                    [
+                                                        'Estimasi omzet',
+                                                        viewing.hpp_estimate
+                                                            .revenue_total,
+                                                    ],
+                                                    [
+                                                        'HPP per jamaah',
+                                                        viewing.hpp_estimate
+                                                            .hpp_per_customer,
+                                                    ],
+                                                ].map(([label, value]) => (
+                                                    <div
+                                                        key={String(label)}
+                                                        className="flex items-center justify-between gap-3 py-2.5"
+                                                    >
+                                                        <span className="text-muted-foreground">
+                                                            {label}
+                                                        </span>
+                                                        <span className="font-semibold">
+                                                            {value === null
+                                                                ? '-'
+                                                                : formatCurrency(
+                                                                      Number(
+                                                                          value,
+                                                                      ),
+                                                                      'IDR',
+                                                                  )}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {(viewing.hpp_estimate.items ?? [])
+                                                .length > 0 ? (
+                                                <div className="space-y-3">
+                                                    {(
+                                                        [
+                                                            [
+                                                                'hotel',
+                                                                'Breakdown Hotel',
+                                                            ],
+                                                            [
+                                                                'product',
+                                                                'Breakdown Product',
+                                                            ],
+                                                            [
+                                                                'all_in',
+                                                                'Paket All In Vendor',
+                                                            ],
+                                                            [
+                                                                'fee',
+                                                                'Fee TL & Muthawwif',
+                                                            ],
+                                                            [
+                                                                'other',
+                                                                'Biaya Lainnya',
+                                                            ],
+                                                        ] as const
+                                                    ).map(
+                                                        ([costType, title]) => {
+                                                            const items = (
+                                                                viewing
+                                                                    .hpp_estimate
+                                                                    ?.items ??
+                                                                []
+                                                            ).filter(
+                                                                (item) =>
+                                                                    item.cost_type ===
+                                                                    costType,
+                                                            );
+
+                                                            return items.length >
+                                                                0 ? (
+                                                                <div
+                                                                    key={
+                                                                        costType
+                                                                    }
+                                                                    className="overflow-hidden rounded-xl border border-border/70"
+                                                                >
+                                                                    <div className="flex items-center justify-between gap-3 bg-muted/35 px-3 py-2">
+                                                                        <p className="text-sm font-semibold">
+                                                                            {
+                                                                                title
+                                                                            }
+                                                                        </p>
+                                                                        <strong className="text-sm">
+                                                                            {formatCurrency(
+                                                                                items.reduce(
+                                                                                    (
+                                                                                        total,
+                                                                                        item,
+                                                                                    ) =>
+                                                                                        total +
+                                                                                        item.total_price,
+                                                                                    0,
+                                                                                ),
+                                                                                'IDR',
+                                                                            )}
+                                                                        </strong>
+                                                                    </div>
+                                                                    <div className="divide-y divide-border/70">
+                                                                        {items.map(
+                                                                            (
+                                                                                item,
+                                                                                index,
+                                                                            ) => (
+                                                                                <div
+                                                                                    key={`${costType}-${item.reference_id ?? 'fee'}-${index}`}
+                                                                                    className="grid gap-1 px-3 py-2.5 text-sm sm:grid-cols-[1fr_auto]"
+                                                                                >
+                                                                                    <div>
+                                                                                        <p className="font-medium">
+                                                                                            {
+                                                                                                item.label
+                                                                                            }
+                                                                                        </p>
+                                                                                        <p className="text-xs text-muted-foreground">
+                                                                                            {costType ===
+                                                                                            'hotel'
+                                                                                                ? `${getMetaNumber(item.meta, 'allocated_pax') ?? 0} pax, ${getMetaNumber(item.meta, 'room_count') ?? item.quantity} kamar × ${formatCurrency(item.unit_price, 'IDR')}`
+                                                                                                : costType ===
+                                                                                                        'fee' &&
+                                                                                                    getMetaNumber(
+                                                                                                        item.meta,
+                                                                                                        'customer_count',
+                                                                                                    ) !==
+                                                                                                        null
+                                                                                                  ? `${formatCurrency(getMetaNumber(item.meta, 'formula_base') ?? 0, 'IDR')} ÷ ${getMetaNumber(item.meta, 'customer_count') ?? 0} jamaah`
+                                                                                                  : `${item.quantity} × ${formatCurrency(item.unit_price, 'IDR')}`}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                    <strong>
+                                                                                        {formatCurrency(
+                                                                                            item.total_price,
+                                                                                            'IDR',
+                                                                                        )}
+                                                                                    </strong>
+                                                                                </div>
+                                                                            ),
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ) : null;
+                                                        },
+                                                    )}
+                                                </div>
+                                            ) : null}
+
+                                            {(
+                                                viewing.hpp_estimate.warnings ??
+                                                []
+                                            ).length > 0 ? (
+                                                <Alert className="border-amber-200 bg-amber-50/80 text-amber-950">
+                                                    <AlertDescription>
+                                                        <ul className="list-disc space-y-1 pl-4 text-sm">
+                                                            {viewing.hpp_estimate.warnings?.map(
+                                                                (warning) => (
+                                                                    <li
+                                                                        key={
+                                                                            warning
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            warning
+                                                                        }
+                                                                    </li>
+                                                                ),
+                                                            )}
+                                                        </ul>
+                                                    </AlertDescription>
+                                                </Alert>
+                                            ) : null}
+
+                                            {viewing.hpp_estimate.notes ? (
+                                                <div className="rounded-xl bg-muted/35 p-3 text-sm text-muted-foreground">
+                                                    {viewing.hpp_estimate.notes}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">
+                                            Estimasi HPP belum diisi pada
+                                            package ini.
+                                        </div>
+                                    )}
+                                </TabsContent>
+
+                                <TabsContent
                                     value="breakdown"
                                     className="space-y-3"
                                 >
                                     {viewing.items.length === 0 ? (
                                         <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
-                                            Belum ada hasil kalkulasi HPP untuk
-                                            baris ini. Silakan klik Generate
-                                            terlebih dahulu.
+                                            Belum ada biaya Actual dari booking,
+                                            product, atau hotel assignment pada
+                                            package ini.
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
@@ -1406,10 +1509,6 @@ export default function HppPackageIndex({
                                                     <div className="text-sm font-medium">
                                                         Breakdown Fee
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Fee ini masuk ke HPP
-                                                        setelah disimpan.
-                                                    </p>
                                                 </div>
 
                                                 {isSavedFeeApplied ? (
@@ -1458,14 +1557,89 @@ export default function HppPackageIndex({
                                                 )}
                                             </div>
 
+                                            {allInDetailItems.length > 0 ? (
+                                                <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3 dark:border-sky-900 dark:bg-sky-950/30">
+                                                    <div className="text-sm font-medium text-sky-950 dark:text-sky-100">
+                                                        Paket All In Vendor
+                                                    </div>
+                                                    {allInDetailItems.map(
+                                                        (item) => {
+                                                            const itemMeta =
+                                                                isRecord(
+                                                                    item.meta,
+                                                                )
+                                                                    ? item.meta
+                                                                    : undefined;
+                                                            const categories =
+                                                                getMetaString(
+                                                                    itemMeta,
+                                                                    'included_category_keys',
+                                                                );
+                                                            const originalCurrency =
+                                                                getMetaString(
+                                                                    itemMeta,
+                                                                    'original_currency',
+                                                                );
+                                                            const originalUnitPrice =
+                                                                getMetaNumber(
+                                                                    itemMeta,
+                                                                    'original_unit_price',
+                                                                );
+
+                                                            return (
+                                                                <div
+                                                                    key={
+                                                                        item.id
+                                                                    }
+                                                                    className="grid gap-2 rounded-lg bg-background px-3 py-2.5 sm:grid-cols-[1fr_auto]"
+                                                                >
+                                                                    <div>
+                                                                        <p className="font-medium text-foreground">
+                                                                            {
+                                                                                item.label
+                                                                            }
+                                                                        </p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            {
+                                                                                item.quantity
+                                                                            }{' '}
+                                                                            jamaah
+                                                                            ×{' '}
+                                                                            {originalCurrency &&
+                                                                            originalUnitPrice !==
+                                                                                null
+                                                                                ? `${originalCurrency} ${new Intl.NumberFormat('id-ID').format(originalUnitPrice)}`
+                                                                                : formatCurrency(
+                                                                                      item.unit_price,
+                                                                                      viewing.currency,
+                                                                                  )}
+                                                                        </p>
+                                                                        {categories ? (
+                                                                            <p className="mt-1 text-xs text-sky-700 dark:text-sky-300">
+                                                                                Kategori:{' '}
+                                                                                {
+                                                                                    categories
+                                                                                }
+                                                                            </p>
+                                                                        ) : null}
+                                                                    </div>
+                                                                    <strong className="text-sm text-foreground">
+                                                                        {formatCurrency(
+                                                                            item.total_price,
+                                                                            viewing.currency,
+                                                                        )}
+                                                                    </strong>
+                                                                </div>
+                                                            );
+                                                        },
+                                                    )}
+                                                </div>
+                                            ) : null}
+
                                             <div className="space-y-2 rounded-xl border border-border/70 bg-card p-3">
                                                 <div className="text-sm font-medium">
                                                     Breakdown Hotel
                                                 </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Harga room type mengikuti
-                                                    periode hotel yang aktif.
-                                                </p>
                                                 {hotelDetailItems.length ===
                                                 0 ? (
                                                     <p className="text-sm text-muted-foreground">
@@ -1601,10 +1775,6 @@ export default function HppPackageIndex({
                                                 <div className="text-sm font-medium">
                                                     Breakdown Product Package
                                                 </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Product dihitung per jamaah
-                                                    sesuai customer count.
-                                                </p>
                                                 {productDetailItems.length ===
                                                 0 ? (
                                                     <p className="text-sm text-muted-foreground">

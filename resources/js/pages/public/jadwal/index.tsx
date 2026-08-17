@@ -9,11 +9,22 @@ import PublicLayout from '@/layouts/PublicLayout';
 import { formatDate, usePublicData } from '@/lib/public/content';
 import { Head, Link } from '@inertiajs/react';
 
+type ScheduleItem = {
+    departure_date?: string | null;
+    departure_city?: string | null;
+    seats_available?: number | null;
+    package?: {
+        slug?: string | null;
+        duration_days?: number | null;
+    } | null;
+};
+
 const content = {
     id: {
-        title: 'Jadwal Keberangkatan',
-        meta: 'Jadwal keberangkatan umroh 2026 dengan seat terbaru.',
-        subtitle: 'Daftar jadwal terbaru untuk keberangkatan umroh 2026.',
+        title: 'Keberangkatan Paket',
+        meta: 'Daftar keberangkatan paket umroh terbaru berdasarkan tanggal berangkat package.',
+        subtitle:
+            'Semua keberangkatan mengikuti start date dan end date di package.',
         table: {
             date: 'Tanggal',
             duration: 'Durasi',
@@ -22,34 +33,11 @@ const content = {
             detail: 'Detail',
             cta: 'Detail Paket',
         },
-        schedules: [
-            {
-                date: '10 Maret 2026',
-                duration: '9 Hari',
-                city: 'Jakarta',
-                seat: '12',
-                href: '/paket-umroh',
-            },
-            {
-                date: '15 April 2026',
-                duration: '10 Hari',
-                city: 'Surabaya',
-                seat: '8',
-                href: '/paket-umroh',
-            },
-            {
-                date: '05 Mei 2026',
-                duration: '12 Hari',
-                city: 'Jakarta',
-                seat: '20',
-                href: '/paket-umroh',
-            },
-        ],
     },
     en: {
-        title: 'Departure Schedule',
-        meta: '2026 umrah departure schedule with updated seat availability.',
-        subtitle: 'Latest departure schedule for 2026 umrah journeys.',
+        title: 'Package Departures',
+        meta: 'Latest package departure list based on package departure dates.',
+        subtitle: 'Every departure follows the package start and end date.',
         table: {
             date: 'Date',
             duration: 'Duration',
@@ -58,29 +46,6 @@ const content = {
             detail: 'Details',
             cta: 'Package Details',
         },
-        schedules: [
-            {
-                date: '10 March 2026',
-                duration: '9 Days',
-                city: 'Jakarta',
-                seat: '12',
-                href: '/paket-umroh',
-            },
-            {
-                date: '15 April 2026',
-                duration: '10 Days',
-                city: 'Surabaya',
-                seat: '8',
-                href: '/paket-umroh',
-            },
-            {
-                date: '05 May 2026',
-                duration: '12 Days',
-                city: 'Jakarta',
-                seat: '20',
-                href: '/paket-umroh',
-            },
-        ],
     },
 };
 
@@ -90,7 +55,7 @@ export default function Jadwal() {
     const t = content[locale];
     const schedules =
         Array.isArray(publicData.schedules) && publicData.schedules.length > 0
-            ? publicData.schedules.map((item: Record<string, any>) => ({
+            ? (publicData.schedules as ScheduleItem[]).map((item) => ({
                   date: formatDate(item.departure_date, locale),
                   duration: `${item.package?.duration_days ?? 0} ${locale === 'id' ? 'Hari' : 'Days'}`,
                   city: item.departure_city,
@@ -99,7 +64,7 @@ export default function Jadwal() {
                       ? `/paket-umroh/${item.package.slug}`
                       : '/paket-umroh',
               }))
-            : t.schedules;
+            : [];
 
     return (
         <PublicLayout>
@@ -115,7 +80,7 @@ export default function Jadwal() {
                 <div className="container mx-auto px-4 sm:px-6">
                     <div className="rounded-3xl border border-border bg-card/90 px-6 py-8 shadow-lg">
                         <span className="inline-flex w-fit items-center rounded-full bg-primary/10 px-4 py-2 text-xs font-semibold tracking-[0.2em] text-primary uppercase">
-                            Schedule
+                            Keberangkatan
                         </span>
                         <h1 className="public-heading mt-4 text-2xl font-semibold text-foreground sm:text-3xl md:text-4xl">
                             {t.title}
@@ -134,58 +99,72 @@ export default function Jadwal() {
                 </div>
                 <div className="container mx-auto px-4 sm:px-6">
                     <MotionCard className="rounded-2xl border border-border bg-card/90 shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[640px] text-left text-sm">
-                                <thead className="bg-muted text-foreground">
-                                    <tr>
-                                        <th className="px-4 py-3">
-                                            {t.table.date}
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            {t.table.duration}
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            {t.table.city}
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            {t.table.seat}
-                                        </th>
-                                        <th className="px-4 py-3">
-                                            {t.table.detail}
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {schedules.map((item) => (
-                                        <tr
-                                            key={item.date}
-                                            className="border-t border-border"
-                                        >
-                                            <td className="px-4 py-3 text-foreground">
-                                                {item.date}
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                {item.duration}
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                {item.city}
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                {item.seat}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <Link
-                                                    href={item.href}
-                                                    className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground transition hover:bg-muted"
-                                                >
-                                                    {t.table.cta}
-                                                </Link>
-                                            </td>
+                        {schedules.length === 0 ? (
+                            <div className="flex min-h-[240px] items-center justify-center px-6 py-12 text-center">
+                                <div>
+                                    <p className="text-lg font-semibold text-foreground">
+                                        Belum ada keberangkatan aktif
+                                    </p>
+                                    <p className="mt-2 text-sm text-muted-foreground">
+                                        Package yang punya tanggal berangkat
+                                        akan muncul di sini.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[640px] text-left text-sm">
+                                    <thead className="bg-muted text-foreground">
+                                        <tr>
+                                            <th className="px-4 py-3">
+                                                {t.table.date}
+                                            </th>
+                                            <th className="px-4 py-3">
+                                                {t.table.duration}
+                                            </th>
+                                            <th className="px-4 py-3">
+                                                {t.table.city}
+                                            </th>
+                                            <th className="px-4 py-3">
+                                                {t.table.seat}
+                                            </th>
+                                            <th className="px-4 py-3">
+                                                {t.table.detail}
+                                            </th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        {schedules.map((item) => (
+                                            <tr
+                                                key={item.date}
+                                                className="border-t border-border"
+                                            >
+                                                <td className="px-4 py-3 text-foreground">
+                                                    {item.date}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {item.duration}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {item.city}
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {item.seat}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <Link
+                                                        href={item.href}
+                                                        className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-foreground transition hover:bg-muted"
+                                                    >
+                                                        {t.table.cta}
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </MotionCard>
                 </div>
             </MotionSection>

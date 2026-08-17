@@ -28,6 +28,10 @@ class PackageCostCalculation extends Model
         'grand_total',
         'hpp_per_customer',
         'currency',
+        'package_currency',
+        'package_conversion_rate_to_idr',
+        'package_conversion_rate_source',
+        'package_conversion_rate_fetched_at',
         'warnings',
         'notes',
         'calculated_at',
@@ -38,6 +42,8 @@ class PackageCostCalculation extends Model
         return [
             'calculation_date' => 'date',
             'calculated_at' => 'datetime',
+            'package_conversion_rate_to_idr' => 'decimal:6',
+            'package_conversion_rate_fetched_at' => 'datetime',
             'warnings' => 'array',
         ];
     }

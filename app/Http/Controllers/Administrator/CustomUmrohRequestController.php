@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Administrator;
 
+use App\Actions\Customer\ResolveCustomerAccount;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApproveCustomUmrohRequestRequest;
 use App\Models\Booking;
@@ -16,6 +17,8 @@ use Inertia\Response;
 
 class CustomUmrohRequestController extends Controller
 {
+    public function __construct(private readonly ResolveCustomerAccount $resolveCustomerAccount) {}
+
     public function index(Request $request): Response
     {
         $filters = [
@@ -86,6 +89,15 @@ class CustomUmrohRequestController extends Controller
 
         return DB::transaction(function () use ($customUmrohRequest, $payload, $request): RedirectResponse {
             $packageId = $this->customPlaceholderPackageId();
+            $customer = $customUmrohRequest->customer;
+
+            if (! $customer && $customUmrohRequest->email) {
+                $customer = $this->resolveCustomerAccount->handle(
+                    $customUmrohRequest->full_name,
+                    $customUmrohRequest->email,
+                    $customUmrohRequest->phone,
+                );
+            }
 
             $bookingCode = sprintf(
                 'BK-%s-CU%04d',
@@ -94,6 +106,7 @@ class CustomUmrohRequestController extends Controller
             );
 
             $booking = Booking::query()->create([
+                'customer_id' => $customer?->id,
                 'booking_code' => $bookingCode,
                 'package_id' => (int) $packageId,
                 'departure_schedule_id' => null,
@@ -103,6 +116,8 @@ class CustomUmrohRequestController extends Controller
                 'custom_unit_price' => (int) $payload['custom_unit_price'],
                 'custom_total_amount' => (int) $payload['custom_unit_price'] * (int) $payload['passenger_count'],
                 'custom_currency' => 'IDR',
+                'agreed_total_amount' => (int) $payload['custom_unit_price'] * (int) $payload['passenger_count'],
+                'agreed_currency' => 'IDR',
                 'full_name' => $customUmrohRequest->full_name,
                 'phone' => $customUmrohRequest->phone,
                 'email' => $customUmrohRequest->email,
