@@ -469,11 +469,12 @@ export default function PackagePage({
             : mode === 'edit'
               ? `Edit ${resolveText(packageData?.name, packageData?.code)}`
               : `Detail ${resolveText(packageData?.name, packageData?.code)}`;
+    const createHref = '/admin/product-management/packages/create';
     const currentHref = packageData
         ? isDetail
             ? packages.show(packageData.id).url
             : packages.edit(packageData.id).url
-        : packages.create().url;
+        : createHref;
 
     return (
         <AppSidebarLayout
