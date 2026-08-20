@@ -143,6 +143,11 @@ class CheckMenuPermission
             $paths[] = '/dashboard/booking-management/listing';
         }
 
+        if (str_contains($currentPath, '/booking-management/customer-data/')) {
+            $paths[] = '/admin/booking-management/customer-data';
+            $paths[] = '/dashboard/booking-management/customer-data';
+        }
+
         if (str_starts_with($currentPath, '/admin')) {
             $paths[] = '/dashboard'.substr($currentPath, strlen('/admin'));
         }

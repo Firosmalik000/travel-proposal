@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\CheckMenuPermission;
 use App\Models\Booking;
+use App\Models\BookingPayment;
 use App\Models\DepartureSchedule;
 use App\Models\InventoryItem;
 use App\Models\PackageRegistration;
@@ -18,6 +19,13 @@ use Tests\TestCase;
 class BookingRegisterManagementTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutMiddleware(CheckMenuPermission::class);
+    }
 
     public function test_it_shows_booking_register_page_with_registration_data(): void
     {
@@ -117,7 +125,11 @@ class BookingRegisterManagementTest extends TestCase
 
         $this->actingAs($user)
             ->put(route('booking.register.mark-registered', $registration))
-            ->assertRedirect(route('booking.register.index'));
+            ->assertRedirect(route('booking.register.index'))
+            ->assertSessionHas(
+                'success',
+                'Booking berhasil dipindahkan ke listing registered.',
+            );
 
         $this->assertDatabaseMissing('package_registrations', [
             'id' => $registration->id,
@@ -255,7 +267,8 @@ class BookingRegisterManagementTest extends TestCase
 
         $this->actingAs($user)
             ->delete(route('booking.register.destroy', $registration))
-            ->assertStatus(302);
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Data registrasi berhasil dihapus.');
 
         $this->assertDatabaseMissing('package_registrations', [
             'id' => $registration->id,
@@ -352,7 +365,6 @@ class BookingRegisterManagementTest extends TestCase
             'notes' => null,
             'status' => 'registered',
         ]);
-
         Booking::query()->create([
             'booking_code' => 'BK-FLTR-0002',
             'package_id' => $packageWithCancelledBooking->id,
@@ -395,7 +407,7 @@ class BookingRegisterManagementTest extends TestCase
             'is_active' => true,
         ]);
 
-        Booking::query()->create([
+        $booking = Booking::query()->create([
             'booking_code' => 'BK-REV-0001',
             'package_id' => $package->id,
             'departure_schedule_id' => null,
@@ -406,6 +418,10 @@ class BookingRegisterManagementTest extends TestCase
             'passenger_count' => 3,
             'notes' => null,
             'status' => 'registered',
+        ]);
+        BookingPayment::factory()->for($booking)->create([
+            'amount' => 1_000_000,
+            'status' => 'confirmed',
         ]);
 
         $this->actingAs($user)
@@ -420,6 +436,10 @@ class BookingRegisterManagementTest extends TestCase
                 ->where('revenue.by_currency.0.amount', 3000000)
                 ->where('registrations.data.0.revenue.currency', 'IDR')
                 ->where('registrations.data.0.revenue.amount', 3000000)
+                ->where('registrations.data.0.payment.status', 'partial')
+                ->where('registrations.data.0.payment.total_amount', 3000000)
+                ->where('registrations.data.0.payment.paid_amount', 1000000)
+                ->where('registrations.data.0.payment.remaining_amount', 2000000)
             );
     }
 
@@ -534,7 +554,8 @@ class BookingRegisterManagementTest extends TestCase
             'passenger_count' => 3,
             'notes' => null,
             'status' => 'registered',
-        ])->assertRedirect(route('booking.listing.index'));
+        ])->assertRedirect(route('booking.listing.index'))
+            ->assertSessionHas('success', 'Booking berhasil ditambahkan.');
 
         $this->assertDatabaseHas('inventory_items', [
             'id' => $inventory->id,
@@ -580,7 +601,8 @@ class BookingRegisterManagementTest extends TestCase
             'passenger_count' => 4,
             'notes' => null,
             'status' => 'registered',
-        ])->assertRedirect(route('booking.listing.index'));
+        ])->assertRedirect(route('booking.listing.index'))
+            ->assertSessionHas('success', 'Booking berhasil ditambahkan.');
 
         $this->assertDatabaseHas('inventory_items', [
             'id' => $inventory->id,
@@ -599,7 +621,8 @@ class BookingRegisterManagementTest extends TestCase
             'passenger_count' => 4,
             'notes' => null,
             'status' => 'cancelled',
-        ])->assertRedirect(route('booking.listing.index'));
+        ])->assertRedirect(route('booking.listing.index'))
+            ->assertSessionHas('success', 'Booking berhasil diperbarui.');
 
         $this->assertDatabaseHas('inventory_items', [
             'id' => $inventory->id,

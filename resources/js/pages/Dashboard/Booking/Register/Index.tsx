@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { requestMessageFrom } from '@/lib/request-toasts';
 import { Head, router } from '@inertiajs/react';
 import {
     CalendarDays,
@@ -252,7 +253,16 @@ export default function BookingRegisterIndex({ registrations }: Props) {
             `Kota Asal: ${registration.origin_city}`,
         ].join('\n');
 
-        navigator.clipboard.writeText(details);
+        if (!navigator.clipboard) {
+            toast.error('Browser tidak mendukung penyalinan kontak otomatis.');
+
+            return;
+        }
+
+        void navigator.clipboard
+            .writeText(details)
+            .then(() => toast.success('Kontak berhasil disalin.'))
+            .catch(() => toast.error('Kontak belum dapat disalin.'));
     }
 
     function markAsRegistered(registration: Registration): void {
@@ -271,12 +281,10 @@ export default function BookingRegisterIndex({ registrations }: Props) {
                     );
                 },
                 onError: (errors) => {
-                    const bookingError =
-                        typeof errors.booking === 'string'
-                            ? errors.booking
-                            : 'Booking belum bisa dipindahkan ke registered.';
-
-                    toast.error(bookingError);
+                    toast.error(
+                        requestMessageFrom(errors) ??
+                            'Booking belum bisa dipindahkan ke registered.',
+                    );
                 },
             },
         );
@@ -293,6 +301,15 @@ export default function BookingRegisterIndex({ registrations }: Props) {
 
         router.delete(`/admin/booking-management/register/${registration.id}`, {
             preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Data registrasi berhasil dihapus.');
+            },
+            onError: (errors) => {
+                toast.error(
+                    requestMessageFrom(errors) ??
+                        'Data registrasi belum dapat dihapus.',
+                );
+            },
         });
     }
 

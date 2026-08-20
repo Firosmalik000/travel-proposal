@@ -125,9 +125,13 @@ function buildPriceBreakdownRows(
 }
 
 export default function PackageRegistrationPage() {
-    const { travelPackage, referralCode } =
+    const { travelPackage, referralCode, flash } =
         usePage<TravelPackageRegistrationPageProps>().props;
     const packageName = localize(travelPackage.name, 'id');
+    const successMessage =
+        typeof flash?.success === 'string' && flash.success.trim() !== ''
+            ? flash.success.trim()
+            : '';
     const defaultRoomConfiguration = recommendedRoomConfiguration(1);
 
     const form = useForm({
@@ -249,16 +253,6 @@ export default function PackageRegistrationPage() {
         form.post(`/paket-umroh/${travelPackage.slug}/daftar`, {
             preserveScroll: true,
             onSuccess: () => {
-                form.reset(
-                    'full_name',
-                    'phone',
-                    'email',
-                    'origin_city',
-                    'passenger_count',
-                    'room_configuration',
-                    'notes',
-                );
-                form.setData('room_configuration', defaultRoomConfiguration);
                 toast.success(
                     'Pendaftaran berhasil dikirim. Tim kami akan segera menghubungi Anda.',
                 );
@@ -419,317 +413,378 @@ export default function PackageRegistrationPage() {
                             </p>
                         </div>
 
-                        {form.recentlySuccessful && (
-                            <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                                Pendaftaran berhasil dikirim. Tim kami akan
-                                segera menghubungi Anda.
-                            </div>
-                        )}
-
-                        <form onSubmit={submit} className="grid gap-5">
-                            <div className="grid gap-2">
-                                <Label htmlFor="full_name">Nama Lengkap</Label>
-                                <Input
-                                    id="full_name"
-                                    value={form.data.full_name}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'full_name',
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder="Contoh: Ahmad Fauzi"
-                                />
-                                <InputError message={form.errors.full_name} />
-                            </div>
-
-                            <div className="grid gap-5 sm:grid-cols-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="phone">
-                                        Nomor WhatsApp
-                                    </Label>
-                                    <Input
-                                        id="phone"
-                                        value={form.data.phone}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'phone',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="08xxxxxxxxxx"
-                                    />
-                                    <InputError message={form.errors.phone} />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        value={form.data.email}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'email',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="nama@email.com"
-                                    />
-                                    <InputError message={form.errors.email} />
-                                </div>
-                            </div>
-
-                            <div className="grid gap-5 sm:grid-cols-2">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="origin_city">
-                                        Kota Asal
-                                    </Label>
-                                    <Input
-                                        id="origin_city"
-                                        value={form.data.origin_city}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'origin_city',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="Contoh: Jakarta"
-                                    />
-                                    <InputError
-                                        message={form.errors.origin_city}
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="referral_code">
-                                        Kode Referral Agent (Opsional)
-                                    </Label>
-                                    <Input
-                                        id="referral_code"
-                                        value={form.data.referral_code}
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'referral_code',
-                                                event.target.value.toUpperCase(),
-                                            )
-                                        }
-                                        placeholder="Contoh: AGENT-001"
-                                    />
-                                    <InputError
-                                        message={form.errors.referral_code}
-                                    />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="passenger_count">
-                                        Jumlah Jamaah
-                                    </Label>
-                                    <Input
-                                        id="passenger_count"
-                                        type="number"
-                                        min="1"
-                                        max={selectedScheduleAvailableSeats}
-                                        value={form.data.passenger_count}
-                                        onChange={(event) =>
-                                            syncPassengerCount(
-                                                Number(event.target.value),
-                                            )
-                                        }
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Maksimal sesuai seat tersedia package:{' '}
-                                        {selectedScheduleAvailableSeats}
-                                    </p>
-                                    <InputError
-                                        message={form.errors.passenger_count}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid gap-4 rounded-2xl bg-muted/20 p-4">
-                                <div className="space-y-1">
-                                    <Label>Komposisi Kamar</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Susun kamar sesuai jumlah pax. Contoh 3
-                                        pax bisa 1 triple, atau 1 double + 1
-                                        single.
-                                    </p>
-                                </div>
-
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {roomTypeMeta.map((roomType) => (
-                                        <div
-                                            key={roomType.type}
-                                            className="grid gap-2 rounded-xl bg-background p-3"
-                                        >
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-foreground">
-                                                        {roomType.label}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {roomType.capacity} pax
-                                                        per kamar
-                                                    </p>
-                                                </div>
-                                                <span className="text-sm font-semibold text-primary">
-                                                    {formatPrice(
-                                                        travelPackage
-                                                            .room_prices?.[
-                                                            roomType.type
-                                                        ] ?? 0,
-                                                        'id',
-                                                        travelPackage.currency,
-                                                    )}
-                                                    /pax
-                                                </span>
-                                            </div>
-
-                                            <Input
-                                                min="0"
-                                                type="number"
-                                                value={
-                                                    form.data
-                                                        .room_configuration[
-                                                        roomType.type
-                                                    ]
-                                                }
-                                                onChange={(event) =>
-                                                    updateRoomConfiguration(
-                                                        roomType.type,
-                                                        event.target.value,
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="grid gap-2 rounded-xl bg-background/85 p-4 text-sm">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="text-muted-foreground">
-                                            Pax terisi
-                                        </span>
-                                        <span className="font-semibold text-foreground">
-                                            {allocatedRoomPax} /{' '}
-                                            {selectedPassengerCount}
+                        {successMessage ? (
+                            <div className="relative flex min-h-[520px] overflow-hidden rounded-3xl border border-emerald-200/70 bg-gradient-to-b from-emerald-50 via-background to-background px-6 py-10 text-center shadow-sm">
+                                <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.18),_transparent_68%)]" />
+                                <div className="relative z-10 mx-auto flex max-w-md flex-1 flex-col items-center justify-center">
+                                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-200 bg-white text-emerald-600 shadow-[0_12px_30px_rgba(16,185,129,0.12)]">
+                                        <span className="text-3xl leading-none">
+                                            ✓
                                         </span>
                                     </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="text-muted-foreground">
-                                            Sisa pax
+                                    <p className="mt-5 text-xs font-semibold tracking-[0.28em] text-emerald-700 uppercase">
+                                        Pendaftaran diterima
+                                    </p>
+                                    <h2 className="mt-3 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                                        Terima kasih
+                                    </h2>
+                                    <p className="mt-4 text-sm leading-6 text-muted-foreground sm:text-base">
+                                        {successMessage}
+                                    </p>
+                                    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                                        <span className="rounded-full border border-emerald-200 bg-emerald-100/80 px-3 py-1 text-xs font-medium text-emerald-700">
+                                            Admin akan follow up
                                         </span>
-                                        <span
-                                            className={
-                                                remainingRoomPax === 0
-                                                    ? 'font-semibold text-emerald-600'
-                                                    : 'font-semibold text-amber-600'
+                                        <span className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+                                            Estimasi 7 x 24 jam
+                                        </span>
+                                    </div>
+                                    <p className="mt-4 max-w-sm text-sm leading-6 text-muted-foreground">
+                                        Sambil menunggu, Anda bisa melihat
+                                        detail paket kembali atau langsung
+                                        kembali ke beranda.
+                                    </p>
+                                    <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
+                                        <Link
+                                            href={`/paket-umroh/${travelPackage.slug}`}
+                                            className="inline-flex items-center justify-center rounded-xl bg-foreground px-5 py-3 text-sm font-semibold text-background transition hover:bg-foreground/90"
+                                        >
+                                            Lihat Paket
+                                        </Link>
+                                        <Link
+                                            href="/"
+                                            className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-muted"
+                                        >
+                                            Ke Beranda
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <form onSubmit={submit} className="grid gap-5">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="full_name">
+                                        Nama Lengkap
+                                    </Label>
+                                    <Input
+                                        id="full_name"
+                                        value={form.data.full_name}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'full_name',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Contoh: Ahmad Fauzi"
+                                    />
+                                    <InputError
+                                        message={form.errors.full_name}
+                                    />
+                                </div>
+
+                                <div className="grid gap-5 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="phone">
+                                            Nomor WhatsApp
+                                        </Label>
+                                        <Input
+                                            id="phone"
+                                            value={form.data.phone}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'phone',
+                                                    event.target.value,
+                                                )
                                             }
-                                        >
-                                            {remainingRoomPax}
-                                        </span>
+                                            placeholder="08xxxxxxxxxx"
+                                        />
+                                        <InputError
+                                            message={form.errors.phone}
+                                        />
                                     </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="text-muted-foreground">
-                                            Ringkasan
-                                        </span>
-                                        <span className="text-right font-semibold text-foreground">
-                                            {roomSummary || '-'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="text-muted-foreground">
-                                            Estimasi total
-                                        </span>
-                                        <span className="font-semibold text-primary">
-                                            {formatPrice(
-                                                estimatedTotalPrice,
-                                                'id',
-                                                travelPackage.currency,
-                                            )}
-                                        </span>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email">Email</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={form.data.email}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'email',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="nama@email.com"
+                                        />
+                                        <InputError
+                                            message={form.errors.email}
+                                        />
                                     </div>
                                 </div>
 
-                                {selectedRoomBreakdown.length > 0 ? (
-                                    <div className="rounded-xl bg-background p-4">
+                                <div className="grid gap-5 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="origin_city">
+                                            Kota Asal
+                                        </Label>
+                                        <Input
+                                            id="origin_city"
+                                            value={form.data.origin_city}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'origin_city',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="Contoh: Jakarta"
+                                        />
+                                        <InputError
+                                            message={form.errors.origin_city}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="referral_code">
+                                            Kode Referral Agent (Opsional)
+                                        </Label>
+                                        <Input
+                                            id="referral_code"
+                                            value={form.data.referral_code}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'referral_code',
+                                                    event.target.value.toUpperCase(),
+                                                )
+                                            }
+                                            placeholder="Contoh: AGENT-001"
+                                        />
+                                        <InputError
+                                            message={form.errors.referral_code}
+                                        />
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="passenger_count">
+                                            Jumlah Jamaah
+                                        </Label>
+                                        <Input
+                                            id="passenger_count"
+                                            type="number"
+                                            min="1"
+                                            max={selectedScheduleAvailableSeats}
+                                            value={form.data.passenger_count}
+                                            onChange={(event) =>
+                                                syncPassengerCount(
+                                                    Number(event.target.value),
+                                                )
+                                            }
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Maksimal sesuai seat tersedia
+                                            package:{' '}
+                                            {selectedScheduleAvailableSeats}
+                                        </p>
+                                        <InputError
+                                            message={
+                                                form.errors.passenger_count
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 rounded-2xl bg-muted/20 p-4">
+                                    <div className="space-y-1">
+                                        <Label>Komposisi Kamar</Label>
+                                        <p className="text-xs text-muted-foreground">
+                                            Susun kamar sesuai jumlah pax.
+                                            Contoh 3 pax bisa 1 triple, atau 1
+                                            double + 1 single.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        {roomTypeMeta.map((roomType) => (
+                                            <div
+                                                key={roomType.type}
+                                                className="grid gap-2 rounded-xl bg-background p-3"
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-foreground">
+                                                            {roomType.label}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {roomType.capacity}{' '}
+                                                            pax per kamar
+                                                        </p>
+                                                    </div>
+                                                    <span className="text-sm font-semibold text-primary">
+                                                        {formatPrice(
+                                                            travelPackage
+                                                                .room_prices?.[
+                                                                roomType.type
+                                                            ] ?? 0,
+                                                            'id',
+                                                            travelPackage.currency,
+                                                        )}
+                                                        /pax
+                                                    </span>
+                                                </div>
+
+                                                <Input
+                                                    min="0"
+                                                    type="number"
+                                                    value={
+                                                        form.data
+                                                            .room_configuration[
+                                                            roomType.type
+                                                        ]
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateRoomConfiguration(
+                                                            roomType.type,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="grid gap-2 rounded-xl bg-background/85 p-4 text-sm">
                                         <div className="flex items-center justify-between gap-3">
-                                            <p className="text-sm font-semibold text-foreground">
-                                                Rincian Harga Sesuai Tipe
-                                            </p>
-                                            <span className="text-xs text-muted-foreground">
-                                                otomatis mengikuti pilihan kamar
+                                            <span className="text-muted-foreground">
+                                                Pax terisi
+                                            </span>
+                                            <span className="font-semibold text-foreground">
+                                                {allocatedRoomPax} /{' '}
+                                                {selectedPassengerCount}
                                             </span>
                                         </div>
-                                        <div className="mt-3 grid gap-2">
-                                            {selectedRoomBreakdown.map(
-                                                (row) => (
-                                                    <div
-                                                        key={row.type}
-                                                        className="flex items-center justify-between gap-3 rounded-xl bg-muted/20 px-3 py-2.5"
-                                                    >
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-foreground">
-                                                                {row.roomCount}{' '}
-                                                                kamar{' '}
-                                                                {row.label}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {row.paxCount}{' '}
-                                                                pax x{' '}
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Sisa pax
+                                            </span>
+                                            <span
+                                                className={
+                                                    remainingRoomPax === 0
+                                                        ? 'font-semibold text-emerald-600'
+                                                        : 'font-semibold text-amber-600'
+                                                }
+                                            >
+                                                {remainingRoomPax}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Ringkasan
+                                            </span>
+                                            <span className="text-right font-semibold text-foreground">
+                                                {roomSummary || '-'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-muted-foreground">
+                                                Estimasi total
+                                            </span>
+                                            <span className="font-semibold text-primary">
+                                                {formatPrice(
+                                                    estimatedTotalPrice,
+                                                    'id',
+                                                    travelPackage.currency,
+                                                )}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {selectedRoomBreakdown.length > 0 ? (
+                                        <div className="rounded-xl bg-background p-4">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="text-sm font-semibold text-foreground">
+                                                    Rincian Harga Sesuai Tipe
+                                                </p>
+                                                <span className="text-xs text-muted-foreground">
+                                                    otomatis mengikuti pilihan
+                                                    kamar
+                                                </span>
+                                            </div>
+                                            <div className="mt-3 grid gap-2">
+                                                {selectedRoomBreakdown.map(
+                                                    (row) => (
+                                                        <div
+                                                            key={row.type}
+                                                            className="flex items-center justify-between gap-3 rounded-xl bg-muted/20 px-3 py-2.5"
+                                                        >
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-foreground">
+                                                                    {
+                                                                        row.roomCount
+                                                                    }{' '}
+                                                                    kamar{' '}
+                                                                    {row.label}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {
+                                                                        row.paxCount
+                                                                    }{' '}
+                                                                    pax x{' '}
+                                                                    {formatPrice(
+                                                                        row.unitPrice,
+                                                                        'id',
+                                                                        travelPackage.currency,
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                            <span className="text-sm font-bold text-primary">
                                                                 {formatPrice(
-                                                                    row.unitPrice,
+                                                                    row.subtotal,
                                                                     'id',
                                                                     travelPackage.currency,
                                                                 )}
-                                                            </p>
+                                                            </span>
                                                         </div>
-                                                        <span className="text-sm font-bold text-primary">
-                                                            {formatPrice(
-                                                                row.subtotal,
-                                                                'id',
-                                                                travelPackage.currency,
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                ),
-                                            )}
+                                                    ),
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ) : null}
-                                <InputError
-                                    message={form.errors.room_configuration}
-                                />
-                            </div>
+                                    ) : null}
+                                    <InputError
+                                        message={form.errors.room_configuration}
+                                    />
+                                </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="notes">Catatan Tambahan</Label>
-                                <Textarea
-                                    id="notes"
-                                    value={form.data.notes}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'notes',
-                                            event.target.value,
-                                        )
+                                <div className="grid gap-2">
+                                    <Label htmlFor="notes">
+                                        Catatan Tambahan
+                                    </Label>
+                                    <Textarea
+                                        id="notes"
+                                        value={form.data.notes}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'notes',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Contoh: ingin kamar triple, berangkat berdua, atau butuh bantuan paspor."
+                                        rows={5}
+                                    />
+                                    <InputError message={form.errors.notes} />
+                                </div>
+
+                                <Button
+                                    type="submit"
+                                    disabled={
+                                        form.processing ||
+                                        !isRoomConfigurationValid
                                     }
-                                    placeholder="Contoh: ingin kamar triple, berangkat berdua, atau butuh bantuan paspor."
-                                    rows={5}
-                                />
-                                <InputError message={form.errors.notes} />
-                            </div>
-
-                            <Button
-                                type="submit"
-                                disabled={
-                                    form.processing || !isRoomConfigurationValid
-                                }
-                                className="h-11 text-sm font-semibold"
-                            >
-                                {form.processing
-                                    ? 'Mengirim...'
-                                    : 'Kirim Pendaftaran'}
-                            </Button>
-                        </form>
+                                    className="h-11 text-sm font-semibold"
+                                >
+                                    {form.processing
+                                        ? 'Mengirim...'
+                                        : 'Kirim Pendaftaran'}
+                                </Button>
+                            </form>
+                        )}
                     </MotionCard>
                 </div>
             </MotionSection>

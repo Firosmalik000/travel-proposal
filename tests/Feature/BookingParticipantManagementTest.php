@@ -85,7 +85,8 @@ class BookingParticipantManagementTest extends TestCase
                 'has_medical_history' => true,
                 'medical_history_notes' => 'Asma ringan',
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Data peserta berhasil ditambahkan.');
 
         $participant = BookingParticipant::query()->firstOrFail();
 
@@ -189,7 +190,8 @@ class BookingParticipantManagementTest extends TestCase
                 'passport_expiry_date' => '2026-01-01',
                 'passport_scan' => UploadedFile::fake()->create('passport-new.pdf', 100, 'application/pdf'),
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Data peserta berhasil diperbarui.');
 
         $participant->refresh();
 
@@ -209,7 +211,8 @@ class BookingParticipantManagementTest extends TestCase
                 'registration' => $booking,
                 'participant' => $participant,
             ]))
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Data peserta berhasil dihapus.');
 
         $this->assertDatabaseMissing('booking_participants', [
             'id' => $participant->id,

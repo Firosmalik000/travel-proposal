@@ -27,19 +27,30 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   searchKey?: string;
+  searchKeys?: Array<keyof TData>;
   searchPlaceholder?: string;
+  filters?: Array<{
+    columnId: string;
+    label: string;
+    options: Array<{ label: string; value: string }>;
+  }>;
+  tableMinWidth?: string;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   searchKey,
-  searchPlaceholder = "Search...",
+  searchKeys,
+  searchPlaceholder = "Cari data...",
+  filters = [],
+  tableMinWidth = "min-w-[900px]",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
 
   const table = useReactTable({
     data,
@@ -52,32 +63,67 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: (row, _columnId, filterValue) => {
+      const query = String(filterValue ?? "").trim().toLowerCase();
+      if (query === "") return true;
+
+      const keys = searchKeys ?? [];
+      return keys.some((key) =>
+        String(row.original[key] ?? "")
+          .toLowerCase()
+          .includes(query),
+      );
+    },
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
+      globalFilter,
     },
   });
 
+  const hasGlobalSearch = Array.isArray(searchKeys) && searchKeys.length > 0;
+  const filteredCount = table.getFilteredRowModel().rows.length;
+  const pagination = table.getState().pagination;
+  const firstRow = filteredCount === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
+  const lastRow = Math.min((pagination.pageIndex + 1) * pagination.pageSize, filteredCount);
+
   return (
     <div className="min-w-0 space-y-4 overflow-x-hidden">
-      {searchKey && (
-        <div className="flex items-center gap-2">
-          <div className="relative w-full sm:max-w-sm">
+      {(searchKey || hasGlobalSearch || filters.length > 0) && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          {(searchKey || hasGlobalSearch) && <div className="relative w-full sm:max-w-md">
             <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder={searchPlaceholder}
-            value={
-              (table.getColumn(searchKey)?.getFilterValue() as string) ?? ""
-            }
-            onChange={(event) =>
-              table.getColumn(searchKey)?.setFilterValue(event.target.value)
-            }
+            value={hasGlobalSearch ? globalFilter : ((table.getColumn(searchKey ?? "")?.getFilterValue() as string) ?? "")}
+            onChange={(event) => {
+              if (hasGlobalSearch) {
+                setGlobalFilter(event.target.value);
+                return;
+              }
+              table.getColumn(searchKey ?? "")?.setFilterValue(event.target.value);
+            }}
             className="h-11 w-full rounded-xl border border-border bg-card/90 pr-3 pl-9 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:ring-offset-0"
           />
-          </div>
+          </div>}
+          {filters.map((filter) => (
+            <select
+              key={filter.columnId}
+              value={(table.getColumn(filter.columnId)?.getFilterValue() as string) ?? ""}
+              onChange={(event) => table.getColumn(filter.columnId)?.setFilterValue(event.target.value || undefined)}
+              className="h-11 min-w-48 rounded-xl border border-border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+              aria-label={filter.label}
+            >
+              <option value="">Semua {filter.label}</option>
+              {filter.options.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          ))}
         </div>
       )}
 
@@ -126,19 +172,19 @@ export function DataTable<TData, TValue>({
             </div>
           ))
         ) : (
-          <div className="rounded-2xl border border-dashed border-border bg-card/70 p-4 text-center text-sm">No results.</div>
+          <div className="rounded-2xl border border-dashed border-border bg-card/70 p-4 text-center text-sm">Data tidak ditemukan.</div>
         )}
       </div>
 
       {/* DESKTOP / TABLET: regular table (hidden on mobile) */}
       <div className="hidden w-full overflow-x-auto rounded-2xl border border-border/70 bg-card/95 shadow-sm sm:block">
-        <Table className="min-w-full">
+        <Table className={tableMinWidth}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="bg-muted/35 hover:bg-muted/35">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id} className="h-12 whitespace-normal break-words px-4 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                    <TableHead key={header.id} className="h-12 whitespace-nowrap px-4 text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
                       {header.isPlaceholder ? null : (
                         <div
                           className={
@@ -181,7 +227,7 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() ? "selected" : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="max-w-[20rem] whitespace-normal break-words px-4 py-3 align-top">
+                    <TableCell key={cell.id} className="px-4 py-3 align-middle">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -190,7 +236,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                  No results.
+                  Data tidak ditemukan.
                 </TableCell>
               </TableRow>
             )}
@@ -201,19 +247,12 @@ export function DataTable<TData, TValue>({
       {/* Responsive Pagination */}
       <div className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-card/90 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
-          <span className="hidden sm:inline">Showing </span>
-          {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{" "}
-          {Math.min(
-            (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-            table.getFilteredRowModel().rows.length
-          )}{" "}
-          of {table.getFilteredRowModel().rows.length}
-          <span className="hidden sm:inline"> results</span>
+          Menampilkan {firstRow}-{lastRow} dari {filteredCount} data
         </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:space-x-6 lg:space-x-8">
           <div className="flex items-center justify-between sm:justify-start space-x-2">
-            <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
+            <p className="text-sm font-medium whitespace-nowrap">Baris per halaman</p>
             <select
               value={table.getState().pagination.pageSize}
               onChange={(e) => {
@@ -231,7 +270,7 @@ export function DataTable<TData, TValue>({
 
           <div className="flex items-center justify-between sm:justify-start gap-2">
             <div className="flex items-center justify-center text-sm font-medium whitespace-nowrap">
-              <span className="hidden sm:inline">Page </span>
+              <span className="hidden sm:inline">Halaman </span>
               {table.getState().pagination.pageIndex + 1}
               <span className="mx-1">/</span>
               {table.getPageCount() || 1}
@@ -245,7 +284,7 @@ export function DataTable<TData, TValue>({
                 disabled={!table.getCanPreviousPage()}
                 className="hidden sm:inline-flex"
               >
-                First
+                Pertama
               </Button>
 
               <Button
@@ -254,8 +293,8 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                <span className="hidden sm:inline">Previous</span>
-                <span className="sm:hidden">Prev</span>
+                <span className="hidden sm:inline">Sebelumnya</span>
+                <span className="sm:hidden">Kembali</span>
               </Button>
 
               <Button
@@ -264,7 +303,7 @@ export function DataTable<TData, TValue>({
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                Next
+                Berikutnya
               </Button>
 
               <Button
@@ -274,7 +313,7 @@ export function DataTable<TData, TValue>({
                 disabled={!table.getCanNextPage()}
                 className="hidden sm:inline-flex"
               >
-                Last
+                Terakhir
               </Button>
             </div>
           </div>

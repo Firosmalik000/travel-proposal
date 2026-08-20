@@ -4,10 +4,15 @@ namespace App\Actions\Booking;
 
 use App\Models\Booking;
 use App\Models\BookingParticipant;
+use App\Services\BookingParticipantCompletenessService;
 use Illuminate\Support\Collection;
 
 class BuildBookingCustomerData
 {
+    public function __construct(
+        private BookingParticipantCompletenessService $completenessService,
+    ) {}
+
     /**
      * @param  array{search: string, status: string, travel_package_id: int|null}  $filters
      * @return array<string, mixed>
@@ -46,6 +51,21 @@ class BuildBookingCustomerData
     }
 
     /**
+     * @return array<string, mixed>
+     */
+    public function bookingDetail(Booking $booking): array
+    {
+        $booking->load([
+            'package:id,code,name,package_type,start_date,end_date,departure_city,booking_status',
+            'participants' => fn ($participantQuery) => $participantQuery
+                ->orderBy('id')
+                ->select($this->participantColumns()),
+        ]);
+
+        return $this->bookingPayload($booking, includeParticipantDetails: true);
+    }
+
+    /**
      * @param  array{search: string, status: string, travel_package_id: int|null}  $filters
      * @return Collection<int, Booking>
      */
@@ -59,30 +79,7 @@ class BuildBookingCustomerData
             ->when($includeBookingDetails, function ($query): void {
                 $query->with(['participants' => fn ($participantQuery) => $participantQuery
                     ->orderBy('id')
-                    ->select([
-                        'id',
-                        'booking_id',
-                        'full_name',
-                        'gender',
-                        'birth_place',
-                        'birth_date',
-                        'marital_status',
-                        'address',
-                        'needs_wheelchair',
-                        'shirt_size',
-                        'passport_ready',
-                        'passport_issue_date',
-                        'passport_expiry_date',
-                        'passport_type',
-                        'passport_validity_years',
-                        'has_medical_history',
-                        'medical_history_notes',
-                        'emergency_contact_name',
-                        'emergency_contact_phone',
-                        'emergency_contact_relationship',
-                        'has_performed_umrah',
-                        'referral_source',
-                    ])]);
+                    ->select($this->participantColumns())]);
             })
             ->where('booking_type', 'regular')
             ->when($filters['travel_package_id'], function ($query) use ($filters): void {
@@ -164,6 +161,16 @@ class BuildBookingCustomerData
                     'completion_percent' => $customerCount > 0
                         ? min((int) floor(($participantsCount / $customerCount) * 100), 100)
                         : 0,
+                    'incomplete_booking_count' => $includeBookingDetails
+                        ? $packageBookings
+                            ->filter(fn (Booking $booking): bool => ! $this->completenessService->bookingSummary($booking)['is_complete'])
+                            ->count()
+                        : 0,
+                    'bookings' => $includeBookingDetails
+                        ? $packageBookings->map(
+                            fn (Booking $booking): array => $this->bookingPayload($booking),
+                        )->values()->all()
+                        : [],
                     'schedules' => $schedules->all(),
                 ];
             })
@@ -174,17 +181,24 @@ class BuildBookingCustomerData
     /**
      * @return array<string, mixed>
      */
-    private function bookingPayload(Booking $booking): array
+    private function bookingPayload(Booking $booking, bool $includeParticipantDetails = false): array
     {
-        $participants = $booking->participants->sortBy('id')->values();
+        $participants = $booking->relationLoaded('participants')
+            ? $booking->participants->sortBy('id')->values()
+            : collect();
         $slotCount = max((int) $booking->passenger_count, 0);
         $slots = [];
 
-        for ($index = 0; $index < $slotCount; $index++) {
-            $slots[] = $this->participantSlotPayload($participants->get($index), $index + 1);
+        if ($includeParticipantDetails) {
+            for ($index = 0; $index < $slotCount; $index++) {
+                $slots[] = $this->participantSlotPayload($participants->get($index), $index + 1);
+            }
         }
 
-        $participantsCount = $participants->count();
+        $participantsCount = $booking->relationLoaded('participants')
+            ? $participants->count()
+            : (int) ($booking->participants_count ?? 0);
+        $completion = $this->completenessService->bookingSummary($booking);
 
         return [
             'id' => $booking->id,
@@ -200,7 +214,19 @@ class BuildBookingCustomerData
             'completion_percent' => (int) ((int) $booking->passenger_count > 0
                 ? min(floor(($participantsCount / (int) $booking->passenger_count) * 100), 100)
                 : 0),
+            'complete_participants_count' => $completion['complete_participants_count'],
+            'incomplete_participants_count' => $completion['incomplete_participants_count'],
+            'missing_fields_count' => $completion['missing_fields_count'],
+            'missing_documents_count' => $completion['missing_documents_count'],
+            'outstanding_count' => $completion['outstanding_count'],
+            'is_complete' => $completion['is_complete'],
             'created_at' => $booking->created_at?->toDateTimeString(),
+            'package' => [
+                'id' => $booking->package?->id,
+                'code' => $booking->package?->code,
+                'name' => (string) ($booking->package?->name['id'] ?? $booking->package?->code ?? '-'),
+                'package_type' => $booking->package?->package_type,
+            ],
             'schedule' => [
                 'id' => null,
                 'departure_date' => $booking->package?->start_date?->toDateString(),
@@ -217,6 +243,23 @@ class BuildBookingCustomerData
      */
     private function participantPayload(BookingParticipant $participant, int $slotNumber): array
     {
+        $completion = $this->completenessService->analyze($participant);
+        $documents = collect($completion['documents'])
+            ->map(function (array $document) use ($participant): array {
+                return [
+                    'key' => $document['key'],
+                    'label' => $document['label'],
+                    'url' => ! $document['is_present']
+                        ? null
+                        : route('booking.customer-data.documents.show', [
+                            'booking' => $participant->booking_id,
+                            'participant' => $participant->id,
+                            'document' => $document['key'],
+                        ]),
+                ];
+            })
+            ->values();
+
         return [
             'slot_number' => $slotNumber,
             'id' => $participant->id,
@@ -240,6 +283,13 @@ class BuildBookingCustomerData
             'emergency_contact_relationship' => $participant->emergency_contact_relationship,
             'has_performed_umrah' => (bool) $participant->has_performed_umrah,
             'referral_source' => $participant->referral_source,
+            'documents_count' => $completion['documents_count'],
+            'documents_total' => $completion['documents_total'],
+            'documents' => $documents->all(),
+            'missing_fields' => $completion['missing_fields'],
+            'missing_documents' => $completion['missing_documents'],
+            'missing_count' => $completion['missing_count'],
+            'is_complete' => $completion['is_complete'],
         ];
     }
 
@@ -270,5 +320,42 @@ class BuildBookingCustomerData
         }
 
         return (int) ($booking->participants_count ?? 0);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function participantColumns(): array
+    {
+        return [
+            'id',
+            'booking_id',
+            'full_name',
+            'gender',
+            'birth_place',
+            'birth_date',
+            'marital_status',
+            'address',
+            'needs_wheelchair',
+            'shirt_size',
+            'passport_ready',
+            'passport_issue_date',
+            'passport_expiry_date',
+            'passport_type',
+            'passport_validity_years',
+            'passport_scan_path',
+            'family_card_scan_path',
+            'marriage_book_scan_path',
+            'birth_certificate_scan_path',
+            'photo_path',
+            'meningitis_vaccine_scan_path',
+            'has_medical_history',
+            'medical_history_notes',
+            'emergency_contact_name',
+            'emergency_contact_phone',
+            'emergency_contact_relationship',
+            'has_performed_umrah',
+            'referral_source',
+        ];
     }
 }

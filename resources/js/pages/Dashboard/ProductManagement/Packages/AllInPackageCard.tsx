@@ -609,7 +609,7 @@ export function AllInPackageCard({
 
             <Dialog open={managerOpen} onOpenChange={setManagerOpen}>
                 <DialogContent
-                    overlayClassName="bg-black/30 backdrop-blur-sm"
+                    overlayClassName="bg-slate-950/20 backdrop-blur-[2px]"
                     className="max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] gap-0 overflow-hidden p-0 sm:max-h-[92vh] sm:w-[calc(100%-3rem)] sm:max-w-4xl"
                 >
                     <DialogHeader className="border-b border-border/60 px-5 py-5 pr-12 sm:px-6">

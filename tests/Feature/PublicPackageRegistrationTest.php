@@ -86,6 +86,10 @@ class PublicPackageRegistrationTest extends TestCase
             'package_type' => 'reguler',
             'departure_city' => 'Surabaya',
             'duration_days' => 10,
+            'start_date' => now()->addDays(14)->toDateString(),
+            'end_date' => now()->addDays(23)->toDateString(),
+            'seats_total' => 45,
+            'booking_status' => 'open',
             'price' => 34900000,
             'currency' => 'IDR',
             'summary' => ['id' => 'Ringkasan paket', 'en' => 'Package summary'],
@@ -119,6 +123,7 @@ class PublicPackageRegistrationTest extends TestCase
             ],
             'notes' => 'Mohon info kamar triple.',
         ])->assertRedirect(route('public.paket-register', ['travelPackage' => $package->slug]));
+        $this->assertSessionHas('success');
 
         $this->assertDatabaseHas('package_registrations', [
             'package_id' => $package->id,
@@ -151,6 +156,36 @@ class PublicPackageRegistrationTest extends TestCase
                 && $request['target'] === '081234567890'
                 && str_contains((string) $request['message'], 'Ahmad Fauzi');
         });
+    }
+
+    public function test_it_shows_the_success_state_after_registration_redirect(): void
+    {
+        $package = TravelPackage::query()->create([
+            'code' => 'ASF-REG-11',
+            'slug' => 'umroh-reguler-success',
+            'name' => ['id' => 'Umroh Reguler Success', 'en' => 'Regular Umrah Success'],
+            'package_type' => 'reguler',
+            'departure_city' => 'Surabaya',
+            'duration_days' => 10,
+            'start_date' => now()->addDays(14)->toDateString(),
+            'end_date' => now()->addDays(23)->toDateString(),
+            'seats_total' => 45,
+            'booking_status' => 'open',
+            'price' => 34900000,
+            'currency' => 'IDR',
+            'summary' => ['id' => 'Ringkasan paket', 'en' => 'Package summary'],
+            'content' => [],
+            'is_active' => true,
+        ]);
+
+        $this->withSession([
+            'success' => 'Terima kasih, pendaftaran Anda telah kami terima. Admin akan menghubungi Anda maksimal 7 x 24 jam.',
+        ])
+            ->get(route('public.paket-register', ['travelPackage' => $package->slug]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/paket/register/index')
+                ->where('flash.success', 'Terima kasih, pendaftaran Anda telah kami terima. Admin akan menghubungi Anda maksimal 7 x 24 jam.'));
     }
 
     public function test_it_rejects_invalid_room_composition_for_public_registration(): void

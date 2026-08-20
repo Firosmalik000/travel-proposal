@@ -28,7 +28,18 @@ class StoreBookingPaymentRequest extends FormRequest
             'payment_method' => ['required', 'string', 'max:50'],
             'reference_number' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'status' => ['required', 'in:confirmed,void'],
+            'status' => ['required', 'in:pending,confirmed,void'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'amount.min' => 'Nominal pembayaran minimal 1.',
+            'status.in' => 'Status pembayaran tidak valid.',
         ];
     }
 }

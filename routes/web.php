@@ -32,6 +32,7 @@ use App\Http\Controllers\Agent\PortalController as AgentPortalController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\Customer\AccountController as CustomerAccountController;
 use App\Http\Controllers\Customer\BookingParticipantController as CustomerBookingParticipantController;
+use App\Http\Controllers\Customer\BookingPaymentInvoiceController as CustomerBookingPaymentInvoiceController;
 use App\Http\Controllers\Customer\PortalController as CustomerPortalController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PackageRegistrationController;
@@ -233,9 +234,11 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware(['auth', 'customer'])->prefix('customer')->name('customer.')->group(function (): void {
     Route::get('', [CustomerPortalController::class, 'index'])->name('dashboard');
+    Route::get('bookings', [CustomerPortalController::class, 'bookings'])->name('bookings.index');
     Route::get('password', [CustomerAccountController::class, 'editPassword'])->name('password.edit');
     Route::put('password', [CustomerAccountController::class, 'updatePassword'])->middleware('throttle:6,1')->name('password.update');
-    Route::get('bookings/{booking:booking_code}', [CustomerPortalController::class, 'show'])->name('bookings.show');
+    Route::get('bookings/{bookingCode}', [CustomerPortalController::class, 'show'])->name('bookings.show');
+    Route::get('bookings/{booking:booking_code}/payments/{payment}/invoice', CustomerBookingPaymentInvoiceController::class)->name('payments.invoice.download');
     Route::post('bookings/{booking}/participants', [CustomerBookingParticipantController::class, 'store'])->name('participants.store');
     Route::post('bookings/{booking}/participants/{participant}', [CustomerBookingParticipantController::class, 'update'])->name('participants.update');
     Route::delete('bookings/{booking}/participants/{participant}', [CustomerBookingParticipantController::class, 'destroy'])->name('participants.destroy');
@@ -341,8 +344,11 @@ Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {    
             $nameRoute(Route::post('listing/{booking}/payments', [BookingPaymentController::class, 'store'])->middleware('check.menu.permission:edit'), 'booking.payments.store');
             $nameRoute(Route::put('listing/{booking}/payments/{payment}', [BookingPaymentController::class, 'update'])->middleware('check.menu.permission:edit'), 'booking.payments.update');
             $nameRoute(Route::delete('listing/{booking}/payments/{payment}', [BookingPaymentController::class, 'destroy'])->middleware('check.menu.permission:edit'), 'booking.payments.destroy');
+            $nameRoute(Route::post('listing/{booking}/payments/reminder', [BookingPaymentController::class, 'remind'])->middleware(['check.menu.permission:edit', 'throttle:3,1']), 'booking.payments.reminder');
             $nameRoute(Route::get('customer-data', [BookingCustomerDataController::class, 'index'])->middleware('check.menu.permission:view'), 'booking.customer-data.index');
-            $nameRoute(Route::get('customer-data/{travelPackage}', [BookingCustomerDataController::class, 'show'])->middleware('check.menu.permission:view'), 'booking.customer-data.show');
+            $nameRoute(Route::get('customer-data/{booking}', [BookingCustomerDataController::class, 'show'])->middleware('check.menu.permission:view'), 'booking.customer-data.show');
+            $nameRoute(Route::get('customer-data/{booking}/participants/{participant}/documents/{document}', [BookingCustomerDataController::class, 'document'])->middleware('check.menu.permission:view'), 'booking.customer-data.documents.show');
+            $nameRoute(Route::post('customer-data/packages/{travelPackage}/reminders', [BookingCustomerDataController::class, 'sendReminders'])->middleware(['check.menu.permission:edit', 'throttle:3,1']), 'booking.customer-data.reminders.send');
             $nameRoute(Route::get('hotel-assignment', [HotelAssignmentController::class, 'index'])->middleware('check.menu.permission:view'), 'booking.hotel-assignment.index');
             $nameRoute(Route::post('hotel-assignment', [HotelAssignmentController::class, 'store'])->middleware('check.menu.permission:create'), 'booking.hotel-assignment.store');
             $nameRoute(Route::put('hotel-assignment/{assignment}', [HotelAssignmentController::class, 'update'])->middleware('check.menu.permission:edit'), 'booking.hotel-assignment.update');

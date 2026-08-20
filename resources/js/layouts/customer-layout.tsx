@@ -1,7 +1,15 @@
 import AppearanceSwitch from '@/components/appearance-switch';
 import BrandThemeStyle from '@/components/brand-theme-style';
 import GlobalFaviconHead from '@/components/global-favicon-head';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     Sidebar,
     SidebarContent,
@@ -20,14 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { SharedData } from '@/types';
 import { Link, router, usePage } from '@inertiajs/react';
-import {
-    BookOpenCheck,
-    ExternalLink,
-    KeyRound,
-    LogOut,
-    PlaneTakeoff,
-    ShieldCheck,
-} from 'lucide-react';
+import { BookOpenCheck, LogOut, PlaneTakeoff, ShieldCheck } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 
 type CustomerLayoutProps = PropsWithChildren<{
@@ -36,14 +37,14 @@ type CustomerLayoutProps = PropsWithChildren<{
 
 const navigation = [
     {
-        title: 'Ringkasan & Booking',
+        title: 'Dashboard',
         href: '/customer',
         icon: BookOpenCheck,
     },
     {
-        title: 'Keamanan Akun',
-        href: '/customer/password',
-        icon: KeyRound,
+        title: 'Booking Saya',
+        href: '/customer/bookings',
+        icon: PlaneTakeoff,
     },
 ] as const;
 
@@ -58,6 +59,8 @@ function normalizePath(path: string): string {
 function CustomerSidebar() {
     const { auth, branding, url } = usePage<SharedData>().props;
     const currentPath = normalizePath(url ?? '/customer');
+    const avatar =
+        typeof auth.user.avatar === 'string' ? auth.user.avatar : undefined;
     const initials = auth.user.name
         .split(' ')
         .map((part) => part[0])
@@ -137,55 +140,74 @@ function CustomerSidebar() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
-
-                <SidebarGroup className="mt-2 rounded-2xl border border-white/10 bg-white/5 p-2">
-                    <SidebarGroupLabel className="px-3 text-[0.62rem] font-semibold tracking-[0.14em] text-white/50 uppercase">
-                        Akses Cepat
-                    </SidebarGroupLabel>
-                    <SidebarGroupContent>
-                        <SidebarMenu>
-                            <SidebarMenuItem>
-                                <SidebarMenuButton
-                                    asChild
-                                    tooltip="Website Utama"
-                                    className="h-10 rounded-xl border border-transparent px-3 text-sm font-semibold text-white/75 hover:border-white/10 hover:bg-white/10 hover:text-white"
-                                >
-                                    <Link href="/">
-                                        <ExternalLink className="size-4" />
-                                        <span>Website Utama</span>
-                                    </Link>
-                                </SidebarMenuButton>
-                            </SidebarMenuItem>
-                        </SidebarMenu>
-                    </SidebarGroupContent>
-                </SidebarGroup>
             </SidebarContent>
 
             <SidebarFooter className="border-t border-white/10 p-2.5">
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/8 p-2 group-data-[collapsible=icon]:justify-center">
-                    <Avatar className="size-9 border border-white/15">
-                        <AvatarFallback className="bg-[#d9b66f] text-xs font-bold text-[#173c36]">
-                            {initials}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                        <p className="truncate text-sm font-bold text-white">
-                            {auth.user.name}
-                        </p>
-                        <p className="truncate text-[0.68rem] text-white/60">
-                            {auth.user.email}
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => router.post('/logout')}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-xl text-white/65 transition group-data-[collapsible=icon]:hidden hover:bg-white/10 hover:text-white"
-                        aria-label="Keluar"
-                        title="Keluar"
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/8 p-2 text-left transition group-data-[collapsible=icon]:justify-center hover:border-white/20 hover:bg-white/12"
+                            aria-label="Buka menu akun"
+                        >
+                            <Avatar className="size-9 border border-white/15">
+                                <AvatarImage
+                                    src={avatar}
+                                    alt={auth.user.name}
+                                />
+                                <AvatarFallback className="bg-[#d9b66f] text-xs font-bold text-[#173c36]">
+                                    {initials}
+                                </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                                <p className="truncate text-sm font-bold text-white">
+                                    {auth.user.name}
+                                </p>
+                                <p className="truncate text-[0.68rem] text-white/60">
+                                    {auth.user.email}
+                                </p>
+                            </div>
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                        align="end"
+                        side="top"
+                        sideOffset={12}
+                        className="w-64 rounded-xl p-2 shadow-2xl"
                     >
-                        <LogOut className="size-4" />
-                    </button>
-                </div>
+                        <DropdownMenuGroup>
+                            <DropdownMenuItem asChild>
+                                <Link
+                                    className="block w-full"
+                                    href="/settings/profile"
+                                >
+                                    Profile
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link
+                                    className="block w-full"
+                                    href="/customer/password"
+                                >
+                                    Keamanan Akun
+                                </Link>
+                            </DropdownMenuItem>
+                        </DropdownMenuGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                            <Link
+                                className="block w-full"
+                                href="/logout"
+                                method="post"
+                                as="button"
+                                onClick={() => router.flushAll()}
+                            >
+                                <LogOut />
+                                Keluar
+                            </Link>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </SidebarFooter>
         </Sidebar>
     );
@@ -212,10 +234,6 @@ export default function CustomerLayout({
                                 <div className="min-w-0">
                                     <p className="truncate text-base font-semibold tracking-tight text-slate-900 sm:text-lg dark:text-white">
                                         {title}
-                                    </p>
-                                    <p className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">
-                                        Kelola perjalanan Anda dengan aman dan
-                                        mudah.
                                     </p>
                                 </div>
                             </div>

@@ -49,6 +49,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useDebounce } from '@/hooks/use-debounce';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { requestMessageFrom } from '@/lib/request-toasts';
 import { Head, router, useForm } from '@inertiajs/react';
 import {
     CalendarDays,
@@ -85,6 +86,13 @@ type Registration = {
     revenue?: {
         currency: string;
         amount: number;
+    };
+    payment: {
+        status: 'unpaid' | 'partial' | 'paid';
+        total_amount: number;
+        paid_amount: number;
+        remaining_amount: number;
+        currency: string;
     };
     notes: string | null;
     status: string;
@@ -525,6 +533,24 @@ function statusBadgeVariant(
     return 'secondary';
 }
 
+const paymentStatusMeta = {
+    unpaid: {
+        label: 'Belum dibayar',
+        className:
+            'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200',
+    },
+    partial: {
+        label: 'Dibayar sebagian',
+        className:
+            'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300',
+    },
+    paid: {
+        label: 'Lunas',
+        className:
+            'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300',
+    },
+} as const;
+
 function participantFileName(value: string | null): string {
     if (!value) {
         return '-';
@@ -864,7 +890,7 @@ function packageDisplayName(
 export default function BookingListingIndex({
     registrations,
     packages,
-    schedules,
+    schedules: _schedules,
     revenue,
     filters,
     participant_upload_max_kilobytes,
@@ -1672,6 +1698,12 @@ export default function BookingListingIndex({
                 registration.id,
                 payload.booking.participants_count,
             );
+        } catch (error) {
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : 'Data peserta belum dapat dimuat.',
+            );
         } finally {
             setIsParticipantLoading(false);
         }
@@ -2387,6 +2419,12 @@ export default function BookingListingIndex({
                     id: registrationId,
                 });
             },
+            onError: (errors) => {
+                toast.error(
+                    requestMessageFrom(errors) ??
+                        'Daftar booking belum dapat diperbarui.',
+                );
+            },
         });
     }
 
@@ -2425,6 +2463,9 @@ export default function BookingListingIndex({
         const endpoint = editingParticipant
             ? `/admin/booking-management/listing/${participantBooking.id}/participants/${editingParticipant.id}`
             : `/admin/booking-management/listing/${participantBooking.id}/participants`;
+        const successMessage = editingParticipant
+            ? 'Data peserta berhasil diperbarui.'
+            : 'Data peserta berhasil ditambahkan.';
 
         participantForm.transform((data) => ({
             ...data,
@@ -2439,6 +2480,13 @@ export default function BookingListingIndex({
 
                 resetParticipantForm();
                 refreshParticipantListing(bookingId);
+                toast.success(successMessage);
+            },
+            onError: (errors) => {
+                toast.error(
+                    requestMessageFrom(errors) ??
+                        'Data peserta belum dapat disimpan.',
+                );
             },
             onFinish: () => {
                 participantForm.transform((data) => data);
@@ -2463,6 +2511,13 @@ export default function BookingListingIndex({
                     }
 
                     refreshParticipantListing(bookingId);
+                    toast.success('Data peserta berhasil dihapus.');
+                },
+                onError: (errors) => {
+                    toast.error(
+                        requestMessageFrom(errors) ??
+                            'Data peserta belum dapat dihapus.',
+                    );
                 },
             },
         );
@@ -2480,6 +2535,13 @@ export default function BookingListingIndex({
                         setIsDialogOpen(false);
                         setEditingRegistration(null);
                         form.reset();
+                        toast.success('Booking berhasil diperbarui.');
+                    },
+                    onError: (errors) => {
+                        toast.error(
+                            requestMessageFrom(errors) ??
+                                'Booking belum dapat diperbarui.',
+                        );
                     },
                 },
             );
@@ -2492,6 +2554,13 @@ export default function BookingListingIndex({
             onSuccess: () => {
                 setIsDialogOpen(false);
                 form.reset();
+                toast.success('Booking berhasil ditambahkan.');
+            },
+            onError: (errors) => {
+                toast.error(
+                    requestMessageFrom(errors) ??
+                        'Booking belum dapat ditambahkan.',
+                );
             },
         });
     }
@@ -2509,6 +2578,13 @@ export default function BookingListingIndex({
             preserveScroll: true,
             onSuccess: () => {
                 setDeleteTarget(null);
+                toast.success('Booking berhasil dibatalkan.');
+            },
+            onError: (errors) => {
+                toast.error(
+                    requestMessageFrom(errors) ??
+                        'Booking belum dapat dibatalkan.',
+                );
             },
         });
     }
@@ -2534,6 +2610,12 @@ export default function BookingListingIndex({
             `/admin/booking-management/listing/${registration.id}/invoice.pdf`,
             '_blank',
             'noopener,noreferrer',
+        );
+    }
+
+    function openPayments(registration: Registration): void {
+        router.visit(
+            `/admin/booking-management/listing/${registration.id}/payments`,
         );
     }
 
@@ -2567,6 +2649,15 @@ export default function BookingListingIndex({
             },
             {
                 preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Booking berhasil dibatalkan.');
+                },
+                onError: (errors) => {
+                    toast.error(
+                        requestMessageFrom(errors) ??
+                            'Booking belum dapat dibatalkan.',
+                    );
+                },
             },
         );
     }
@@ -2755,7 +2846,7 @@ export default function BookingListingIndex({
                             </div>
                         ) : (
                             <div className="w-full overflow-x-auto">
-                                <Table className="min-w-[1320px]">
+                                <Table className="min-w-[1540px]">
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-14 text-center">
@@ -2773,6 +2864,7 @@ export default function BookingListingIndex({
                                             <TableHead>Paket</TableHead>
                                             <TableHead>Berangkat</TableHead>
                                             <TableHead>Status</TableHead>
+                                            <TableHead>Pembayaran</TableHead>
                                             <TableHead className="text-right">
                                                 Revenue
                                             </TableHead>
@@ -2836,6 +2928,16 @@ export default function BookingListingIndex({
                                                                         Peserta
                                                                     </DropdownMenuItem>
                                                                 ) : null}
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        openPayments(
+                                                                            registration,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <CircleDollarSign className="h-4 w-4" />
+                                                                    Pembayaran
+                                                                </DropdownMenuItem>
                                                                 {canExport ? (
                                                                     <DropdownMenuItem
                                                                         onClick={() =>
@@ -2966,6 +3068,58 @@ export default function BookingListingIndex({
                                                             }
                                                         </Badge>
                                                     </TableCell>
+                                                    <TableCell className="min-w-60 align-top">
+                                                        <div className="space-y-1.5">
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={
+                                                                    paymentStatusMeta[
+                                                                        registration
+                                                                            .payment
+                                                                            .status
+                                                                    ].className
+                                                                }
+                                                            >
+                                                                {
+                                                                    paymentStatusMeta[
+                                                                        registration
+                                                                            .payment
+                                                                            .status
+                                                                    ].label
+                                                                }
+                                                            </Badge>
+                                                            <p className="text-xs font-medium tabular-nums">
+                                                                {formatCurrency(
+                                                                    registration
+                                                                        .payment
+                                                                        .paid_amount,
+                                                                    registration
+                                                                        .payment
+                                                                        .currency,
+                                                                )}{' '}
+                                                                /{' '}
+                                                                {formatCurrency(
+                                                                    registration
+                                                                        .payment
+                                                                        .total_amount,
+                                                                    registration
+                                                                        .payment
+                                                                        .currency,
+                                                                )}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground tabular-nums">
+                                                                Sisa{' '}
+                                                                {formatCurrency(
+                                                                    registration
+                                                                        .payment
+                                                                        .remaining_amount,
+                                                                    registration
+                                                                        .payment
+                                                                        .currency,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </TableCell>
                                                     <TableCell className="text-right align-top whitespace-nowrap">
                                                         {formatCurrency(
                                                             registration.revenue
@@ -3021,6 +3175,16 @@ export default function BookingListingIndex({
                                                                         Peserta
                                                                     </DropdownMenuItem>
                                                                 ) : null}
+                                                                <DropdownMenuItem
+                                                                    onClick={() =>
+                                                                        openPayments(
+                                                                            registration,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <CircleDollarSign className="h-4 w-4" />
+                                                                    Pembayaran
+                                                                </DropdownMenuItem>
                                                                 {canExport ? (
                                                                     <DropdownMenuItem
                                                                         onClick={() =>

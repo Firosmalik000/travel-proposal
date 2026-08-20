@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
 import { initializeTheme } from './hooks/use-appearance';
 import RootLayout from './layouts/root-layout';
+import { initializeRequestToasts } from './lib/request-toasts';
 
 const rawAppName = import.meta.env.VITE_APP_NAME || 'Travel Proposal';
 const appName = rawAppName
@@ -46,6 +47,10 @@ createInertiaApp({
                     closeButton
                 />
             </>,
+        );
+
+        initializeRequestToasts(
+            props.initialPage.props as Record<string, unknown>,
         );
     },
     progress: {

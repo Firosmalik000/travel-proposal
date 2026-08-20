@@ -4,17 +4,21 @@ import { Card, CardContent } from '@/components/ui/card';
 import CustomerLayout from '@/layouts/customer-layout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
-    ArrowRight,
     CalendarDays,
     CircleDollarSign,
-    ClipboardCheck,
+    Clock3,
     PlaneTakeoff,
+    Users,
 } from 'lucide-react';
 
 type Booking = {
+    id: number;
+    record_type: 'booking' | 'registration';
     booking_code: string;
     status: string;
     package_name: string | null;
+    package_url: string | null;
+    detail_url: string | null;
     departure_date: string | null;
     passenger_count: number;
     participants_count: number;
@@ -23,12 +27,26 @@ type Booking = {
     remaining_amount: number;
     payment_status: string;
     currency: string;
+    updated_at: string | null;
 };
+
 type Summary = {
     total_bookings: number;
-    active_bookings: number;
+    total_spent: number;
+    total_due: number;
     remaining_payment: number;
-    remaining_participants: number;
+    incomplete_participant_orders: number;
+    remaining_participant_slots: number;
+    latest_booking_code: string | null;
+    latest_booking_status: string | null;
+    latest_booking_status_at: string | null;
+};
+
+type DashboardCard = {
+    label: string;
+    value: string | number;
+    icon: typeof PlaneTakeoff;
+    note: string;
 };
 
 const money = (amount: number, currency: string) =>
@@ -37,10 +55,25 @@ const money = (amount: number, currency: string) =>
         currency,
         maximumFractionDigits: 0,
     }).format(amount);
+
+const formatDateTime = (value: string | null) =>
+    value
+        ? new Intl.DateTimeFormat('id-ID', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+          }).format(new Date(value))
+        : '-';
+
 const statusLabel: Record<string, string> = {
     registered: 'Terdaftar',
-    pending: 'Menunggu',
+    pending: 'Menunggu Konfirmasi',
     cancelled: 'Dibatalkan',
+};
+
+const paymentStatusLabel: Record<string, string> = {
+    unpaid: 'Belum Dibayar',
+    partial: 'Dibayar Sebagian',
+    paid: 'Lunas',
 };
 
 export default function CustomerDashboard({
@@ -53,53 +86,89 @@ export default function CustomerDashboard({
     const { auth } = usePage().props as unknown as {
         auth?: { user?: { name?: string } };
     };
-    const cards = [
-        ['Total Booking', summary.total_bookings, PlaneTakeoff],
-        ['Booking Aktif', summary.active_bookings, CalendarDays],
-        [
-            'Sisa Pembayaran',
-            money(summary.remaining_payment, 'IDR'),
-            CircleDollarSign,
-        ],
-        [
-            'Data Belum Lengkap',
-            `${summary.remaining_participants} peserta`,
-            ClipboardCheck,
-        ],
-    ] as const;
+
+    const cards: DashboardCard[] = [
+        {
+            label: 'Total Pesanan',
+            value: summary.total_bookings,
+            icon: PlaneTakeoff,
+            note: 'Semua booking yang terhubung ke akun ini',
+        },
+        {
+            label: 'Total Pengeluaran',
+            value: money(summary.total_spent, 'IDR'),
+            icon: CircleDollarSign,
+            note: 'Total pembayaran yang sudah terkonfirmasi',
+        },
+        {
+            label: 'Jumlah Harus Dibayar',
+            value: money(summary.total_due, 'IDR'),
+            icon: CalendarDays,
+            note: 'Total tagihan dari booking aktif',
+        },
+        {
+            label: 'Sisa Pembayaran',
+            value: money(summary.remaining_payment, 'IDR'),
+            icon: CircleDollarSign,
+            note: 'Sisa tagihan yang belum lunas',
+        },
+        {
+            label: 'Data Peserta Belum Lengkap',
+            value: `${summary.incomplete_participant_orders} booking`,
+            icon: Users,
+            note:
+                summary.remaining_participant_slots > 0
+                    ? `${summary.remaining_participant_slots} slot belum diisi`
+                    : 'Semua data peserta lengkap',
+        },
+        {
+            label: 'Status Booking Terbaru',
+            value: summary.latest_booking_status
+                ? (statusLabel[summary.latest_booking_status] ??
+                  summary.latest_booking_status)
+                : '-',
+            icon: Clock3,
+            note: summary.latest_booking_code
+                ? `${summary.latest_booking_code} · ${formatDateTime(summary.latest_booking_status_at)}`
+                : 'Belum ada booking yang diperbarui',
+        },
+    ];
 
     return (
         <CustomerLayout title="Dashboard Customer">
             <Head title="Portal Customer" />
-            <section className="overflow-hidden rounded-[2rem] bg-[#0d5c52] p-6 text-white shadow-2xl shadow-emerald-950/15 sm:p-9">
-                <p className="text-sm font-semibold tracking-[.22em] text-emerald-100 uppercase">
-                    Perjalanan Anda
-                </p>
-                <h1 className="mt-3 max-w-3xl font-serif text-3xl font-bold sm:text-5xl">
+
+            <section className="rounded-3xl bg-[#0d5c52] p-5 text-white shadow-2xl shadow-emerald-950/15 sm:p-6">
+                <h1 className="font-serif text-2xl font-bold sm:text-3xl">
                     Assalamu'alaikum, {auth?.user?.name}
                 </h1>
-                <p className="mt-3 max-w-2xl text-emerald-50/80">
-                    Pantau booking, pembayaran, dan kelengkapan data peserta
-                    dari satu tempat.
-                </p>
+                <Button
+                    asChild
+                    className="mt-4 rounded-full bg-[#e1b86a] px-4 text-sm text-[#173c36] hover:bg-[#d7aa54]"
+                >
+                    <Link href="/customer/bookings">Lihat Booking</Link>
+                </Button>
             </section>
 
-            <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {cards.map(([label, value, Icon]) => (
+            <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {cards.map(({ label, value, icon: Icon, note }) => (
                     <Card
                         key={label}
                         className="border-[#dfd3bf] bg-[#fffaf1]/90 shadow-sm dark:border-[#334155] dark:bg-[#202836]"
                     >
-                        <CardContent className="flex items-center gap-4 p-5">
-                            <div className="rounded-2xl bg-[#ead8b8] p-3 text-[#74501d]">
-                                <Icon className="h-5 w-5" />
+                        <CardContent className="flex items-center gap-3 p-4">
+                            <div className="rounded-xl bg-[#ead8b8] p-2.5 text-[#74501d]">
+                                <Icon className="h-4 w-4" />
                             </div>
                             <div>
-                                <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+                                <p className="text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
                                     {label}
                                 </p>
-                                <p className="mt-1 text-xl font-bold">
+                                <p className="mt-0.5 text-lg font-semibold text-slate-900 dark:text-white">
                                     {value}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                    {note}
                                 </p>
                             </div>
                         </CardContent>
@@ -107,97 +176,124 @@ export default function CustomerDashboard({
                 ))}
             </section>
 
-            <section id="booking-saya" className="mt-10 scroll-mt-24">
-                <div className="mb-4">
-                    <h2 className="font-serif text-2xl font-bold">
-                        Booking Saya
+            <section className="mt-8">
+                <div className="mb-3">
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                        Booking Terbaru
                     </h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        Semua perjalanan yang terhubung dengan akun ini.
-                    </p>
                 </div>
-                <div className="grid gap-5 lg:grid-cols-2">
+                <div className="grid gap-3">
                     {bookings.map((booking) => (
                         <Card
-                            key={booking.booking_code}
-                            className="overflow-hidden border-[#dfd3bf] bg-[#fffaf1] shadow-md shadow-stone-900/5 dark:border-[#334155] dark:bg-[#202836]"
+                            key={`${booking.record_type}-${booking.id}`}
+                            className="border-[#dfd3bf] bg-[#fffaf1] shadow-sm dark:border-[#334155] dark:bg-[#202836]"
                         >
-                            <CardContent className="p-0">
-                                <div className="border-b border-[#e8ddcc] p-5 dark:border-[#334155]">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <p className="text-xs font-bold tracking-[.16em] text-[#0d5c52] uppercase">
-                                                {booking.booking_code}
-                                            </p>
-                                            <h3 className="mt-2 font-serif text-xl font-bold">
-                                                {booking.package_name}
-                                            </h3>
-                                        </div>
-                                        <Badge>
+                            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">
+                                            {booking.package_name}
+                                        </p>
+                                        <Badge
+                                            variant="outline"
+                                            className="text-[11px]"
+                                        >
                                             {statusLabel[booking.status] ??
                                                 booking.status}
                                         </Badge>
+                                        {booking.record_type === 'booking' ? (
+                                            <Badge
+                                                variant="outline"
+                                                className="text-[11px]"
+                                            >
+                                                {paymentStatusLabel[
+                                                    booking.payment_status
+                                                ] ?? booking.payment_status}
+                                            </Badge>
+                                        ) : null}
                                     </div>
-                                    <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
-                                        Berangkat:{' '}
+                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        {booking.booking_code} ·{' '}
                                         {booking.departure_date ??
                                             'Jadwal menyusul'}{' '}
-                                        · {booking.passenger_count} pax
+                                        · {booking.participants_count}/
+                                        {booking.passenger_count} peserta
                                     </p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-px bg-[#e8ddcc] dark:bg-[#334155]">
-                                    <div className="bg-[#fffaf1] p-4 dark:bg-[#202836]">
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            Pembayaran
-                                        </p>
-                                        <p className="mt-1 font-semibold">
+                                    {booking.record_type === 'booking' ? (
+                                        <p className="mt-1 text-xs font-medium text-slate-600 tabular-nums dark:text-slate-300">
+                                            Terbayar{' '}
                                             {money(
                                                 booking.paid_amount,
                                                 booking.currency,
-                                            )}
-                                        </p>
-                                        <p className="text-xs text-rose-700">
-                                            Sisa{' '}
+                                            )}{' '}
+                                            dari{' '}
+                                            {money(
+                                                booking.total_amount,
+                                                booking.currency,
+                                            )}{' '}
+                                            · Sisa{' '}
                                             {money(
                                                 booking.remaining_amount,
                                                 booking.currency,
                                             )}
                                         </p>
-                                    </div>
-                                    <div className="bg-[#fffaf1] p-4 dark:bg-[#202836]">
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            Data Peserta
-                                        </p>
-                                        <p className="mt-1 font-semibold">
-                                            {booking.participants_count} dari{' '}
-                                            {booking.passenger_count}
-                                        </p>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                                            peserta terisi
-                                        </p>
-                                    </div>
+                                    ) : null}
                                 </div>
-                                <div className="p-4">
-                                    <Button
-                                        className="w-full bg-[#0d5c52] hover:bg-[#08483f]"
-                                        asChild
-                                    >
-                                        <Link
-                                            href={`/customer/bookings/${booking.booking_code}`}
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {booking.detail_url ? (
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            variant="outline"
+                                            className="rounded-full text-xs"
                                         >
-                                            Buka Detail{' '}
-                                            <ArrowRight className="h-4 w-4" />
-                                        </Link>
-                                    </Button>
+                                            <Link href={booking.detail_url}>
+                                                Detail Pesanan
+                                            </Link>
+                                        </Button>
+                                    ) : null}
+                                    {booking.package_url ? (
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            variant="outline"
+                                            className="rounded-full text-xs"
+                                        >
+                                            <Link href={booking.package_url}>
+                                                Detail Paket
+                                            </Link>
+                                        </Button>
+                                    ) : null}
+                                    {booking.record_type === 'booking' ? (
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            className="rounded-full bg-[#0d5c52] px-4 hover:bg-[#08483f]"
+                                        >
+                                            <Link
+                                                href={
+                                                    booking.detail_url ??
+                                                    '/customer/bookings'
+                                                }
+                                            >
+                                                Buka
+                                            </Link>
+                                        </Button>
+                                    ) : (
+                                        <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                                            Menunggu verifikasi
+                                        </span>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
                     ))}
+
                     {bookings.length === 0 && (
-                        <Card className="border-dashed border-[#cdbd9f] bg-transparent lg:col-span-2 dark:border-[#475569]">
-                            <CardContent className="py-16 text-center text-slate-500 dark:text-slate-400">
-                                Belum ada booking resmi yang terhubung ke akun
-                                ini.
+                        <Card className="border-dashed border-[#cdbd9f] bg-transparent dark:border-[#475569]">
+                            <CardContent className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
+                                Belum ada booking yang terhubung ke akun ini.
                             </CardContent>
                         </Card>
                     )}

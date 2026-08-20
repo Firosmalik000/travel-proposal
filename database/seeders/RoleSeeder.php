@@ -40,7 +40,7 @@ class RoleSeeder extends Seeder
                 'dashboard' => ['view'],
                 'booking_register' => ['view', 'approve', 'reject', 'export'],
                 'booking_listing' => ['view', 'edit', 'export'],
-                'booking_customer_data' => ['view'],
+                'booking_customer_data' => ['view', 'edit'],
                 'booking_custom_requests' => ['view', 'approve', 'reject'],
                 'booking_hotel_assignment' => ['view', 'create', 'edit', 'delete'],
                 'cashflow' => ['view', 'create', 'edit', 'delete', 'export'],

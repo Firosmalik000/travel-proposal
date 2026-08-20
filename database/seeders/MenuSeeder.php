@@ -163,7 +163,7 @@ class MenuSeeder extends Seeder
                         'children' => null,
                     ],
                     [
-                        'name' => 'Data Customer',
+                        'name' => 'Data Peserta',
                         'menu_key' => 'booking_customer_data',
                         'path' => '/dashboard/booking-management/customer-data',
                         'icon' => 'Users',

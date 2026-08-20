@@ -21,6 +21,17 @@ export type Participant = {
     emergency_contact_relationship: string | null;
     has_performed_umrah: boolean;
     referral_source: string | null;
+    documents_count: number;
+    documents_total: number;
+    documents: {
+        key: string;
+        label: string;
+        url: string | null;
+    }[];
+    missing_fields: string[];
+    missing_documents: string[];
+    missing_count: number;
+    is_complete: boolean;
 };
 
 export type ParticipantSlot = {
@@ -41,7 +52,19 @@ export type CustomerBooking = {
     participants_count: number;
     remaining_slots: number;
     completion_percent: number;
+    complete_participants_count: number;
+    incomplete_participants_count: number;
+    missing_fields_count: number;
+    missing_documents_count: number;
+    outstanding_count: number;
+    is_complete: boolean;
     created_at: string | null;
+    package: {
+        id: number;
+        code: string | null;
+        name: string;
+        package_type: string | null;
+    };
     schedule: {
         id: number | null;
         departure_date: string | null;
@@ -75,6 +98,8 @@ export type PackageGroup = {
     participants: number;
     remaining: number;
     completion_percent: number;
+    incomplete_booking_count: number;
+    bookings: CustomerBooking[];
     schedules: ScheduleGroup[];
 };
 

@@ -56,6 +56,12 @@ export interface SharedData {
         favicon_path: string;
     };
     publicData?: Record<string, unknown>;
+    flash?: {
+        success?: string;
+        error?: string;
+        bulk_created_count?: number;
+        bulk_skipped_hotels?: string[];
+    };
     url?: string;
     sidebarOpen: boolean;
     [key: string]: unknown;

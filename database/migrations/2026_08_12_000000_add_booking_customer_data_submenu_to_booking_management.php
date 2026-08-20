@@ -49,7 +49,7 @@ return new class extends Migration
             })
             ->filter()
             ->push([
-                'name' => 'Data Customer',
+                'name' => 'Data Peserta',
                 'menu_key' => 'booking_customer_data',
                 'path' => '/dashboard/booking-management/customer-data',
                 'icon' => 'Users',

@@ -1,9 +1,14 @@
 import GlobalFaviconHead from '@/components/global-favicon-head';
 import PublicSeoHead from '@/components/public/seo-head';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useInitials } from '@/hooks/use-initials';
 import {
     getPublicSocialAccounts,
     whatsappLinkFromSeo,
 } from '@/lib/public/content';
+import { dashboard } from '@/routes';
+import customer from '@/routes/customer';
+import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
 import {
     AtSign,
@@ -81,12 +86,18 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [headerHeight, setHeaderHeight] = useState(88);
     const headerRef = useRef<HTMLElement | null>(null);
-    const page = usePage();
-    const { branding, seoSettings, publicBranding } = usePage().props as any;
+    const page = usePage<SharedData>();
+    const { auth, branding, seoSettings, publicBranding } = page.props;
     const t = content.id;
     const seo = (seoSettings as Record<string, any>) ?? {};
     const resolvedLogoPath = publicBranding?.logo_path ?? branding.logo_path;
+    const getInitials = useInitials();
     const contactLink = whatsappLinkFromSeo(seo);
+    const accountHref = auth.user?.is_super_admin
+        ? dashboard().url
+        : customer.dashboard().url;
+    const accountAvatar = auth.user?.avatar;
+    const accountInitials = auth.user?.name ? getInitials(auth.user.name) : 'U';
     const socialIconMap = {
         instagram: Instagram,
         facebook: Facebook,
@@ -310,6 +321,32 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                         )}
                     </nav>
                     <div className="hidden items-center gap-3 lg:flex">
+                        {auth.user ? (
+                            <Link
+                                href={accountHref}
+                                className="inline-flex items-center gap-2 rounded-full border border-[#d8bd91]/45 bg-white/75 px-2.5 py-1.5 text-sm font-semibold text-[#64132e] shadow-[0_10px_24px_rgba(58,14,32,0.06)] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_14px_28px_rgba(58,14,32,0.1)]"
+                            >
+                                <Avatar className="h-8 w-8 border border-[#d8bd91]/40">
+                                    <AvatarImage
+                                        src={accountAvatar}
+                                        alt={auth.user.name}
+                                    />
+                                    <AvatarFallback className="bg-[#f4e5ce] text-xs font-bold text-[#64132e]">
+                                        {accountInitials}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span className="hidden xl:inline">
+                                    Portal Saya
+                                </span>
+                            </Link>
+                        ) : (
+                            <Link
+                                href="/login"
+                                className="inline-flex items-center justify-center rounded-full border border-[#d8bd91]/45 bg-white/75 px-4 py-2 text-sm font-semibold text-[#64132e] shadow-[0_10px_24px_rgba(58,14,32,0.06)] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_14px_28px_rgba(58,14,32,0.1)]"
+                            >
+                                {t.signIn}
+                            </Link>
+                        )}
                         {contactLink ? (
                             <a
                                 className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#4a0d21] to-[#7d1b3d] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(74,13,33,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(74,13,33,0.24)]"
@@ -406,6 +443,39 @@ function PublicLayoutInner({ children }: PropsWithChildren) {
                             ),
                         )}
                         <div className="mt-2 flex flex-col gap-2">
+                            {auth.user ? (
+                                <Link
+                                    href={accountHref}
+                                    onClick={() => setMobileOpen(false)}
+                                    className="inline-flex items-center gap-3 rounded-xl border border-[#d8bd91]/35 bg-white/70 px-3 py-2.5 text-sm font-semibold text-[#64132e] transition hover:bg-white"
+                                >
+                                    <Avatar className="h-9 w-9 border border-[#d8bd91]/35">
+                                        <AvatarImage
+                                            src={accountAvatar}
+                                            alt={auth.user.name}
+                                        />
+                                        <AvatarFallback className="bg-[#f4e5ce] text-xs font-bold text-[#64132e]">
+                                            {accountInitials}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className="min-w-0 text-left">
+                                        <p className="truncate text-sm font-semibold text-current">
+                                            Portal Saya
+                                        </p>
+                                        <p className="truncate text-xs text-current/65">
+                                            {auth.user.name}
+                                        </p>
+                                    </div>
+                                </Link>
+                            ) : (
+                                <Link
+                                    href="/login"
+                                    onClick={() => setMobileOpen(false)}
+                                    className="inline-flex items-center justify-center rounded-xl border border-[#d8bd91]/45 bg-white/75 px-3 py-2.5 text-sm font-semibold text-[#64132e] transition hover:bg-white"
+                                >
+                                    {t.signIn}
+                                </Link>
+                            )}
                             {contactLink ? (
                                 <a
                                     className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#4a0d21] to-[#7d1b3d] px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"

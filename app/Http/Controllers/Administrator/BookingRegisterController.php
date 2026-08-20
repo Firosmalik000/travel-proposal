@@ -14,6 +14,7 @@ use App\Models\BookingParticipant;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
 use App\Services\BookingParticipantImportService;
+use App\Services\BookingPaymentService;
 use App\Services\InventoryStockService;
 use App\Services\PackageRoomConfigurationService;
 use App\Services\PdfBrandingService;
@@ -39,6 +40,7 @@ class BookingRegisterController extends Controller
         private readonly PdfBrandingService $pdfBrandingService,
         private readonly InventoryStockService $inventoryStockService,
         private readonly BookingParticipantImportService $bookingParticipantImportService,
+        private readonly BookingPaymentService $bookingPaymentService,
         private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
         private readonly ResolveCustomerAccount $resolveCustomerAccount,
         private readonly CreateBookingCommission $createBookingCommission,
@@ -239,10 +241,12 @@ class BookingRegisterController extends Controller
     {
         $participant = $registration->participants()->create($this->participantPayloadFromRequest($request, $registration));
 
-        return back()->with('participant_payload', [
-            'participant' => $this->participantPayload($participant->fresh()),
-            'message' => 'Data peserta berhasil ditambahkan.',
-        ]);
+        return back()
+            ->with('participant_payload', [
+                'participant' => $this->participantPayload($participant->fresh()),
+                'message' => 'Data peserta berhasil ditambahkan.',
+            ])
+            ->with('success', 'Data peserta berhasil ditambahkan.');
     }
 
     public function updateParticipant(UpdateBookingParticipantRequest $request, Booking $registration, BookingParticipant $participant): RedirectResponse
@@ -252,10 +256,12 @@ class BookingRegisterController extends Controller
         $participant->fill($this->participantPayloadFromRequest($request, $registration, $participant));
         $participant->save();
 
-        return back()->with('participant_payload', [
-            'participant' => $this->participantPayload($participant->fresh()),
-            'message' => 'Data peserta berhasil diperbarui.',
-        ]);
+        return back()
+            ->with('participant_payload', [
+                'participant' => $this->participantPayload($participant->fresh()),
+                'message' => 'Data peserta berhasil diperbarui.',
+            ])
+            ->with('success', 'Data peserta berhasil diperbarui.');
     }
 
     public function importParticipants(BulkStoreBookingParticipantRequest $request, Booking $registration): JsonResponse
@@ -293,10 +299,12 @@ class BookingRegisterController extends Controller
 
         $participant->delete();
 
-        return back()->with('participant_payload', [
-            'participant_id' => $participant->id,
-            'message' => 'Data peserta berhasil dihapus.',
-        ]);
+        return back()
+            ->with('participant_payload', [
+                'participant_id' => $participant->id,
+                'message' => 'Data peserta berhasil dihapus.',
+            ])
+            ->with('success', 'Data peserta berhasil dihapus.');
     }
 
     public function participantPdf(Booking $registration): HttpResponse
@@ -871,6 +879,7 @@ class BookingRegisterController extends Controller
                 'package:id,code,slug,name,package_type,departure_city,start_date,end_date,booking_status,price,currency,content',
             ])
             ->withCount('participants')
+            ->withSum(['payments as paid_amount' => fn ($query) => $query->where('status', 'confirmed')], 'amount')
             ->withExists('testimonial')
             ->when(in_array($bookingType, ['regular', 'custom'], true), function ($query) use ($bookingType): void {
                 $query->where('booking_type', $bookingType);
@@ -907,6 +916,7 @@ class BookingRegisterController extends Controller
                 $amount = $booking->booking_type === 'custom'
                     ? (float) ($booking->custom_total_amount ?? 0)
                     : $this->packageRoomConfigurationService->calculateBookingAmount($booking);
+                $paymentSummary = $this->bookingPaymentService->summary($booking);
 
                 $departureDate = $booking->booking_type === 'custom'
                     ? $booking->custom_departure_date?->toDateString()
@@ -943,6 +953,13 @@ class BookingRegisterController extends Controller
                     'revenue' => [
                         'currency' => $currency,
                         'amount' => $amount,
+                    ],
+                    'payment' => [
+                        'status' => $paymentSummary['payment_status'],
+                        'total_amount' => $paymentSummary['total_amount'],
+                        'paid_amount' => $paymentSummary['paid_amount'],
+                        'remaining_amount' => $paymentSummary['remaining_amount'],
+                        'currency' => $booking->agreed_currency ?? $booking->custom_currency ?? $currency,
                     ],
                     'notes' => $booking->notes,
                     'status' => $booking->status,

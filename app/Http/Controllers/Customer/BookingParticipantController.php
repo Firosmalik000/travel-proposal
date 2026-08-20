@@ -9,9 +9,10 @@ use App\Models\Booking;
 use App\Models\BookingParticipant;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class BookingParticipantController extends Controller
 {
@@ -56,7 +57,7 @@ class BookingParticipantController extends Controller
         return back()->with('success', 'Data peserta berhasil dihapus.');
     }
 
-    public function download(Booking $booking, BookingParticipant $participant, string $document): StreamedResponse
+    public function download(Booking $booking, BookingParticipant $participant, string $document): BinaryFileResponse
     {
         Gate::authorize('view', $booking);
         $this->ensureParticipantBelongsToBooking($booking, $participant);
@@ -65,9 +66,18 @@ class BookingParticipantController extends Controller
         abort_unless($pathField !== null, 404);
 
         $path = $participant->{$pathField};
-        abort_unless(is_string($path) && Storage::disk('local')->exists($path), 404);
+        abort_unless(is_string($path) && $path !== '', 404);
 
-        return Storage::disk('local')->download($path);
+        if (str_starts_with($path, '/storage/')) {
+            $publicPath = substr($path, strlen('/storage/'));
+            abort_unless(Storage::disk('public')->exists($publicPath), 404);
+
+            return response()->file(Storage::disk('public')->path($publicPath));
+        }
+
+        abort_unless(Storage::disk('local')->exists($path), 404);
+
+        return response()->file(Storage::disk('local')->path($path));
     }
 
     /** @return array<string, mixed> */
@@ -78,6 +88,12 @@ class BookingParticipantController extends Controller
     ): array {
         $excluded = [...array_keys(self::DOCUMENT_FIELDS), ...array_map(fn (string $field): string => $field.'_url', array_keys(self::DOCUMENT_FIELDS))];
         $payload = Arr::except($request->validated(), $excluded);
+
+        $issuedAt = $request->date('passport_issue_date');
+        $expiresAt = $request->date('passport_expiry_date');
+        $payload['passport_validity_years'] = $issuedAt instanceof Carbon && $expiresAt instanceof Carbon
+            ? max((int) round($issuedAt->diffInDays($expiresAt) / 365), 0) ?: null
+            : null;
 
         foreach (self::DOCUMENT_FIELDS as $input => $pathField) {
             if (! $request->hasFile($input)) {

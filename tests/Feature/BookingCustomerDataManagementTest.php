@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\ParticipantDataReminder;
 use App\Models\Booking;
 use App\Models\BookingParticipant;
 use App\Models\DepartureSchedule;
@@ -9,6 +10,8 @@ use App\Models\Menu;
 use App\Models\TravelPackage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -25,9 +28,9 @@ class BookingCustomerDataManagementTest extends TestCase
 
     public function test_guest_is_redirected_from_booking_customer_data_detail_page(): void
     {
-        $package = TravelPackage::factory()->create();
+        $booking = Booking::factory()->create();
 
-        $this->get(route('booking.customer-data.show', $package))
+        $this->get(route('booking.customer-data.show', $booking))
             ->assertRedirect(route('login'));
     }
 
@@ -43,11 +46,11 @@ class BookingCustomerDataManagementTest extends TestCase
     public function test_user_without_permission_cannot_open_detail_page(): void
     {
         $this->seedBookingManagementMenu();
-        $package = TravelPackage::factory()->create();
+        $booking = Booking::factory()->create();
 
         $this->actingAs(User::factory()->create())
-            ->get(route('booking.customer-data.show', $package))
-            ->assertNotFound();
+            ->get(route('booking.customer-data.show', $booking))
+            ->assertForbidden();
     }
 
     public function test_invalid_filters_are_rejected(): void
@@ -133,12 +136,28 @@ class BookingCustomerDataManagementTest extends TestCase
             'passenger_count' => 10,
             'status' => 'registered',
         ]);
-        BookingParticipant::query()->create([
+        $completeParticipant = BookingParticipant::query()->create([
             'booking_id' => $bookingA1->id,
             'full_name' => 'Ahmad Fauzi',
             'gender' => 'male',
+            'birth_place' => 'Jakarta',
+            'birth_date' => '1988-01-01',
+            'marital_status' => 'married',
+            'address' => 'Jakarta',
             'passport_ready' => true,
+            'passport_issue_date' => '2025-01-01',
+            'passport_expiry_date' => '2030-01-01',
+            'passport_type' => 'ordinary',
             'shirt_size' => 'L',
+            'passport_scan_path' => 'participants/passport.pdf',
+            'family_card_scan_path' => 'participants/family-card.pdf',
+            'marriage_book_scan_path' => 'participants/marriage-book.pdf',
+            'birth_certificate_scan_path' => 'participants/birth-certificate.pdf',
+            'photo_path' => 'participants/photo.jpg',
+            'meningitis_vaccine_scan_path' => 'participants/vaccine.pdf',
+            'emergency_contact_name' => 'Siti',
+            'emergency_contact_phone' => '08123456789',
+            'emergency_contact_relationship' => 'Istri',
         ]);
         BookingParticipant::query()->create([
             'booking_id' => $bookingA1->id,
@@ -203,30 +222,125 @@ class BookingCustomerDataManagementTest extends TestCase
                 ->has('packages', 2)
                 ->where('packages.0.code', 'PKG-A')
                 ->where('packages.0.booking_count', 2)
+                ->where('packages.0.incomplete_booking_count', 2)
+                ->has('packages.0.bookings', 2)
+                ->where('packages.0.bookings.0.booking_code', 'BK-A-001')
                 ->where('packages.1.code', 'PKG-B')
             );
 
         $this->actingAs($user)
             ->get(route('booking.customer-data.show', [
-                'travelPackage' => $packageA,
+                'booking' => $bookingA1,
                 'status' => 'all',
             ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Dashboard/Booking/CustomerData/Show')
-                ->where('selectedPackage.id', $packageA->id)
-                ->where('selectedPackage.code', 'PKG-A')
-                ->has('selectedPackage.schedules', 2)
-                ->where('selectedPackage.schedules.0.departure_date', '2026-07-10')
-                ->where('selectedPackage.schedules.0.booking_count', 1)
-                ->where('selectedPackage.schedules.0.bookings.0.booking_code', 'BK-A-001')
-                ->where('selectedPackage.schedules.0.bookings.0.participants_count', 2)
-                ->has('selectedPackage.schedules.0.bookings.0.slots', 10)
-                ->where('selectedPackage.schedules.0.bookings.0.slots.0.is_filled', true)
-                ->where('selectedPackage.schedules.0.bookings.0.slots.1.is_filled', true)
-                ->where('selectedPackage.schedules.0.bookings.0.slots.2.is_filled', false)
-                ->where('selectedPackage.schedules.1.departure_date', '2026-08-10')
-                ->where('selectedPackage.schedules.1.bookings.0.booking_code', 'BK-A-002'));
+                ->where('booking.id', $bookingA1->id)
+                ->where('booking.booking_code', 'BK-A-001')
+                ->where('booking.package.code', 'PKG-A')
+                ->where('booking.participants_count', 2)
+                ->has('booking.slots', 10)
+                ->where('booking.slots.0.is_filled', true)
+                ->where('booking.slots.0.participant.is_complete', true)
+                ->where('booking.slots.0.participant.documents_count', 6)
+                ->where(
+                    'booking.slots.0.participant.documents.0.url',
+                    route('booking.customer-data.documents.show', [
+                        'booking' => $bookingA1,
+                        'participant' => $completeParticipant,
+                        'document' => 'passport_scan',
+                    ]),
+                )
+                ->where('booking.slots.1.is_filled', true)
+                ->where('booking.slots.1.participant.is_complete', false)
+                ->where('booking.slots.2.is_filled', false));
+    }
+
+    public function test_authorized_user_can_view_an_existing_participant_document(): void
+    {
+        Storage::fake('local');
+        $this->seedBookingManagementMenu();
+
+        $permission = Permission::findOrCreate('menu.booking_customer_data.view', 'web');
+        $user = User::factory()->create();
+        $user->givePermissionTo($permission);
+        $booking = Booking::factory()->create();
+        $path = "booking-participants/{$booking->id}/passport.pdf";
+        Storage::disk('local')->put($path, '%PDF-1.4 test document');
+
+        $participant = BookingParticipant::query()->create([
+            'booking_id' => $booking->id,
+            'full_name' => 'Peserta Dokumen',
+            'passport_scan_path' => $path,
+        ]);
+        $documentUrl = route('booking.customer-data.documents.show', [
+            'booking' => $booking,
+            'participant' => $participant,
+            'document' => 'passport_scan',
+        ]);
+
+        $this->get($documentUrl)->assertRedirect(route('login'));
+
+        $this->actingAs(User::factory()->create())
+            ->get($documentUrl)
+            ->assertForbidden();
+
+        $this->actingAs($user)
+            ->get($documentUrl)
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+
+        $this->actingAs($user)
+            ->get(route('booking.customer-data.documents.show', [
+                'booking' => $booking,
+                'participant' => $participant,
+                'document' => 'not-allowed',
+            ]))
+            ->assertNotFound();
+    }
+
+    public function test_authorized_user_can_send_participant_reminders_for_incomplete_bookings(): void
+    {
+        Mail::fake();
+        $this->seedBookingManagementMenu();
+
+        $viewPermission = Permission::findOrCreate('menu.booking_customer_data.view', 'web');
+        $editPermission = Permission::findOrCreate('menu.booking_customer_data.edit', 'web');
+        $package = TravelPackage::factory()->create();
+        $booking = Booking::factory()->create([
+            'package_id' => $package->id,
+            'email' => 'customer@example.com',
+            'passenger_count' => 2,
+        ]);
+        BookingParticipant::query()->create([
+            'booking_id' => $booking->id,
+            'full_name' => 'Peserta Belum Lengkap',
+        ]);
+        $reminderUrl = route('booking.customer-data.reminders.send', $package);
+
+        $viewOnlyUser = User::factory()->create();
+        $viewOnlyUser->givePermissionTo($viewPermission);
+        $this->actingAs($viewOnlyUser)
+            ->post($reminderUrl, ['status' => 'registered'])
+            ->assertForbidden();
+
+        $authorizedUser = User::factory()->create();
+        $authorizedUser->givePermissionTo([$viewPermission, $editPermission]);
+
+        $this->actingAs($authorizedUser)
+            ->post($reminderUrl, ['status' => 'registered'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        Mail::assertSent(
+            ParticipantDataReminder::class,
+            fn (ParticipantDataReminder $mail): bool => $mail->booking->is($booking)
+                && $mail->hasTo('customer@example.com')
+                && $mail->summary['remaining_slots'] === 1
+                && $mail->summary['missing_fields_count'] > 0
+                && $mail->summary['missing_documents_count'] === 6,
+        );
     }
 
     public function test_registered_filter_is_used_by_default_and_search_stays_synchronized(): void
@@ -275,7 +389,7 @@ class BookingCustomerDataManagementTest extends TestCase
                 ->where('summary.bookings', 1)
                 ->where('packages.0.code', 'SYNC-001')
                 ->where('packages.0.booking_count', 1)
-                ->has('packages.0.schedules.0.bookings', 0));
+                ->has('packages.0.bookings', 1));
     }
 
     public function test_travel_package_filter_accepts_existing_package_ids(): void
@@ -356,7 +470,7 @@ class BookingCustomerDataManagementTest extends TestCase
                         'children' => null,
                     ],
                     [
-                        'name' => 'Data Customer',
+                        'name' => 'Data Peserta',
                         'menu_key' => 'booking_customer_data',
                         'path' => '/dashboard/booking-management/customer-data',
                         'icon' => 'Users',

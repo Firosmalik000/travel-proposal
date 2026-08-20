@@ -98,6 +98,10 @@ class PackageRegistrationController extends Controller
 
         $this->bookingRegistrationNotifier->notifyAdmin($registration);
 
-        return to_route('public.paket-register', ['travelPackage' => $travelPackage->slug]);
+        return to_route('public.paket-register', ['travelPackage' => $travelPackage->slug])
+            ->with(
+                'success',
+                'Terima kasih, pendaftaran Anda telah kami terima. Admin akan menghubungi Anda maksimal 7 x 24 jam.',
+            );
     }
 }
