@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Textarea } from '@/components/ui/textarea';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate } from '@/lib/date-format';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -259,11 +260,9 @@ export default function ArticleForm({
     const previewMetaDescription = form.data.meta_description || previewExcerpt;
     const previewReadingTime = estimateReadingTime(previewBody);
     const previewParagraphs = paragraphBlocks(previewBody);
-    const previewPublishedAt = form.data.published_at
-        ? new Intl.DateTimeFormat('id-ID', {
-              dateStyle: 'medium',
-          }).format(new Date(form.data.published_at))
-        : 'Tanggal publish';
+    const previewPublishedAt = formatDate(form.data.published_at, {
+        fallback: 'Tanggal publish',
+    });
 
     return (
         <AppSidebarLayout
@@ -858,7 +857,7 @@ export default function ArticleForm({
                                             </div>
                                             <div className="mt-1 text-xs text-muted-foreground">
                                                 {form.data.published_at
-                                                    ? `Tayang: ${form.data.published_at}`
+                                                    ? `Tayang: ${formatDate(form.data.published_at)}`
                                                     : 'Belum ada tanggal tayang'}
                                             </div>
                                         </div>

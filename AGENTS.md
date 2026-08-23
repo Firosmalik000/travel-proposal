@@ -31,6 +31,14 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
 
+## Date Preview Convention
+
+- All user-facing date previews in React must use the shared helpers from `@/lib/date-format` or the `@/components/formatted-date` component. Do not create page-local date formatters or call `Intl.DateTimeFormat`, `toLocaleDateString`, or `date-fns/format` directly for previews.
+- A date without a weekday must use the Indonesian long form: `21 Agustus 2026`.
+- When the weekday is useful, use `formatDateWithDay()` or `withDay: true`: `Jumat, 21 Agustus 2026`.
+- Date-time previews must use `formatDateTime()`, which follows the same date form and the `Asia/Jakarta` timezone.
+- Native date inputs may keep the machine value `YYYY-MM-DD`; this convention applies to labels, cards, tables, drawers, detail views, and all other user-facing previews.
+
 ## Verification Scripts
 
 - Do not create verification scripts or tinker when tests cover that functionality and prove it works. Unit and feature tests are more important.

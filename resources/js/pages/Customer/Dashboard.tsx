@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import CustomerLayout from '@/layouts/customer-layout';
+import { formatDateTime } from '@/lib/date-format';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     CalendarDays,
@@ -55,14 +56,6 @@ const money = (amount: number, currency: string) =>
         currency,
         maximumFractionDigits: 0,
     }).format(amount);
-
-const formatDateTime = (value: string | null) =>
-    value
-        ? new Intl.DateTimeFormat('id-ID', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-          }).format(new Date(value))
-        : '-';
 
 const statusLabel: Record<string, string> = {
     registered: 'Terdaftar',

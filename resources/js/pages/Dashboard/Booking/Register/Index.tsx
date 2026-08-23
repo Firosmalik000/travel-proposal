@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/table';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate, formatDateTime } from '@/lib/date-format';
 import { requestMessageFrom } from '@/lib/request-toasts';
 import { Head, router } from '@inertiajs/react';
 import {
@@ -76,27 +77,6 @@ type Props = {
               data?: Registration[];
           };
 };
-
-function formatDateTime(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
-}
-
-function formatDate(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        dateStyle: 'medium',
-    }).format(new Date(value));
-}
 
 function statusBadgeVariant(
     status: string,

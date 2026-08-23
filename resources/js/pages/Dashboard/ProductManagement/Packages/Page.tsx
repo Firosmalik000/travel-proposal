@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate } from '@/lib/date-format';
 import packages from '@/routes/packages';
 import { Head, Link, router } from '@inertiajs/react';
 import {
@@ -19,13 +20,16 @@ import { PackageForm } from './PackageForm';
 import type {
     ActivityOption,
     CurrencyOption,
+    HotelCityOption,
+    HotelCountryOption,
     Package,
+    PackageDraft,
     PackageVendorOption,
     ProductCategoryOption,
     ProductOption,
 } from './types';
 
-type PageMode = 'create' | 'edit' | 'detail';
+type PageMode = 'create' | 'edit' | 'detail' | 'hpp';
 
 type Props = {
     mode: PageMode;
@@ -35,7 +39,10 @@ type Props = {
     activityOptions: ActivityOption[];
     packageImageUploadMaxKilobytes: number;
     productCategories: ProductCategoryOption[];
+    hotelCountries: HotelCountryOption[];
+    hotelCities: HotelCityOption[];
     vendors: PackageVendorOption[];
+    draft: PackageDraft | null;
 };
 
 function resolveText(
@@ -47,18 +54,6 @@ function resolveText(
     }
 
     return value?.id?.trim() || value?.en?.trim() || fallback;
-}
-
-function formatDate(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    }).format(new Date(`${value}T00:00:00`));
 }
 
 function formatMoney(value: number | null | undefined, currency = 'IDR') {
@@ -96,6 +91,27 @@ function PackageDetail({
     const selectedProducts = productOptions.filter((product) =>
         pkg.product_ids.includes(product.id),
     );
+    const displayedProducts: ProductOption[] = [
+        ...selectedProducts,
+        ...(pkg.custom_products ?? []).map((product) => ({
+            id: product.estimate_id,
+            code: '',
+            name: product.name,
+            product_type: product.product_type,
+            price: product.price,
+            currency: product.currency,
+            is_package_specific: true,
+            hotel_info:
+                product.product_type === 'hotel'
+                    ? {
+                          city: product.city,
+                          country: product.country,
+                          currency: product.currency,
+                          pricing: product.pricing,
+                      }
+                    : null,
+        })),
+    ];
     const hppEstimate = pkg.content.hpp_estimate;
     const roomOriginalPrices = pkg.content.room_original_prices ?? {};
     const roomPrices = pkg.content.room_prices ?? {};
@@ -309,20 +325,27 @@ function PackageDetail({
                                 </p>
                             </div>
                         ) : null}
-                        {selectedProducts.length > 0 ? (
+                        {displayedProducts.length > 0 ? (
                             <div className="divide-y divide-border/60">
-                                {selectedProducts.map((product) => (
+                                {displayedProducts.map((product) => (
                                     <div
                                         key={product.id}
                                         className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
                                     >
                                         <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold">
-                                                {resolveText(
-                                                    product.name,
-                                                    product.code,
-                                                )}
-                                            </p>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="truncate text-sm font-semibold">
+                                                    {resolveText(
+                                                        product.name,
+                                                        product.code,
+                                                    )}
+                                                </p>
+                                                {product.is_package_specific ? (
+                                                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+                                                        Khusus package
+                                                    </span>
+                                                ) : null}
+                                            </div>
                                             <p className="text-xs text-muted-foreground capitalize">
                                                 {product.product_type}
                                             </p>
@@ -330,9 +353,16 @@ function PackageDetail({
                                         <div className="text-right text-sm">
                                             <p className="font-semibold">
                                                 x
-                                                {pkg.product_multipliers[
-                                                    String(product.id)
-                                                ] ?? 1}{' '}
+                                                {product.is_package_specific
+                                                    ? (pkg.custom_products.find(
+                                                          (item) =>
+                                                              item.estimate_id ===
+                                                              product.id,
+                                                      )?.multiplier_per_pax ??
+                                                      1)
+                                                    : (pkg.product_multipliers[
+                                                          String(product.id)
+                                                      ] ?? 1)}{' '}
                                                 / pax
                                             </p>
                                             <p className="text-xs text-muted-foreground">
@@ -459,27 +489,41 @@ export default function PackagePage({
     activityOptions,
     packageImageUploadMaxKilobytes,
     productCategories,
+    hotelCountries,
+    hotelCities,
     vendors,
+    draft,
 }: Props) {
     const { can } = usePermission('package');
     const isDetail = mode === 'detail';
+    const isHppEditor = mode === 'hpp';
     const title =
         mode === 'create'
             ? 'Tambah Package'
             : mode === 'edit'
               ? `Edit ${resolveText(packageData?.name, packageData?.code)}`
-              : `Detail ${resolveText(packageData?.name, packageData?.code)}`;
+              : mode === 'hpp'
+                ? `Edit Estimasi HPP ${resolveText(packageData?.name, packageData?.code)}`
+                : `Detail ${resolveText(packageData?.name, packageData?.code)}`;
+    const indexHref = isHppEditor
+        ? '/admin/financial-management/hpp-package'
+        : packages.index().url;
     const createHref = '/admin/product-management/packages/create';
     const currentHref = packageData
-        ? isDetail
-            ? packages.show(packageData.id).url
-            : packages.edit(packageData.id).url
+        ? isHppEditor
+            ? `/admin/financial-management/hpp-package/${packageData.id}/estimate/edit`
+            : isDetail
+              ? packages.show(packageData.id).url
+              : packages.edit(packageData.id).url
         : createHref;
 
     return (
         <AppSidebarLayout
             breadcrumbs={[
-                { label: 'Package Management', href: packages.index().url },
+                {
+                    label: isHppEditor ? 'HPP Package' : 'Package Management',
+                    href: indexHref,
+                },
                 { label: title, href: currentHref },
             ]}
         >
@@ -495,15 +539,21 @@ export default function PackagePage({
                             className="shrink-0"
                         >
                             <Link
-                                href={packages.index().url}
-                                aria-label="Kembali ke daftar package"
+                                href={indexHref}
+                                aria-label={
+                                    isHppEditor
+                                        ? 'Kembali ke HPP Package'
+                                        : 'Kembali ke daftar package'
+                                }
                             >
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
                         <div className="min-w-0">
                             <p className="text-xs font-medium text-muted-foreground">
-                                Product Management / Package
+                                {isHppEditor
+                                    ? 'Financial Management / HPP Package'
+                                    : 'Product Management / Package'}
                             </p>
                             <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
                                 {title}
@@ -530,7 +580,11 @@ export default function PackagePage({
                 ) : (
                     <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:p-4 md:p-5 xl:p-6">
                         <PackageForm
-                            pkg={mode === 'edit' ? packageData : null}
+                            pkg={
+                                mode === 'edit' || mode === 'hpp'
+                                    ? packageData
+                                    : null
+                            }
                             productOptions={productOptions}
                             currencies={currencies}
                             activityOptions={activityOptions}
@@ -538,9 +592,13 @@ export default function PackagePage({
                                 packageImageUploadMaxKilobytes
                             }
                             productCategories={productCategories}
+                            hotelCountries={hotelCountries}
+                            hotelCities={hotelCities}
                             vendors={vendors}
+                            draft={draft}
                             locale="id"
-                            onSuccess={() => router.visit(packages.index().url)}
+                            editorMode={isHppEditor ? 'hpp' : 'package'}
+                            onSuccess={() => router.visit(indexHref)}
                         />
                     </div>
                 )}

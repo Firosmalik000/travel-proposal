@@ -197,7 +197,11 @@ class TravelContentResourceManagementTest extends TestCase
             'name' => ['id' => 'Hotel Madinah', 'en' => 'Madinah Hotel'],
             'product_type' => 'layanan',
             'description' => ['id' => 'Hotel dekat masjid', 'en' => 'Hotel near the mosque'],
-            'content' => ['unit' => ['id' => 'per kamar', 'en' => 'per room']],
+            'content' => [
+                'price' => 350000,
+                'currency' => 'IDR',
+                'currency_rate_to_idr' => 1,
+            ],
             'is_active' => true,
         ];
 

@@ -12,6 +12,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDateTime } from '@/lib/date-format';
 import {
     normalizePackageContent,
     packageHighlightIconMap,
@@ -22,9 +23,12 @@ import { cn } from '@/lib/utils';
 import packages from '@/routes/packages';
 import { router, useForm } from '@inertiajs/react';
 import {
+    AlertTriangle,
     BookOpenText,
     Calculator,
     Camera,
+    Cloud,
+    CloudOff,
     DollarSign,
     FileText,
     GripVertical,
@@ -35,10 +39,11 @@ import {
     Trash2,
     Upload,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AllInPackageCard } from './AllInPackageCard';
 import { PackageOperationalCostCards } from './PackageOperationalCostCards';
+import { PackageSpecificProductManager } from './PackageSpecificProductManager';
 import { ProductSelector } from './ProductSelector';
 import {
     calculateOperationalCostTotals,
@@ -47,12 +52,17 @@ import {
 import type {
     ActivityOption,
     CurrencyOption,
+    HotelCityOption,
+    HotelCountryOption,
     Itinerary,
     ItineraryInput,
     Package,
     PackageAllInConfiguration,
+    PackageDraft,
+    PackageDraftPayload,
     PackageFormData,
     PackageHppEstimate,
+    PackageSpecificProduct,
     PackageVendorOption,
     ProductCategoryOption,
     ProductOption,
@@ -65,9 +75,13 @@ type Props = {
     currencies: CurrencyOption[];
     activityOptions: ActivityOption[];
     productCategories: ProductCategoryOption[];
+    hotelCountries: HotelCountryOption[];
+    hotelCities: HotelCityOption[];
     vendors: PackageVendorOption[];
     packageImageUploadMaxKilobytes: number;
+    draft: PackageDraft | null;
     locale: 'id' | 'en';
+    editorMode?: 'package' | 'hpp';
     onSuccess: () => void;
 };
 
@@ -258,6 +272,7 @@ function buildFormData(pkg: Package | null): PackageFormData {
         itineraries: normalizeItineraries(durationDays, pkg?.itineraries ?? []),
         product_ids: pkg?.product_ids ?? [],
         product_multipliers: pkg?.product_multipliers ?? {},
+        custom_products: pkg?.custom_products ?? [],
         is_featured: pkg?.is_featured ?? false,
         is_active: pkg?.is_active ?? true,
         all_in: pkg?.all_in ?? {
@@ -270,6 +285,91 @@ function buildFormData(pkg: Package | null): PackageFormData {
             included_category_keys: [],
         },
     };
+}
+
+function buildDraftFormData(
+    pkg: Package | null,
+    payload: PackageDraftPayload,
+): PackageFormData {
+    const base = buildFormData(pkg);
+    const {
+        name,
+        summary,
+        existing_images: _existingImages,
+        ...draftFields
+    } = payload;
+    void _existingImages;
+    const durationDays = Math.max(
+        1,
+        Number(draftFields.duration_days ?? base.duration_days) || 1,
+    );
+
+    return {
+        ...base,
+        ...draftFields,
+        'name.id': name?.id ?? base['name.id'],
+        'name.en': name?.en ?? base['name.en'],
+        'summary.id': summary?.id ?? base['summary.id'],
+        'summary.en': summary?.en ?? base['summary.en'],
+        duration_days: durationDays,
+        images: [],
+        content: normalizePackageContent(draftFields.content ?? base.content),
+        itineraries: normalizeItineraries(
+            durationDays,
+            draftFields.itineraries ?? base.itineraries,
+        ),
+        product_ids: draftFields.product_ids ?? base.product_ids,
+        product_multipliers:
+            draftFields.product_multipliers ?? base.product_multipliers,
+        custom_products: draftFields.custom_products ?? base.custom_products,
+        all_in: {
+            ...base.all_in,
+            ...(draftFields.all_in ?? {}),
+        },
+    };
+}
+
+function buildDraftPayload(
+    data: PackageFormData,
+    existingImages: string[],
+): PackageDraftPayload {
+    const {
+        images: _images,
+        ['name.id']: nameId,
+        ['name.en']: nameEn,
+        ['summary.id']: summaryId,
+        ['summary.en']: summaryEn,
+        ...draftFields
+    } = data;
+    void _images;
+
+    return {
+        ...draftFields,
+        name: { id: nameId, en: nameEn },
+        summary: { id: summaryId, en: summaryEn },
+        existing_images: existingImages,
+    };
+}
+
+function draftImagePaths(draft: PackageDraft | null): string[] {
+    if (!draft) {
+        return [];
+    }
+
+    return Array.from(
+        new Set([
+            ...(draft.payload.existing_images ?? []),
+            ...draft.temporary_images.map((image) => image.path),
+        ]),
+    );
+}
+
+function csrfToken(): string {
+    return (
+        document
+            .querySelector<HTMLMetaElement>('meta[name="csrf-token"]')
+            ?.getAttribute('content') ?? ''
+    );
 }
 
 function buildPackageCodePreview(value: string, durationDays: number): string {
@@ -592,11 +692,9 @@ function SectionHeader({
 function InfoSectionHeading({
     icon: Icon,
     title,
-    description,
 }: {
     icon: React.ElementType;
     title: string;
-    description: string;
 }) {
     return (
         <div className="flex items-start gap-3 border-t border-border/70 pt-5">
@@ -605,9 +703,6 @@ function InfoSectionHeading({
             </div>
             <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground">{title}</p>
-                <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-                    {description}
-                </p>
             </div>
         </div>
     );
@@ -691,19 +786,52 @@ export function PackageForm({
     currencies,
     activityOptions,
     productCategories,
+    hotelCountries,
+    hotelCities,
     vendors,
     packageImageUploadMaxKilobytes,
+    draft,
     locale,
+    editorMode = 'package',
     onSuccess,
 }: Props) {
-    const initialFormData = buildFormData(pkg);
     const isEdit = pkg !== null;
+    const isHppEditor = editorMode === 'hpp';
+    const shouldResumeCreateDraft = !isEdit && !isHppEditor && draft !== null;
+    const initialFormData = shouldResumeCreateDraft
+        ? buildDraftFormData(null, draft.payload)
+        : buildFormData(pkg);
+    const initialExistingImages = shouldResumeCreateDraft
+        ? draftImagePaths(draft)
+        : (pkg?.images ?? []);
+    const draftUrl = isEdit
+        ? `/admin/product-management/packages/${pkg.id}/draft`
+        : '/admin/product-management/packages/drafts/create';
     const imageInputRef = useRef<HTMLInputElement>(null);
     const itineraryLoadingTimeoutRef = useRef<number | null>(null);
+    const draftSaveTimeoutRef = useRef<number | null>(null);
+    const draftNavigationBypassRef = useRef(false);
+    const draftSaveQueueRef = useRef<Promise<boolean>>(Promise.resolve(true));
+    const lastSavedDraftSnapshotRef = useRef(
+        JSON.stringify(
+            buildDraftPayload(initialFormData, initialExistingImages),
+        ),
+    );
 
     const [existingImages, setExistingImages] = useState<string[]>(
-        pkg?.images ?? [],
+        initialExistingImages,
     );
+    const [currentDraft, setCurrentDraft] = useState<PackageDraft | null>(
+        draft,
+    );
+    const [hasPendingEditDraft, setHasPendingEditDraft] = useState(
+        isEdit && !isHppEditor && draft !== null,
+    );
+    const [draftStatus, setDraftStatus] = useState<
+        'idle' | 'saving' | 'saved' | 'error'
+    >(draft ? 'saved' : 'idle');
+    const [isUploadingDraftImages, setIsUploadingDraftImages] = useState(false);
+    const [isSubmittingPackage, setIsSubmittingPackage] = useState(false);
 
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [isDragOverGallery, setIsDragOverGallery] = useState(false);
@@ -714,12 +842,19 @@ export function PackageForm({
         string | null
     >(null);
     const [activeItineraryTab, setActiveItineraryTab] = useState('day-1');
+    const [activeProductCategoryKey, setActiveProductCategoryKey] = useState(
+        productCategories[0]?.key ?? '',
+    );
     const [itineraryActivitySearch, setItineraryActivitySearch] = useState<
         Record<number, string>
     >({});
     const [isItineraryPanelLoading, setIsItineraryPanelLoading] =
         useState(false);
     const form = useForm<PackageFormData>(initialFormData);
+    const latestDraftPayload = buildDraftPayload(form.data, existingImages);
+    const latestDraftSnapshot = JSON.stringify(latestDraftPayload);
+    const latestDraftPayloadRef = useRef(latestDraftPayload);
+    latestDraftPayloadRef.current = latestDraftPayload;
     const packageImageUploadMaxBytes = packageImageUploadMaxKilobytes * 1024;
     const packageImageUploadMaxLabel = `${Math.max(1, Math.round(packageImageUploadMaxKilobytes / 1024))} MB`;
     const galleryItems = [
@@ -741,8 +876,163 @@ export function PackageForm({
             if (itineraryLoadingTimeoutRef.current !== null) {
                 window.clearTimeout(itineraryLoadingTimeoutRef.current);
             }
+            if (draftSaveTimeoutRef.current !== null) {
+                window.clearTimeout(draftSaveTimeoutRef.current);
+            }
         };
     }, []);
+
+    const saveDraft = useCallback(
+        (payload: PackageDraftPayload): Promise<boolean> => {
+            if (isHppEditor) {
+                return Promise.resolve(true);
+            }
+
+            const snapshot = JSON.stringify(payload);
+            setDraftStatus('saving');
+            const queuedRequest = draftSaveQueueRef.current
+                .catch(() => false)
+                .then(async () => {
+                    try {
+                        const response = await fetch(draftUrl, {
+                            method: 'PUT',
+                            credentials: 'same-origin',
+                            headers: {
+                                Accept: 'application/json',
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken(),
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({ payload }),
+                        });
+                        const responseData = (await response.json()) as {
+                            draft?: PackageDraft;
+                            message?: string;
+                        };
+
+                        if (!response.ok || !responseData.draft) {
+                            throw new Error(
+                                responseData.message ||
+                                    'Draft tidak dapat disimpan.',
+                            );
+                        }
+
+                        setCurrentDraft(responseData.draft);
+                        lastSavedDraftSnapshotRef.current = snapshot;
+                        setDraftStatus('saved');
+
+                        return true;
+                    } catch {
+                        setDraftStatus('error');
+
+                        return false;
+                    }
+                });
+
+            draftSaveQueueRef.current = queuedRequest;
+
+            return queuedRequest;
+        },
+        [draftUrl, isHppEditor],
+    );
+
+    useEffect(() => {
+        if (
+            isHppEditor ||
+            hasPendingEditDraft ||
+            latestDraftSnapshot === lastSavedDraftSnapshotRef.current
+        ) {
+            return;
+        }
+
+        if (draftSaveTimeoutRef.current !== null) {
+            window.clearTimeout(draftSaveTimeoutRef.current);
+        }
+
+        draftSaveTimeoutRef.current = window.setTimeout(() => {
+            void saveDraft(latestDraftPayloadRef.current);
+        }, 700);
+
+        return () => {
+            if (draftSaveTimeoutRef.current !== null) {
+                window.clearTimeout(draftSaveTimeoutRef.current);
+            }
+        };
+    }, [hasPendingEditDraft, isHppEditor, latestDraftSnapshot, saveDraft]);
+
+    useEffect(() => {
+        if (isHppEditor || hasPendingEditDraft) {
+            return;
+        }
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            if (
+                latestDraftSnapshot === lastSavedDraftSnapshotRef.current &&
+                form.data.images.length === 0
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () =>
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [
+        form.data.images.length,
+        hasPendingEditDraft,
+        isHppEditor,
+        latestDraftSnapshot,
+    ]);
+
+    useEffect(() => {
+        if (isHppEditor || hasPendingEditDraft) {
+            return;
+        }
+
+        return router.on('before', (event) => {
+            const visit = event.detail.visit;
+            if (draftNavigationBypassRef.current || visit.method !== 'get') {
+                return;
+            }
+
+            if (form.data.images.length > 0) {
+                event.preventDefault();
+                toast.error(
+                    'Masih ada gambar yang belum tersimpan. Hapus atau upload ulang sebelum meninggalkan halaman.',
+                );
+
+                return;
+            }
+
+            if (latestDraftSnapshot === lastSavedDraftSnapshotRef.current) {
+                return;
+            }
+
+            event.preventDefault();
+            void saveDraft(latestDraftPayloadRef.current).then((saved) => {
+                if (!saved) {
+                    toast.error(
+                        'Draft belum tersimpan. Periksa koneksi lalu coba kembali.',
+                    );
+
+                    return;
+                }
+
+                draftNavigationBypassRef.current = true;
+                router.visit(visit.url);
+            });
+        });
+    }, [
+        form.data.images.length,
+        hasPendingEditDraft,
+        isHppEditor,
+        latestDraftSnapshot,
+        saveDraft,
+    ]);
 
     function switchItineraryTab(nextTab: string) {
         if (itineraryLoadingTimeoutRef.current !== null) {
@@ -814,9 +1104,15 @@ export function PackageForm({
                     );
                 },
             );
-            const retainedProductIdKeys = new Set(
-                retainedProductIds.map(String),
+            const retainedCustomProducts = currentData.custom_products.filter(
+                (product) => !coveredCategoryKeys.has(product.product_type),
             );
+            const retainedProductIdKeys = new Set([
+                ...retainedProductIds.map(String),
+                ...retainedCustomProducts.map((product) =>
+                    String(product.estimate_id),
+                ),
+            ]);
             const retainedMultipliers = Object.fromEntries(
                 Object.entries(currentData.product_multipliers).filter(
                     ([productId]) => retainedProductIdKeys.has(productId),
@@ -833,6 +1129,7 @@ export function PackageForm({
                 all_in: allInConfiguration,
                 product_ids: retainedProductIds,
                 product_multipliers: retainedMultipliers,
+                custom_products: retainedCustomProducts,
                 content: setHotelBrokerSelections(
                     currentData.content,
                     retainedHotelBrokers,
@@ -841,8 +1138,16 @@ export function PackageForm({
         });
     }
 
-    function appendSelectedImages(selectedFiles: File[]) {
+    async function appendSelectedImages(selectedFiles: File[]) {
         if (selectedFiles.length === 0) {
+            return;
+        }
+
+        if (hasPendingEditDraft) {
+            toast.error(
+                'Gunakan atau buang draft lama sebelum mengubah galeri.',
+            );
+
             return;
         }
 
@@ -879,19 +1184,77 @@ export function PackageForm({
             return;
         }
 
-        const newImages = [...form.data.images, ...selectedFiles];
         form.clearErrors('images');
-        form.setData('images', newImages);
 
-        const newPreviewUrls = selectedFiles.map((file) =>
-            URL.createObjectURL(file),
-        );
-        setPreviewUrls((prev) => [...prev, ...newPreviewUrls]);
+        if (!isHppEditor) {
+            const imagePayload = new FormData();
+            selectedFiles.forEach((file) =>
+                imagePayload.append('images[]', file),
+            );
+            setIsUploadingDraftImages(true);
+            setDraftStatus('saving');
+
+            try {
+                const response = await fetch(`${draftUrl}/images`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: imagePayload,
+                });
+                const responseData = (await response.json()) as {
+                    draft?: PackageDraft;
+                    message?: string;
+                    errors?: Record<string, string[]>;
+                };
+
+                if (!response.ok || !responseData.draft) {
+                    throw new Error(
+                        responseData.errors?.images?.[0] ||
+                            responseData.message ||
+                            'Gambar gagal disimpan ke draft.',
+                    );
+                }
+
+                const uploadedPaths = responseData.draft.temporary_images.map(
+                    (image) => image.path,
+                );
+                setCurrentDraft(responseData.draft);
+                setExistingImages((currentImages) =>
+                    Array.from(new Set([...currentImages, ...uploadedPaths])),
+                );
+                setDraftStatus('saved');
+                toast.success(
+                    `${selectedFiles.length} gambar tersimpan di draft.`,
+                );
+
+                return;
+            } catch (error) {
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : 'Gambar gagal disimpan ke draft.';
+                form.setError('images', message);
+                setDraftStatus('error');
+                toast.error(message);
+            } finally {
+                setIsUploadingDraftImages(false);
+            }
+        }
+
+        form.setData('images', [...form.data.images, ...selectedFiles]);
+        setPreviewUrls((currentUrls) => [
+            ...currentUrls,
+            ...selectedFiles.map((file) => URL.createObjectURL(file)),
+        ]);
     }
 
     function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
         const selectedFiles = Array.from(event.target.files || []);
-        appendSelectedImages(selectedFiles);
+        void appendSelectedImages(selectedFiles);
 
         // Reset input value so same file can be selected again
         if (imageInputRef.current) {
@@ -904,7 +1267,7 @@ export function PackageForm({
         setIsDragOverGallery(false);
 
         const selectedFiles = Array.from(event.dataTransfer.files || []);
-        appendSelectedImages(selectedFiles);
+        void appendSelectedImages(selectedFiles);
     }
 
     function removeNewImage(index: number) {
@@ -918,10 +1281,56 @@ export function PackageForm({
         setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
     }
 
-    function removeExistingImage(index: number) {
-        setExistingImages((prev) => prev.filter((_, i) => i !== index));
+    async function removeExistingImage(index: number) {
+        const imagePath = existingImages[index];
+        const temporaryImage = currentDraft?.temporary_images.find(
+            (image) => image.path === imagePath,
+        );
 
-        // Mark for deletion on backend if needed, but for now we'll just handle it by what's NOT in the payload
+        if (!temporaryImage || isHppEditor) {
+            setExistingImages((currentImages) =>
+                currentImages.filter((_, imageIndex) => imageIndex !== index),
+            );
+
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `${draftUrl}/images/${temporaryImage.id}`,
+                {
+                    method: 'DELETE',
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                },
+            );
+            const responseData = (await response.json()) as {
+                draft?: PackageDraft;
+                message?: string;
+            };
+
+            if (!response.ok || !responseData.draft) {
+                throw new Error(
+                    responseData.message || 'Gambar draft gagal dihapus.',
+                );
+            }
+
+            setCurrentDraft(responseData.draft);
+            setExistingImages((currentImages) =>
+                currentImages.filter((path) => path !== imagePath),
+            );
+            toast.success('Gambar dihapus dari draft.');
+        } catch (error) {
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : 'Gambar draft gagal dihapus.',
+            );
+        }
     }
 
     function reorderGalleryItems(fromKey: string, toKey: string) {
@@ -1094,12 +1503,100 @@ export function PackageForm({
         }));
     }
 
-    function submit(event: React.FormEvent) {
+    function updateSpecificProducts(
+        products: PackageSpecificProduct[],
+        hotelBrokerSelections: Record<string, string>,
+    ) {
+        form.setData((currentData) => ({
+            ...currentData,
+            custom_products: products,
+            content: {
+                ...setHotelBrokerSelections(
+                    currentData.content,
+                    hotelBrokerSelections,
+                ),
+                hpp_currency_snapshots: products.reduce(
+                    (snapshots, product) => {
+                        const currencyCode = product.currency.toUpperCase();
+                        if (snapshots[currencyCode]) {
+                            return snapshots;
+                        }
+
+                        const liveCurrency = currencies.find(
+                            (currency) => currency.code === currencyCode,
+                        );
+
+                        return {
+                            ...snapshots,
+                            [currencyCode]: {
+                                currency: currencyCode,
+                                rate_to_idr:
+                                    currencyCode === 'IDR'
+                                        ? 1
+                                        : Number(
+                                              liveCurrency?.live_conversion_rate ??
+                                                  liveCurrency?.conversion_rate ??
+                                                  0,
+                                          ),
+                                source:
+                                    currencyCode === 'IDR'
+                                        ? 'identity'
+                                        : 'live',
+                                fetched_at:
+                                    liveCurrency?.rate_fetched_at ?? null,
+                            },
+                        };
+                    },
+                    {
+                        ...(currentData.content.hpp_currency_snapshots ?? {}),
+                    },
+                ),
+            },
+        }));
+    }
+
+    async function submit(event: React.FormEvent) {
         event.preventDefault();
 
-        const submitUrl = isEdit
-            ? packages.update(pkg.id).url
-            : packages.store().url;
+        if (hasPendingEditDraft) {
+            toast.error(
+                'Pilih gunakan atau buang draft sebelum menyimpan package.',
+            );
+
+            return;
+        }
+
+        if (isUploadingDraftImages) {
+            toast.error('Tunggu hingga gambar selesai disimpan ke draft.');
+
+            return;
+        }
+
+        if (draftSaveTimeoutRef.current !== null) {
+            window.clearTimeout(draftSaveTimeoutRef.current);
+        }
+
+        setIsSubmittingPackage(true);
+        draftNavigationBypassRef.current = true;
+
+        if (!isHppEditor) {
+            const draftSaved = await saveDraft(latestDraftPayloadRef.current);
+            if (!draftSaved) {
+                draftNavigationBypassRef.current = false;
+                setIsSubmittingPackage(false);
+                toast.error(
+                    'Draft gagal diamankan. Periksa koneksi sebelum menyimpan package.',
+                );
+
+                return;
+            }
+        }
+
+        const submitUrl = isHppEditor
+            ? `/admin/financial-management/hpp-package/${pkg?.id}/estimate`
+            : isEdit
+              ? packages.update(pkg.id).url
+              : packages.store().url;
         const basePrice = Number(form.data.original_price) || 0;
         const discountPercentValue = Number(form.data.discount_percent) || 0;
         const hasDiscount = basePrice > 0 && discountPercentValue > 0;
@@ -1216,6 +1713,10 @@ export function PackageForm({
             'product_multipliers',
             JSON.stringify(form.data.product_multipliers ?? {}),
         );
+        formData.append(
+            'custom_products',
+            JSON.stringify(form.data.custom_products ?? []),
+        );
         formData.append('all_in', JSON.stringify(form.data.all_in));
         formData.append('is_featured', form.data.is_featured ? '1' : '0');
         formData.append('is_active', form.data.is_active ? '1' : '0');
@@ -1238,11 +1739,16 @@ export function PackageForm({
                 preserveScroll: true,
                 onSuccess: () => {
                     toast.success(
-                        isEdit ? 'Package diperbarui.' : 'Package ditambahkan.',
+                        isHppEditor
+                            ? 'Estimasi HPP diperbarui.'
+                            : isEdit
+                              ? 'Package diperbarui.'
+                              : 'Package ditambahkan.',
                     );
                     onSuccess();
                 },
                 onError: (errors) => {
+                    draftNavigationBypassRef.current = false;
                     console.error('[PackageForm] validation errors', {
                         submitUrl,
                         errors,
@@ -1254,8 +1760,11 @@ export function PackageForm({
                             .join(' | ')}`,
                     );
                 },
+                onFinish: () => setIsSubmittingPackage(false),
             });
         } catch (error) {
+            draftNavigationBypassRef.current = false;
+            setIsSubmittingPackage(false);
             console.error('[PackageForm] submit threw', {
                 submitUrl,
                 error,
@@ -1362,28 +1871,60 @@ export function PackageForm({
               }
             : currency;
     });
-    const selectedProductCurrencyCodes = Array.from(
-        new Set(
-            form.data.product_ids
-                .map((productId) =>
-                    String(
-                        productOptions.find(
-                            (product) => product.id === productId,
-                        )?.currency ?? 'IDR',
-                    ).toUpperCase(),
-                )
-                .filter((currencyCode) => currencyCode !== 'IDR'),
+    const specificProductOptions: ProductOption[] =
+        form.data.custom_products.map((product) => ({
+            id: product.estimate_id,
+            code: '',
+            name: product.name,
+            product_type: product.product_type,
+            currency: product.currency,
+            price: product.price,
+            is_package_specific: true,
+            hotel_info:
+                product.product_type === 'hotel'
+                    ? {
+                          city: product.city,
+                          country: product.country,
+                          currency: product.currency,
+                          pricing: product.pricing,
+                      }
+                    : null,
+        }));
+    const selectedProductsForEstimate = [
+        ...productOptions.filter((product) =>
+            form.data.product_ids.includes(product.id),
         ),
-    );
-    const selectedProductsForEstimate = productOptions.filter(
+        ...specificProductOptions,
+    ].filter(
         (product) =>
-            form.data.product_ids.includes(product.id) &&
             !(
                 form.data.all_in.enabled &&
                 form.data.all_in.included_category_keys.includes(
                     product.product_type,
                 )
             ),
+    );
+    const effectiveProductMultipliers = {
+        ...form.data.product_multipliers,
+        ...form.data.custom_products.reduce<Record<string, number>>(
+            (multipliers, product) => ({
+                ...multipliers,
+                [String(product.estimate_id)]: Math.max(
+                    1,
+                    Number(product.multiplier_per_pax) || 1,
+                ),
+            }),
+            {},
+        ),
+    };
+    const selectedProductCurrencyCodes = Array.from(
+        new Set(
+            selectedProductsForEstimate
+                .map((product) =>
+                    String(product.currency ?? 'IDR').toUpperCase(),
+                )
+                .filter((currencyCode) => currencyCode !== 'IDR'),
+        ),
     );
     const estimateCurrencyRates = effectiveCurrencies.reduce(
         (rates, currency) => ({
@@ -1414,7 +1955,7 @@ export function PackageForm({
         .map((product) => {
             const multiplier = Math.max(
                 1,
-                Number(form.data.product_multipliers[String(product.id)] ?? 1),
+                Number(effectiveProductMultipliers[String(product.id)] ?? 1),
             );
             const quantityIsManual = Boolean(
                 hppEstimate.product_quantities_is_manual?.[String(product.id)],
@@ -1543,7 +2084,7 @@ export function PackageForm({
             );
             const multiplier = Math.max(
                 1,
-                Number(form.data.product_multipliers[String(product.id)] ?? 1),
+                Number(effectiveProductMultipliers[String(product.id)] ?? 1),
             );
             const rows = (
                 Object.keys(estimateRoomCapacities) as Array<
@@ -1949,1833 +2490,2009 @@ export function PackageForm({
         );
     }
 
-    return (
-        <form onSubmit={submit}>
-            <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid h-auto w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-                    <TabsTrigger value="info" className="gap-1.5 text-xs">
-                        <Info className="h-3.5 w-3.5" />
-                        Info
-                    </TabsTrigger>
-                    <TabsTrigger value="gallery" className="gap-1.5 text-xs">
-                        <Camera className="h-3.5 w-3.5" />
-                        Gallery
-                    </TabsTrigger>
-                    <TabsTrigger value="konten" className="gap-1.5 text-xs">
-                        <FileText className="h-3.5 w-3.5" />
-                        Konten
-                    </TabsTrigger>
-                    <TabsTrigger value="itinerary" className="gap-1.5 text-xs">
-                        <BookOpenText className="h-3.5 w-3.5" />
-                        Itinerary
-                    </TabsTrigger>
-                    <TabsTrigger value="harga" className="gap-1.5 text-xs">
-                        <DollarSign className="h-3.5 w-3.5" />
-                        Harga
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="estimasi-hpp"
-                        className="gap-1.5 text-xs"
-                    >
-                        <Calculator className="h-3.5 w-3.5" />
-                        Estimasi HPP
-                    </TabsTrigger>
-                </TabsList>
+    function clearLocalImagePreviews() {
+        previewUrls.forEach((previewUrl) => URL.revokeObjectURL(previewUrl));
+        setPreviewUrls([]);
+    }
 
-                <TabsContent value="info" className="mt-4">
-                    <SectionHeader icon={Info} title="Informasi Dasar" />
-                    <FieldGroup>
-                        <div className="grid gap-3">
-                            <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="space-y-1">
-                                        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                                            Kode Otomatis
-                                        </p>
-                                        <p className="font-mono text-sm font-semibold text-foreground">
-                                            {generatedCodePreview}
-                                        </p>
-                                    </div>
-                                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
-                                        Auto
-                                    </span>
-                                </div>
+    function applyPendingDraft() {
+        if (!currentDraft) {
+            return;
+        }
+
+        const restoredImages = draftImagePaths(currentDraft);
+        const restoredData = buildDraftFormData(pkg, currentDraft.payload);
+        form.setData(restoredData);
+        setExistingImages(restoredImages);
+        clearLocalImagePreviews();
+        setHasPendingEditDraft(false);
+        setDraftStatus('saved');
+        lastSavedDraftSnapshotRef.current = JSON.stringify(
+            buildDraftPayload(restoredData, restoredImages),
+        );
+        toast.success('Draft diterapkan ke form.');
+    }
+
+    async function discardDraft() {
+        if (!currentDraft) {
+            return;
+        }
+
+        try {
+            if (draftSaveTimeoutRef.current !== null) {
+                window.clearTimeout(draftSaveTimeoutRef.current);
+            }
+            await draftSaveQueueRef.current.catch(() => false);
+
+            const response = await fetch(draftUrl, {
+                method: 'DELETE',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Draft gagal dibuang.');
+            }
+
+            const resetData = buildFormData(pkg);
+            const resetImages = pkg?.images ?? [];
+            form.setData(resetData);
+            setExistingImages(resetImages);
+            clearLocalImagePreviews();
+            setCurrentDraft(null);
+            setHasPendingEditDraft(false);
+            setDraftStatus('idle');
+            lastSavedDraftSnapshotRef.current = JSON.stringify(
+                buildDraftPayload(resetData, resetImages),
+            );
+            toast.success('Draft berhasil dibuang.');
+        } catch (error) {
+            toast.error(
+                error instanceof Error ? error.message : 'Draft gagal dibuang.',
+            );
+        }
+    }
+
+    return (
+        <form onSubmit={submit} className="space-y-4">
+            {!isHppEditor && hasPendingEditDraft && currentDraft ? (
+                <section className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/35 dark:text-amber-100">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex min-w-0 gap-3">
+                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <div className="space-y-1">
+                                <p className="font-semibold">
+                                    Ada perubahan yang belum disimpan
+                                </p>
+                                <p className="text-sm text-amber-800 dark:text-amber-200">
+                                    Draft terakhir{' '}
+                                    {currentDraft.last_autosaved_at
+                                        ? formatDateTime(
+                                              currentDraft.last_autosaved_at,
+                                          )
+                                        : 'baru saja'}
+                                </p>
+                                {currentDraft.has_conflict ? (
+                                    <p className="text-sm font-semibold text-destructive">
+                                        Package berubah setelah draft dibuat.
+                                    </p>
+                                ) : null}
                             </div>
                         </div>
-                        <Field label="Nama Package *" error={errors['name.id']}>
-                            <Input
-                                value={form.data['name.id']}
-                                onChange={(event) =>
-                                    form.setData((currentData) => ({
-                                        ...currentData,
-                                        'name.id': event.target.value,
-                                        'name.en': event.target.value,
-                                    }))
-                                }
-                                placeholder="Umroh Reguler 10 Hari"
-                            />
-                        </Field>
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <Field label="Tipe *">
-                                <Select
-                                    value={form.data.package_type}
-                                    onValueChange={(value) =>
-                                        form.setData('package_type', value)
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="reguler">
-                                            Reguler
-                                        </SelectItem>
-                                        <SelectItem value="hemat">
-                                            Hemat
-                                        </SelectItem>
-                                        <SelectItem value="vip">VIP</SelectItem>
-                                        <SelectItem value="premium">
-                                            Premium
-                                        </SelectItem>
-                                        <SelectItem value="private">
-                                            Private
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                            <Field
-                                label="Kota Keberangkatan *"
-                                error={errors.departure_city}
+                        <div className="flex shrink-0 flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => void discardDraft()}
                             >
-                                <div className="space-y-2">
+                                Buang Draft
+                            </Button>
+                            <Button type="button" onClick={applyPendingDraft}>
+                                Gunakan Draft
+                            </Button>
+                        </div>
+                    </div>
+                </section>
+            ) : null}
+
+            {!isHppEditor &&
+            !hasPendingEditDraft &&
+            (currentDraft ||
+                draftStatus === 'saving' ||
+                draftStatus === 'error' ||
+                isUploadingDraftImages) ? (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/45 px-3 py-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                        {draftStatus === 'error' ? (
+                            <CloudOff className="h-4 w-4 text-destructive" />
+                        ) : (
+                            <Cloud
+                                className={cn(
+                                    'h-4 w-4',
+                                    draftStatus === 'saved' &&
+                                        'text-emerald-600 dark:text-emerald-400',
+                                )}
+                            />
+                        )}
+                        <span>
+                            {isUploadingDraftImages || draftStatus === 'saving'
+                                ? 'Menyimpan draft...'
+                                : draftStatus === 'error'
+                                  ? 'Draft gagal disimpan.'
+                                  : currentDraft?.last_autosaved_at
+                                    ? `Draft tersimpan ${formatDateTime(currentDraft.last_autosaved_at)}`
+                                    : null}
+                        </span>
+                    </div>
+                    {currentDraft ? (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => void discardDraft()}
+                        >
+                            Buang draft
+                        </Button>
+                    ) : null}
+                </div>
+            ) : null}
+
+            <fieldset
+                disabled={hasPendingEditDraft}
+                className="m-0 min-w-0 border-0 p-0 disabled:opacity-60"
+            >
+                <Tabs
+                    defaultValue={isHppEditor ? 'estimasi-hpp' : 'info'}
+                    className="w-full"
+                >
+                    {!isHppEditor ? (
+                        <TabsList className="grid h-auto w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                            <TabsTrigger
+                                value="info"
+                                className="gap-1.5 text-xs"
+                            >
+                                <Info className="h-3.5 w-3.5" />
+                                Info
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="gallery"
+                                className="gap-1.5 text-xs"
+                            >
+                                <Camera className="h-3.5 w-3.5" />
+                                Gallery
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="konten"
+                                className="gap-1.5 text-xs"
+                            >
+                                <FileText className="h-3.5 w-3.5" />
+                                Konten
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="itinerary"
+                                className="gap-1.5 text-xs"
+                            >
+                                <BookOpenText className="h-3.5 w-3.5" />
+                                Itinerary
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="harga"
+                                className="gap-1.5 text-xs"
+                            >
+                                <DollarSign className="h-3.5 w-3.5" />
+                                Harga
+                            </TabsTrigger>
+                        </TabsList>
+                    ) : null}
+
+                    <TabsContent value="info" className="mt-4">
+                        <SectionHeader icon={Info} title="Informasi Dasar" />
+                        <FieldGroup>
+                            <div className="grid gap-3">
+                                <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                                Kode Otomatis
+                                            </p>
+                                            <p className="font-mono text-sm font-semibold text-foreground">
+                                                {generatedCodePreview}
+                                            </p>
+                                        </div>
+                                        <span className="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+                                            Auto
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <Field
+                                label="Nama Package *"
+                                error={errors['name.id']}
+                            >
+                                <Input
+                                    value={form.data['name.id']}
+                                    onChange={(event) =>
+                                        form.setData((currentData) => ({
+                                            ...currentData,
+                                            'name.id': event.target.value,
+                                            'name.en': event.target.value,
+                                        }))
+                                    }
+                                    placeholder="Umroh Reguler 10 Hari"
+                                />
+                            </Field>
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                <Field label="Tipe *">
+                                    <Select
+                                        value={form.data.package_type}
+                                        onValueChange={(value) =>
+                                            form.setData('package_type', value)
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="reguler">
+                                                Reguler
+                                            </SelectItem>
+                                            <SelectItem value="hemat">
+                                                Hemat
+                                            </SelectItem>
+                                            <SelectItem value="vip">
+                                                VIP
+                                            </SelectItem>
+                                            <SelectItem value="premium">
+                                                Premium
+                                            </SelectItem>
+                                            <SelectItem value="private">
+                                                Private
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+                                <Field
+                                    label="Kota Keberangkatan *"
+                                    error={errors.departure_city}
+                                >
+                                    <div className="space-y-2">
+                                        <Input
+                                            list="indonesian-departure-cities"
+                                            value={form.data.departure_city}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'departure_city',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            placeholder="Pilih atau cari kota keberangkatan"
+                                        />
+                                        <datalist id="indonesian-departure-cities">
+                                            {indonesianDepartureCities.map(
+                                                (city) => (
+                                                    <option
+                                                        key={city}
+                                                        value={city}
+                                                    />
+                                                ),
+                                            )}
+                                        </datalist>
+                                    </div>
+                                </Field>
+                                <Field
+                                    label="Durasi (Hari) *"
+                                    error={errors.duration_days}
+                                >
                                     <Input
-                                        list="indonesian-departure-cities"
-                                        value={form.data.departure_city}
+                                        type="number"
+                                        min={1}
+                                        value={form.data.duration_days}
+                                        onChange={(event) =>
+                                            updateDurationDays(
+                                                Number(event.target.value) || 1,
+                                            )
+                                        }
+                                    />
+                                </Field>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <Field
+                                    label="Tanggal Berangkat *"
+                                    error={errors.start_date}
+                                >
+                                    <Input
+                                        type="date"
+                                        value={form.data.start_date}
+                                        onChange={(event) =>
+                                            updateStartDate(event.target.value)
+                                        }
+                                    />
+                                </Field>
+                                <Field
+                                    label="Tanggal Pulang *"
+                                    error={errors.end_date}
+                                >
+                                    <Input
+                                        type="date"
+                                        min={form.data.start_date || undefined}
+                                        value={form.data.end_date}
                                         onChange={(event) =>
                                             form.setData(
-                                                'departure_city',
+                                                'end_date',
                                                 event.target.value,
                                             )
                                         }
-                                        placeholder="Pilih atau cari kota keberangkatan"
                                     />
-                                    <datalist id="indonesian-departure-cities">
-                                        {indonesianDepartureCities.map(
-                                            (city) => (
-                                                <option
-                                                    key={city}
-                                                    value={city}
-                                                />
-                                            ),
-                                        )}
-                                    </datalist>
-                                </div>
-                            </Field>
-                            <Field
-                                label="Durasi (Hari) *"
-                                error={errors.duration_days}
-                            >
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    value={form.data.duration_days}
-                                    onChange={(event) =>
-                                        updateDurationDays(
-                                            Number(event.target.value) || 1,
-                                        )
-                                    }
-                                />
-                            </Field>
-                        </div>
+                                </Field>
+                                <Field
+                                    label="Total Seat / Pax *"
+                                    error={errors.seats_total}
+                                >
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={form.data.seats_total}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'seats_total',
+                                                Math.max(
+                                                    1,
+                                                    Number(
+                                                        event.target.value,
+                                                    ) || 1,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
+                                <Field
+                                    label="Status Pendaftaran *"
+                                    error={errors.booking_status}
+                                >
+                                    <Select
+                                        value={form.data.booking_status}
+                                        onValueChange={(
+                                            value: 'open' | 'closed',
+                                        ) =>
+                                            form.setData(
+                                                'booking_status',
+                                                value,
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="open">
+                                                Dibuka
+                                            </SelectItem>
+                                            <SelectItem value="closed">
+                                                Ditutup
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
+                            </div>
 
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                             <Field
-                                label="Tanggal Berangkat *"
-                                error={errors.start_date}
+                                label="Catatan Keberangkatan"
+                                error={errors.departure_notes}
                             >
                                 <Input
-                                    type="date"
-                                    value={form.data.start_date}
-                                    onChange={(event) =>
-                                        updateStartDate(event.target.value)
-                                    }
-                                />
-                            </Field>
-                            <Field
-                                label="Tanggal Pulang *"
-                                error={errors.end_date}
-                            >
-                                <Input
-                                    type="date"
-                                    min={form.data.start_date || undefined}
-                                    value={form.data.end_date}
+                                    value={form.data.departure_notes}
                                     onChange={(event) =>
                                         form.setData(
-                                            'end_date',
+                                            'departure_notes',
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="Contoh: Meeting point Terminal 3"
+                                />
+                            </Field>
+
+                            <AllInPackageCard
+                                value={form.data.all_in}
+                                vendors={vendors}
+                                categories={productCategories}
+                                currencies={effectiveCurrencies}
+                                packageStartDate={form.data.start_date}
+                                packageEndDate={form.data.end_date}
+                                errors={errors as Record<string, string>}
+                                onChange={updateAllInConfiguration}
+                            />
+
+                            <InfoSectionHeading icon={Layers} title="Produk" />
+
+                            <div className="space-y-4">
+                                {selectedProductCurrencyCodes.length > 0 ? (
+                                    <div className="grid gap-3 rounded-xl bg-muted/30 p-3 sm:grid-cols-2">
+                                        {selectedProductCurrencyCodes.map(
+                                            (currencyCode) => {
+                                                const snapshot =
+                                                    form.data.content
+                                                        .hpp_currency_snapshots?.[
+                                                        currencyCode
+                                                    ];
+                                                const liveCurrency =
+                                                    currencies.find(
+                                                        (currency) =>
+                                                            currency.code ===
+                                                            currencyCode,
+                                                    );
+
+                                                return (
+                                                    <div
+                                                        key={currencyCode}
+                                                        className="space-y-2"
+                                                    >
+                                                        <Label>
+                                                            Kurs {currencyCode}{' '}
+                                                            ke IDR
+                                                        </Label>
+                                                        <div className="flex flex-col gap-2 sm:flex-row">
+                                                            <Input
+                                                                type="number"
+                                                                min={0.000001}
+                                                                step="any"
+                                                                value={
+                                                                    snapshot?.rate_to_idr ||
+                                                                    ''
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    form.setData(
+                                                                        'content',
+                                                                        {
+                                                                            ...form
+                                                                                .data
+                                                                                .content,
+                                                                            hpp_currency_snapshots:
+                                                                                {
+                                                                                    ...(form
+                                                                                        .data
+                                                                                        .content
+                                                                                        .hpp_currency_snapshots ??
+                                                                                        {}),
+                                                                                    [currencyCode]:
+                                                                                        {
+                                                                                            currency:
+                                                                                                currencyCode,
+                                                                                            rate_to_idr:
+                                                                                                Number(
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                                ),
+                                                                                            source: 'manual',
+                                                                                            fetched_at:
+                                                                                                null,
+                                                                                        },
+                                                                                },
+                                                                        },
+                                                                    )
+                                                                }
+                                                            />
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                className="shrink-0"
+                                                                disabled={
+                                                                    Number(
+                                                                        liveCurrency?.live_conversion_rate ??
+                                                                            0,
+                                                                    ) <= 0
+                                                                }
+                                                                onClick={() =>
+                                                                    form.setData(
+                                                                        'content',
+                                                                        {
+                                                                            ...form
+                                                                                .data
+                                                                                .content,
+                                                                            hpp_currency_snapshots:
+                                                                                {
+                                                                                    ...(form
+                                                                                        .data
+                                                                                        .content
+                                                                                        .hpp_currency_snapshots ??
+                                                                                        {}),
+                                                                                    [currencyCode]:
+                                                                                        {
+                                                                                            currency:
+                                                                                                currencyCode,
+                                                                                            rate_to_idr:
+                                                                                                Number(
+                                                                                                    liveCurrency?.live_conversion_rate ??
+                                                                                                        0,
+                                                                                                ),
+                                                                                            source: 'live',
+                                                                                            fetched_at:
+                                                                                                liveCurrency?.rate_fetched_at ??
+                                                                                                null,
+                                                                                        },
+                                                                                },
+                                                                        },
+                                                                    )
+                                                                }
+                                                            >
+                                                                Gunakan Kurs
+                                                                Live
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            },
+                                        )}
+                                    </div>
+                                ) : null}
+
+                                <ProductSelector
+                                    options={productOptions}
+                                    categories={productCategories}
+                                    currencies={effectiveCurrencies}
+                                    selected={form.data.product_ids}
+                                    productMultipliers={
+                                        form.data.product_multipliers
+                                    }
+                                    hotelBrokerSelections={getHotelBrokerSelections(
+                                        form.data.content,
+                                    )}
+                                    locale={locale}
+                                    lockedCategoryKeys={
+                                        form.data.all_in.enabled
+                                            ? form.data.all_in
+                                                  .included_category_keys
+                                            : []
+                                    }
+                                    activeCategoryKey={activeProductCategoryKey}
+                                    onActiveCategoryChange={
+                                        setActiveProductCategoryKey
+                                    }
+                                    onChange={updateSelectedProducts}
+                                />
+
+                                <PackageSpecificProductManager
+                                    value={form.data.custom_products}
+                                    categories={productCategories}
+                                    currencies={effectiveCurrencies}
+                                    hotelCountries={hotelCountries}
+                                    hotelCities={hotelCities}
+                                    packageStartDate={form.data.start_date}
+                                    packageEndDate={form.data.end_date}
+                                    activeCategoryKey={activeProductCategoryKey}
+                                    lockedCategoryKeys={
+                                        form.data.all_in.enabled
+                                            ? form.data.all_in
+                                                  .included_category_keys
+                                            : []
+                                    }
+                                    hotelBrokerSelections={getHotelBrokerSelections(
+                                        form.data.content,
+                                    )}
+                                    errors={errors as Record<string, string>}
+                                    onChange={updateSpecificProducts}
+                                />
+                            </div>
+
+                            <InfoSectionHeading
+                                icon={Calculator}
+                                title="Biaya Operasional"
+                            />
+
+                            <PackageOperationalCostCards
+                                value={operationalCosts}
+                                currencies={effectiveCurrencies}
+                                hotelPerPax={estimatedHotelPerPax}
+                                ticketAndVisaPerPax={
+                                    estimatedTicketAndVisaPerPax
+                                }
+                                tourLeaderTotal={estimatedTourLeaderFee}
+                                muthawwifTotal={estimatedMuthawwifFee}
+                                onChange={(nextCosts) =>
+                                    updateHppEstimate({
+                                        ...hppEstimate,
+                                        operational_costs: nextCosts,
+                                    })
+                                }
+                            />
+
+                            <InfoSectionHeading
+                                icon={FileText}
+                                title="Ringkasan & Publikasi"
+                            />
+
+                            <Field label="Ringkasan">
+                                <Textarea
+                                    rows={2}
+                                    value={form.data['summary.id']}
+                                    onChange={(event) =>
+                                        form.setData((currentData) => ({
+                                            ...currentData,
+                                            'summary.id': event.target.value,
+                                            'summary.en': event.target.value,
+                                        }))
+                                    }
+                                    placeholder="Deskripsi singkat paket..."
+                                />
+                            </Field>
+
+                            <div className="flex gap-6 rounded-xl border bg-muted/20 px-4 py-3">
+                                <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                                    <Checkbox
+                                        checked={form.data.is_featured}
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'is_featured',
+                                                Boolean(checked),
+                                            )
+                                        }
+                                    />
+                                    <span>Tampilkan sebagai Featured</span>
+                                </label>
+                                <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+                                    <Checkbox
+                                        checked={form.data.is_active}
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'is_active',
+                                                Boolean(checked),
+                                            )
+                                        }
+                                    />
+                                    <span>Package Aktif</span>
+                                </label>
+                            </div>
+                        </FieldGroup>
+                    </TabsContent>
+
+                    <TabsContent value="gallery" className="mt-4">
+                        <SectionHeader icon={Camera} title="Gallery Package" />
+                        <FieldGroup>
+                            <div className="rounded-2xl border border-border bg-card p-4">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold text-foreground">
+                                            Foto-foto Package
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="gap-2"
+                                        onClick={() =>
+                                            imageInputRef.current?.click()
+                                        }
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Tambah Foto
+                                    </Button>
+                                </div>
+
+                                <input
+                                    ref={imageInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="hidden"
+                                    onChange={handleImageChange}
+                                />
+
+                                <div
+                                    className={[
+                                        'mt-4 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-all',
+                                        isDragOverGallery
+                                            ? 'border-primary bg-linear-to-br from-primary/12 via-background to-primary/5 shadow-sm'
+                                            : 'border-border bg-linear-to-br from-muted/30 via-background to-muted/10 hover:border-primary/40 hover:from-primary/8 hover:to-primary/4',
+                                    ].join(' ')}
+                                    onDragEnter={(event) => {
+                                        event.preventDefault();
+                                        setIsDragOverGallery(true);
+                                    }}
+                                    onDragOver={(event) => {
+                                        event.preventDefault();
+                                        if (!isDragOverGallery) {
+                                            setIsDragOverGallery(true);
+                                        }
+                                    }}
+                                    onDragLeave={(event) => {
+                                        event.preventDefault();
+                                        const nextTarget =
+                                            event.relatedTarget as Node | null;
+
+                                        if (
+                                            nextTarget &&
+                                            event.currentTarget.contains(
+                                                nextTarget,
+                                            )
+                                        ) {
+                                            return;
+                                        }
+
+                                        setIsDragOverGallery(false);
+                                    }}
+                                    onDrop={handleGalleryDrop}
+                                >
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div
+                                            className={[
+                                                'rounded-full p-3 shadow-sm transition-all',
+                                                isDragOverGallery
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-background text-primary',
+                                            ].join(' ')}
+                                        >
+                                            <Upload className="h-5 w-5" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold text-foreground">
+                                                Drag & drop foto package di sini
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                                    {galleryItems.map((item, index) => (
+                                        <div
+                                            key={item.key}
+                                            draggable
+                                            onDragStart={() => {
+                                                setDraggedGalleryItemKey(
+                                                    item.key,
+                                                );
+                                                setGalleryDropTargetKey(
+                                                    item.key,
+                                                );
+                                            }}
+                                            onDragOver={(event) => {
+                                                event.preventDefault();
+                                                if (
+                                                    galleryDropTargetKey !==
+                                                    item.key
+                                                ) {
+                                                    setGalleryDropTargetKey(
+                                                        item.key,
+                                                    );
+                                                }
+                                            }}
+                                            onDrop={(event) => {
+                                                event.preventDefault();
+
+                                                if (draggedGalleryItemKey) {
+                                                    reorderGalleryItems(
+                                                        draggedGalleryItemKey,
+                                                        item.key,
+                                                    );
+                                                }
+
+                                                setDraggedGalleryItemKey(null);
+                                                setGalleryDropTargetKey(null);
+                                            }}
+                                            onDragEnd={() => {
+                                                setDraggedGalleryItemKey(null);
+                                                setGalleryDropTargetKey(null);
+                                            }}
+                                            className={[
+                                                'group relative h-24 overflow-hidden rounded-xl border bg-muted transition-all',
+                                                draggedGalleryItemKey ===
+                                                item.key
+                                                    ? 'scale-[0.98] opacity-70 ring-2 ring-primary/30'
+                                                    : '',
+                                                galleryDropTargetKey ===
+                                                    item.key &&
+                                                draggedGalleryItemKey !==
+                                                    item.key
+                                                    ? 'ring-2 ring-primary'
+                                                    : '',
+                                            ].join(' ')}
+                                        >
+                                            <img
+                                                src={item.url}
+                                                alt="Gallery"
+                                                className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                            />
+                                            <div className="absolute top-1 right-1 rounded-full bg-black/70 p-1 text-white shadow-sm">
+                                                <GripVertical className="h-3 w-3" />
+                                            </div>
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="h-8 w-8 rounded-full"
+                                                    onClick={() =>
+                                                        item.kind === 'existing'
+                                                            ? removeExistingImage(
+                                                                  existingImages.findIndex(
+                                                                      (url) =>
+                                                                          url ===
+                                                                          item.url,
+                                                                  ),
+                                                              )
+                                                            : removeNewImage(
+                                                                  previewUrls.findIndex(
+                                                                      (url) =>
+                                                                          url ===
+                                                                          item.url,
+                                                                  ),
+                                                              )
+                                                    }
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            <div className="absolute top-1 left-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                                                {index === 0
+                                                    ? 'Cover'
+                                                    : 'Gallery'}
+                                                {item.kind === 'new'
+                                                    ? ' Baru'
+                                                    : ''}
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            imageInputRef.current?.click()
+                                        }
+                                        className="flex h-24 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                                    >
+                                        <Plus className="h-5 w-5" />
+                                        <span className="text-[10px] font-medium tracking-wider uppercase">
+                                            Tambah Foto
+                                        </span>
+                                    </button>
+                                </div>
+
+                                {existingImages.length === 0 &&
+                                previewUrls.length === 0 ? (
+                                    <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                                        <p className="text-sm font-medium text-foreground">
+                                            Belum ada foto package
+                                        </p>
+                                    </div>
+                                ) : null}
+
+                                <p className="mt-3 text-xs text-muted-foreground">
+                                    Format: PNG, JPG, JPEG, WEBP. Maksimal{' '}
+                                    {packageImageUploadMaxLabel} per gambar.
+                                </p>
+
+                                {errors.images ? (
+                                    <p className="mt-1 text-xs text-destructive">
+                                        {errors.images}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </FieldGroup>
+                    </TabsContent>
+
+                    <TabsContent value="harga" className="mt-4">
+                        <SectionHeader icon={Tag} title="Harga dan Promosi" />
+                        <FieldGroup>
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <Field
+                                    label="Harga Base / Single (IDR) *"
+                                    error={
+                                        errors.original_price || errors.price
+                                    }
+                                >
+                                    <div className="relative">
+                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                            Rp
+                                        </span>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            step={100000}
+                                            value={form.data.original_price}
+                                            onChange={(event) => {
+                                                const nextOriginalPrice = event
+                                                    .target.value
+                                                    ? Number(event.target.value)
+                                                    : '';
+                                                form.setData(
+                                                    'original_price',
+                                                    nextOriginalPrice,
+                                                );
+
+                                                if (!event.target.value) {
+                                                    form.setData(
+                                                        'discount_percent',
+                                                        '',
+                                                    );
+                                                }
+                                            }}
+                                            className="pl-8"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </Field>
+                                <Field label="Diskon (%)">
+                                    <div className="relative">
+                                        <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                            %
+                                        </span>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            max={99}
+                                            value={form.data.discount_percent}
+                                            onChange={(event) => {
+                                                const nextDiscountPercent =
+                                                    event.target.value
+                                                        ? Math.min(
+                                                              99,
+                                                              Math.max(
+                                                                  0,
+                                                                  Number(
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                                  ),
+                                                              ),
+                                                          )
+                                                        : '';
+                                                form.setData(
+                                                    'discount_percent',
+                                                    nextDiscountPercent,
+                                                );
+                                            }}
+                                            className="pr-8"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </Field>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                <Field label="Harga Asli Double (DBL)">
+                                    <div className="relative">
+                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                            Rp
+                                        </span>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            step={100000}
+                                            value={
+                                                effectiveRoomOriginalPrices.dbl ??
+                                                ''
+                                            }
+                                            onChange={(event) =>
+                                                updateRoomOriginalPrice(
+                                                    'dbl',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            className="pl-8"
+                                            placeholder="Isi manual jika diperlukan"
+                                        />
+                                    </div>
+                                </Field>
+                                <Field label="Harga Asli Triple (TRPL)">
+                                    <div className="relative">
+                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                            Rp
+                                        </span>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            step={100000}
+                                            value={
+                                                effectiveRoomOriginalPrices.trpl ??
+                                                ''
+                                            }
+                                            onChange={(event) =>
+                                                updateRoomOriginalPrice(
+                                                    'trpl',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            className="pl-8"
+                                            placeholder="Isi manual jika diperlukan"
+                                        />
+                                    </div>
+                                </Field>
+                                <Field label="Harga Asli Quad (QUAD)">
+                                    <div className="relative">
+                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                            Rp
+                                        </span>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            step={100000}
+                                            value={
+                                                effectiveRoomOriginalPrices.quad ??
+                                                ''
+                                            }
+                                            onChange={(event) =>
+                                                updateRoomOriginalPrice(
+                                                    'quad',
+                                                    event.target.value,
+                                                )
+                                            }
+                                            className="pl-8"
+                                            placeholder="Isi manual jika diperlukan"
+                                        />
+                                    </div>
+                                </Field>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                                <Field label="Harga Jual Double (DBL)">
+                                    <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
+                                        {formatCurrencyInputPreview(
+                                            effectiveRoomSellingPrices.dbl ??
+                                                null,
+                                        )}
+                                    </div>
+                                </Field>
+                                <Field label="Harga Jual Triple (TRPL)">
+                                    <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
+                                        {formatCurrencyInputPreview(
+                                            effectiveRoomSellingPrices.trpl ??
+                                                null,
+                                        )}
+                                    </div>
+                                </Field>
+                                <Field label="Harga Jual Quad (QUAD)">
+                                    <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
+                                        {formatCurrencyInputPreview(
+                                            effectiveRoomSellingPrices.quad ??
+                                                null,
+                                        )}
+                                    </div>
+                                </Field>
+                            </div>
+                            <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                                <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+                                    Harga Jual Otomatis
+                                </p>
+                                <div className="mt-2 flex flex-wrap items-end gap-3">
+                                    <p className="text-3xl font-bold text-primary">
+                                        Rp{' '}
+                                        {sellingPrice.toLocaleString('id-ID')}
+                                    </p>
+                                    {hasDiscount ? (
+                                        <p className="text-sm text-muted-foreground line-through">
+                                            Rp{' '}
+                                            {basePrice.toLocaleString('id-ID')}
+                                        </p>
+                                    ) : null}
+                                </div>
+                            </div>
+
+                            {hasDiscount ? (
+                                <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+                                    <div className="rounded-full bg-emerald-500 px-3 py-1 text-sm font-bold text-white">
+                                        -{discountPercent}%
+                                    </div>
+                                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                                        Diskon aktif
+                                    </p>
+                                </div>
+                            ) : null}
+
+                            <Field label="Label Diskon">
+                                <Input
+                                    value={form.data.discount_label}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'discount_label',
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="Contoh: EARLY BIRD, FLASH SALE"
+                                />
+                            </Field>
+                            <Field label="Promo Berakhir">
+                                <Input
+                                    type="datetime-local"
+                                    value={form.data.discount_ends_at}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'discount_ends_at',
                                             event.target.value,
                                         )
                                     }
                                 />
                             </Field>
-                            <Field
-                                label="Total Seat / Pax *"
-                                error={errors.seats_total}
-                            >
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    value={form.data.seats_total}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'seats_total',
-                                            Math.max(
-                                                1,
-                                                Number(event.target.value) || 1,
-                                            ),
-                                        )
-                                    }
-                                />
-                            </Field>
-                            <Field
-                                label="Status Pendaftaran *"
-                                error={errors.booking_status}
-                            >
+                            <Field label="Mata Uang">
                                 <Select
-                                    value={form.data.booking_status}
-                                    onValueChange={(value: 'open' | 'closed') =>
-                                        form.setData('booking_status', value)
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="open">
-                                            Dibuka
-                                        </SelectItem>
-                                        <SelectItem value="closed">
-                                            Ditutup
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                        </div>
-
-                        <Field
-                            label="Catatan Keberangkatan"
-                            error={errors.departure_notes}
-                        >
-                            <Input
-                                value={form.data.departure_notes}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'departure_notes',
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder="Contoh: Meeting point Terminal 3"
-                            />
-                        </Field>
-
-                        <AllInPackageCard
-                            value={form.data.all_in}
-                            vendors={vendors}
-                            categories={productCategories}
-                            currencies={effectiveCurrencies}
-                            packageStartDate={form.data.start_date}
-                            packageEndDate={form.data.end_date}
-                            errors={errors as Record<string, string>}
-                            onChange={updateAllInConfiguration}
-                        />
-
-                        <InfoSectionHeading
-                            icon={Layers}
-                            title="Produk"
-                            description="Kategori yang ditanggung vendor All In otomatis tidak dapat dipilih kembali."
-                        />
-
-                        <div className="space-y-4">
-                            {selectedProductCurrencyCodes.length > 0 ? (
-                                <div className="grid gap-3 rounded-xl bg-muted/30 p-3 sm:grid-cols-2">
-                                    {selectedProductCurrencyCodes.map(
-                                        (currencyCode) => {
-                                            const snapshot =
-                                                form.data.content
-                                                    .hpp_currency_snapshots?.[
-                                                    currencyCode
-                                                ];
-                                            const liveCurrency =
-                                                currencies.find(
-                                                    (currency) =>
-                                                        currency.code ===
-                                                        currencyCode,
-                                                );
-
-                                            return (
-                                                <div
-                                                    key={currencyCode}
-                                                    className="space-y-2"
-                                                >
-                                                    <Label>
-                                                        Kurs {currencyCode} ke
-                                                        IDR
-                                                    </Label>
-                                                    <div className="flex flex-col gap-2 sm:flex-row">
-                                                        <Input
-                                                            type="number"
-                                                            min={0.000001}
-                                                            step="any"
-                                                            value={
-                                                                snapshot?.rate_to_idr ||
-                                                                ''
-                                                            }
-                                                            onChange={(event) =>
-                                                                form.setData(
-                                                                    'content',
-                                                                    {
-                                                                        ...form
-                                                                            .data
-                                                                            .content,
-                                                                        hpp_currency_snapshots:
-                                                                            {
-                                                                                ...(form
-                                                                                    .data
-                                                                                    .content
-                                                                                    .hpp_currency_snapshots ??
-                                                                                    {}),
-                                                                                [currencyCode]:
-                                                                                    {
-                                                                                        currency:
-                                                                                            currencyCode,
-                                                                                        rate_to_idr:
-                                                                                            Number(
-                                                                                                event
-                                                                                                    .target
-                                                                                                    .value,
-                                                                                            ),
-                                                                                        source: 'manual',
-                                                                                        fetched_at:
-                                                                                            null,
-                                                                                    },
-                                                                            },
-                                                                    },
-                                                                )
-                                                            }
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            variant="outline"
-                                                            className="shrink-0"
-                                                            disabled={
-                                                                Number(
-                                                                    liveCurrency?.live_conversion_rate ??
-                                                                        0,
-                                                                ) <= 0
-                                                            }
-                                                            onClick={() =>
-                                                                form.setData(
-                                                                    'content',
-                                                                    {
-                                                                        ...form
-                                                                            .data
-                                                                            .content,
-                                                                        hpp_currency_snapshots:
-                                                                            {
-                                                                                ...(form
-                                                                                    .data
-                                                                                    .content
-                                                                                    .hpp_currency_snapshots ??
-                                                                                    {}),
-                                                                                [currencyCode]:
-                                                                                    {
-                                                                                        currency:
-                                                                                            currencyCode,
-                                                                                        rate_to_idr:
-                                                                                            Number(
-                                                                                                liveCurrency?.live_conversion_rate ??
-                                                                                                    0,
-                                                                                            ),
-                                                                                        source: 'live',
-                                                                                        fetched_at:
-                                                                                            liveCurrency?.rate_fetched_at ??
-                                                                                            null,
-                                                                                    },
-                                                                            },
-                                                                    },
-                                                                )
-                                                            }
-                                                        >
-                                                            Gunakan Kurs Live
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        },
-                                    )}
-                                </div>
-                            ) : null}
-
-                            <ProductSelector
-                                options={productOptions}
-                                categories={productCategories}
-                                currencies={effectiveCurrencies}
-                                selected={form.data.product_ids}
-                                productMultipliers={
-                                    form.data.product_multipliers
-                                }
-                                hotelBrokerSelections={getHotelBrokerSelections(
-                                    form.data.content,
-                                )}
-                                locale={locale}
-                                lockedCategoryKeys={
-                                    form.data.all_in.enabled
-                                        ? form.data.all_in
-                                              .included_category_keys
-                                        : []
-                                }
-                                onChange={updateSelectedProducts}
-                            />
-                        </div>
-
-                        <InfoSectionHeading
-                            icon={Calculator}
-                            title="Biaya Operasional"
-                            description="Lengkapi biaya pendukung package. Nilainya langsung dipakai dalam breakdown Estimasi HPP."
-                        />
-
-                        <PackageOperationalCostCards
-                            value={operationalCosts}
-                            currencies={effectiveCurrencies}
-                            hotelPerPax={estimatedHotelPerPax}
-                            ticketAndVisaPerPax={estimatedTicketAndVisaPerPax}
-                            tourLeaderTotal={estimatedTourLeaderFee}
-                            muthawwifTotal={estimatedMuthawwifFee}
-                            onChange={(nextCosts) =>
-                                updateHppEstimate({
-                                    ...hppEstimate,
-                                    operational_costs: nextCosts,
-                                })
-                            }
-                        />
-
-                        <InfoSectionHeading
-                            icon={FileText}
-                            title="Ringkasan & Publikasi"
-                            description="Tambahkan ringkasan singkat dan tentukan visibilitas package pada halaman publik."
-                        />
-
-                        <Field label="Ringkasan">
-                            <Textarea
-                                rows={2}
-                                value={form.data['summary.id']}
-                                onChange={(event) =>
-                                    form.setData((currentData) => ({
-                                        ...currentData,
-                                        'summary.id': event.target.value,
-                                        'summary.en': event.target.value,
-                                    }))
-                                }
-                                placeholder="Deskripsi singkat paket..."
-                            />
-                        </Field>
-
-                        <div className="flex gap-6 rounded-xl border bg-muted/20 px-4 py-3">
-                            <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                                <Checkbox
-                                    checked={form.data.is_featured}
-                                    onCheckedChange={(checked) =>
-                                        form.setData(
-                                            'is_featured',
-                                            Boolean(checked),
-                                        )
-                                    }
-                                />
-                                <span>Tampilkan sebagai Featured</span>
-                            </label>
-                            <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-                                <Checkbox
-                                    checked={form.data.is_active}
-                                    onCheckedChange={(checked) =>
-                                        form.setData(
-                                            'is_active',
-                                            Boolean(checked),
-                                        )
-                                    }
-                                />
-                                <span>Package Aktif</span>
-                            </label>
-                        </div>
-                    </FieldGroup>
-                </TabsContent>
-
-                <TabsContent value="gallery" className="mt-4">
-                    <SectionHeader icon={Camera} title="Gallery Package" />
-                    <FieldGroup>
-                        <div className="rounded-2xl border border-border bg-card p-4">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Foto-foto Package
-                                    </p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="gap-2"
-                                    onClick={() =>
-                                        imageInputRef.current?.click()
-                                    }
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Tambah Foto
-                                </Button>
-                            </div>
-
-                            <input
-                                ref={imageInputRef}
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={handleImageChange}
-                            />
-
-                            <div
-                                className={[
-                                    'mt-4 rounded-2xl border-2 border-dashed px-4 py-6 text-center transition-all',
-                                    isDragOverGallery
-                                        ? 'border-primary bg-linear-to-br from-primary/12 via-background to-primary/5 shadow-sm'
-                                        : 'border-border bg-linear-to-br from-muted/30 via-background to-muted/10 hover:border-primary/40 hover:from-primary/8 hover:to-primary/4',
-                                ].join(' ')}
-                                onDragEnter={(event) => {
-                                    event.preventDefault();
-                                    setIsDragOverGallery(true);
-                                }}
-                                onDragOver={(event) => {
-                                    event.preventDefault();
-                                    if (!isDragOverGallery) {
-                                        setIsDragOverGallery(true);
-                                    }
-                                }}
-                                onDragLeave={(event) => {
-                                    event.preventDefault();
-                                    const nextTarget =
-                                        event.relatedTarget as Node | null;
-
-                                    if (
-                                        nextTarget &&
-                                        event.currentTarget.contains(nextTarget)
-                                    ) {
-                                        return;
-                                    }
-
-                                    setIsDragOverGallery(false);
-                                }}
-                                onDrop={handleGalleryDrop}
-                            >
-                                <div className="flex flex-col items-center gap-2">
-                                    <div
-                                        className={[
-                                            'rounded-full p-3 shadow-sm transition-all',
-                                            isDragOverGallery
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-background text-primary',
-                                        ].join(' ')}
-                                    >
-                                        <Upload className="h-5 w-5" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-semibold text-foreground">
-                                            Drag & drop foto package di sini
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Bisa pilih banyak file sekaligus
-                                            atau klik tombol tambah foto.
-                                        </p>
-                                        <p className="text-[11px] font-medium tracking-[0.18em] text-primary/80 uppercase">
-                                            Cover mengikuti urutan foto paling
-                                            pertama
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                                {galleryItems.map((item, index) => (
-                                    <div
-                                        key={item.key}
-                                        draggable
-                                        onDragStart={() => {
-                                            setDraggedGalleryItemKey(item.key);
-                                            setGalleryDropTargetKey(item.key);
-                                        }}
-                                        onDragOver={(event) => {
-                                            event.preventDefault();
-                                            if (
-                                                galleryDropTargetKey !==
-                                                item.key
-                                            ) {
-                                                setGalleryDropTargetKey(
-                                                    item.key,
-                                                );
-                                            }
-                                        }}
-                                        onDrop={(event) => {
-                                            event.preventDefault();
-
-                                            if (draggedGalleryItemKey) {
-                                                reorderGalleryItems(
-                                                    draggedGalleryItemKey,
-                                                    item.key,
-                                                );
-                                            }
-
-                                            setDraggedGalleryItemKey(null);
-                                            setGalleryDropTargetKey(null);
-                                        }}
-                                        onDragEnd={() => {
-                                            setDraggedGalleryItemKey(null);
-                                            setGalleryDropTargetKey(null);
-                                        }}
-                                        className={[
-                                            'group relative h-24 overflow-hidden rounded-xl border bg-muted transition-all',
-                                            draggedGalleryItemKey === item.key
-                                                ? 'scale-[0.98] opacity-70 ring-2 ring-primary/30'
-                                                : '',
-                                            galleryDropTargetKey === item.key &&
-                                            draggedGalleryItemKey !== item.key
-                                                ? 'ring-2 ring-primary'
-                                                : '',
-                                        ].join(' ')}
-                                    >
-                                        <img
-                                            src={item.url}
-                                            alt="Gallery"
-                                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                                        />
-                                        <div className="absolute top-1 right-1 rounded-full bg-black/70 p-1 text-white shadow-sm">
-                                            <GripVertical className="h-3 w-3" />
-                                        </div>
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="h-8 w-8 rounded-full"
-                                                onClick={() =>
-                                                    item.kind === 'existing'
-                                                        ? removeExistingImage(
-                                                              existingImages.findIndex(
-                                                                  (url) =>
-                                                                      url ===
-                                                                      item.url,
-                                                              ),
-                                                          )
-                                                        : removeNewImage(
-                                                              previewUrls.findIndex(
-                                                                  (url) =>
-                                                                      url ===
-                                                                      item.url,
-                                                              ),
-                                                          )
-                                                }
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                        <div className="absolute top-1 left-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
-                                            {index === 0 ? 'Cover' : 'Gallery'}
-                                            {item.kind === 'new' ? ' Baru' : ''}
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        imageInputRef.current?.click()
-                                    }
-                                    className="flex h-24 flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-muted-foreground/30 text-muted-foreground transition-all hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
-                                >
-                                    <Plus className="h-5 w-5" />
-                                    <span className="text-[10px] font-medium tracking-wider uppercase">
-                                        Tambah Foto
-                                    </span>
-                                </button>
-                            </div>
-
-                            {existingImages.length === 0 &&
-                            previewUrls.length === 0 ? (
-                                <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                                    <p className="text-sm font-medium text-foreground">
-                                        Belum ada foto package
-                                    </p>
-                                </div>
-                            ) : null}
-
-                            <p className="mt-3 text-xs text-muted-foreground">
-                                Format: PNG, JPG, JPEG, WEBP. Maksimal{' '}
-                                {packageImageUploadMaxLabel} per gambar.
-                            </p>
-
-                            {errors.images ? (
-                                <p className="mt-1 text-xs text-destructive">
-                                    {errors.images}
-                                </p>
-                            ) : null}
-                        </div>
-                    </FieldGroup>
-                </TabsContent>
-
-                <TabsContent value="harga" className="mt-4">
-                    <SectionHeader icon={Tag} title="Harga dan Promosi" />
-                    <FieldGroup>
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            <Field
-                                label="Harga Base / Single (IDR) *"
-                                error={errors.original_price || errors.price}
-                            >
-                                <div className="relative">
-                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                        Rp
-                                    </span>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={100000}
-                                        value={form.data.original_price}
-                                        onChange={(event) => {
-                                            const nextOriginalPrice = event
-                                                .target.value
-                                                ? Number(event.target.value)
-                                                : '';
-                                            form.setData(
-                                                'original_price',
-                                                nextOriginalPrice,
-                                            );
-
-                                            if (!event.target.value) {
-                                                form.setData(
-                                                    'discount_percent',
-                                                    '',
-                                                );
-                                            }
-                                        }}
-                                        className="pl-8"
-                                        placeholder="0"
-                                    />
-                                </div>
-                            </Field>
-                            <Field label="Diskon (%)">
-                                <div className="relative">
-                                    <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                        %
-                                    </span>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        max={99}
-                                        value={form.data.discount_percent}
-                                        onChange={(event) => {
-                                            const nextDiscountPercent = event
-                                                .target.value
-                                                ? Math.min(
-                                                      99,
-                                                      Math.max(
-                                                          0,
-                                                          Number(
-                                                              event.target
-                                                                  .value,
-                                                          ),
-                                                      ),
-                                                  )
-                                                : '';
-                                            form.setData(
-                                                'discount_percent',
-                                                nextDiscountPercent,
-                                            );
-                                        }}
-                                        className="pr-8"
-                                        placeholder="0"
-                                    />
-                                </div>
-                            </Field>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <Field label="Harga Asli Double (DBL)">
-                                <div className="relative">
-                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                        Rp
-                                    </span>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={100000}
-                                        value={
-                                            effectiveRoomOriginalPrices.dbl ??
-                                            ''
-                                        }
-                                        onChange={(event) =>
-                                            updateRoomOriginalPrice(
-                                                'dbl',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className="pl-8"
-                                        placeholder="Isi manual jika diperlukan"
-                                    />
-                                </div>
-                            </Field>
-                            <Field label="Harga Asli Triple (TRPL)">
-                                <div className="relative">
-                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                        Rp
-                                    </span>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={100000}
-                                        value={
-                                            effectiveRoomOriginalPrices.trpl ??
-                                            ''
-                                        }
-                                        onChange={(event) =>
-                                            updateRoomOriginalPrice(
-                                                'trpl',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className="pl-8"
-                                        placeholder="Isi manual jika diperlukan"
-                                    />
-                                </div>
-                            </Field>
-                            <Field label="Harga Asli Quad (QUAD)">
-                                <div className="relative">
-                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                        Rp
-                                    </span>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step={100000}
-                                        value={
-                                            effectiveRoomOriginalPrices.quad ??
-                                            ''
-                                        }
-                                        onChange={(event) =>
-                                            updateRoomOriginalPrice(
-                                                'quad',
-                                                event.target.value,
-                                            )
-                                        }
-                                        className="pl-8"
-                                        placeholder="Isi manual jika diperlukan"
-                                    />
-                                </div>
-                            </Field>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            <Field label="Harga Jual Double (DBL)">
-                                <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
-                                    {formatCurrencyInputPreview(
-                                        effectiveRoomSellingPrices.dbl ?? null,
-                                    )}
-                                </div>
-                            </Field>
-                            <Field label="Harga Jual Triple (TRPL)">
-                                <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
-                                    {formatCurrencyInputPreview(
-                                        effectiveRoomSellingPrices.trpl ?? null,
-                                    )}
-                                </div>
-                            </Field>
-                            <Field label="Harga Jual Quad (QUAD)">
-                                <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
-                                    {formatCurrencyInputPreview(
-                                        effectiveRoomSellingPrices.quad ?? null,
-                                    )}
-                                </div>
-                            </Field>
-                        </div>
-                        <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                            <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
-                                Harga Jual Otomatis
-                            </p>
-                            <div className="mt-2 flex flex-wrap items-end gap-3">
-                                <p className="text-3xl font-bold text-primary">
-                                    Rp {sellingPrice.toLocaleString('id-ID')}
-                                </p>
-                                {hasDiscount ? (
-                                    <p className="text-sm text-muted-foreground line-through">
-                                        Rp {basePrice.toLocaleString('id-ID')}
-                                    </p>
-                                ) : null}
-                            </div>
-                        </div>
-
-                        {hasDiscount ? (
-                            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
-                                <div className="rounded-full bg-emerald-500 px-3 py-1 text-sm font-bold text-white">
-                                    -{discountPercent}%
-                                </div>
-                                <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                                    Diskon aktif
-                                </p>
-                            </div>
-                        ) : null}
-
-                        <Field label="Label Diskon">
-                            <Input
-                                value={form.data.discount_label}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'discount_label',
-                                        event.target.value,
-                                    )
-                                }
-                                placeholder="Contoh: EARLY BIRD, FLASH SALE"
-                            />
-                        </Field>
-                        <Field label="Promo Berakhir">
-                            <Input
-                                type="datetime-local"
-                                value={form.data.discount_ends_at}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'discount_ends_at',
-                                        event.target.value,
-                                    )
-                                }
-                            />
-                        </Field>
-                        <Field label="Mata Uang">
-                            <Select
-                                value={form.data.currency}
-                                onValueChange={(value) => {
-                                    const liveCurrency = currencies.find(
-                                        (currency) => currency.code === value,
-                                    );
-                                    form.setData((current) => ({
-                                        ...current,
-                                        currency: value,
-                                        content: {
-                                            ...current.content,
-                                            hpp_currency_snapshots: {
-                                                ...(current.content
-                                                    .hpp_currency_snapshots ??
-                                                    {}),
-                                                [value]: {
-                                                    currency: value,
-                                                    rate_to_idr:
-                                                        value === 'IDR'
-                                                            ? 1
-                                                            : Number(
-                                                                  liveCurrency?.live_conversion_rate ??
-                                                                      0,
-                                                              ),
-                                                    source:
-                                                        value === 'IDR'
-                                                            ? 'identity'
-                                                            : 'live',
-                                                    fetched_at:
-                                                        liveCurrency?.rate_fetched_at ??
-                                                        null,
-                                                },
-                                            },
-                                        },
-                                    }));
-                                }}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {currencies.map((currency) => (
-                                        <SelectItem
-                                            key={currency.code}
-                                            value={currency.code}
-                                        >
-                                            {currency.code} - {currency.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {form.data.currency !== 'IDR' ? (
-                                <div className="mt-2 flex gap-2">
-                                    <Input
-                                        type="number"
-                                        min={0.000001}
-                                        step="any"
-                                        value={currencyRateToIdr || ''}
-                                        onChange={(event) => {
-                                            const code =
-                                                form.data.currency.toUpperCase();
-                                            form.setData('content', {
-                                                ...form.data.content,
+                                    value={form.data.currency}
+                                    onValueChange={(value) => {
+                                        const liveCurrency = currencies.find(
+                                            (currency) =>
+                                                currency.code === value,
+                                        );
+                                        form.setData((current) => ({
+                                            ...current,
+                                            currency: value,
+                                            content: {
+                                                ...current.content,
                                                 hpp_currency_snapshots: {
-                                                    ...(form.data.content
+                                                    ...(current.content
                                                         .hpp_currency_snapshots ??
                                                         {}),
-                                                    [code]: {
-                                                        currency: code,
-                                                        rate_to_idr: Number(
-                                                            event.target.value,
-                                                        ),
-                                                        source: 'manual',
-                                                        fetched_at: null,
-                                                    },
-                                                },
-                                            });
-                                        }}
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        disabled={
-                                            Number(
-                                                selectedCurrency?.live_conversion_rate ??
-                                                    0,
-                                            ) <= 0
-                                        }
-                                        onClick={() => {
-                                            const code =
-                                                form.data.currency.toUpperCase();
-                                            form.setData('content', {
-                                                ...form.data.content,
-                                                hpp_currency_snapshots: {
-                                                    ...(form.data.content
-                                                        .hpp_currency_snapshots ??
-                                                        {}),
-                                                    [code]: {
-                                                        currency: code,
-                                                        rate_to_idr: Number(
-                                                            selectedCurrency?.live_conversion_rate ??
-                                                                0,
-                                                        ),
-                                                        source: 'live',
+                                                    [value]: {
+                                                        currency: value,
+                                                        rate_to_idr:
+                                                            value === 'IDR'
+                                                                ? 1
+                                                                : Number(
+                                                                      liveCurrency?.live_conversion_rate ??
+                                                                          0,
+                                                                  ),
+                                                        source:
+                                                            value === 'IDR'
+                                                                ? 'identity'
+                                                                : 'live',
                                                         fetched_at:
-                                                            selectedCurrency?.rate_fetched_at ??
+                                                            liveCurrency?.rate_fetched_at ??
                                                             null,
                                                     },
                                                 },
-                                            });
-                                        }}
-                                    >
-                                        Gunakan Kurs Live
-                                    </Button>
-                                </div>
-                            ) : null}
-                        </Field>
-                    </FieldGroup>
-                </TabsContent>
-
-                <TabsContent value="estimasi-hpp" className="mt-4">
-                    <SectionHeader
-                        icon={Calculator}
-                        title="Estimasi HPP Package"
-                    />
-                    <div className="space-y-4">
-                        <div className="rounded-2xl border border-border bg-card p-4">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                                <div>
-                                    <p className="text-sm font-semibold">
-                                        Target dan Komposisi Jamaah
-                                    </p>
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        Komposisi harga jual otomatis mengikuti
-                                        Breakdown Hotel utama.
-                                    </p>
-                                </div>
-                                <strong className="text-sm">
-                                    {estimatedCustomerCount} jamaah
-                                </strong>
-                            </div>
-                            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/60 pt-3 text-sm">
-                                {(
-                                    [
-                                        ['single', 'Single'],
-                                        ['dbl', 'Double'],
-                                        ['trpl', 'Triple'],
-                                        ['quad', 'Quad'],
-                                    ] as const
-                                ).map(([roomType, label]) => (
-                                    <span key={roomType}>
-                                        <span className="text-muted-foreground">
-                                            {label}
-                                        </span>{' '}
-                                        <strong>
-                                            {estimatedCustomers[roomType]} pax
-                                        </strong>
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-
-                        {form.data.all_in.enabled ? (
-                            <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-900 dark:bg-sky-950/30">
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-sky-950 dark:text-sky-100">
-                                            Paket All In Vendor
-                                        </p>
-                                        <p className="mt-1 text-xs text-sky-800 dark:text-sky-300">
-                                            {form.data.all_in
-                                                .broker_package_name ||
-                                                'Nama paket vendor belum diisi'}
-                                            {' - '}
-                                            {form.data.all_in.included_category_keys
-                                                .map(
-                                                    (categoryKey) =>
-                                                        productCategories.find(
-                                                            (category) =>
-                                                                category.key ===
-                                                                categoryKey,
-                                                        )?.name,
-                                                )
-                                                .map((name) =>
-                                                    typeof name === 'string'
-                                                        ? name
-                                                        : name?.id || name?.en,
-                                                )
-                                                .filter(Boolean)
-                                                .join(', ') ||
-                                                'Kategori belum dipilih'}
-                                        </p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-xs text-sky-700 dark:text-sky-300">
-                                            {formatEstimateCurrency(
-                                                convertEstimatePriceToIdr(
-                                                    form.data.all_in
-                                                        .price_per_pax,
-                                                    form.data.all_in.currency,
-                                                ),
-                                            )}{' '}
-                                            / jamaah
-                                        </p>
-                                        <p className="font-semibold text-sky-950 dark:text-sky-100">
-                                            {formatEstimateCurrency(
-                                                estimatedAllInTotal,
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : null}
-
-                        <div className="rounded-2xl border border-border bg-card p-4">
-                            <div className="mb-3 flex items-center justify-between gap-3">
-                                <p className="text-sm font-semibold">
-                                    Breakdown Product
-                                </p>
-                                <strong className="text-sm">
-                                    {formatEstimateCurrency(
-                                        estimatedProductTotal,
-                                    )}
-                                </strong>
-                            </div>
-                            {estimateProductItems.length > 0 ? (
-                                <div className="divide-y divide-border/70 rounded-xl border border-border/70">
-                                    {estimateProductItems.map((item) => (
-                                        <div
-                                            key={item.product.id}
-                                            className="grid gap-2 p-3 sm:grid-cols-[1fr_190px_150px] sm:items-end"
-                                        >
-                                            <div>
-                                                <p className="text-sm font-medium">
-                                                    {localizedFieldValue(
-                                                        item.product.name,
-                                                        locale,
-                                                        item.product.code,
-                                                    )}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {formatEstimateCurrency(
-                                                        item.unitPrice,
-                                                    )}{' '}
-                                                    / unit
-                                                </p>
-                                            </div>
-                                            <Field label="Quantity">
-                                                <div className="flex gap-1.5">
-                                                    <Input
-                                                        type="number"
-                                                        min={0}
-                                                        value={item.quantity}
-                                                        onChange={(event) =>
-                                                            updateEstimatedProductQuantity(
-                                                                item.product.id,
+                                            },
+                                        }));
+                                    }}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {currencies.map((currency) => (
+                                            <SelectItem
+                                                key={currency.code}
+                                                value={currency.code}
+                                            >
+                                                {currency.code} -{' '}
+                                                {currency.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {form.data.currency !== 'IDR' ? (
+                                    <div className="mt-2 flex gap-2">
+                                        <Input
+                                            type="number"
+                                            min={0.000001}
+                                            step="any"
+                                            value={currencyRateToIdr || ''}
+                                            onChange={(event) => {
+                                                const code =
+                                                    form.data.currency.toUpperCase();
+                                                form.setData('content', {
+                                                    ...form.data.content,
+                                                    hpp_currency_snapshots: {
+                                                        ...(form.data.content
+                                                            .hpp_currency_snapshots ??
+                                                            {}),
+                                                        [code]: {
+                                                            currency: code,
+                                                            rate_to_idr: Number(
                                                                 event.target
                                                                     .value,
-                                                            )
-                                                        }
-                                                    />
-                                                    {item.quantityIsManual ? (
+                                                            ),
+                                                            source: 'manual',
+                                                            fetched_at: null,
+                                                        },
+                                                    },
+                                                });
+                                            }}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            disabled={
+                                                Number(
+                                                    selectedCurrency?.live_conversion_rate ??
+                                                        0,
+                                                ) <= 0
+                                            }
+                                            onClick={() => {
+                                                const code =
+                                                    form.data.currency.toUpperCase();
+                                                form.setData('content', {
+                                                    ...form.data.content,
+                                                    hpp_currency_snapshots: {
+                                                        ...(form.data.content
+                                                            .hpp_currency_snapshots ??
+                                                            {}),
+                                                        [code]: {
+                                                            currency: code,
+                                                            rate_to_idr: Number(
+                                                                selectedCurrency?.live_conversion_rate ??
+                                                                    0,
+                                                            ),
+                                                            source: 'live',
+                                                            fetched_at:
+                                                                selectedCurrency?.rate_fetched_at ??
+                                                                null,
+                                                        },
+                                                    },
+                                                });
+                                            }}
+                                        >
+                                            Gunakan Kurs Live
+                                        </Button>
+                                    </div>
+                                ) : null}
+                            </Field>
+                        </FieldGroup>
+                    </TabsContent>
+
+                    <TabsContent value="estimasi-hpp" className="mt-4">
+                        <SectionHeader
+                            icon={Calculator}
+                            title="Estimasi HPP Package"
+                        />
+                        <div className="space-y-4">
+                            <div className="rounded-2xl border border-border bg-card p-4">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <p className="text-sm font-semibold">
+                                            Target dan Komposisi Jamaah
+                                        </p>
+                                    </div>
+                                    <strong className="text-sm">
+                                        {estimatedCustomerCount} jamaah
+                                    </strong>
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/60 pt-3 text-sm">
+                                    {(
+                                        [
+                                            ['single', 'Single'],
+                                            ['dbl', 'Double'],
+                                            ['trpl', 'Triple'],
+                                            ['quad', 'Quad'],
+                                        ] as const
+                                    ).map(([roomType, label]) => (
+                                        <span key={roomType}>
+                                            <span className="text-muted-foreground">
+                                                {label}
+                                            </span>{' '}
+                                            <strong>
+                                                {estimatedCustomers[roomType]}{' '}
+                                                pax
+                                            </strong>
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {form.data.all_in.enabled ? (
+                                <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-900 dark:bg-sky-950/30">
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-semibold text-sky-950 dark:text-sky-100">
+                                                Paket All In Vendor
+                                            </p>
+                                            <p className="mt-1 text-xs text-sky-800 dark:text-sky-300">
+                                                {form.data.all_in
+                                                    .broker_package_name ||
+                                                    'Nama paket vendor belum diisi'}
+                                                {' - '}
+                                                {form.data.all_in.included_category_keys
+                                                    .map(
+                                                        (categoryKey) =>
+                                                            productCategories.find(
+                                                                (category) =>
+                                                                    category.key ===
+                                                                    categoryKey,
+                                                            )?.name,
+                                                    )
+                                                    .map((name) =>
+                                                        typeof name === 'string'
+                                                            ? name
+                                                            : name?.id ||
+                                                              name?.en,
+                                                    )
+                                                    .filter(Boolean)
+                                                    .join(', ') ||
+                                                    'Kategori belum dipilih'}
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-sky-700 dark:text-sky-300">
+                                                {formatEstimateCurrency(
+                                                    convertEstimatePriceToIdr(
+                                                        form.data.all_in
+                                                            .price_per_pax,
+                                                        form.data.all_in
+                                                            .currency,
+                                                    ),
+                                                )}{' '}
+                                                / jamaah
+                                            </p>
+                                            <p className="font-semibold text-sky-950 dark:text-sky-100">
+                                                {formatEstimateCurrency(
+                                                    estimatedAllInTotal,
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            <div className="rounded-2xl border border-border bg-card p-4">
+                                <div className="mb-3 flex items-center justify-between gap-3">
+                                    <p className="text-sm font-semibold">
+                                        Breakdown Product
+                                    </p>
+                                    <strong className="text-sm">
+                                        {formatEstimateCurrency(
+                                            estimatedProductTotal,
+                                        )}
+                                    </strong>
+                                </div>
+                                {estimateProductItems.length > 0 ? (
+                                    <div className="divide-y divide-border/70 rounded-xl border border-border/70">
+                                        {estimateProductItems.map((item) => (
+                                            <div
+                                                key={item.product.id}
+                                                className="grid gap-2 p-3 sm:grid-cols-[1fr_190px_150px] sm:items-end"
+                                            >
+                                                <div>
+                                                    <p className="text-sm font-medium">
+                                                        {localizedFieldValue(
+                                                            item.product.name,
+                                                            locale,
+                                                            item.product.code,
+                                                        )}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {formatEstimateCurrency(
+                                                            item.unitPrice,
+                                                        )}{' '}
+                                                        / unit
+                                                    </p>
+                                                </div>
+                                                <Field label="Quantity">
+                                                    <div className="flex gap-1.5">
+                                                        <Input
+                                                            type="number"
+                                                            min={0}
+                                                            value={
+                                                                item.quantity
+                                                            }
+                                                            onChange={(event) =>
+                                                                updateEstimatedProductQuantity(
+                                                                    item.product
+                                                                        .id,
+                                                                    event.target
+                                                                        .value,
+                                                                )
+                                                            }
+                                                        />
+                                                        {item.quantityIsManual ? (
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    resetEstimatedProductQuantity(
+                                                                        item
+                                                                            .product
+                                                                            .id,
+                                                                    )
+                                                                }
+                                                            >
+                                                                Auto
+                                                            </Button>
+                                                        ) : null}
+                                                    </div>
+                                                </Field>
+                                                <div className="sm:text-right">
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Total
+                                                    </p>
+                                                    <p className="text-sm font-semibold">
+                                                        {formatEstimateCurrency(
+                                                            item.totalPrice,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
+                                        Belum ada product non-hotel yang
+                                        dipilih.
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-2xl border border-border bg-card p-4">
+                                <div className="mb-3 flex items-center justify-between gap-3">
+                                    <p className="text-sm font-semibold">
+                                        Breakdown Hotel
+                                    </p>
+                                    <strong className="text-sm">
+                                        {formatEstimateCurrency(
+                                            estimatedHotelTotal,
+                                        )}
+                                    </strong>
+                                </div>
+                                {estimateHotelGroups.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {estimateHotelGroups.map(
+                                            (group, index) => (
+                                                <div
+                                                    key={group.product.id}
+                                                    className="rounded-xl border border-border/70 p-3"
+                                                >
+                                                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                                        <div>
+                                                            <p className="text-sm font-medium">
+                                                                {localizedFieldValue(
+                                                                    group
+                                                                        .product
+                                                                        .name,
+                                                                    locale,
+                                                                    group
+                                                                        .product
+                                                                        .code,
+                                                                )}
+                                                            </p>
+                                                            {index === 0 ? (
+                                                                <p className="mt-0.5 text-[11px] font-medium text-primary">
+                                                                    Acuan
+                                                                    komposisi
+                                                                    harga jual
+                                                                </p>
+                                                            ) : null}
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Kapasitas{' '}
+                                                                {
+                                                                    group.allocatedPax
+                                                                }{' '}
+                                                                pax, target{' '}
+                                                                {
+                                                                    estimatedCustomerCount
+                                                                }{' '}
+                                                                jamaah,{' '}
+                                                                {
+                                                                    group.allocationDeltaLabel
+                                                                }
+                                                            </p>
+                                                        </div>
                                                         <Button
                                                             type="button"
                                                             size="sm"
                                                             variant="outline"
                                                             onClick={() =>
-                                                                resetEstimatedProductQuantity(
-                                                                    item.product
+                                                                applyQuadFirstHotelScenario(
+                                                                    group
+                                                                        .product
                                                                         .id,
+                                                                    group.defaultAllocation,
                                                                 )
                                                             }
                                                         >
-                                                            Auto
+                                                            Skenario QUAD
                                                         </Button>
-                                                    ) : null}
-                                                </div>
-                                            </Field>
-                                            <div className="sm:text-right">
-                                                <p className="text-xs text-muted-foreground">
-                                                    Total
-                                                </p>
-                                                <p className="text-sm font-semibold">
-                                                    {formatEstimateCurrency(
-                                                        item.totalPrice,
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
-                                    Belum ada product non-hotel yang dipilih.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="rounded-2xl border border-border bg-card p-4">
-                            <div className="mb-3 flex items-center justify-between gap-3">
-                                <p className="text-sm font-semibold">
-                                    Breakdown Hotel
-                                </p>
-                                <strong className="text-sm">
-                                    {formatEstimateCurrency(
-                                        estimatedHotelTotal,
-                                    )}
-                                </strong>
-                            </div>
-                            {estimateHotelGroups.length > 0 ? (
-                                <div className="space-y-3">
-                                    {estimateHotelGroups.map((group, index) => (
-                                        <div
-                                            key={group.product.id}
-                                            className="rounded-xl border border-border/70 p-3"
-                                        >
-                                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                                <div>
-                                                    <p className="text-sm font-medium">
-                                                        {localizedFieldValue(
-                                                            group.product.name,
-                                                            locale,
-                                                            group.product.code,
-                                                        )}
-                                                    </p>
-                                                    {index === 0 ? (
-                                                        <p className="mt-0.5 text-[11px] font-medium text-primary">
-                                                            Acuan komposisi
-                                                            harga jual
-                                                        </p>
-                                                    ) : null}
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Kapasitas{' '}
-                                                        {group.allocatedPax}{' '}
-                                                        pax, target{' '}
-                                                        {estimatedCustomerCount}{' '}
-                                                        jamaah,{' '}
-                                                        {
-                                                            group.allocationDeltaLabel
-                                                        }
-                                                    </p>
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() =>
-                                                        applyQuadFirstHotelScenario(
-                                                            group.product.id,
-                                                            group.defaultAllocation,
-                                                        )
-                                                    }
-                                                >
-                                                    Skenario QUAD
-                                                </Button>
-                                            </div>
-                                            <div className="grid gap-2 md:grid-cols-3">
-                                                {group.rows.map((row) => (
-                                                    <div
-                                                        key={row.roomType}
-                                                        className="rounded-lg bg-muted/30 p-2.5"
-                                                    >
-                                                        <div className="mb-2 flex items-center justify-between gap-2">
-                                                            <strong className="text-xs uppercase">
-                                                                {row.roomType}
-                                                            </strong>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {row.roomCount}{' '}
-                                                                kamar
-                                                            </span>
-                                                        </div>
-                                                        <Field label="Jumlah kamar">
-                                                            <Input
-                                                                type="number"
-                                                                min={0}
-                                                                max={
-                                                                    row.roomCountLimit
-                                                                }
-                                                                value={
-                                                                    row.roomCount
-                                                                }
-                                                                onChange={(
-                                                                    event,
-                                                                ) =>
-                                                                    updateEstimatedHotelAllocation(
-                                                                        group
-                                                                            .product
-                                                                            .id,
-                                                                        row.roomType,
-                                                                        event
-                                                                            .target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                            />
-                                                            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                                                                {row.roomCount}{' '}
-                                                                kamar x{' '}
-                                                                {
-                                                                    estimateRoomCapacities[
-                                                                        row
-                                                                            .roomType
-                                                                    ]
-                                                                }{' '}
-                                                                pax = {row.pax}{' '}
-                                                                pax
-                                                            </p>
-                                                        </Field>
-                                                        <div className="mt-2 flex justify-between gap-2 text-xs">
-                                                            <span>
-                                                                {row.pax} pax
-                                                            </span>
-                                                            <strong>
-                                                                {formatEstimateCurrency(
-                                                                    row.totalPrice,
-                                                                )}
-                                                            </strong>
-                                                        </div>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
-                                    Belum ada product hotel yang dipilih.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="grid gap-3 md:grid-cols-2">
-                            <div className="rounded-2xl border border-border bg-card p-4">
-                                <p className="mb-3 text-sm font-semibold">
-                                    Fee dan Biaya Tambahan
-                                </p>
-                                {hasOperationalCostConfiguration ? (
-                                    <div className="divide-y divide-border/60 text-sm">
-                                        {[
-                                            [
-                                                'SDM',
-                                                estimatedOperationalTotals.humanResources,
-                                                `${operationalCosts.human_resources.length} SDM`,
-                                            ],
-                                            [
-                                                'Overhead',
-                                                estimatedOperationalTotals.overhead,
-                                                operationalCosts.overhead
-                                                    .mode === 'per_pax'
-                                                    ? `${formatEstimateCurrency(operationalCosts.overhead.amount)} x ${estimatedCustomerCount} jamaah`
-                                                    : 'Total flat',
-                                            ],
-                                            [
-                                                'Fotografer',
-                                                estimatedOperationalTotals.photographer,
-                                                `${operationalCosts.photographer.count} x ${formatEstimateCurrency(operationalCosts.photographer.daily_salary)} x ${operationalCosts.photographer.days} hari`,
-                                            ],
-                                            [
-                                                'Tour Leader',
-                                                estimatedOperationalTotals.tourLeader,
-                                                `${operationalCosts.tour_leader.count} x (gaji + hotel ${formatEstimateCurrency(operationalCosts.tour_leader.include_hotel ? estimatedHotelPerPax : 0)} + tiket/visa ${formatEstimateCurrency(operationalCosts.tour_leader.include_ticket_and_visa ? estimatedTicketAndVisaPerPax : 0)})`,
-                                            ],
-                                            [
-                                                'Muthawwif',
-                                                estimatedOperationalTotals.muthawwif,
-                                                `${operationalCosts.muthawwif.count} x (${operationalCosts.muthawwif.daily_salary} ${operationalCosts.muthawwif.currency} x ${operationalCosts.muthawwif.days} hari${operationalCosts.muthawwif.include_hotel ? ` + kamar hotel ${formatEstimateCurrency(estimatedHotelPerPax)}` : ''})`,
-                                            ],
-                                            [
-                                                'Marketing',
-                                                estimatedOperationalTotals.marketing,
-                                                estimatedCustomerCount > 0
-                                                    ? `${formatEstimateCurrency(operationalCosts.marketing.amount_per_pax)} ÷ ${estimatedCustomerCount} jamaah = ${formatEstimateCurrency(Math.floor(operationalCosts.marketing.amount_per_pax / estimatedCustomerCount))} / pax`
-                                                    : `${formatEstimateCurrency(operationalCosts.marketing.amount_per_pax)} ÷ 0 jamaah`,
-                                            ],
-                                            [
-                                                'Tips guide lokal',
-                                                estimatedOperationalTotals.guideTips,
-                                                `${operationalCosts.guide_tips.length} negara / baris`,
-                                            ],
-                                            [
-                                                'Tips sopir',
-                                                estimatedOperationalTotals.driverTips,
-                                                `${operationalCosts.driver_tips.length} negara / baris`,
-                                            ],
-                                        ].map(([label, amount, formula]) => (
-                                            <div
-                                                key={String(label)}
-                                                className="flex items-start justify-between gap-3 py-2 first:pt-0"
-                                            >
-                                                <span className="min-w-0 text-muted-foreground">
-                                                    <span className="block text-foreground">
-                                                        {label}
-                                                    </span>
-                                                    <span className="block text-[11px] leading-4">
-                                                        {formula}
-                                                    </span>
-                                                </span>
-                                                <strong className="shrink-0">
-                                                    {formatEstimateCurrency(
-                                                        Number(amount),
-                                                    )}
-                                                </strong>
-                                            </div>
-                                        ))}
-                                        <div className="flex justify-between gap-3 py-2 font-semibold text-primary">
-                                            <span>Total operasional</span>
-                                            <strong>
-                                                {formatEstimateCurrency(
-                                                    estimatedOperationalTotals.total,
-                                                )}
-                                            </strong>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="grid gap-3 sm:grid-cols-2">
-                                        <Field label="HPP Tour Leader (IDR)">
-                                            <div className="flex gap-2">
-                                                <Input
-                                                    type="number"
-                                                    min={0}
-                                                    step={1000}
-                                                    value={
-                                                        estimatedTourLeaderFee
-                                                    }
-                                                    onChange={(event) =>
-                                                        updateEstimatedCost(
-                                                            'tour_leader_fee',
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                />
-                                                {tourLeaderFeeIsManual ? (
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={() =>
-                                                            resetEstimatedFeeToFormula(
-                                                                'tour_leader_fee',
-                                                            )
-                                                        }
-                                                    >
-                                                        Rumus
-                                                    </Button>
-                                                ) : null}
-                                            </div>
-                                        </Field>
-                                        <Field label="HPP Muthawwif (IDR)">
-                                            <div className="flex gap-2">
-                                                <Input
-                                                    type="number"
-                                                    min={0}
-                                                    step={1000}
-                                                    value={
-                                                        estimatedMuthawwifFee
-                                                    }
-                                                    onChange={(event) =>
-                                                        updateEstimatedCost(
-                                                            'muthawwif_fee',
-                                                            event.target.value,
-                                                        )
-                                                    }
-                                                />
-                                                {muthawwifFeeIsManual ? (
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={() =>
-                                                            resetEstimatedFeeToFormula(
-                                                                'muthawwif_fee',
-                                                            )
-                                                        }
-                                                    >
-                                                        Rumus
-                                                    </Button>
-                                                ) : null}
-                                            </div>
-                                        </Field>
-                                    </div>
-                                )}
-                                <div className="mt-3">
-                                    <Field label="Biaya lainnya (IDR)">
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            step={1000}
-                                            value={hppEstimate.other_cost ?? ''}
-                                            onChange={(event) =>
-                                                updateEstimatedCost(
-                                                    'other_cost',
-                                                    event.target.value,
-                                                )
-                                            }
-                                        />
-                                    </Field>
-                                </div>
-                                <div className="mt-3">
-                                    <Field label="Catatan estimasi">
-                                        <Textarea
-                                            value={hppEstimate.notes ?? ''}
-                                            onChange={(event) =>
-                                                updateHppEstimate({
-                                                    ...hppEstimate,
-                                                    notes: event.target.value,
-                                                })
-                                            }
-                                            rows={3}
-                                        />
-                                    </Field>
-                                </div>
-                            </div>
-
-                            <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 dark:bg-emerald-500/15">
-                                <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                                    Ringkasan Perkiraan
-                                </p>
-                                <div className="mt-3 divide-y divide-emerald-500/20 text-sm">
-                                    <div className="flex justify-between gap-3 py-2">
-                                        <span>Target jamaah</span>
-                                        <strong>
-                                            {estimatedCustomerCount} pax
-                                        </strong>
-                                    </div>
-                                    <div className="flex justify-between gap-3 py-2">
-                                        <span>Total produk</span>
-                                        <strong>
-                                            {formatEstimateCurrency(
-                                                estimatedProductTotal,
-                                            )}
-                                        </strong>
-                                    </div>
-                                    <div className="flex justify-between gap-3 py-2">
-                                        <span>Total hotel</span>
-                                        <strong>
-                                            {formatEstimateCurrency(
-                                                estimatedHotelTotal,
-                                            )}
-                                        </strong>
-                                    </div>
-                                    {form.data.all_in.enabled ? (
-                                        <div className="flex justify-between gap-3 py-2">
-                                            <span>Paket All In</span>
-                                            <strong>
-                                                {formatEstimateCurrency(
-                                                    estimatedAllInTotal,
-                                                )}
-                                            </strong>
-                                        </div>
-                                    ) : null}
-                                    <div className="flex justify-between gap-3 py-2">
-                                        <span>
-                                            {hasOperationalCostConfiguration
-                                                ? 'Biaya operasional'
-                                                : 'Fee TL & Muthawwif'}
-                                        </span>
-                                        <strong>
-                                            {formatEstimateCurrency(
-                                                hasOperationalCostConfiguration
-                                                    ? estimatedOperationalTotals.total
-                                                    : estimatedTourLeaderFee +
-                                                          estimatedMuthawwifFee,
-                                            )}
-                                        </strong>
-                                    </div>
-                                    <div className="flex justify-between gap-3 py-2">
-                                        <span>Total HPP estimasi</span>
-                                        <strong>
-                                            {formatEstimateCurrency(
-                                                estimatedGrandTotal,
-                                            )}
-                                        </strong>
-                                    </div>
-                                    <div className="flex justify-between gap-3 py-2">
-                                        <span>HPP / jamaah</span>
-                                        <strong>
-                                            {formatEstimateCurrency(
-                                                estimatedCustomerCount > 0
-                                                    ? Math.floor(
-                                                          estimatedGrandTotal /
-                                                              estimatedCustomerCount,
-                                                      )
-                                                    : 0,
-                                            )}
-                                        </strong>
-                                    </div>
-                                    <div className="flex justify-between gap-3 py-2">
-                                        <span>Estimasi omzet</span>
-                                        <strong>
-                                            {formatEstimateCurrency(
-                                                estimatedRevenue,
-                                            )}
-                                        </strong>
-                                    </div>
-                                    <div className="flex justify-between gap-3 py-2 text-emerald-800 dark:text-emerald-200">
-                                        <span>Estimasi keuntungan</span>
-                                        <strong>
-                                            {formatEstimateCurrency(
-                                                estimatedRevenue -
-                                                    estimatedGrandTotal,
-                                            )}
-                                        </strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-                            <div className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Keputusan Harga Jual
-                                    </p>
-                                </div>
-                                <span className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                                    Semua total dalam IDR
-                                </span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-border/60 py-4 lg:grid-cols-4">
-                                <div>
-                                    <p className="text-xs text-muted-foreground">
-                                        HPP / jamaah
-                                    </p>
-                                    <p className="mt-1 text-base font-bold text-foreground sm:text-lg">
-                                        {formatEstimateCurrency(
-                                            estimatedHppPerCustomer,
-                                        )}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Profit / jamaah
-                                    </p>
-                                    <p
-                                        className={cn(
-                                            'mt-1 text-base font-bold sm:text-lg',
-                                            estimatedProfitPerCustomer >= 0
-                                                ? 'text-emerald-700 dark:text-emerald-300'
-                                                : 'text-destructive',
-                                        )}
-                                    >
-                                        {formatEstimateCurrency(
-                                            estimatedProfitPerCustomer,
-                                        )}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Margin
-                                    </p>
-                                    <p
-                                        className={cn(
-                                            'mt-1 text-base font-bold sm:text-lg',
-                                            estimatedMarginPercent >= 0
-                                                ? 'text-emerald-700 dark:text-emerald-300'
-                                                : 'text-destructive',
-                                        )}
-                                    >
-                                        {estimatedMarginPercent.toLocaleString(
-                                            'id-ID',
-                                            {
-                                                minimumFractionDigits: 1,
-                                                maximumFractionDigits: 1,
-                                            },
-                                        )}
-                                        %
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground">
-                                        Total profit
-                                    </p>
-                                    <p
-                                        className={cn(
-                                            'mt-1 text-base font-bold sm:text-lg',
-                                            estimatedProfit >= 0
-                                                ? 'text-emerald-700 dark:text-emerald-300'
-                                                : 'text-destructive',
-                                        )}
-                                    >
-                                        {formatEstimateCurrency(
-                                            estimatedProfit,
-                                        )}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 rounded-2xl border border-border/60 bg-muted/30 p-3">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                                        Komposisi harga paket
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {estimatedCustomerCount} pax
-                                    </p>
-                                </div>
-                                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                                    Ini komposisi harga jual per tipe kamar
-                                    untuk skenario estimasi. Saat booking
-                                    aktual, komposisi bisa lebih efisien dan
-                                    margin bisa berubah.
-                                </p>
-                                {estimatedRoomPriceBreakdown.length > 0 ? (
-                                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                                        {estimatedRoomPriceBreakdown.map(
-                                            (room) => (
-                                                <div
-                                                    key={room.key}
-                                                    className="rounded-xl border border-border/60 bg-background p-3"
-                                                >
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div>
-                                                            <p className="text-sm font-medium text-foreground">
-                                                                {room.label}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {room.pax} pax x{' '}
-                                                                {formatEstimateCurrency(
-                                                                    room.unitPrice,
-                                                                )}
-                                                            </p>
-                                                        </div>
-                                                        <strong className="text-sm">
-                                                            {formatEstimateCurrency(
-                                                                room.totalPrice,
-                                                            )}
-                                                        </strong>
+                                                    <div className="grid gap-2 md:grid-cols-3">
+                                                        {group.rows.map(
+                                                            (row) => (
+                                                                <div
+                                                                    key={
+                                                                        row.roomType
+                                                                    }
+                                                                    className="rounded-lg bg-muted/30 p-2.5"
+                                                                >
+                                                                    <div className="mb-2 flex items-center justify-between gap-2">
+                                                                        <strong className="text-xs uppercase">
+                                                                            {
+                                                                                row.roomType
+                                                                            }
+                                                                        </strong>
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                            {
+                                                                                row.roomCount
+                                                                            }{' '}
+                                                                            kamar
+                                                                        </span>
+                                                                    </div>
+                                                                    <Field label="Jumlah kamar">
+                                                                        <Input
+                                                                            type="number"
+                                                                            min={
+                                                                                0
+                                                                            }
+                                                                            max={
+                                                                                row.roomCountLimit
+                                                                            }
+                                                                            value={
+                                                                                row.roomCount
+                                                                            }
+                                                                            onChange={(
+                                                                                event,
+                                                                            ) =>
+                                                                                updateEstimatedHotelAllocation(
+                                                                                    group
+                                                                                        .product
+                                                                                        .id,
+                                                                                    row.roomType,
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                                                                            {
+                                                                                row.roomCount
+                                                                            }{' '}
+                                                                            kamar
+                                                                            x{' '}
+                                                                            {
+                                                                                estimateRoomCapacities[
+                                                                                    row
+                                                                                        .roomType
+                                                                                ]
+                                                                            }{' '}
+                                                                            pax
+                                                                            ={' '}
+                                                                            {
+                                                                                row.pax
+                                                                            }{' '}
+                                                                            pax
+                                                                        </p>
+                                                                    </Field>
+                                                                    <div className="mt-2 flex justify-between gap-2 text-xs">
+                                                                        <span>
+                                                                            {
+                                                                                row.pax
+                                                                            }{' '}
+                                                                            pax
+                                                                        </span>
+                                                                        <strong>
+                                                                            {formatEstimateCurrency(
+                                                                                row.totalPrice,
+                                                                            )}
+                                                                        </strong>
+                                                                    </div>
+                                                                </div>
+                                                            ),
+                                                        )}
                                                     </div>
                                                 </div>
                                             ),
                                         )}
                                     </div>
-                                ) : null}
+                                ) : (
+                                    <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
+                                        Belum ada product hotel yang dipilih.
+                                    </div>
+                                )}
                             </div>
 
-                            <div className="grid gap-4 pt-4">
-                                <div className="grid gap-3 md:grid-cols-2">
-                                    <Field
-                                        label="Harga Base / Single (IDR) *"
-                                        error={
-                                            errors.original_price ||
-                                            errors.price
-                                        }
-                                    >
-                                        <div className="relative">
-                                            <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                                Rp
-                                            </span>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                step={100000}
-                                                value={form.data.original_price}
-                                                onChange={(event) => {
-                                                    const nextOriginalPrice =
-                                                        event.target.value
-                                                            ? Number(
-                                                                  event.target
-                                                                      .value,
-                                                              )
-                                                            : '';
-                                                    form.setData(
-                                                        'original_price',
-                                                        nextOriginalPrice,
-                                                    );
-
-                                                    if (!event.target.value) {
-                                                        form.setData(
-                                                            'discount_percent',
-                                                            '',
-                                                        );
-                                                    }
-                                                }}
-                                                className="pl-8"
-                                                placeholder="0"
-                                            />
+                            <div className="grid gap-3 md:grid-cols-2">
+                                <div className="rounded-2xl border border-border bg-card p-4">
+                                    <p className="mb-3 text-sm font-semibold">
+                                        Fee dan Biaya Tambahan
+                                    </p>
+                                    {hasOperationalCostConfiguration ? (
+                                        <div className="divide-y divide-border/60 text-sm">
+                                            {[
+                                                [
+                                                    'SDM',
+                                                    estimatedOperationalTotals.humanResources,
+                                                    `${operationalCosts.human_resources.length} SDM`,
+                                                ],
+                                                [
+                                                    'Overhead',
+                                                    estimatedOperationalTotals.overhead,
+                                                    operationalCosts.overhead
+                                                        .mode === 'per_pax'
+                                                        ? `${formatEstimateCurrency(operationalCosts.overhead.amount)} x ${estimatedCustomerCount} jamaah`
+                                                        : 'Total flat',
+                                                ],
+                                                [
+                                                    'Fotografer',
+                                                    estimatedOperationalTotals.photographer,
+                                                    `${operationalCosts.photographer.count} x ${formatEstimateCurrency(operationalCosts.photographer.daily_salary)} x ${operationalCosts.photographer.days} hari`,
+                                                ],
+                                                [
+                                                    'Tour Leader',
+                                                    estimatedOperationalTotals.tourLeader,
+                                                    `${operationalCosts.tour_leader.count} x (gaji + hotel ${formatEstimateCurrency(operationalCosts.tour_leader.include_hotel ? estimatedHotelPerPax : 0)} + tiket/visa ${formatEstimateCurrency(operationalCosts.tour_leader.include_ticket_and_visa ? estimatedTicketAndVisaPerPax : 0)})`,
+                                                ],
+                                                [
+                                                    'Muthawwif',
+                                                    estimatedOperationalTotals.muthawwif,
+                                                    `${operationalCosts.muthawwif.count} x (${operationalCosts.muthawwif.daily_salary} ${operationalCosts.muthawwif.currency} x ${operationalCosts.muthawwif.days} hari${operationalCosts.muthawwif.include_hotel ? ` + kamar hotel ${formatEstimateCurrency(estimatedHotelPerPax)}` : ''})`,
+                                                ],
+                                                [
+                                                    'Marketing',
+                                                    estimatedOperationalTotals.marketing,
+                                                    estimatedCustomerCount > 0
+                                                        ? `${formatEstimateCurrency(operationalCosts.marketing.amount_per_pax)} ÷ ${estimatedCustomerCount} jamaah = ${formatEstimateCurrency(Math.floor(operationalCosts.marketing.amount_per_pax / estimatedCustomerCount))} / pax`
+                                                        : `${formatEstimateCurrency(operationalCosts.marketing.amount_per_pax)} ÷ 0 jamaah`,
+                                                ],
+                                                [
+                                                    'Tips guide lokal',
+                                                    estimatedOperationalTotals.guideTips,
+                                                    `${operationalCosts.guide_tips.length} negara / baris`,
+                                                ],
+                                                [
+                                                    'Tips sopir',
+                                                    estimatedOperationalTotals.driverTips,
+                                                    `${operationalCosts.driver_tips.length} negara / baris`,
+                                                ],
+                                            ].map(
+                                                ([label, amount, formula]) => (
+                                                    <div
+                                                        key={String(label)}
+                                                        className="flex items-start justify-between gap-3 py-2 first:pt-0"
+                                                    >
+                                                        <span className="min-w-0 text-muted-foreground">
+                                                            <span className="block text-foreground">
+                                                                {label}
+                                                            </span>
+                                                            <span className="block text-[11px] leading-4">
+                                                                {formula}
+                                                            </span>
+                                                        </span>
+                                                        <strong className="shrink-0">
+                                                            {formatEstimateCurrency(
+                                                                Number(amount),
+                                                            )}
+                                                        </strong>
+                                                    </div>
+                                                ),
+                                            )}
+                                            <div className="flex justify-between gap-3 py-2 font-semibold text-primary">
+                                                <span>Total operasional</span>
+                                                <strong>
+                                                    {formatEstimateCurrency(
+                                                        estimatedOperationalTotals.total,
+                                                    )}
+                                                </strong>
+                                            </div>
                                         </div>
-                                    </Field>
-                                    <Field label="Diskon (%)">
-                                        <div className="relative">
-                                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                                %
-                                            </span>
+                                    ) : (
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                            <Field label="HPP Tour Leader (IDR)">
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        step={1000}
+                                                        value={
+                                                            estimatedTourLeaderFee
+                                                        }
+                                                        onChange={(event) =>
+                                                            updateEstimatedCost(
+                                                                'tour_leader_fee',
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                    />
+                                                    {tourLeaderFeeIsManual ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                resetEstimatedFeeToFormula(
+                                                                    'tour_leader_fee',
+                                                                )
+                                                            }
+                                                        >
+                                                            Rumus
+                                                        </Button>
+                                                    ) : null}
+                                                </div>
+                                            </Field>
+                                            <Field label="HPP Muthawwif (IDR)">
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        step={1000}
+                                                        value={
+                                                            estimatedMuthawwifFee
+                                                        }
+                                                        onChange={(event) =>
+                                                            updateEstimatedCost(
+                                                                'muthawwif_fee',
+                                                                event.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                    />
+                                                    {muthawwifFeeIsManual ? (
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                resetEstimatedFeeToFormula(
+                                                                    'muthawwif_fee',
+                                                                )
+                                                            }
+                                                        >
+                                                            Rumus
+                                                        </Button>
+                                                    ) : null}
+                                                </div>
+                                            </Field>
+                                        </div>
+                                    )}
+                                    <div className="mt-3">
+                                        <Field label="Biaya lainnya (IDR)">
                                             <Input
                                                 type="number"
                                                 min={0}
-                                                max={99}
+                                                step={1000}
                                                 value={
-                                                    form.data.discount_percent
+                                                    hppEstimate.other_cost ?? ''
                                                 }
                                                 onChange={(event) =>
-                                                    form.setData(
-                                                        'discount_percent',
-                                                        event.target.value
-                                                            ? Math.min(
-                                                                  99,
-                                                                  Math.max(
-                                                                      0,
-                                                                      Number(
-                                                                          event
-                                                                              .target
-                                                                              .value,
-                                                                      ),
-                                                                  ),
-                                                              )
-                                                            : '',
+                                                    updateEstimatedCost(
+                                                        'other_cost',
+                                                        event.target.value,
                                                     )
                                                 }
-                                                className="pr-8"
-                                                placeholder="0"
                                             />
-                                        </div>
-                                    </Field>
+                                        </Field>
+                                    </div>
+                                    <div className="mt-3">
+                                        <Field label="Catatan estimasi">
+                                            <Textarea
+                                                value={hppEstimate.notes ?? ''}
+                                                onChange={(event) =>
+                                                    updateHppEstimate({
+                                                        ...hppEstimate,
+                                                        notes: event.target
+                                                            .value,
+                                                    })
+                                                }
+                                                rows={3}
+                                            />
+                                        </Field>
+                                    </div>
                                 </div>
 
-                                <div className="grid gap-3 md:grid-cols-3">
-                                    {(
-                                        [
-                                            ['dbl', 'Double (DBL)'],
-                                            ['trpl', 'Triple (TRPL)'],
-                                            ['quad', 'Quad (QUAD)'],
-                                        ] as const
-                                    ).map(([roomType, label]) => (
+                                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 dark:bg-emerald-500/15">
+                                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+                                        Ringkasan Perkiraan
+                                    </p>
+                                    <div className="mt-3 divide-y divide-emerald-500/20 text-sm">
+                                        <div className="flex justify-between gap-3 py-2">
+                                            <span>Target jamaah</span>
+                                            <strong>
+                                                {estimatedCustomerCount} pax
+                                            </strong>
+                                        </div>
+                                        <div className="flex justify-between gap-3 py-2">
+                                            <span>Total produk</span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    estimatedProductTotal,
+                                                )}
+                                            </strong>
+                                        </div>
+                                        <div className="flex justify-between gap-3 py-2">
+                                            <span>Total hotel</span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    estimatedHotelTotal,
+                                                )}
+                                            </strong>
+                                        </div>
+                                        {form.data.all_in.enabled ? (
+                                            <div className="flex justify-between gap-3 py-2">
+                                                <span>Paket All In</span>
+                                                <strong>
+                                                    {formatEstimateCurrency(
+                                                        estimatedAllInTotal,
+                                                    )}
+                                                </strong>
+                                            </div>
+                                        ) : null}
+                                        <div className="flex justify-between gap-3 py-2">
+                                            <span>
+                                                {hasOperationalCostConfiguration
+                                                    ? 'Biaya operasional'
+                                                    : 'Fee TL & Muthawwif'}
+                                            </span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    hasOperationalCostConfiguration
+                                                        ? estimatedOperationalTotals.total
+                                                        : estimatedTourLeaderFee +
+                                                              estimatedMuthawwifFee,
+                                                )}
+                                            </strong>
+                                        </div>
+                                        <div className="flex justify-between gap-3 py-2">
+                                            <span>Total HPP estimasi</span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    estimatedGrandTotal,
+                                                )}
+                                            </strong>
+                                        </div>
+                                        <div className="flex justify-between gap-3 py-2">
+                                            <span>HPP / jamaah</span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    estimatedCustomerCount > 0
+                                                        ? Math.floor(
+                                                              estimatedGrandTotal /
+                                                                  estimatedCustomerCount,
+                                                          )
+                                                        : 0,
+                                                )}
+                                            </strong>
+                                        </div>
+                                        <div className="flex justify-between gap-3 py-2">
+                                            <span>Estimasi omzet</span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    estimatedRevenue,
+                                                )}
+                                            </strong>
+                                        </div>
+                                        <div className="flex justify-between gap-3 py-2 text-emerald-800 dark:text-emerald-200">
+                                            <span>Estimasi keuntungan</span>
+                                            <strong>
+                                                {formatEstimateCurrency(
+                                                    estimatedRevenue -
+                                                        estimatedGrandTotal,
+                                                )}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+                                <div className="flex flex-col gap-2 border-b border-border/60 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold text-foreground">
+                                            Keputusan Harga Jual
+                                        </p>
+                                    </div>
+                                    <span className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                        Semua total dalam IDR
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-3 border-b border-border/60 py-4 lg:grid-cols-4">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">
+                                            HPP / jamaah
+                                        </p>
+                                        <p className="mt-1 text-base font-bold text-foreground sm:text-lg">
+                                            {formatEstimateCurrency(
+                                                estimatedHppPerCustomer,
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Profit / jamaah
+                                        </p>
+                                        <p
+                                            className={cn(
+                                                'mt-1 text-base font-bold sm:text-lg',
+                                                estimatedProfitPerCustomer >= 0
+                                                    ? 'text-emerald-700 dark:text-emerald-300'
+                                                    : 'text-destructive',
+                                            )}
+                                        >
+                                            {formatEstimateCurrency(
+                                                estimatedProfitPerCustomer,
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Margin
+                                        </p>
+                                        <p
+                                            className={cn(
+                                                'mt-1 text-base font-bold sm:text-lg',
+                                                estimatedMarginPercent >= 0
+                                                    ? 'text-emerald-700 dark:text-emerald-300'
+                                                    : 'text-destructive',
+                                            )}
+                                        >
+                                            {estimatedMarginPercent.toLocaleString(
+                                                'id-ID',
+                                                {
+                                                    minimumFractionDigits: 1,
+                                                    maximumFractionDigits: 1,
+                                                },
+                                            )}
+                                            %
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">
+                                            Total profit
+                                        </p>
+                                        <p
+                                            className={cn(
+                                                'mt-1 text-base font-bold sm:text-lg',
+                                                estimatedProfit >= 0
+                                                    ? 'text-emerald-700 dark:text-emerald-300'
+                                                    : 'text-destructive',
+                                            )}
+                                        >
+                                            {formatEstimateCurrency(
+                                                estimatedProfit,
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 rounded-2xl border border-border/60 bg-muted/30 p-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                            Komposisi harga paket
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {estimatedCustomerCount} pax
+                                        </p>
+                                    </div>
+                                    {estimatedRoomPriceBreakdown.length > 0 ? (
+                                        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                            {estimatedRoomPriceBreakdown.map(
+                                                (room) => (
+                                                    <div
+                                                        key={room.key}
+                                                        className="rounded-xl border border-border/60 bg-background p-3"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <p className="text-sm font-medium text-foreground">
+                                                                    {room.label}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {room.pax}{' '}
+                                                                    pax x{' '}
+                                                                    {formatEstimateCurrency(
+                                                                        room.unitPrice,
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                            <strong className="text-sm">
+                                                                {formatEstimateCurrency(
+                                                                    room.totalPrice,
+                                                                )}
+                                                            </strong>
+                                                        </div>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </div>
+
+                                <div className="grid gap-4 pt-4">
+                                    <div className="grid gap-3 md:grid-cols-2">
                                         <Field
-                                            key={roomType}
-                                            label={`Harga Asli ${label}`}
+                                            label="Harga Base / Single (IDR) *"
+                                            error={
+                                                errors.original_price ||
+                                                errors.price
+                                            }
                                         >
                                             <div className="relative">
                                                 <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
@@ -3786,654 +4503,822 @@ export function PackageForm({
                                                     min={0}
                                                     step={100000}
                                                     value={
-                                                        effectiveRoomOriginalPrices[
-                                                            roomType
-                                                        ] ?? ''
+                                                        form.data.original_price
                                                     }
-                                                    onChange={(event) =>
-                                                        updateRoomOriginalPrice(
-                                                            roomType,
-                                                            event.target.value,
-                                                        )
-                                                    }
+                                                    onChange={(event) => {
+                                                        const nextOriginalPrice =
+                                                            event.target.value
+                                                                ? Number(
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                                  )
+                                                                : '';
+                                                        form.setData(
+                                                            'original_price',
+                                                            nextOriginalPrice,
+                                                        );
+
+                                                        if (
+                                                            !event.target.value
+                                                        ) {
+                                                            form.setData(
+                                                                'discount_percent',
+                                                                '',
+                                                            );
+                                                        }
+                                                    }}
                                                     className="pl-8"
-                                                    placeholder="Isi manual"
+                                                    placeholder="0"
                                                 />
                                             </div>
                                         </Field>
-                                    ))}
-                                </div>
+                                        <Field label="Diskon (%)">
+                                            <div className="relative">
+                                                <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                    %
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={99}
+                                                    value={
+                                                        form.data
+                                                            .discount_percent
+                                                    }
+                                                    onChange={(event) =>
+                                                        form.setData(
+                                                            'discount_percent',
+                                                            event.target.value
+                                                                ? Math.min(
+                                                                      99,
+                                                                      Math.max(
+                                                                          0,
+                                                                          Number(
+                                                                              event
+                                                                                  .target
+                                                                                  .value,
+                                                                          ),
+                                                                      ),
+                                                                  )
+                                                                : '',
+                                                        )
+                                                    }
+                                                    className="pr-8"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </Field>
+                                    </div>
 
-                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                                    {[
-                                        {
-                                            label: 'Single',
-                                            value: sellingPrice,
-                                        },
-                                        {
-                                            label: 'Double',
-                                            value: effectiveRoomSellingPrices.dbl,
-                                        },
-                                        {
-                                            label: 'Triple',
-                                            value: effectiveRoomSellingPrices.trpl,
-                                        },
-                                        {
-                                            label: 'Quad',
-                                            value: effectiveRoomSellingPrices.quad,
-                                        },
-                                    ].map((roomPrice) => (
-                                        <div
-                                            key={roomPrice.label}
-                                            className="border-l-2 border-primary/30 pl-3"
-                                        >
-                                            <p className="text-xs text-muted-foreground">
-                                                Harga jual {roomPrice.label}
-                                            </p>
-                                            <p className="mt-1 text-sm font-bold text-foreground">
-                                                {formatCurrencyInputPreview(
-                                                    roomPrice.value ?? null,
-                                                )}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                                    <Field label="Label Diskon">
-                                        <Input
-                                            value={form.data.discount_label}
-                                            onChange={(event) =>
-                                                form.setData(
-                                                    'discount_label',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            placeholder="Contoh: EARLY BIRD"
-                                        />
-                                    </Field>
-                                    <Field label="Promo Berakhir">
-                                        <Input
-                                            type="datetime-local"
-                                            value={form.data.discount_ends_at}
-                                            onChange={(event) =>
-                                                form.setData(
-                                                    'discount_ends_at',
-                                                    event.target.value,
-                                                )
-                                            }
-                                        />
-                                    </Field>
-                                    <Field label="Mata Uang">
-                                        <Select
-                                            value={form.data.currency}
-                                            onValueChange={(value) => {
-                                                const liveCurrency =
-                                                    currencies.find(
-                                                        (currency) =>
-                                                            currency.code ===
-                                                            value,
-                                                    );
-                                                form.setData((current) => ({
-                                                    ...current,
-                                                    currency: value,
-                                                    content: {
-                                                        ...current.content,
-                                                        hpp_currency_snapshots:
-                                                            {
-                                                                ...(current
-                                                                    .content
-                                                                    .hpp_currency_snapshots ??
-                                                                    {}),
-                                                                [value]: {
-                                                                    currency:
-                                                                        value,
-                                                                    rate_to_idr:
-                                                                        value ===
-                                                                        'IDR'
-                                                                            ? 1
-                                                                            : Number(
-                                                                                  liveCurrency?.live_conversion_rate ??
-                                                                                      0,
-                                                                              ),
-                                                                    source:
-                                                                        value ===
-                                                                        'IDR'
-                                                                            ? 'identity'
-                                                                            : 'live',
-                                                                    fetched_at:
-                                                                        liveCurrency?.rate_fetched_at ??
-                                                                        null,
-                                                                },
-                                                            },
-                                                    },
-                                                }));
-                                            }}
-                                        >
-                                            <SelectTrigger className="w-full">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {currencies.map((currency) => (
-                                                    <SelectItem
-                                                        key={currency.code}
-                                                        value={currency.code}
-                                                    >
-                                                        {currency.code} -{' '}
-                                                        {currency.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </Field>
-                                </div>
-
-                                {form.data.currency !== 'IDR' ? (
-                                    <Field
-                                        label={`Kurs ${form.data.currency} ke IDR`}
-                                    >
-                                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                                            <Input
-                                                type="number"
-                                                min={0.000001}
-                                                step="any"
-                                                value={currencyRateToIdr || ''}
-                                                onChange={(event) => {
-                                                    const code =
-                                                        form.data.currency.toUpperCase();
-                                                    form.setData('content', {
-                                                        ...form.data.content,
-                                                        hpp_currency_snapshots:
-                                                            {
-                                                                ...(form.data
-                                                                    .content
-                                                                    .hpp_currency_snapshots ??
-                                                                    {}),
-                                                                [code]: {
-                                                                    currency:
-                                                                        code,
-                                                                    rate_to_idr:
-                                                                        Number(
-                                                                            event
-                                                                                .target
-                                                                                .value,
-                                                                        ),
-                                                                    source: 'manual',
-                                                                    fetched_at:
-                                                                        null,
-                                                                },
-                                                            },
-                                                    });
-                                                }}
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                disabled={
-                                                    Number(
-                                                        selectedCurrency?.live_conversion_rate ??
-                                                            0,
-                                                    ) <= 0
-                                                }
-                                                onClick={() => {
-                                                    const code =
-                                                        form.data.currency.toUpperCase();
-                                                    form.setData('content', {
-                                                        ...form.data.content,
-                                                        hpp_currency_snapshots:
-                                                            {
-                                                                ...(form.data
-                                                                    .content
-                                                                    .hpp_currency_snapshots ??
-                                                                    {}),
-                                                                [code]: {
-                                                                    currency:
-                                                                        code,
-                                                                    rate_to_idr:
-                                                                        Number(
-                                                                            selectedCurrency?.live_conversion_rate ??
-                                                                                0,
-                                                                        ),
-                                                                    source: 'live',
-                                                                    fetched_at:
-                                                                        selectedCurrency?.rate_fetched_at ??
-                                                                        null,
-                                                                },
-                                                            },
-                                                    });
-                                                }}
+                                    <div className="grid gap-3 md:grid-cols-3">
+                                        {(
+                                            [
+                                                ['dbl', 'Double (DBL)'],
+                                                ['trpl', 'Triple (TRPL)'],
+                                                ['quad', 'Quad (QUAD)'],
+                                            ] as const
+                                        ).map(([roomType, label]) => (
+                                            <Field
+                                                key={roomType}
+                                                label={`Harga Asli ${label}`}
                                             >
-                                                Gunakan Kurs Live
-                                            </Button>
-                                        </div>
-                                    </Field>
-                                ) : null}
-                            </div>
-                        </div>
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="konten" className="mt-4">
-                    <SectionHeader icon={FileText} title="Konten Package" />
-                    <FieldGroup>
-                        <div className="rounded-2xl border border-border bg-card p-4">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Highlight Package
-                                    </p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="gap-2"
-                                    onClick={addPackageHighlight}
-                                >
-                                    <Plus className="h-4 w-4" />
-                                    Tambah Highlight
-                                </Button>
-                            </div>
-
-                            <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
-                                <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
-                                    Preset cepat
-                                </p>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {packageHighlightPresets.map((preset) => (
-                                        <Button
-                                            key={preset.label}
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className="rounded-full"
-                                            onClick={() =>
-                                                addPresetPackageHighlight(
-                                                    preset.label,
-                                                    preset.icon,
-                                                )
-                                            }
-                                        >
-                                            {preset.label}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="mt-4 space-y-3">
-                                {packageHighlights.length > 0 ? (
-                                    packageHighlights.map((highlight) => {
-                                        const HighlightIcon =
-                                            packageHighlightIconMap[
-                                                highlight.icon
-                                            ] ??
-                                            packageHighlightIconMap.Sparkles;
-                                        const matchingPreset =
-                                            packageHighlightPresets.find(
-                                                (preset) =>
-                                                    preset.label.toLowerCase() ===
-                                                    highlight.label.id
-                                                        .trim()
-                                                        .toLowerCase(),
-                                            );
-
-                                        return (
-                                            <div
-                                                key={highlight.id}
-                                                className="rounded-2xl border border-border bg-background/80 p-4"
-                                            >
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="rounded-xl bg-primary/10 p-2 text-primary">
-                                                            <HighlightIcon className="h-4 w-4" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-foreground">
-                                                                {highlight.label
-                                                                    .id ||
-                                                                    'Highlight baru'}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-muted-foreground hover:text-destructive"
-                                                        onClick={() =>
-                                                            removePackageHighlight(
-                                                                highlight.id,
+                                                <div className="relative">
+                                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                        Rp
+                                                    </span>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        step={100000}
+                                                        value={
+                                                            effectiveRoomOriginalPrices[
+                                                                roomType
+                                                            ] ?? ''
+                                                        }
+                                                        onChange={(event) =>
+                                                            updateRoomOriginalPrice(
+                                                                roomType,
+                                                                event.target
+                                                                    .value,
                                                             )
                                                         }
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                        className="pl-8"
+                                                        placeholder="Isi manual"
+                                                    />
                                                 </div>
+                                            </Field>
+                                        ))}
+                                    </div>
 
-                                                <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_1fr]">
-                                                    <Field label="Icon">
-                                                        <Select
-                                                            value={
-                                                                highlight.icon
-                                                            }
-                                                            onValueChange={(
+                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                        {[
+                                            {
+                                                label: 'Single',
+                                                value: sellingPrice,
+                                            },
+                                            {
+                                                label: 'Double',
+                                                value: effectiveRoomSellingPrices.dbl,
+                                            },
+                                            {
+                                                label: 'Triple',
+                                                value: effectiveRoomSellingPrices.trpl,
+                                            },
+                                            {
+                                                label: 'Quad',
+                                                value: effectiveRoomSellingPrices.quad,
+                                            },
+                                        ].map((roomPrice) => (
+                                            <div
+                                                key={roomPrice.label}
+                                                className="border-l-2 border-primary/30 pl-3"
+                                            >
+                                                <p className="text-xs text-muted-foreground">
+                                                    Harga jual {roomPrice.label}
+                                                </p>
+                                                <p className="mt-1 text-sm font-bold text-foreground">
+                                                    {formatCurrencyInputPreview(
+                                                        roomPrice.value ?? null,
+                                                    )}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                        <Field label="Label Diskon">
+                                            <Input
+                                                value={form.data.discount_label}
+                                                onChange={(event) =>
+                                                    form.setData(
+                                                        'discount_label',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                placeholder="Contoh: EARLY BIRD"
+                                            />
+                                        </Field>
+                                        <Field label="Promo Berakhir">
+                                            <Input
+                                                type="datetime-local"
+                                                value={
+                                                    form.data.discount_ends_at
+                                                }
+                                                onChange={(event) =>
+                                                    form.setData(
+                                                        'discount_ends_at',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                        </Field>
+                                        <Field label="Mata Uang">
+                                            <Select
+                                                value={form.data.currency}
+                                                onValueChange={(value) => {
+                                                    const liveCurrency =
+                                                        currencies.find(
+                                                            (currency) =>
+                                                                currency.code ===
                                                                 value,
-                                                            ) =>
-                                                                updatePackageHighlight(
+                                                        );
+                                                    form.setData((current) => ({
+                                                        ...current,
+                                                        currency: value,
+                                                        content: {
+                                                            ...current.content,
+                                                            hpp_currency_snapshots:
+                                                                {
+                                                                    ...(current
+                                                                        .content
+                                                                        .hpp_currency_snapshots ??
+                                                                        {}),
+                                                                    [value]: {
+                                                                        currency:
+                                                                            value,
+                                                                        rate_to_idr:
+                                                                            value ===
+                                                                            'IDR'
+                                                                                ? 1
+                                                                                : Number(
+                                                                                      liveCurrency?.live_conversion_rate ??
+                                                                                          0,
+                                                                                  ),
+                                                                        source:
+                                                                            value ===
+                                                                            'IDR'
+                                                                                ? 'identity'
+                                                                                : 'live',
+                                                                        fetched_at:
+                                                                            liveCurrency?.rate_fetched_at ??
+                                                                            null,
+                                                                    },
+                                                                },
+                                                        },
+                                                    }));
+                                                }}
+                                            >
+                                                <SelectTrigger className="w-full">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {currencies.map(
+                                                        (currency) => (
+                                                            <SelectItem
+                                                                key={
+                                                                    currency.code
+                                                                }
+                                                                value={
+                                                                    currency.code
+                                                                }
+                                                            >
+                                                                {currency.code}{' '}
+                                                                -{' '}
+                                                                {currency.name}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        </Field>
+                                    </div>
+
+                                    {form.data.currency !== 'IDR' ? (
+                                        <Field
+                                            label={`Kurs ${form.data.currency} ke IDR`}
+                                        >
+                                            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                                                <Input
+                                                    type="number"
+                                                    min={0.000001}
+                                                    step="any"
+                                                    value={
+                                                        currencyRateToIdr || ''
+                                                    }
+                                                    onChange={(event) => {
+                                                        const code =
+                                                            form.data.currency.toUpperCase();
+                                                        form.setData(
+                                                            'content',
+                                                            {
+                                                                ...form.data
+                                                                    .content,
+                                                                hpp_currency_snapshots:
+                                                                    {
+                                                                        ...(form
+                                                                            .data
+                                                                            .content
+                                                                            .hpp_currency_snapshots ??
+                                                                            {}),
+                                                                        [code]: {
+                                                                            currency:
+                                                                                code,
+                                                                            rate_to_idr:
+                                                                                Number(
+                                                                                    event
+                                                                                        .target
+                                                                                        .value,
+                                                                                ),
+                                                                            source: 'manual',
+                                                                            fetched_at:
+                                                                                null,
+                                                                        },
+                                                                    },
+                                                            },
+                                                        );
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    disabled={
+                                                        Number(
+                                                            selectedCurrency?.live_conversion_rate ??
+                                                                0,
+                                                        ) <= 0
+                                                    }
+                                                    onClick={() => {
+                                                        const code =
+                                                            form.data.currency.toUpperCase();
+                                                        form.setData(
+                                                            'content',
+                                                            {
+                                                                ...form.data
+                                                                    .content,
+                                                                hpp_currency_snapshots:
+                                                                    {
+                                                                        ...(form
+                                                                            .data
+                                                                            .content
+                                                                            .hpp_currency_snapshots ??
+                                                                            {}),
+                                                                        [code]: {
+                                                                            currency:
+                                                                                code,
+                                                                            rate_to_idr:
+                                                                                Number(
+                                                                                    selectedCurrency?.live_conversion_rate ??
+                                                                                        0,
+                                                                                ),
+                                                                            source: 'live',
+                                                                            fetched_at:
+                                                                                selectedCurrency?.rate_fetched_at ??
+                                                                                null,
+                                                                        },
+                                                                    },
+                                                            },
+                                                        );
+                                                    }}
+                                                >
+                                                    Gunakan Kurs Live
+                                                </Button>
+                                            </div>
+                                        </Field>
+                                    ) : null}
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="konten" className="mt-4">
+                        <SectionHeader icon={FileText} title="Konten Package" />
+                        <FieldGroup>
+                            <div className="rounded-2xl border border-border bg-card p-4">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold text-foreground">
+                                            Highlight Package
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="gap-2"
+                                        onClick={addPackageHighlight}
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Tambah Highlight
+                                    </Button>
+                                </div>
+
+                                <div className="mt-4 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
+                                    <p className="text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                                        Preset cepat
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {packageHighlightPresets.map(
+                                            (preset) => (
+                                                <Button
+                                                    key={preset.label}
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="rounded-full"
+                                                    onClick={() =>
+                                                        addPresetPackageHighlight(
+                                                            preset.label,
+                                                            preset.icon,
+                                                        )
+                                                    }
+                                                >
+                                                    {preset.label}
+                                                </Button>
+                                            ),
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 space-y-3">
+                                    {packageHighlights.length > 0 ? (
+                                        packageHighlights.map((highlight) => {
+                                            const HighlightIcon =
+                                                packageHighlightIconMap[
+                                                    highlight.icon
+                                                ] ??
+                                                packageHighlightIconMap.Sparkles;
+                                            const matchingPreset =
+                                                packageHighlightPresets.find(
+                                                    (preset) =>
+                                                        preset.label.toLowerCase() ===
+                                                        highlight.label.id
+                                                            .trim()
+                                                            .toLowerCase(),
+                                                );
+
+                                            return (
+                                                <div
+                                                    key={highlight.id}
+                                                    className="rounded-2xl border border-border bg-background/80 p-4"
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                                                                <HighlightIcon className="h-4 w-4" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-foreground">
+                                                                    {highlight
+                                                                        .label
+                                                                        .id ||
+                                                                        'Highlight baru'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-muted-foreground hover:text-destructive"
+                                                            onClick={() =>
+                                                                removePackageHighlight(
                                                                     highlight.id,
-                                                                    'icon',
-                                                                    value,
                                                                 )
                                                             }
                                                         >
-                                                            <SelectTrigger>
-                                                                <SelectValue placeholder="Pilih icon" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {packageHighlightIconOptions.map(
-                                                                    (
-                                                                        iconOption,
-                                                                    ) => (
-                                                                        <SelectItem
-                                                                            key={
-                                                                                iconOption.value
-                                                                            }
-                                                                            value={
-                                                                                iconOption.value
-                                                                            }
-                                                                        >
-                                                                            {
-                                                                                iconOption.label
-                                                                            }
-                                                                        </SelectItem>
-                                                                    ),
-                                                                )}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </Field>
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
 
-                                                    <Field label="Label Highlight">
-                                                        <Input
-                                                            value={
-                                                                highlight.label
-                                                                    .id
-                                                            }
-                                                            onChange={(event) =>
-                                                                updatePackageHighlight(
-                                                                    highlight.id,
-                                                                    'label',
-                                                                    event.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            placeholder="Contoh: Maskapai, Hotel, Badge, Periode"
-                                                        />
-                                                    </Field>
+                                                    <div className="mt-4 grid gap-3 md:grid-cols-[220px_1fr_1fr]">
+                                                        <Field label="Icon">
+                                                            <Select
+                                                                value={
+                                                                    highlight.icon
+                                                                }
+                                                                onValueChange={(
+                                                                    value,
+                                                                ) =>
+                                                                    updatePackageHighlight(
+                                                                        highlight.id,
+                                                                        'icon',
+                                                                        value,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <SelectTrigger>
+                                                                    <SelectValue placeholder="Pilih icon" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {packageHighlightIconOptions.map(
+                                                                        (
+                                                                            iconOption,
+                                                                        ) => (
+                                                                            <SelectItem
+                                                                                key={
+                                                                                    iconOption.value
+                                                                                }
+                                                                                value={
+                                                                                    iconOption.value
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    iconOption.label
+                                                                                }
+                                                                            </SelectItem>
+                                                                        ),
+                                                                    )}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </Field>
 
-                                                    <Field label="Isi Highlight">
-                                                        <Input
-                                                            value={
-                                                                highlight.value
-                                                                    .id
-                                                            }
-                                                            onChange={(event) =>
-                                                                updatePackageHighlight(
-                                                                    highlight.id,
-                                                                    'value',
-                                                                    event.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            placeholder={
-                                                                matchingPreset?.placeholder ??
-                                                                'Contoh: Saudia, Hilton, Early Bird, November 2026'
-                                                            }
-                                                        />
-                                                    </Field>
+                                                        <Field label="Label Highlight">
+                                                            <Input
+                                                                value={
+                                                                    highlight
+                                                                        .label
+                                                                        .id
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    updatePackageHighlight(
+                                                                        highlight.id,
+                                                                        'label',
+                                                                        event
+                                                                            .target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                placeholder="Contoh: Maskapai, Hotel, Badge, Periode"
+                                                            />
+                                                        </Field>
+
+                                                        <Field label="Isi Highlight">
+                                                            <Input
+                                                                value={
+                                                                    highlight
+                                                                        .value
+                                                                        .id
+                                                                }
+                                                                onChange={(
+                                                                    event,
+                                                                ) =>
+                                                                    updatePackageHighlight(
+                                                                        highlight.id,
+                                                                        'value',
+                                                                        event
+                                                                            .target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                placeholder={
+                                                                    matchingPreset?.placeholder ??
+                                                                    'Contoh: Saudia, Hilton, Early Bird, November 2026'
+                                                                }
+                                                            />
+                                                        </Field>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })
-                                ) : (
-                                    <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
-                                        <p className="text-sm font-medium text-foreground">
-                                            Belum ada highlight package.
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <Field label="Termasuk dalam Paket">
-                            <Textarea
-                                rows={5}
-                                value={toLines(
-                                    (
-                                        form.data.content?.included as Record<
-                                            string,
-                                            unknown
-                                        >
-                                    )?.id,
-                                )}
-                                onChange={(event) => {
-                                    const lines =
-                                        event.target.value.split('\n');
-                                    const existingIncluded =
-                                        (form.data.content?.included as Record<
-                                            string,
-                                            unknown
-                                        >) ?? {};
-                                    form.setData('content', {
-                                        ...form.data.content,
-                                        included: {
-                                            ...existingIncluded,
-                                            id: lines,
-                                        },
-                                    });
-                                }}
-                                placeholder={
-                                    'Tiket pesawat PP\nVisa umroh\nAkomodasi hotel bintang 4'
-                                }
-                            />
-                        </Field>
-                        <Field label="Tidak Termasuk">
-                            <Textarea
-                                rows={3}
-                                value={toLines(
-                                    (
-                                        form.data.content?.excluded as Record<
-                                            string,
-                                            unknown
-                                        >
-                                    )?.id,
-                                )}
-                                onChange={(event) => {
-                                    const lines =
-                                        event.target.value.split('\n');
-                                    const existingExcluded =
-                                        (form.data.content?.excluded as Record<
-                                            string,
-                                            unknown
-                                        >) ?? {};
-                                    form.setData('content', {
-                                        ...form.data.content,
-                                        excluded: {
-                                            ...existingExcluded,
-                                            id: lines,
-                                        },
-                                    });
-                                }}
-                                placeholder={'Pengeluaran pribadi\nOleh-oleh'}
-                            />
-                        </Field>
-                        <Field label="Kebijakan">
-                            <Textarea
-                                rows={3}
-                                value={contentField(
-                                    form.data.content,
-                                    'policy',
-                                )}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'content',
-                                        setContentField(
-                                            form.data.content,
-                                            'policy',
-                                            'id',
-                                            event.target.value,
-                                        ),
-                                    )
-                                }
-                                placeholder="Kebijakan pembatalan, perubahan jadwal, dan hal penting lainnya."
-                            />
-                        </Field>
-                    </FieldGroup>
-                </TabsContent>
-
-                <TabsContent value="itinerary" className="mt-4 space-y-4">
-                    <SectionHeader
-                        icon={BookOpenText}
-                        title="Itinerary Perjalanan"
-                    />
-
-                    <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-sm font-semibold text-foreground">
-                                    Ringkasan itinerary
-                                </p>
-                            </div>
-                            <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                                {form.data.duration_days} hari
-                            </div>
-                        </div>
-
-                        <Tabs
-                            value={activeItineraryTab}
-                            onValueChange={switchItineraryTab}
-                            className="mt-4 space-y-4"
-                        >
-                            <div className="overflow-x-auto pb-1">
-                                <TabsList className="inline-flex h-auto min-w-full justify-start gap-2 rounded-2xl bg-background/80 p-2">
-                                    {form.data.itineraries.map((itinerary) => (
-                                        <TabsTrigger
-                                            key={itinerary.day_number}
-                                            value={`day-${itinerary.day_number}`}
-                                            className="shrink-0 rounded-xl px-4 py-2 text-sm"
-                                        >
-                                            Hari {itinerary.day_number}
-                                        </TabsTrigger>
-                                    ))}
-                                </TabsList>
-                            </div>
-
-                            {form.data.itineraries.map((itinerary) => (
-                                <TabsContent
-                                    key={itinerary.day_number}
-                                    value={`day-${itinerary.day_number}`}
-                                    className="mt-0"
-                                >
-                                    {isItineraryPanelLoading &&
-                                    currentItineraryDay ===
-                                        itinerary.day_number ? (
-                                        <ItinerarySkeleton />
+                                            );
+                                        })
                                     ) : (
-                                        <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-foreground">
-                                                        Hari{' '}
-                                                        {itinerary.day_number}
-                                                    </p>
-                                                </div>
-                                                <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-                                                    Urutan tampil #
-                                                    {itinerary.sort_order}
-                                                </div>
-                                            </div>
+                                        <div className="rounded-2xl border border-dashed border-border bg-muted/20 px-4 py-6 text-center">
+                                            <p className="text-sm font-medium text-foreground">
+                                                Belum ada highlight package.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <Field label="Termasuk dalam Paket">
+                                <Textarea
+                                    rows={5}
+                                    value={toLines(
+                                        (
+                                            form.data.content
+                                                ?.included as Record<
+                                                string,
+                                                unknown
+                                            >
+                                        )?.id,
+                                    )}
+                                    onChange={(event) => {
+                                        const lines =
+                                            event.target.value.split('\n');
+                                        const existingIncluded =
+                                            (form.data.content
+                                                ?.included as Record<
+                                                string,
+                                                unknown
+                                            >) ?? {};
+                                        form.setData('content', {
+                                            ...form.data.content,
+                                            included: {
+                                                ...existingIncluded,
+                                                id: lines,
+                                            },
+                                        });
+                                    }}
+                                    placeholder={
+                                        'Tiket pesawat PP\nVisa umroh\nAkomodasi hotel bintang 4'
+                                    }
+                                />
+                            </Field>
+                            <Field label="Tidak Termasuk">
+                                <Textarea
+                                    rows={3}
+                                    value={toLines(
+                                        (
+                                            form.data.content
+                                                ?.excluded as Record<
+                                                string,
+                                                unknown
+                                            >
+                                        )?.id,
+                                    )}
+                                    onChange={(event) => {
+                                        const lines =
+                                            event.target.value.split('\n');
+                                        const existingExcluded =
+                                            (form.data.content
+                                                ?.excluded as Record<
+                                                string,
+                                                unknown
+                                            >) ?? {};
+                                        form.setData('content', {
+                                            ...form.data.content,
+                                            excluded: {
+                                                ...existingExcluded,
+                                                id: lines,
+                                            },
+                                        });
+                                    }}
+                                    placeholder={
+                                        'Pengeluaran pribadi\nOleh-oleh'
+                                    }
+                                />
+                            </Field>
+                            <Field label="Kebijakan">
+                                <Textarea
+                                    rows={3}
+                                    value={contentField(
+                                        form.data.content,
+                                        'policy',
+                                    )}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'content',
+                                            setContentField(
+                                                form.data.content,
+                                                'policy',
+                                                'id',
+                                                event.target.value,
+                                            ),
+                                        )
+                                    }
+                                    placeholder="Kebijakan pembatalan, perubahan jadwal, dan hal penting lainnya."
+                                />
+                            </Field>
+                        </FieldGroup>
+                    </TabsContent>
 
-                                            <div className="space-y-4 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-foreground">
-                                                        Activity itinerary
-                                                    </p>
+                    <TabsContent value="itinerary" className="mt-4 space-y-4">
+                        <SectionHeader
+                            icon={BookOpenText}
+                            title="Itinerary Perjalanan"
+                        />
+
+                        <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">
+                                        Ringkasan itinerary
+                                    </p>
+                                </div>
+                                <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                    {form.data.duration_days} hari
+                                </div>
+                            </div>
+
+                            <Tabs
+                                value={activeItineraryTab}
+                                onValueChange={switchItineraryTab}
+                                className="mt-4 space-y-4"
+                            >
+                                <div className="overflow-x-auto pb-1">
+                                    <TabsList className="inline-flex h-auto min-w-full justify-start gap-2 rounded-2xl bg-background/80 p-2">
+                                        {form.data.itineraries.map(
+                                            (itinerary) => (
+                                                <TabsTrigger
+                                                    key={itinerary.day_number}
+                                                    value={`day-${itinerary.day_number}`}
+                                                    className="shrink-0 rounded-xl px-4 py-2 text-sm"
+                                                >
+                                                    Hari {itinerary.day_number}
+                                                </TabsTrigger>
+                                            ),
+                                        )}
+                                    </TabsList>
+                                </div>
+
+                                {form.data.itineraries.map((itinerary) => (
+                                    <TabsContent
+                                        key={itinerary.day_number}
+                                        value={`day-${itinerary.day_number}`}
+                                        className="mt-0"
+                                    >
+                                        {isItineraryPanelLoading &&
+                                        currentItineraryDay ===
+                                            itinerary.day_number ? (
+                                            <ItinerarySkeleton />
+                                        ) : (
+                                            <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-foreground">
+                                                            Hari{' '}
+                                                            {
+                                                                itinerary.day_number
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                    <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                                                        Urutan tampil #
+                                                        {itinerary.sort_order}
+                                                    </div>
                                                 </div>
 
-                                                {activityOptions.length > 0 ? (
-                                                    <div className="space-y-4">
-                                                        {(() => {
-                                                            const searchStateKey =
-                                                                itinerary.day_number;
-                                                            const searchTerm = (
-                                                                itineraryActivitySearch[
-                                                                    searchStateKey
-                                                                ] ?? ''
-                                                            )
-                                                                .trim()
-                                                                .toLowerCase();
-                                                            const availableActivities =
-                                                                activityOptions.filter(
+                                                <div className="space-y-4 rounded-2xl border border-dashed border-border bg-muted/20 p-4">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-foreground">
+                                                            Activity itinerary
+                                                        </p>
+                                                    </div>
+
+                                                    {activityOptions.length >
+                                                    0 ? (
+                                                        <div className="space-y-4">
+                                                            {(() => {
+                                                                const searchStateKey =
+                                                                    itinerary.day_number;
+                                                                const searchTerm =
                                                                     (
-                                                                        activity,
-                                                                    ) => {
-                                                                        if (
-                                                                            itinerary.activity_ids.includes(
-                                                                                activity.id,
-                                                                            )
-                                                                        ) {
-                                                                            return false;
-                                                                        }
-
-                                                                        if (
-                                                                            searchTerm ===
-                                                                            ''
-                                                                        ) {
-                                                                            return true;
-                                                                        }
-
-                                                                        const searchableText =
-                                                                            [
-                                                                                activity.code,
-                                                                                localizedFieldValue(
-                                                                                    activity.name,
-                                                                                    'id',
-                                                                                ),
-                                                                                localizedFieldValue(
-                                                                                    activity.name,
-                                                                                    'en',
-                                                                                ),
-                                                                                localizedFieldValue(
-                                                                                    activity.description,
-                                                                                    'id',
-                                                                                ),
-                                                                                localizedFieldValue(
-                                                                                    activity.description,
-                                                                                    'en',
-                                                                                ),
-                                                                            ]
-                                                                                .filter(
-                                                                                    Boolean,
+                                                                        itineraryActivitySearch[
+                                                                            searchStateKey
+                                                                        ] ?? ''
+                                                                    )
+                                                                        .trim()
+                                                                        .toLowerCase();
+                                                                const availableActivities =
+                                                                    activityOptions.filter(
+                                                                        (
+                                                                            activity,
+                                                                        ) => {
+                                                                            if (
+                                                                                itinerary.activity_ids.includes(
+                                                                                    activity.id,
                                                                                 )
-                                                                                .join(
-                                                                                    ' ',
-                                                                                )
-                                                                                .toLowerCase();
+                                                                            ) {
+                                                                                return false;
+                                                                            }
 
-                                                                        return searchableText.includes(
-                                                                            searchTerm,
-                                                                        );
-                                                                    },
-                                                                );
+                                                                            if (
+                                                                                searchTerm ===
+                                                                                ''
+                                                                            ) {
+                                                                                return true;
+                                                                            }
 
-                                                            return (
-                                                                <>
-                                                                    <Field label="Pilih Activity">
-                                                                        <Select
-                                                                            key={`activity-select-${itinerary.day_number}-${itinerary.activity_ids.join('-')}`}
-                                                                            onOpenChange={(
-                                                                                open,
-                                                                            ) => {
-                                                                                if (
-                                                                                    !open
-                                                                                ) {
+                                                                            const searchableText =
+                                                                                [
+                                                                                    activity.code,
+                                                                                    localizedFieldValue(
+                                                                                        activity.name,
+                                                                                        'id',
+                                                                                    ),
+                                                                                    localizedFieldValue(
+                                                                                        activity.name,
+                                                                                        'en',
+                                                                                    ),
+                                                                                    localizedFieldValue(
+                                                                                        activity.description,
+                                                                                        'id',
+                                                                                    ),
+                                                                                    localizedFieldValue(
+                                                                                        activity.description,
+                                                                                        'en',
+                                                                                    ),
+                                                                                ]
+                                                                                    .filter(
+                                                                                        Boolean,
+                                                                                    )
+                                                                                    .join(
+                                                                                        ' ',
+                                                                                    )
+                                                                                    .toLowerCase();
+
+                                                                            return searchableText.includes(
+                                                                                searchTerm,
+                                                                            );
+                                                                        },
+                                                                    );
+
+                                                                return (
+                                                                    <>
+                                                                        <Field label="Pilih Activity">
+                                                                            <Select
+                                                                                key={`activity-select-${itinerary.day_number}-${itinerary.activity_ids.join('-')}`}
+                                                                                onOpenChange={(
+                                                                                    open,
+                                                                                ) => {
+                                                                                    if (
+                                                                                        !open
+                                                                                    ) {
+                                                                                        setItineraryActivitySearch(
+                                                                                            (
+                                                                                                current,
+                                                                                            ) => ({
+                                                                                                ...current,
+                                                                                                [searchStateKey]:
+                                                                                                    '',
+                                                                                            }),
+                                                                                        );
+                                                                                    }
+                                                                                }}
+                                                                                onValueChange={(
+                                                                                    value,
+                                                                                ) => {
+                                                                                    const selectedActivityId =
+                                                                                        Number(
+                                                                                            value,
+                                                                                        );
+
+                                                                                    if (
+                                                                                        itinerary.activity_ids.includes(
+                                                                                            selectedActivityId,
+                                                                                        )
+                                                                                    ) {
+                                                                                        return;
+                                                                                    }
+
+                                                                                    updateItineraryActivities(
+                                                                                        itinerary.day_number,
+                                                                                        [
+                                                                                            ...itinerary.activity_ids,
+                                                                                            selectedActivityId,
+                                                                                        ],
+                                                                                    );
                                                                                     setItineraryActivitySearch(
                                                                                         (
                                                                                             current,
@@ -4443,252 +5328,224 @@ export function PackageForm({
                                                                                                 '',
                                                                                         }),
                                                                                     );
-                                                                                }
-                                                                            }}
-                                                                            onValueChange={(
-                                                                                value,
-                                                                            ) => {
-                                                                                const selectedActivityId =
-                                                                                    Number(
-                                                                                        value,
-                                                                                    );
-
-                                                                                if (
-                                                                                    itinerary.activity_ids.includes(
-                                                                                        selectedActivityId,
-                                                                                    )
-                                                                                ) {
-                                                                                    return;
-                                                                                }
-
-                                                                                updateItineraryActivities(
-                                                                                    itinerary.day_number,
-                                                                                    [
-                                                                                        ...itinerary.activity_ids,
-                                                                                        selectedActivityId,
-                                                                                    ],
-                                                                                );
-                                                                                setItineraryActivitySearch(
-                                                                                    (
-                                                                                        current,
-                                                                                    ) => ({
-                                                                                        ...current,
-                                                                                        [searchStateKey]:
-                                                                                            '',
-                                                                                    }),
-                                                                                );
-                                                                            }}
-                                                                        >
-                                                                            <SelectTrigger>
-                                                                                <SelectValue placeholder="Tambah activity itinerary" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                <div className="border-b border-border p-2">
-                                                                                    <Input
-                                                                                        value={
-                                                                                            itineraryActivitySearch[
-                                                                                                searchStateKey
-                                                                                            ] ??
-                                                                                            ''
-                                                                                        }
-                                                                                        onChange={(
-                                                                                            event,
-                                                                                        ) =>
-                                                                                            setItineraryActivitySearch(
-                                                                                                (
-                                                                                                    current,
-                                                                                                ) => ({
-                                                                                                    ...current,
-                                                                                                    [searchStateKey]:
-                                                                                                        event
-                                                                                                            .target
-                                                                                                            .value,
-                                                                                                }),
-                                                                                            )
-                                                                                        }
-                                                                                        onKeyDown={(
-                                                                                            event,
-                                                                                        ) => {
-                                                                                            event.stopPropagation();
-                                                                                        }}
-                                                                                        placeholder="Cari activity..."
-                                                                                        className="h-8"
-                                                                                    />
-                                                                                </div>
-                                                                                {availableActivities.length >
-                                                                                0 ? (
-                                                                                    availableActivities.map(
-                                                                                        (
-                                                                                            activity,
-                                                                                        ) => (
-                                                                                            <SelectItem
-                                                                                                key={
-                                                                                                    activity.id
-                                                                                                }
-                                                                                                value={String(
-                                                                                                    activity.id,
-                                                                                                )}
-                                                                                            >
-                                                                                                {localizedFieldValue(
-                                                                                                    activity.name,
-                                                                                                    locale,
-                                                                                                    activity.code,
-                                                                                                )}
-                                                                                            </SelectItem>
-                                                                                        ),
-                                                                                    )
-                                                                                ) : (
-                                                                                    <div className="px-3 py-2 text-sm text-muted-foreground">
-                                                                                        Tidak
-                                                                                        ada
-                                                                                        activity
-                                                                                        yang
-                                                                                        cocok.
-                                                                                    </div>
-                                                                                )}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </Field>
-                                                                </>
-                                                            );
-                                                        })()}
-
-                                                        {itinerary.activity_ids
-                                                            .length > 0 ? (
-                                                            <div className="rounded-2xl border bg-background p-4">
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {activityOptions
-                                                                        .filter(
-                                                                            (
-                                                                                activity,
-                                                                            ) =>
-                                                                                itinerary.activity_ids.includes(
-                                                                                    activity.id,
-                                                                                ),
-                                                                        )
-                                                                        .map(
-                                                                            (
-                                                                                activity,
-                                                                            ) => (
-                                                                                <span
-                                                                                    key={
-                                                                                        activity.id
-                                                                                    }
-                                                                                    className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
-                                                                                >
-                                                                                    {localizedFieldValue(
-                                                                                        activity.name,
-                                                                                        locale,
-                                                                                        activity.code,
-                                                                                    )}
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] transition hover:bg-white/25"
-                                                                                        onClick={() =>
-                                                                                            updateItineraryActivities(
-                                                                                                itinerary.day_number,
-                                                                                                itinerary.activity_ids.filter(
+                                                                                }}
+                                                                            >
+                                                                                <SelectTrigger>
+                                                                                    <SelectValue placeholder="Tambah activity itinerary" />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    <div className="border-b border-border p-2">
+                                                                                        <Input
+                                                                                            value={
+                                                                                                itineraryActivitySearch[
+                                                                                                    searchStateKey
+                                                                                                ] ??
+                                                                                                ''
+                                                                                            }
+                                                                                            onChange={(
+                                                                                                event,
+                                                                                            ) =>
+                                                                                                setItineraryActivitySearch(
                                                                                                     (
-                                                                                                        selectedId,
-                                                                                                    ) =>
-                                                                                                        selectedId !==
+                                                                                                        current,
+                                                                                                    ) => ({
+                                                                                                        ...current,
+                                                                                                        [searchStateKey]:
+                                                                                                            event
+                                                                                                                .target
+                                                                                                                .value,
+                                                                                                    }),
+                                                                                                )
+                                                                                            }
+                                                                                            onKeyDown={(
+                                                                                                event,
+                                                                                            ) => {
+                                                                                                event.stopPropagation();
+                                                                                            }}
+                                                                                            placeholder="Cari activity..."
+                                                                                            className="h-8"
+                                                                                        />
+                                                                                    </div>
+                                                                                    {availableActivities.length >
+                                                                                    0 ? (
+                                                                                        availableActivities.map(
+                                                                                            (
+                                                                                                activity,
+                                                                                            ) => (
+                                                                                                <SelectItem
+                                                                                                    key={
+                                                                                                        activity.id
+                                                                                                    }
+                                                                                                    value={String(
                                                                                                         activity.id,
-                                                                                                ),
-                                                                                            )
+                                                                                                    )}
+                                                                                                >
+                                                                                                    {localizedFieldValue(
+                                                                                                        activity.name,
+                                                                                                        locale,
+                                                                                                        activity.code,
+                                                                                                    )}
+                                                                                                </SelectItem>
+                                                                                            ),
+                                                                                        )
+                                                                                    ) : (
+                                                                                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                                                                                            Tidak
+                                                                                            ada
+                                                                                            activity
+                                                                                            yang
+                                                                                            cocok.
+                                                                                        </div>
+                                                                                    )}
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        </Field>
+                                                                    </>
+                                                                );
+                                                            })()}
+
+                                                            {itinerary
+                                                                .activity_ids
+                                                                .length > 0 ? (
+                                                                <div className="rounded-2xl border bg-background p-4">
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {activityOptions
+                                                                            .filter(
+                                                                                (
+                                                                                    activity,
+                                                                                ) =>
+                                                                                    itinerary.activity_ids.includes(
+                                                                                        activity.id,
+                                                                                    ),
+                                                                            )
+                                                                            .map(
+                                                                                (
+                                                                                    activity,
+                                                                                ) => (
+                                                                                    <span
+                                                                                        key={
+                                                                                            activity.id
                                                                                         }
+                                                                                        className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
                                                                                     >
-                                                                                        Hapus
-                                                                                    </button>
-                                                                                </span>
-                                                                            ),
-                                                                        )}
-                                                                </div>
-                                                                <div className="mt-3 space-y-3">
-                                                                    {activityOptions
-                                                                        .filter(
-                                                                            (
-                                                                                activity,
-                                                                            ) =>
-                                                                                itinerary.activity_ids.includes(
-                                                                                    activity.id,
-                                                                                ),
-                                                                        )
-                                                                        .map(
-                                                                            (
-                                                                                activity,
-                                                                            ) => (
-                                                                                <div
-                                                                                    key={`preview-${activity.id}`}
-                                                                                    className="rounded-xl border border-border bg-muted/20 p-3"
-                                                                                >
-                                                                                    <p className="text-sm font-semibold text-foreground">
                                                                                         {localizedFieldValue(
                                                                                             activity.name,
                                                                                             locale,
                                                                                             activity.code,
                                                                                         )}
-                                                                                    </p>
-                                                                                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                                                                                        {localizedFieldValue(
-                                                                                            activity.description,
-                                                                                            locale,
-                                                                                            'Belum ada deskripsi activity.',
-                                                                                        )}
-                                                                                    </p>
-                                                                                </div>
-                                                                            ),
-                                                                        )}
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] transition hover:bg-white/25"
+                                                                                            onClick={() =>
+                                                                                                updateItineraryActivities(
+                                                                                                    itinerary.day_number,
+                                                                                                    itinerary.activity_ids.filter(
+                                                                                                        (
+                                                                                                            selectedId,
+                                                                                                        ) =>
+                                                                                                            selectedId !==
+                                                                                                            activity.id,
+                                                                                                    ),
+                                                                                                )
+                                                                                            }
+                                                                                        >
+                                                                                            Hapus
+                                                                                        </button>
+                                                                                    </span>
+                                                                                ),
+                                                                            )}
+                                                                    </div>
+                                                                    <div className="mt-3 space-y-3">
+                                                                        {activityOptions
+                                                                            .filter(
+                                                                                (
+                                                                                    activity,
+                                                                                ) =>
+                                                                                    itinerary.activity_ids.includes(
+                                                                                        activity.id,
+                                                                                    ),
+                                                                            )
+                                                                            .map(
+                                                                                (
+                                                                                    activity,
+                                                                                ) => (
+                                                                                    <div
+                                                                                        key={`preview-${activity.id}`}
+                                                                                        className="rounded-xl border border-border bg-muted/20 p-3"
+                                                                                    >
+                                                                                        <p className="text-sm font-semibold text-foreground">
+                                                                                            {localizedFieldValue(
+                                                                                                activity.name,
+                                                                                                locale,
+                                                                                                activity.code,
+                                                                                            )}
+                                                                                        </p>
+                                                                                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                                                            {localizedFieldValue(
+                                                                                                activity.description,
+                                                                                                locale,
+                                                                                                'Belum ada deskripsi activity.',
+                                                                                            )}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                ),
+                                                                            )}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="rounded-xl border border-dashed border-border bg-background px-4 py-5 text-center text-xs text-muted-foreground">
-                                                                Belum ada
-                                                                activity yang
-                                                                dipilih untuk
-                                                                hari ini.
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="rounded-xl border border-dashed border-border bg-background px-4 py-5 text-center text-xs text-muted-foreground">
-                                                        Belum ada activity
-                                                        aktif. Tambahkan dulu
-                                                        lewat submenu Product
-                                                        Management &gt;
-                                                        Activities.
-                                                    </div>
-                                                )}
+                                                            ) : (
+                                                                <div className="rounded-xl border border-dashed border-border bg-background px-4 py-5 text-center text-xs text-muted-foreground">
+                                                                    Belum ada
+                                                                    activity
+                                                                    yang dipilih
+                                                                    untuk hari
+                                                                    ini.
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="rounded-xl border border-dashed border-border bg-background px-4 py-5 text-center text-xs text-muted-foreground">
+                                                            Belum ada activity
+                                                            aktif. Tambahkan
+                                                            dulu lewat submenu
+                                                            Product Management
+                                                            &gt; Activities.
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-                                </TabsContent>
-                            ))}
-                        </Tabs>
-                    </div>
-                </TabsContent>
-            </Tabs>
+                                        )}
+                                    </TabsContent>
+                                ))}
+                            </Tabs>
+                        </div>
+                    </TabsContent>
+                </Tabs>
 
-            <div className="mt-6 flex items-center justify-between border-t pt-4">
-                <p className="text-xs text-muted-foreground">
-                    {form.isDirty ? 'Ada perubahan yang belum disimpan' : ''}
-                </p>
-                <Button
-                    type="submit"
-                    disabled={form.processing}
-                    className="min-w-32"
-                >
-                    {form.processing ? (
-                        <span className="flex items-center gap-2">
-                            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                            Menyimpan...
-                        </span>
-                    ) : isEdit ? (
-                        'Simpan Perubahan'
-                    ) : (
-                        'Tambah Package'
-                    )}
-                </Button>
-            </div>
+                <div className="mt-6 flex justify-end border-t pt-4">
+                    <Button
+                        type="submit"
+                        disabled={
+                            form.processing ||
+                            isSubmittingPackage ||
+                            isUploadingDraftImages
+                        }
+                        className="min-w-32"
+                    >
+                        {form.processing || isSubmittingPackage ? (
+                            <span className="flex items-center gap-2">
+                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                Menyimpan...
+                            </span>
+                        ) : isHppEditor ? (
+                            'Simpan Estimasi HPP'
+                        ) : isEdit ? (
+                            'Simpan Perubahan'
+                        ) : (
+                            'Tambah Package'
+                        )}
+                    </Button>
+                </div>
+            </fieldset>
         </form>
     );
 }

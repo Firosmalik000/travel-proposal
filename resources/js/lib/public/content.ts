@@ -1,3 +1,4 @@
+import { formatDate as formatSharedDate } from '@/lib/date-format';
 import { type SharedData } from '@/types';
 import { usePage } from '@inertiajs/react';
 
@@ -197,13 +198,5 @@ export function formatDate(
     value: string | null | undefined,
     _locale: 'id' = 'id',
 ): string {
-    if (!value) {
-        return '';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-    }).format(new Date(value));
+    return formatSharedDate(value, { fallback: '' });
 }

@@ -18,8 +18,21 @@ class StoreProductCategoryHotelRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'country_id' => ['required', 'integer', 'exists:hotel_countries,id'],
-            'city_id' => ['required', 'integer', 'exists:hotel_cities,id'],
+            'country_id' => [
+                'required',
+                'integer',
+                Rule::exists('hotel_countries', 'id')->where(fn ($query) => $query
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
+            'city_id' => [
+                'required',
+                'integer',
+                Rule::exists('hotel_cities', 'id')->where(fn ($query) => $query
+                    ->where('country_id', $this->integer('country_id'))
+                    ->where('is_active', true)
+                    ->whereNull('deleted_at')),
+            ],
             'name' => [
                 'required',
                 'string',
@@ -28,8 +41,12 @@ class StoreProductCategoryHotelRequest extends FormRequest
                     ->where(fn ($query) => $query->where('city_id', (int) $this->input('city_id'))),
             ],
             'description' => ['nullable', 'string'],
-            'currency' => ['required', 'string', 'size:3'],
-            'is_active' => ['boolean'],
+            'currency' => [
+                'required',
+                'string',
+                Rule::in(array_keys((array) config('services.currency.supported', []))),
+            ],
+            'is_active' => ['required', 'boolean'],
             'prices' => ['required', 'array', 'min:1'],
             'prices.*.broker_key' => ['nullable', 'string', 'max:255'],
             'prices.*.broker_name' => ['nullable', 'string', 'max:255'],
@@ -52,5 +69,27 @@ class StoreProductCategoryHotelRequest extends FormRequest
                 }
             }
         });
+    }
+
+    public function messages(): array
+    {
+        return [
+            'country_id.required' => 'Negara wajib dipilih.',
+            'country_id.exists' => 'Negara tidak aktif atau tidak ditemukan.',
+            'city_id.required' => 'Kota wajib dipilih.',
+            'city_id.exists' => 'Kota tidak sesuai dengan negara yang dipilih atau sudah tidak aktif.',
+            'name.required' => 'Nama hotel wajib diisi.',
+            'name.unique' => 'Hotel dengan nama yang sama sudah tersedia di kota tersebut.',
+            'currency.required' => 'Mata uang wajib dipilih.',
+            'currency.in' => 'Mata uang tidak tersedia pada daftar currency.',
+            'prices.required' => 'Minimal satu periode harga wajib diisi.',
+            'prices.min' => 'Minimal satu periode harga wajib diisi.',
+            'prices.*.room_type_id.in' => 'Tipe kamar hanya boleh Double, Triple, atau Quad.',
+            'prices.*.period_start.required' => 'Tanggal mulai periode wajib diisi.',
+            'prices.*.period_end.required' => 'Tanggal akhir periode wajib diisi.',
+            'prices.*.price.required' => 'Harga kamar wajib diisi.',
+            'prices.*.price.integer' => 'Harga kamar harus berupa angka bulat.',
+            'prices.*.price.min' => 'Harga kamar tidak boleh negatif.',
+        ];
     }
 }

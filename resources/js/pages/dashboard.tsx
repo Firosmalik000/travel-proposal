@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import { formatDate, formatDateWithDay, formatTime } from '@/lib/date-format';
 import { handleApiError } from '@/lib/notifications';
 import { dashboard } from '@/routes';
 import {
@@ -18,8 +19,6 @@ import { index as menusIndex } from '@/routes/menus';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
 import axios from 'axios';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
 import {
     Activity,
     CalendarDays,
@@ -340,9 +339,7 @@ export default function Dashboard() {
                                 Dashboard
                             </h1>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {format(new Date(), 'EEEE, dd MMMM yyyy', {
-                                    locale: id,
-                                })}
+                                {formatDateWithDay(new Date())}
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -547,7 +544,7 @@ export default function Dashboard() {
                                 <span className="ml-auto flex items-center gap-1.5">
                                     <Clock3 className="h-3.5 w-3.5" />
                                     {updatedAt
-                                        ? format(updatedAt, 'HH:mm')
+                                        ? formatTime(updatedAt)
                                         : '--:--'}
                                 </span>
                             </div>
@@ -782,12 +779,8 @@ export default function Dashboard() {
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-xs font-bold">
-                                                    {format(
-                                                        new Date(
-                                                            departure.departure_date,
-                                                        ),
-                                                        'dd MMM yyyy',
-                                                        { locale: id },
+                                                    {formatDate(
+                                                        departure.departure_date,
                                                     )}
                                                 </p>
                                                 <p

@@ -30,9 +30,11 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, router, useForm } from '@inertiajs/react';
-import { Eye, MoreHorizontal } from 'lucide-react';
+import { formatDate } from '@/lib/date-format';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Eye, MoreHorizontal, Pencil } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -173,27 +175,6 @@ const formatCurrency = (value: number, currency: string): string =>
         currency: currency || 'IDR',
         maximumFractionDigits: 0,
     }).format(value);
-
-const formatDate = (value: string | null | undefined): string => {
-    if (!value) {
-        return '-';
-    }
-
-    const normalizedValue = /^\d{4}-\d{2}-\d{2}$/.test(value)
-        ? `${value}T00:00:00`
-        : value;
-    const parsedDate = new Date(normalizedValue);
-
-    if (Number.isNaN(parsedDate.getTime())) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    }).format(parsedDate);
-};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -371,6 +352,7 @@ export default function HppPackageIndex({
     packages,
     filters,
 }: Props) {
+    const { can } = usePermission('hpp_package');
     const [viewing, setViewing] = useState<Row | null>(null);
     const [detailTab, setDetailTab] = useState<
         'estimate' | 'actual' | 'breakdown'
@@ -844,8 +826,8 @@ export default function HppPackageIndex({
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            {source.departure_date ?? '-'} -{' '}
-                                            {source.departure_city ?? '-'}
+                                            {formatDate(source.departure_date)}{' '}
+                                            - {source.departure_city ?? '-'}
                                         </TableCell>
                                         <TableCell>
                                             {source.total_bookings}
@@ -1232,6 +1214,18 @@ export default function HppPackageIndex({
                                     value="estimate"
                                     className="space-y-3"
                                 >
+                                    {can('edit') ? (
+                                        <div className="flex justify-end">
+                                            <Button asChild size="sm">
+                                                <Link
+                                                    href={`/admin/financial-management/hpp-package/${viewing.travel_package_id}/estimate/edit`}
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                    Edit Estimasi HPP
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    ) : null}
                                     {viewing.hpp_estimate ? (
                                         <div className="space-y-3 rounded-2xl border border-border/70 bg-card p-3">
                                             <div className="grid gap-2 sm:grid-cols-3">

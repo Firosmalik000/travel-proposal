@@ -12,6 +12,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatDate, formatDateRange } from '@/lib/date-format';
 import { ChevronDown, MapPin, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type {
@@ -29,6 +30,8 @@ type Props = {
     hotelBrokerSelections: Record<string, string>;
     lockedCategoryKeys: string[];
     locale: 'id' | 'en';
+    activeCategoryKey: string;
+    onActiveCategoryChange: (categoryKey: string) => void;
     onChange: (
         ids: number[],
         hotelBrokerSelections: Record<string, string>,
@@ -122,30 +125,12 @@ function formatCurrencyValue(
     }
 }
 
-function formatDateLabel(value?: string | null): string {
-    if (!value) {
-        return '';
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    }).format(date);
-}
-
 function formatPeriod(start?: string | null, end?: string | null): string {
-    const formattedStart = formatDateLabel(start);
-    const formattedEnd = formatDateLabel(end);
+    const formattedStart = formatDate(start, { fallback: '' });
+    const formattedEnd = formatDate(end, { fallback: '' });
 
     if (formattedStart && formattedEnd) {
-        return `${formattedStart} - ${formattedEnd}`;
+        return formatDateRange(start, end);
     }
 
     if (formattedStart) {
@@ -277,9 +262,10 @@ export function ProductSelector({
     hotelBrokerSelections,
     lockedCategoryKeys,
     locale,
+    activeCategoryKey,
+    onActiveCategoryChange,
     onChange,
 }: Props) {
-    const [activeType, setActiveType] = useState('');
     const [searchByType, setSearchByType] = useState<Record<string, string>>(
         {},
     );
@@ -380,8 +366,8 @@ export function ProductSelector({
     const resolvedActiveType =
         availableTypes.length === 0
             ? ''
-            : availableTypes.includes(activeType)
-              ? activeType
+            : availableTypes.includes(activeCategoryKey)
+              ? activeCategoryKey
               : availableTypes[0];
 
     const optionsByType = useMemo(() => {
@@ -555,7 +541,7 @@ export function ProductSelector({
 
             <Tabs
                 value={resolvedActiveType}
-                onValueChange={setActiveType}
+                onValueChange={onActiveCategoryChange}
                 className="w-full"
             >
                 <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/50 p-1 md:grid-cols-4">

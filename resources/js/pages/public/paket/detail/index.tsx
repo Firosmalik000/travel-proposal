@@ -703,7 +703,10 @@ export default function PaketDetail() {
                                     >
                                         <div className="flex items-center justify-between">
                                             <span className="font-semibold text-foreground">
-                                                {s.departure_date}
+                                                {formatDate(
+                                                    s.departure_date,
+                                                    'id',
+                                                )}
                                             </span>
                                             <span
                                                 className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}
@@ -717,7 +720,11 @@ export default function PaketDetail() {
                                         </div>
                                         {s.return_date && (
                                             <p className="mt-0.5 text-xs text-muted-foreground">
-                                                Pulang: {s.return_date}
+                                                Pulang:{' '}
+                                                {formatDate(
+                                                    s.return_date,
+                                                    'id',
+                                                )}
                                             </p>
                                         )}
                                         <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">

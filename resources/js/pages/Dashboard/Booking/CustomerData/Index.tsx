@@ -26,6 +26,7 @@ import {
 import { useDebounce } from '@/hooks/use-debounce';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate } from '@/lib/date-format';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowRight,
@@ -54,18 +55,6 @@ type Props = {
     summary: CustomerDataSummary;
     packages: PackageGroup[];
 };
-
-function formatDate(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    }).format(new Date(value));
-}
 
 function BookingRow({
     booking,

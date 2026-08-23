@@ -3,6 +3,7 @@ import {
     IslamicOrnamentZellige,
 } from '@/components/public/ornaments';
 import PublicLayout from '@/layouts/PublicLayout';
+import { formatMonth } from '@/lib/date-format';
 import {
     formatDate,
     formatPrice,
@@ -148,7 +149,7 @@ export default function Paket() {
                   ratingCount: Number(item.rating_count ?? 0),
                   date: formatDate(departureDate, locale),
                   departureMonth: departureDate
-                      ? formatMonthYear(departureDate, locale)
+                      ? formatMonth(departureDate, { withYear: true })
                       : '',
                   city: String(item.departure_city ?? ''),
                   hotel: fallbackHotel,
@@ -577,13 +578,6 @@ function uniqueOptions(...groups: string[][]): string[] {
     return [
         ...new Set(groups.flat().filter((item) => item && item.trim() !== '')),
     ];
-}
-
-function formatMonthYear(value: string, locale: 'id' | 'en'): string {
-    return new Intl.DateTimeFormat(locale === 'id' ? 'id-ID' : 'en-US', {
-        month: 'long',
-        year: 'numeric',
-    }).format(new Date(value));
 }
 
 function buildPackageInquiryMessage(

@@ -39,4 +39,9 @@ class AgentProfile extends Model
     {
         return $this->hasMany(Booking::class);
     }
+
+    public function referralVisits(): HasMany
+    {
+        return $this->hasMany(AgentReferralVisit::class);
+    }
 }

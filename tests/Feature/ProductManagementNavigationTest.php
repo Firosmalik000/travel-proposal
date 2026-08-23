@@ -6,6 +6,7 @@ use App\Models\Hotel;
 use App\Models\HotelCity;
 use App\Models\HotelCountry;
 use App\Models\Menu;
+use App\Models\ProductCategory;
 use App\Models\TravelProduct;
 use App\Models\User;
 use App\Support\MenuPermissionService;
@@ -104,6 +105,12 @@ class ProductManagementNavigationTest extends TestCase
     public function test_product_currency_rate_is_saved_as_an_editable_snapshot(): void
     {
         $user = User::factory()->create();
+        ProductCategory::query()->create([
+            'key' => 'layanan',
+            'name' => 'Layanan',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
 
         $this->actingAs($user)
             ->post(route('content.resources.store', ['resource' => 'products']), [

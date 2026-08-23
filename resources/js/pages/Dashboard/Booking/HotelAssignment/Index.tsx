@@ -32,6 +32,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDateRange } from '@/lib/date-format';
 import { Head, router, useForm } from '@inertiajs/react';
 import { MoreHorizontal, Plus, SquarePen } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -135,17 +136,6 @@ const blankForm = (roomTypes: Option[]): FormData => ({
     notes: '',
     rooms: buildBlankRooms(roomTypes),
 });
-
-const formatDateRange = (
-    startDate: string | null | undefined,
-    endDate: string | null | undefined,
-): string => {
-    if (startDate && endDate) {
-        return `${startDate} - ${endDate}`;
-    }
-
-    return startDate ?? endDate ?? '-';
-};
 
 const flattenErrorMessages = (input: unknown): string[] => {
     if (typeof input === 'string') {

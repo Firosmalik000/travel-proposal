@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Activity;
 use App\Models\Booking;
+use App\Models\HotelCity;
+use App\Models\HotelCountry;
 use App\Models\PackageItinerary;
 use App\Models\PackageVendor;
 use App\Models\ProductCategory;
@@ -1300,13 +1302,37 @@ class PackageManagementTest extends TestCase
     public function test_it_syncs_products_when_updating_package(): void
     {
         $user = User::factory()->create();
-        $pkg = $this->makePackage();
+        $pkg = $this->makePackage([
+            'seats_total' => 4,
+            'content' => [
+                'hpp_currency_snapshots' => [
+                    'IDR' => [
+                        'currency' => 'IDR',
+                        'rate_to_idr' => 1,
+                        'source' => 'identity',
+                    ],
+                ],
+                'hpp_estimate' => [
+                    'customers' => [
+                        'single' => 0,
+                        'dbl' => 0,
+                        'trpl' => 0,
+                        'quad' => 4,
+                    ],
+                    'customers_is_manual' => true,
+                ],
+            ],
+        ]);
         $product = TravelProduct::query()->create([
             'code' => 'PRD-VISA',
             'slug' => 'visa-umroh',
             'name' => ['id' => 'Visa', 'en' => 'Visa'],
             'product_type' => 'dokumen',
             'description' => ['id' => 'Visa', 'en' => 'Visa'],
+            'content' => [
+                'currency' => 'IDR',
+                'price' => 500_000,
+            ],
             'is_active' => true,
         ]);
 
@@ -1323,15 +1349,20 @@ class PackageManagementTest extends TestCase
                 'product_multipliers' => [
                     (string) $product->id => 4,
                 ],
+                'content' => $pkg->content,
                 'is_active' => true,
             ])
             ->assertRedirect();
 
-        $this->assertEquals(1, $pkg->fresh()->products()->count());
+        $updatedPackage = $pkg->fresh();
+
+        $this->assertEquals(1, $updatedPackage->products()->count());
         $this->assertSame(
             4,
-            (int) $pkg->fresh()->products()->firstOrFail()->pivot->multiplier_per_pax,
+            (int) $updatedPackage->products()->firstOrFail()->pivot->multiplier_per_pax,
         );
+        $this->assertSame(8_000_000, data_get($updatedPackage->content, 'hpp_estimate.product_total'));
+        $this->assertSame($product->id, data_get($updatedPackage->content, 'hpp_estimate.items.0.reference_id'));
     }
 
     public function test_it_deletes_a_package(): void
@@ -1623,6 +1654,329 @@ class PackageManagementTest extends TestCase
 
         Storage::disk('public')->assertMissing('packages/cover.jpg');
         Storage::disk('public')->assertMissing('packages/gallery-1.jpg');
+    }
+
+    public function test_it_stores_package_specific_products_and_uses_them_in_hpp(): void
+    {
+        $user = User::factory()->create();
+        foreach (['hotel' => 'Hotel', 'tiket' => 'Tiket'] as $key => $name) {
+            ProductCategory::query()->updateOrCreate(['key' => $key], [
+                'name' => $name,
+                'is_active' => true,
+            ]);
+        }
+        $country = HotelCountry::query()->create([
+            'name' => 'Arab Saudi',
+            'is_active' => true,
+        ]);
+        $city = HotelCity::query()->create([
+            'country_id' => $country->id,
+            'name' => 'Makkah',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->post(route('packages.store'), [
+            'slug' => 'package-produk-khusus',
+            'name' => 'Package Produk Khusus',
+            'package_type' => 'reguler',
+            'departure_city' => 'Jakarta',
+            'start_date' => '2026-09-10',
+            'end_date' => '2026-09-19',
+            'seats_total' => 4,
+            'booking_status' => 'open',
+            'duration_days' => 10,
+            'price' => 20_000_000,
+            'currency' => 'IDR',
+            'custom_products' => [
+                [
+                    'client_key' => 'hotel-local',
+                    'estimate_id' => -1,
+                    'name' => 'Hotel Khusus Package',
+                    'product_type' => 'hotel',
+                    'description' => 'Tidak masuk master hotel.',
+                    'currency' => 'IDR',
+                    'multiplier_per_pax' => 3,
+                    'country_id' => $country->id,
+                    'city_id' => $city->id,
+                    'country' => 'Nama dari client tidak dipercaya',
+                    'city' => 'Nama dari client tidak dipercaya',
+                    'pricing' => [
+                        [
+                            'broker_name' => 'Broker Khusus',
+                            'room_type' => 'DBL',
+                            'period_start' => '2026-09-01',
+                            'period_end' => '2026-09-30',
+                            'price' => 800_000,
+                        ],
+                        [
+                            'broker_name' => 'Broker Khusus',
+                            'room_type' => 'TRPL',
+                            'period_start' => '2026-09-01',
+                            'period_end' => '2026-09-30',
+                            'price' => 900_000,
+                        ],
+                        [
+                            'broker_name' => 'Broker Khusus',
+                            'room_type' => 'QUAD',
+                            'period_start' => '2026-09-01',
+                            'period_end' => '2026-09-30',
+                            'price' => 1_000_000,
+                        ],
+                    ],
+                ],
+                [
+                    'client_key' => 'ticket-local',
+                    'estimate_id' => -2,
+                    'name' => 'Tiket Charter Khusus',
+                    'product_type' => 'tiket',
+                    'currency' => 'IDR',
+                    'price' => 2_000_000,
+                    'multiplier_per_pax' => 2,
+                ],
+            ],
+            'content' => [
+                'hotel_product_brokers' => ['-1' => 'Broker Khusus'],
+                'hpp_estimate' => [
+                    'customers' => ['single' => 0, 'dbl' => 0, 'trpl' => 0, 'quad' => 4],
+                    'customers_is_manual' => true,
+                    'hotel_allocations' => ['-1' => ['dbl' => 0, 'trpl' => 0, 'quad' => 1]],
+                    'hotel_allocations_is_manual' => ['-1' => true],
+                ],
+            ],
+            'is_featured' => false,
+            'is_active' => true,
+        ]);
+
+        $response->assertRedirect()->assertSessionHasNoErrors();
+
+        $package = TravelPackage::query()->where('slug', 'package-produk-khusus')->firstOrFail();
+        $products = $package->ownedProducts()->orderBy('product_type')->get();
+        $hotel = $products->firstWhere('product_type', 'hotel');
+        $ticket = $products->firstWhere('product_type', 'tiket');
+
+        $this->assertCount(2, $products);
+        $this->assertNotNull($hotel);
+        $this->assertNotNull($ticket);
+        $this->assertSame($package->id, $hotel->package_id);
+        $this->assertSame($country->id, data_get($hotel->content, 'country_id'));
+        $this->assertSame($city->id, data_get($hotel->content, 'city_id'));
+        $this->assertSame('Arab Saudi', data_get($hotel->content, 'country'));
+        $this->assertSame('Makkah', data_get($hotel->content, 'city'));
+        $this->assertSame(3, (int) $package->products()->whereKey($hotel->id)->firstOrFail()->pivot->multiplier_per_pax);
+        $this->assertSame(2, (int) $package->products()->whereKey($ticket->id)->firstOrFail()->pivot->multiplier_per_pax);
+        $this->assertSame('Broker Khusus', data_get($package->content, 'hotel_product_brokers.'.$hotel->id));
+        $this->assertSame(3, data_get($package->content, 'hpp_estimate.items.0.meta.multiplier_per_pax'));
+        $this->assertSame(3_000_000, data_get($package->content, 'hpp_estimate.hotel_total'));
+        $this->assertSame(16_000_000, data_get($package->content, 'hpp_estimate.product_total'));
+        $this->assertFalse(TravelProduct::query()->whereKey($hotel->id)->exists());
+
+        $this->actingAs($user)
+            ->post(route('packages.update', $package), [
+                'slug' => $package->slug,
+                'name' => $package->name,
+                'package_type' => $package->package_type,
+                'departure_city' => $package->departure_city,
+                'start_date' => $package->start_date?->toDateString(),
+                'end_date' => $package->end_date?->toDateString(),
+                'seats_total' => $package->seats_total,
+                'booking_status' => $package->booking_status,
+                'duration_days' => $package->duration_days,
+                'price' => $package->price,
+                'currency' => $package->currency,
+                'custom_products' => [
+                    [
+                        'id' => $hotel->id,
+                        'client_key' => (string) $hotel->id,
+                        'estimate_id' => $hotel->id,
+                        'name' => 'Hotel Khusus Diperbarui',
+                        'product_type' => 'hotel',
+                        'currency' => 'IDR',
+                        'multiplier_per_pax' => 2,
+                        'country_id' => $country->id,
+                        'city_id' => $city->id,
+                        'pricing' => [[
+                            'broker_name' => 'Broker Khusus',
+                            'room_type' => 'QUAD',
+                            'period_start' => '2026-09-01',
+                            'period_end' => '2026-09-30',
+                            'price' => 1_200_000,
+                        ]],
+                    ],
+                    [
+                        'id' => $ticket->id,
+                        'client_key' => (string) $ticket->id,
+                        'estimate_id' => $ticket->id,
+                        'name' => 'Tiket Charter Khusus',
+                        'product_type' => 'tiket',
+                        'currency' => 'IDR',
+                        'price' => 2_000_000,
+                        'multiplier_per_pax' => 2,
+                    ],
+                ],
+                'content' => [
+                    'hotel_product_brokers' => [(string) $hotel->id => 'Broker Khusus'],
+                    'hpp_estimate' => [
+                        'customers' => ['single' => 0, 'dbl' => 0, 'trpl' => 0, 'quad' => 4],
+                        'customers_is_manual' => true,
+                        'hotel_allocations' => [(string) $hotel->id => ['dbl' => 0, 'trpl' => 0, 'quad' => 1]],
+                        'hotel_allocations_is_manual' => [(string) $hotel->id => true],
+                    ],
+                ],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $updatedPackage = $package->fresh();
+        $updatedHotel = TravelProduct::query()
+            ->includingPackageSpecific()
+            ->findOrFail($hotel->id);
+
+        $this->assertSame('Hotel Khusus Diperbarui', $updatedHotel->name);
+        $this->assertCount(2, $updatedPackage->ownedProducts()->get());
+        $this->assertSame(2, (int) $updatedPackage->products()->whereKey($hotel->id)->firstOrFail()->pivot->multiplier_per_pax);
+        $this->assertSame(2_400_000, data_get($updatedPackage->content, 'hpp_estimate.hotel_total'));
+    }
+
+    public function test_package_specific_products_are_isolated_updated_and_deleted_with_their_package(): void
+    {
+        $user = User::factory()->create();
+        ProductCategory::query()->updateOrCreate(['key' => 'tiket'], [
+            'name' => 'Tiket',
+            'is_active' => true,
+        ]);
+        $country = HotelCountry::query()->create([
+            'name' => 'Arab Saudi',
+            'is_active' => true,
+        ]);
+        $city = HotelCity::query()->create([
+            'country_id' => $country->id,
+            'name' => 'Madinah',
+            'is_active' => true,
+        ]);
+        $firstPackage = $this->makePackage(['slug' => 'package-pertama']);
+        $secondPackage = $this->makePackage([
+            'code' => 'ASF-TEST-SECOND',
+            'slug' => 'package-kedua',
+        ]);
+        $specificProduct = TravelProduct::query()->includingPackageSpecific()->create([
+            'code' => 'PKG-ISOLATED-TEST',
+            'slug' => 'produk-khusus-isolated-test',
+            'name' => 'Produk Khusus Lama',
+            'product_type' => 'tiket',
+            'visibility' => 'package',
+            'package_id' => $firstPackage->id,
+            'content' => ['currency' => 'IDR', 'price' => 1_000_000],
+            'is_active' => true,
+        ]);
+        $firstPackage->products()->attach($specificProduct->id, ['multiplier_per_pax' => 1]);
+
+        $this->actingAs($user)
+            ->get(route('packages.create'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('productOptions', fn ($options) => collect($options)
+                    ->doesntContain('id', $specificProduct->id))
+                ->where('hotelCountries.0.id', $country->id)
+                ->where('hotelCountries.0.name', 'Arab Saudi')
+                ->where('hotelCities.0.id', $city->id)
+                ->where('hotelCities.0.country_id', $country->id));
+
+        $this->actingAs($user)
+            ->post(route('packages.update', $secondPackage), [
+                'slug' => $secondPackage->slug,
+                'name' => $secondPackage->name,
+                'package_type' => $secondPackage->package_type,
+                'departure_city' => $secondPackage->departure_city,
+                'start_date' => $secondPackage->start_date?->toDateString(),
+                'end_date' => $secondPackage->end_date?->toDateString(),
+                'seats_total' => $secondPackage->seats_total,
+                'booking_status' => $secondPackage->booking_status,
+                'duration_days' => $secondPackage->duration_days,
+                'price' => $secondPackage->price,
+                'currency' => $secondPackage->currency,
+                'custom_products' => [[
+                    'id' => $specificProduct->id,
+                    'client_key' => (string) $specificProduct->id,
+                    'estimate_id' => $specificProduct->id,
+                    'name' => 'Percobaan Mengambil Produk',
+                    'product_type' => 'tiket',
+                    'currency' => 'IDR',
+                    'price' => 2_000_000,
+                    'multiplier_per_pax' => 1,
+                ]],
+                'is_active' => true,
+            ])
+            ->assertSessionHasErrors('custom_products.0.id');
+
+        $this->assertSame('Produk Khusus Lama', $specificProduct->fresh()->name);
+
+        $this->actingAs($user)
+            ->delete(route('packages.destroy', $firstPackage))
+            ->assertRedirect();
+
+        $this->assertFalse(TravelProduct::query()
+            ->includingPackageSpecific()
+            ->whereKey($specificProduct->id)
+            ->exists());
+    }
+
+    public function test_it_rejects_invalid_master_references_for_package_specific_products(): void
+    {
+        $user = User::factory()->create();
+        ProductCategory::query()->updateOrCreate(['key' => 'hotel'], [
+            'name' => 'Hotel',
+            'is_active' => true,
+        ]);
+        $saudi = HotelCountry::query()->create(['name' => 'Arab Saudi', 'is_active' => true]);
+        $indonesia = HotelCountry::query()->create(['name' => 'Indonesia', 'is_active' => true]);
+        $makkah = HotelCity::query()->create([
+            'country_id' => $saudi->id,
+            'name' => 'Makkah',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'package-invalid-custom-reference',
+                'name' => 'Package Invalid Custom Reference',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-09-10',
+                'end_date' => '2026-09-19',
+                'seats_total' => 4,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 20_000_000,
+                'currency' => 'IDR',
+                'custom_products' => [[
+                    'client_key' => 'hotel-invalid',
+                    'estimate_id' => -1,
+                    'name' => 'Hotel Invalid',
+                    'product_type' => 'hotel',
+                    'currency' => 'XYZ',
+                    'multiplier_per_pax' => 1,
+                    'country_id' => $indonesia->id,
+                    'city_id' => $makkah->id,
+                    'pricing' => [[
+                        'broker_name' => 'Broker 1',
+                        'room_type' => 'DBL',
+                        'period_start' => '2026-09-01',
+                        'period_end' => '2026-09-30',
+                        'price' => 1_000_000,
+                    ]],
+                ]],
+                'is_active' => true,
+            ])
+            ->assertSessionHasErrors([
+                'custom_products.0.currency',
+                'custom_products.0.city_id',
+            ]);
+
+        $this->assertFalse(TravelPackage::query()
+            ->where('slug', 'package-invalid-custom-reference')
+            ->exists());
     }
 
     public function test_it_uses_package_booking_status_instead_of_schedule_active_flag(): void

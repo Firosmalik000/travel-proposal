@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { useDebounce } from '@/hooks/use-debounce';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate, formatDateTime } from '@/lib/date-format';
 import { Head, router } from '@inertiajs/react';
 import { CalendarDays, CircleDollarSign, Search, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -71,16 +72,6 @@ function statusBadgeTone(status: string): string {
     }
 
     return 'bg-amber-100 text-amber-700';
-}
-
-function formatDate(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        dateStyle: 'medium',
-    }).format(new Date(value));
 }
 
 function formatCurrency(amount: number | null, currency: string): string {
@@ -262,21 +253,9 @@ export default function CustomBookingsIndex({
                                                     {booking.booking_code}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {booking.created_at
-                                                        ? new Intl.DateTimeFormat(
-                                                              'id-ID',
-                                                              {
-                                                                  dateStyle:
-                                                                      'medium',
-                                                                  timeStyle:
-                                                                      'short',
-                                                              },
-                                                          ).format(
-                                                              new Date(
-                                                                  booking.created_at,
-                                                              ),
-                                                          )
-                                                        : '-'}
+                                                    {formatDateTime(
+                                                        booking.created_at,
+                                                    )}
                                                 </p>
                                             </div>
                                         </TableCell>

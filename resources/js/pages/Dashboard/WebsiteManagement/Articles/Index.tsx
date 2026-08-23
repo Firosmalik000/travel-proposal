@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/sheet';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDateTime } from '@/lib/date-format';
 import { Head, router } from '@inertiajs/react';
 import {
     Eye,
@@ -66,19 +67,8 @@ const contentTypeLabels: Record<string, string> = {
     general_news: 'General News',
 };
 
-const formatPublishedAt = (publishedAt?: string | null): string => {
-    if (!publishedAt) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(new Date(publishedAt));
-};
+const formatPublishedAt = (publishedAt?: string | null): string =>
+    formatDateTime(publishedAt);
 
 export default function ArticleIndex({
     articles,

@@ -118,9 +118,17 @@ class TravelPackage extends Model
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(TravelProduct::class, 'package_product', 'package_id', 'product_id')
+            ->withoutGlobalScope('master-products')
             ->withPivot('sort_order', 'multiplier_per_pax')
             ->withTimestamps()
             ->orderByPivot('sort_order');
+    }
+
+    public function ownedProducts(): HasMany
+    {
+        return $this->hasMany(TravelProduct::class, 'package_id')
+            ->withoutGlobalScope('master-products')
+            ->where('visibility', TravelProduct::VISIBILITY_PACKAGE);
     }
 
     public function testimonials(): HasMany

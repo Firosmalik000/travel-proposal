@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Administrator;
 
 use App\Actions\Package\SyncPackageAllInConfig;
+use App\Actions\Package\SyncPackageSpecificProducts;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\StorePackageRequest;
 use App\Models\Activity;
+use App\Models\HotelCity;
+use App\Models\HotelCountry;
 use App\Models\PackageItinerary;
 use App\Models\PackageVendor;
 use App\Models\ProductCategory;
@@ -14,14 +17,18 @@ use App\Models\TravelProduct;
 use App\Models\VendorPricePeriod;
 use App\Services\LiveCurrencyRateService;
 use App\Services\PackageCurrencySnapshotService;
+use App\Services\PackageDraftService;
 use App\Services\PackageHppEstimateService;
 use App\Support\ParticipantUploadLimit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class PackageController extends Controller
 {
@@ -30,10 +37,13 @@ class PackageController extends Controller
         private readonly LiveCurrencyRateService $liveCurrencyRateService,
         private readonly PackageCurrencySnapshotService $packageCurrencySnapshotService,
         private readonly SyncPackageAllInConfig $syncPackageAllInConfig,
+        private readonly SyncPackageSpecificProducts $syncPackageSpecificProducts,
+        private readonly PackageDraftService $packageDraftService,
     ) {}
 
     public function index(): Response
     {
+        $drafts = $this->packageDraftService->allForUser(request()->user());
         $packages = TravelPackage::query()
             ->with($this->packageRelations())
             ->orderBy('code')
@@ -42,6 +52,14 @@ class PackageController extends Controller
 
         return Inertia::render('Dashboard/ProductManagement/Packages/Index', [
             'packages' => $packages,
+            'packageDrafts' => $drafts
+                ->filter(fn ($draft): bool => $draft->package_id !== null)
+                ->map(fn ($draft): array => $this->packageDraftService->serializeSummary($draft))
+                ->values()
+                ->all(),
+            'createDraft' => ($createDraft = $drafts->firstWhere('draft_key', 'create'))
+                ? $this->packageDraftService->serializeSummary($createDraft)
+                : null,
         ]);
     }
 
@@ -60,43 +78,131 @@ class PackageController extends Controller
         return $this->renderPackagePage('edit', $package);
     }
 
+    public function editHppEstimate(TravelPackage $package): Response
+    {
+        return $this->renderPackagePage('hpp', $package);
+    }
+
     public function store(StorePackageRequest $request): RedirectResponse
     {
-        $this->removeAllInCoveredProducts($request);
-        $package = TravelPackage::query()->create(
-            $this->packagePayload($request)
+        $preparedImages = $this->packageDraftService->prepareImagesForSave(
+            $request->user(),
+            $request->input('existing_images', []),
         );
-        $package->syncSeatAvailability();
+        $request->merge(['existing_images' => $preparedImages['images']]);
 
-        $this->syncProducts(
-            $package,
-            $request->input('product_ids', []),
-            $request->input('product_multipliers', []),
-        );
-        $this->syncItineraries($package, $request->validated('itineraries', []));
-        $this->syncPackageAllInConfig->handle($package, $request->input('all_in'));
+        try {
+            DB::transaction(function () use ($request): void {
+                $customProducts = $this->syncSpecificProducts($request);
+                $this->mergeSpecificProductsIntoRequest($request, $customProducts);
+                $this->removeAllInCoveredProducts($request);
+
+                $package = TravelPackage::query()->create(
+                    $this->packagePayload($request)
+                );
+                $this->syncPackageSpecificProducts->assignOwnership($package, $customProducts['ids']);
+                $package->syncSeatAvailability();
+
+                $this->syncProducts(
+                    $package,
+                    $request->input('product_ids', []),
+                    $request->input('product_multipliers', []),
+                );
+                $this->syncItineraries($package, $request->validated('itineraries', []));
+                $this->syncPackageAllInConfig->handle($package, $request->input('all_in'));
+                $this->hppEstimateService->refreshForPackage($package);
+            });
+        } catch (Throwable $exception) {
+            $this->packageDraftService->removePromotedImages($preparedImages['promoted_paths']);
+
+            throw $exception;
+        }
+
+        $this->packageDraftService->discard($request->user());
 
         return back()->with('success', 'Package berhasil ditambahkan.');
     }
 
     public function update(StorePackageRequest $request, TravelPackage $package): RedirectResponse
     {
-        $this->removeAllInCoveredProducts($request);
-        $package->update($this->packagePayload($request, $package));
-        $package->syncSeatAvailability();
-        $this->syncProducts(
+        $preparedImages = $this->packageDraftService->prepareImagesForSave(
+            $request->user(),
+            $request->input('existing_images', []),
             $package,
-            $request->input('product_ids', []),
-            $request->input('product_multipliers', []),
         );
-        $this->syncItineraries($package, $request->validated('itineraries', []));
-        $this->syncPackageAllInConfig->handle($package, $request->input('all_in'));
+        $request->merge(['existing_images' => $preparedImages['images']]);
+
+        try {
+            DB::transaction(function () use ($request, $package): void {
+                $customProducts = $this->syncSpecificProducts($request, $package);
+                $this->mergeSpecificProductsIntoRequest($request, $customProducts);
+                $this->removeAllInCoveredProducts($request);
+
+                $package->update($this->packagePayload($request, $package));
+                $package->syncSeatAvailability();
+                $this->syncProducts(
+                    $package,
+                    $request->input('product_ids', []),
+                    $request->input('product_multipliers', []),
+                );
+                $this->syncItineraries($package, $request->validated('itineraries', []));
+                $this->syncPackageAllInConfig->handle($package, $request->input('all_in'));
+                $this->hppEstimateService->refreshForPackage($package);
+            });
+        } catch (Throwable $exception) {
+            $this->packageDraftService->removePromotedImages($preparedImages['promoted_paths']);
+
+            throw $exception;
+        }
+
+        $this->packageDraftService->discard($request->user(), $package);
 
         return back()->with('success', 'Package berhasil diperbarui.');
     }
 
+    public function updateHppEstimate(StorePackageRequest $request, TravelPackage $package): RedirectResponse
+    {
+        $package->load('products');
+        $request->merge([
+            'product_ids' => $package->products->pluck('id')->values()->all(),
+            'product_multipliers' => $package->products->mapWithKeys(fn (TravelProduct $product): array => [
+                (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
+            ])->all(),
+        ]);
+
+        $payload = $this->packagePayload($request, $package, preserveImages: true);
+        $existingContent = is_array($package->content) ? $package->content : [];
+        $calculatedContent = is_array($payload['content']) ? $payload['content'] : [];
+
+        foreach ([
+            'hpp_estimate',
+            'hpp_currency_snapshots',
+            'currency_rate_snapshot',
+            'room_original_prices',
+            'room_prices',
+        ] as $financialContentKey) {
+            if (array_key_exists($financialContentKey, $calculatedContent)) {
+                $existingContent[$financialContentKey] = $calculatedContent[$financialContentKey];
+            }
+        }
+
+        $package->update([
+            'price' => $payload['price'],
+            'original_price' => $payload['original_price'],
+            'discount_label' => $payload['discount_label'],
+            'discount_ends_at' => $payload['discount_ends_at'],
+            'currency' => $payload['currency'],
+            'content' => $existingContent,
+        ]);
+
+        return redirect()
+            ->route('hpp-package.index')
+            ->with('success', 'Estimasi HPP berhasil diperbarui.');
+    }
+
     public function destroy(TravelPackage $package): RedirectResponse
     {
+        $this->packageDraftService->discardAllForPackage($package);
         collect([
             $package->image_path,
             ...(($package->content['gallery'] ?? [])),
@@ -193,10 +299,18 @@ class PackageController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function packagePayload(StorePackageRequest $request, ?TravelPackage $existing = null): array
-    {
-        $allImages = [];
-        $existingImages = $request->input('existing_images', []);
+    private function packagePayload(
+        StorePackageRequest $request,
+        ?TravelPackage $existing = null,
+        bool $preserveImages = false,
+    ): array {
+        $existingImages = $preserveImages && $existing !== null
+            ? collect([
+                $existing->image_path,
+                ...data_get($existing->content, 'gallery', []),
+            ])->filter()->values()->all()
+            : $request->input('existing_images', []);
+        $allImages = $existingImages;
 
         // Collect existing images that were kept
         if (! empty($existingImages)) {
@@ -214,24 +328,26 @@ class PackageController extends Controller
             }
         }
 
-        foreach ($oldImages as $oldImage) {
-            if (! in_array($oldImage, $existingImages) && str_starts_with($oldImage, '/storage/')) {
-                Storage::disk('public')->delete(str_replace('/storage/', '', $oldImage));
+        if (! $preserveImages) {
+            foreach ($oldImages as $oldImage) {
+                if (! in_array($oldImage, $existingImages) && str_starts_with($oldImage, '/storage/')) {
+                    Storage::disk('public')->delete(str_replace('/storage/', '', $oldImage));
+                }
             }
-        }
 
-        // Handle newly uploaded images
-        if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $file) {
-                $path = '/storage/'.$file->store('packages', 'public');
-                $allImages[] = $path;
+            // Handle newly uploaded images
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $file) {
+                    $path = '/storage/'.$file->store('packages', 'public');
+                    $allImages[] = $path;
+                }
             }
-        }
 
-        // Legacy support for single 'image' if sent
-        if ($request->hasFile('image')) {
-            $path = '/storage/'.$request->file('image')->store('packages', 'public');
-            array_unshift($allImages, $path);
+            // Legacy support for single 'image' if sent
+            if ($request->hasFile('image')) {
+                $path = '/storage/'.$request->file('image')->store('packages', 'public');
+                array_unshift($allImages, $path);
+            }
         }
 
         $imagePath = $allImages[0] ?? null;
@@ -322,6 +438,7 @@ class PackageController extends Controller
                 ->map(fn (mixed $productId): int => (int) $productId)
                 ->values();
             $selectedProducts = TravelProduct::query()
+                ->includingPackageSpecific()
                 ->whereIn('id', $selectedProductIds)
                 ->get()
                 ->sortBy(fn (TravelProduct $product): int => $selectedProductIds->search($product->id))
@@ -531,6 +648,7 @@ class PackageController extends Controller
                             'pricing' => $pricing,
                         ]
                         : null,
+                    'is_package_specific' => false,
                 ];
             })
             ->values()
@@ -550,7 +668,14 @@ class PackageController extends Controller
             'currencies' => $this->currencyOptions(),
             'activityOptions' => $this->activityOptions(),
             'productCategories' => $this->productCategoryOptions(),
+            'hotelCountries' => $this->hotelCountryOptions(),
+            'hotelCities' => $this->hotelCityOptions(),
             'vendors' => $this->vendorOptions(),
+            'draft' => in_array($mode, ['create', 'edit'], true)
+                ? (($draft = $this->packageDraftService->findForUser(request()->user(), $package))
+                    ? $this->packageDraftService->serialize($draft)
+                    : null)
+                : null,
             'packageImageUploadMaxKilobytes' => ParticipantUploadLimit::kilobytes(4096),
         ]);
     }
@@ -559,7 +684,7 @@ class PackageController extends Controller
     private function packageRelations(): array
     {
         return [
-            'products:id,code,name,product_type',
+            'products:id,code,name,product_type,description,content,visibility,package_id',
             'allInConfig',
             'testimonials',
             'itineraries.activity:id,code,name,description,sort_order,is_active',
@@ -571,6 +696,40 @@ class PackageController extends Controller
     private function currencyOptions(): array
     {
         return $this->liveCurrencyRateService->options();
+    }
+
+    /** @return array<int, array{id:int,name:string}> */
+    private function hotelCountryOptions(): array
+    {
+        return HotelCountry::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (HotelCountry $country): array => [
+                'id' => $country->id,
+                'name' => $country->name,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** @return array<int, array{id:int,country_id:int,name:string,country_name:string}> */
+    private function hotelCityOptions(): array
+    {
+        return HotelCity::query()
+            ->with('country:id,name')
+            ->where('is_active', true)
+            ->whereHas('country', fn ($query) => $query->where('is_active', true))
+            ->orderBy('name')
+            ->get(['id', 'country_id', 'name'])
+            ->map(fn (HotelCity $city): array => [
+                'id' => $city->id,
+                'country_id' => $city->country_id,
+                'name' => $city->name,
+                'country_name' => $city->country?->name ?? '',
+            ])
+            ->values()
+            ->all();
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -595,6 +754,12 @@ class PackageController extends Controller
     /** @return array<string, mixed> */
     private function serializePackage(TravelPackage $pkg): array
     {
+        $content = is_array($pkg->content) ? $pkg->content : [];
+        $currentHppEstimate = $this->hppEstimateService->calculateForPackage($pkg);
+        if ($currentHppEstimate !== null) {
+            $content['hpp_estimate'] = $currentHppEstimate;
+        }
+
         return [
             'id' => $pkg->id,
             'code' => $pkg->code,
@@ -621,7 +786,7 @@ class PackageController extends Controller
                 ...($pkg->content['gallery'] ?? []),
             ]),
             'summary' => $pkg->summary,
-            'content' => $pkg->content ?? [],
+            'content' => $content,
             'all_in' => $pkg->allInConfig ? [
                 'enabled' => true,
                 'vendor_id' => $pkg->allInConfig->package_vendor_id,
@@ -645,11 +810,21 @@ class PackageController extends Controller
             ],
             'is_featured' => $pkg->is_featured,
             'is_active' => $pkg->is_active,
-            'product_ids' => $pkg->products->pluck('id')->values()->all(),
+            'product_ids' => $pkg->products
+                ->where('visibility', TravelProduct::VISIBILITY_MASTER)
+                ->pluck('id')
+                ->values()
+                ->all(),
             'product_multipliers' => $pkg->products
+                ->where('visibility', TravelProduct::VISIBILITY_MASTER)
                 ->mapWithKeys(fn (TravelProduct $product) => [
                     (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
                 ])
+                ->all(),
+            'custom_products' => $pkg->products
+                ->where('visibility', TravelProduct::VISIBILITY_PACKAGE)
+                ->map(fn (TravelProduct $product): array => $this->serializeSpecificProduct($product))
+                ->values()
                 ->all(),
             'rating_avg' => $pkg->testimonials->where('is_active', true)->avg('rating')
                 ? round($pkg->testimonials->where('is_active', true)->avg('rating'), 1)
@@ -728,6 +903,125 @@ class PackageController extends Controller
             ])->values()->all();
     }
 
+    /**
+     * @return array{
+     *     ids: array<int, int>,
+     *     multipliers: array<string, int>,
+     *     id_map: array<string, int>,
+     *     products: Collection<int, TravelProduct>
+     * }
+     */
+    private function syncSpecificProducts(
+        StorePackageRequest $request,
+        ?TravelPackage $package = null,
+    ): array {
+        $coveredCategoryKeys = $request->boolean('all_in.enabled')
+            ? collect($request->input('all_in.included_category_keys', []))
+            : collect();
+        $items = collect($request->input('custom_products', []))
+            ->filter(fn (mixed $item): bool => is_array($item))
+            ->reject(fn (array $item): bool => $coveredCategoryKeys->contains($item['product_type'] ?? null))
+            ->values()
+            ->all();
+
+        return $this->syncPackageSpecificProducts->handle($package, $items);
+    }
+
+    /**
+     * @param  array{
+     *     ids: array<int, int>,
+     *     multipliers: array<string, int>,
+     *     id_map: array<string, int>
+     * }  $specificProducts
+     */
+    private function mergeSpecificProductsIntoRequest(
+        StorePackageRequest $request,
+        array $specificProducts,
+    ): void {
+        $masterProductIds = collect($request->input('product_ids', []))
+            ->filter(fn (mixed $id): bool => is_numeric($id))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+        $content = $request->input('content', []);
+        $content = is_array($content)
+            ? $this->remapSpecificProductContentKeys($content, $specificProducts['id_map'])
+            : [];
+
+        $request->merge([
+            'product_ids' => array_values(array_unique([
+                ...$masterProductIds,
+                ...$specificProducts['ids'],
+            ])),
+            'product_multipliers' => array_replace(
+                $request->input('product_multipliers', []),
+                $specificProducts['multipliers'],
+            ),
+            'content' => $content,
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $content
+     * @param  array<string, int>  $idMap
+     * @return array<string, mixed>
+     */
+    private function remapSpecificProductContentKeys(array $content, array $idMap): array
+    {
+        foreach ([
+            'hotel_product_brokers',
+            'hpp_estimate.product_quantities',
+            'hpp_estimate.product_quantities_is_manual',
+            'hpp_estimate.hotel_allocations',
+            'hpp_estimate.hotel_allocations_is_manual',
+        ] as $path) {
+            $values = data_get($content, $path);
+            if (! is_array($values)) {
+                continue;
+            }
+
+            $remapped = [];
+            foreach ($values as $key => $value) {
+                $resolvedKey = (string) ($idMap[(string) $key] ?? $key);
+                $remapped[$resolvedKey] = $value;
+            }
+
+            data_set($content, $path, $remapped);
+        }
+
+        return $content;
+    }
+
+    /** @return array<string, mixed> */
+    private function serializeSpecificProduct(TravelProduct $product): array
+    {
+        return [
+            'id' => $product->id,
+            'client_key' => (string) $product->id,
+            'estimate_id' => $product->id,
+            'name' => $product->name,
+            'product_type' => $product->product_type,
+            'description' => $product->description ?? '',
+            'currency' => strtoupper((string) data_get($product->content, 'currency', 'IDR')),
+            'price' => data_get($product->content, 'price') !== null
+                ? (float) data_get($product->content, 'price')
+                : null,
+            'multiplier_per_pax' => (int) ($product->pivot->multiplier_per_pax ?? 1),
+            'country_id' => data_get($product->content, 'country_id') !== null
+                ? (int) data_get($product->content, 'country_id')
+                : null,
+            'city_id' => data_get($product->content, 'city_id') !== null
+                ? (int) data_get($product->content, 'city_id')
+                : null,
+            'country' => (string) data_get($product->content, 'country', ''),
+            'city' => (string) data_get($product->content, 'city', ''),
+            'pricing' => collect(data_get($product->content, 'pricing', []))
+                ->filter(fn (mixed $row): bool => is_array($row))
+                ->values()
+                ->all(),
+        ];
+    }
+
     private function removeAllInCoveredProducts(StorePackageRequest $request): void
     {
         if (! $request->boolean('all_in.enabled')) {
@@ -741,6 +1035,7 @@ class PackageController extends Controller
             ->unique()
             ->values();
         $productsById = TravelProduct::query()
+            ->includingPackageSpecific()
             ->whereIn('id', $requestedProductIds)
             ->get(['id', 'product_type'])
             ->keyBy('id');

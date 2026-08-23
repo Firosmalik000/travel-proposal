@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate, formatDateTime } from '@/lib/date-format';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
@@ -76,23 +77,6 @@ const money = (amount: number, currency: string) =>
         currency,
         maximumFractionDigits: 0,
     }).format(amount);
-const formatDate = (value: string) =>
-    new Intl.DateTimeFormat('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    }).format(new Date(`${value}T00:00:00`));
-const formatDateTime = (value: string | null) =>
-    value
-        ? new Intl.DateTimeFormat('id-ID', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-          }).format(new Date(value))
-        : '-';
-
 const transactionStatus: Record<
     PaymentStatus,
     { label: string; className: string }

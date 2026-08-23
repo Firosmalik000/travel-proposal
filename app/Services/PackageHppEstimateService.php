@@ -2,12 +2,86 @@
 
 namespace App\Services;
 
+use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use Illuminate\Support\Collection;
 
 class PackageHppEstimateService
 {
     private const ROOM_CAPACITIES = ['dbl' => 2, 'trpl' => 3, 'quad' => 4];
+
+    /** @return array<string, mixed>|null */
+    public function calculateForPackage(TravelPackage $package): ?array
+    {
+        $content = is_array($package->content) ? $package->content : [];
+        $estimate = data_get($content, 'hpp_estimate');
+
+        if (! is_array($estimate)) {
+            return null;
+        }
+
+        if (! is_array(data_get($estimate, 'customers'))) {
+            $storedCustomerCount = max(0, (int) data_get($estimate, 'customer_count', 0));
+            $customerCount = $storedCustomerCount > 0
+                ? $storedCustomerCount
+                : max(0, (int) $package->seats_total);
+            $estimate['customers'] = [
+                'single' => 0,
+                'dbl' => $customerCount,
+                'trpl' => 0,
+                'quad' => 0,
+            ];
+            $estimate['customers_is_manual'] = false;
+        }
+
+        $package->loadMissing(['products', 'allInConfig']);
+        $currencyCode = strtoupper((string) ($package->currency ?: 'IDR'));
+        $currencySnapshot = data_get($content, "hpp_currency_snapshots.{$currencyCode}", []);
+        $allInConfig = $package->allInConfig;
+
+        return $this->calculate(
+            $estimate,
+            (int) round((float) $package->price),
+            data_get($content, 'room_prices', []),
+            (float) data_get($currencySnapshot, 'rate_to_idr', $currencyCode === 'IDR' ? 1 : 0),
+            $currencyCode,
+            (string) data_get($currencySnapshot, 'source', $currencyCode === 'IDR' ? 'identity' : 'unavailable'),
+            data_get($currencySnapshot, 'fetched_at'),
+            $package->products,
+            $package->products->mapWithKeys(fn (TravelProduct $product): array => [
+                (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
+            ])->all(),
+            $package->start_date?->toDateString(),
+            data_get($content, 'hotel_product_brokers', []),
+            data_get($content, 'hpp_currency_snapshots', []),
+            $allInConfig ? [
+                'enabled' => true,
+                'vendor_id' => $allInConfig->package_vendor_id,
+                'period_id' => $allInConfig->vendor_price_period_id,
+                'broker_package_name' => $allInConfig->broker_package_name,
+                'currency' => $allInConfig->currency,
+                'price_per_pax' => (float) $allInConfig->price_per_pax,
+                'included_category_keys' => $allInConfig->included_category_keys ?? [],
+            ] : ['enabled' => false],
+        );
+    }
+
+    public function refreshForPackage(TravelPackage $package): ?array
+    {
+        $package->unsetRelation('products');
+        $package->unsetRelation('allInConfig');
+        $estimate = $this->calculateForPackage($package);
+
+        if ($estimate === null) {
+            return null;
+        }
+
+        $content = is_array($package->content) ? $package->content : [];
+        $content['hpp_estimate'] = $estimate;
+        $package->update(['content' => $content]);
+
+        return $estimate;
+    }
 
     /**
      * @param  array<string, mixed>  $estimate

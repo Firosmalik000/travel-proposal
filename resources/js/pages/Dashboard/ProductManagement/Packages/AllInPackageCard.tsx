@@ -17,6 +17,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { formatDate } from '@/lib/date-format';
 import { router } from '@inertiajs/react';
 import {
     Building2,
@@ -92,18 +93,6 @@ function resolveCategoryName(category: ProductCategoryOption): string {
     }
 
     return category.name.id || category.name.en || category.key;
-}
-
-function formatDate(value: string): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-    }).format(new Date(`${value}T00:00:00`));
 }
 
 function formatMoney(value: number, currency: string): string {
@@ -616,7 +605,7 @@ export function AllInPackageCard({
                         <DialogTitle>
                             Kelola Vendor &amp; Periode Harga
                         </DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription className="sr-only">
                             Data ini menjadi master sementara untuk semua
                             package. Periode harga selalu terhubung ke satu
                             vendor.

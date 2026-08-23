@@ -5,20 +5,98 @@ namespace App\Http\Controllers\Administrator\ProductManagement;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\ProductCategoryHotel\BulkDeleteProductCategoryHotelRequest;
 use App\Http\Requests\Administrator\ProductCategoryHotel\BulkStoreProductCategoryHotelRequest;
+use App\Http\Requests\Administrator\ProductCategoryHotel\ParseProductCategoryHotelPdfRequest;
+use App\Http\Requests\Administrator\ProductCategoryHotel\ReconcileProductCategoryHotelImportRequest;
 use App\Http\Requests\Administrator\ProductCategoryHotel\StoreProductCategoryHotelRequest;
 use App\Http\Requests\Administrator\ProductCategoryHotel\UpdateProductCategoryHotelRequest;
 use App\Models\Hotel;
+use App\Models\HotelCity;
+use App\Models\HotelCountry;
+use App\Models\HotelPrice;
+use App\Services\HotelImport\HotelImportReconciliationService;
+use App\Services\HotelImport\HotelRatePdfParser;
+use App\Services\HotelImport\PdfTextExtractor;
 use App\Services\HotelProductSyncService;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class ProductCategoryHotelController extends Controller
 {
     public function __construct(
         private readonly HotelProductSyncService $hotelProductSyncService,
+        private readonly PdfTextExtractor $pdfTextExtractor,
+        private readonly HotelRatePdfParser $hotelRatePdfParser,
+        private readonly HotelImportReconciliationService $hotelImportReconciliationService,
     ) {}
+
+    public function parsePdf(ParseProductCategoryHotelPdfRequest $request): JsonResponse
+    {
+        $startedAt = microtime(true);
+        $storedPath = $request->file('file')->storeAs(
+            'hotel-imports',
+            Str::uuid().'.pdf',
+            'local'
+        );
+
+        Log::info('Hotel PDF parsing started');
+
+        try {
+            $pages = $this->pdfTextExtractor->extract(Storage::disk('local')->path($storedPath));
+            $defaultCountryId = $request->filled('default_country_id') ? $request->integer('default_country_id') : null;
+            $defaultCountry = $defaultCountryId !== null
+                ? HotelCountry::query()->find($defaultCountryId)?->name
+                : null;
+            $defaultCurrency = $request->filled('default_currency')
+                ? strtoupper((string) $request->string('default_currency')->value())
+                : null;
+            $knownCities = HotelCity::query()->where('is_active', true)->pluck('name')->all();
+            $rows = $this->hotelRatePdfParser->parse($pages, $defaultCountry, $defaultCurrency, $knownCities);
+            $result = $this->hotelImportReconciliationService->reconcile($rows, $defaultCountryId, $defaultCurrency);
+
+            Log::info('Hotel PDF parsing completed', [
+                'pages_processed' => count($pages),
+                'hotel_blocks_detected' => $result['summary']['hotels_detected'],
+                'rate_rows_detected' => $result['summary']['periods_detected'],
+                'warnings' => $result['summary']['warnings'],
+                'conflicts' => $result['summary']['conflicts'],
+                'duration_ms' => (int) ((microtime(true) - $startedAt) * 1000),
+            ]);
+
+            return response()->json([
+                'rows' => $rows,
+                ...$result,
+            ]);
+        } catch (RuntimeException $exception) {
+            Log::warning('Hotel PDF parsing failed', [
+                'message' => $exception->getMessage(),
+                'duration_ms' => (int) ((microtime(true) - $startedAt) * 1000),
+            ]);
+
+            return response()->json(['message' => $exception->getMessage()], 422);
+        } finally {
+            Storage::disk('local')->delete($storedPath);
+        }
+    }
+
+    public function reconcileImport(ReconcileProductCategoryHotelImportRequest $request): JsonResponse
+    {
+        $defaultCountryId = $request->filled('default_country_id') ? $request->integer('default_country_id') : null;
+        $defaultCurrency = $request->filled('default_currency')
+            ? strtoupper((string) $request->string('default_currency')->value())
+            : null;
+
+        return response()->json($this->hotelImportReconciliationService->reconcile(
+            (array) $request->validated('rows'),
+            $defaultCountryId,
+            $defaultCurrency,
+        ));
+    }
 
     public function store(StoreProductCategoryHotelRequest $request): RedirectResponse
     {
@@ -34,14 +112,17 @@ class ProductCategoryHotelController extends Controller
     public function bulkStore(BulkStoreProductCategoryHotelRequest $request): RedirectResponse
     {
         $createdCount = 0;
+        $updatedCount = 0;
+        $newPeriodCount = 0;
+        $unchangedCount = 0;
         $skippedHotels = [];
         $seenPayloadKeys = [];
 
-        DB::transaction(function () use ($request, &$createdCount, &$skippedHotels, &$seenPayloadKeys): void {
+        DB::transaction(function () use ($request, &$createdCount, &$updatedCount, &$newPeriodCount, &$unchangedCount, &$skippedHotels, &$seenPayloadKeys): void {
             foreach ((array) $request->validated('hotels') as $index => $hotelPayload) {
                 $cityId = (int) data_get($hotelPayload, 'city_id');
                 $name = trim((string) data_get($hotelPayload, 'name'));
-                $key = $cityId.'|'.mb_strtolower($name);
+                $key = $cityId.'|'.$this->normalizeHotelName($name);
 
                 if (isset($seenPayloadKeys[$key])) {
                     $skippedHotels[] = [
@@ -55,17 +136,41 @@ class ProductCategoryHotelController extends Controller
                 $seenPayloadKeys[$key] = true;
 
                 $existingHotel = Hotel::withTrashed()
+                    ->with(['prices' => fn ($query) => $query->withTrashed()])
                     ->where('city_id', $cityId)
-                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
-                    ->first();
+                    ->get()
+                    ->first(fn (Hotel $hotel): bool => $this->normalizeHotelName($hotel->name) === $this->normalizeHotelName($name));
                 if ($existingHotel) {
-                    $skippedHotels[] = [
-                        'index' => $index + 1,
-                        'name' => $name,
-                        'reason' => $existingHotel->is_active
-                            ? 'Data sudah ada (aktif)'
-                            : 'Data sudah ada (nonaktif)',
-                    ];
+                    if ($existingHotel->trashed() || ! $existingHotel->is_active) {
+                        $skippedHotels[] = [
+                            'index' => $index + 1,
+                            'name' => $name,
+                            'reason' => 'Data existing nonaktif atau sudah dihapus',
+                        ];
+
+                        continue;
+                    }
+
+                    $incomingCurrency = strtoupper((string) data_get($hotelPayload, 'currency'));
+                    if (strtoupper($existingHotel->currency) !== $incomingCurrency) {
+                        $skippedHotels[] = [
+                            'index' => $index + 1,
+                            'name' => $name,
+                            'reason' => "Konflik mata uang {$existingHotel->currency} dan {$incomingCurrency}",
+                        ];
+
+                        continue;
+                    }
+
+                    $priceResult = $this->upsertHotelPrices($existingHotel, (array) data_get($hotelPayload, 'prices', []));
+                    $newPeriodCount += $priceResult['new_periods'];
+
+                    if ($priceResult['changed']) {
+                        $updatedCount++;
+                        $this->hotelProductSyncService->sync($existingHotel->fresh());
+                    } else {
+                        $unchangedCount++;
+                    }
 
                     continue;
                 }
@@ -77,9 +182,60 @@ class ProductCategoryHotelController extends Controller
         });
 
         return back()
-            ->with('success', 'Bulk create hotel berhasil diproses.')
+            ->with('success', 'Bulk create/update hotel berhasil diproses.')
             ->with('bulk_created_count', $createdCount)
+            ->with('bulk_updated_count', $updatedCount)
+            ->with('bulk_new_period_count', $newPeriodCount)
+            ->with('bulk_unchanged_count', $unchangedCount)
             ->with('bulk_skipped_hotels', $skippedHotels);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $prices
+     * @return array{changed: bool, new_periods: int}
+     */
+    private function upsertHotelPrices(Hotel $hotel, array $prices): array
+    {
+        $changed = false;
+        $newPeriods = 0;
+        $knownPeriods = $hotel->prices
+            ->filter(fn (HotelPrice $price): bool => ! $price->trashed())
+            ->map(fn (HotelPrice $price): string => $price->period_start?->toDateString().'|'.$price->period_end?->toDateString())
+            ->unique()
+            ->flip();
+
+        foreach ($this->pricePayload($prices) as $pricePayload) {
+            $periodKey = $pricePayload['period_start'].'|'.$pricePayload['period_end'];
+            $existingPrice = $hotel->prices
+                ->filter(fn (HotelPrice $price): bool => ! $price->trashed())
+                ->first(fn (HotelPrice $price): bool => (int) $price->room_type_id === (int) $pricePayload['room_type_id']
+                    && $price->period_start?->toDateString() === $pricePayload['period_start']
+                    && $price->period_end?->toDateString() === $pricePayload['period_end']
+                    && mb_strtolower($price->broker_name ?: 'Broker 1') === mb_strtolower($pricePayload['broker_name']));
+
+            if ($existingPrice) {
+                if ((int) $existingPrice->price !== (int) $pricePayload['price']) {
+                    $existingPrice->update(['price' => $pricePayload['price']]);
+                    $changed = true;
+                }
+
+                continue;
+            }
+
+            $hotel->prices()->create($pricePayload);
+            $changed = true;
+            if (! $knownPeriods->has($periodKey)) {
+                $knownPeriods->put($periodKey, true);
+                $newPeriods++;
+            }
+        }
+
+        return ['changed' => $changed, 'new_periods' => $newPeriods];
+    }
+
+    private function normalizeHotelName(string $name): string
+    {
+        return preg_replace('/[^\pL\pN]+/u', '', mb_strtolower(trim($name))) ?? '';
     }
 
     public function update(UpdateProductCategoryHotelRequest $request, Hotel $hotel): RedirectResponse

@@ -1,4 +1,5 @@
 import PublicLayout from '@/layouts/PublicLayout';
+import { formatDate } from '@/lib/date-format';
 import { Head, useForm } from '@inertiajs/react';
 import { Star } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -47,7 +48,7 @@ function localizeName(value: Record<string, string> | null): string {
 export default function PublicBookingReview({ booking, existing }: Props) {
     const pkgName = localizeName(booking.package.name);
     const scheduleLabel = booking.departure_schedule.departure_date
-        ? `${booking.departure_schedule.departure_date}${
+        ? `${formatDate(booking.departure_schedule.departure_date)}${
               booking.departure_schedule.departure_city
                   ? ` - ${booking.departure_schedule.departure_city}`
                   : ''

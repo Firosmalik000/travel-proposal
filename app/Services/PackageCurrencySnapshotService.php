@@ -19,6 +19,7 @@ class PackageCurrencySnapshotService
     public function capture(array $productIds, string $packageCurrency, array $additionalCurrencies = []): array
     {
         $productCurrencies = TravelProduct::query()
+            ->includingPackageSpecific()
             ->whereIn('id', collect($productIds)->filter(fn (mixed $id): bool => is_numeric($id))->map(fn (mixed $id): int => (int) $id)->all())
             ->get(['content'])
             ->map(fn (TravelProduct $product): string => strtoupper((string) data_get($product->content, 'currency', 'IDR')));

@@ -23,6 +23,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDateTime } from '@/lib/date-format';
 import { Head, router } from '@inertiajs/react';
 import { Clock3, Search } from 'lucide-react';
 import { useState } from 'react';
@@ -80,18 +81,6 @@ export default function ActivityLogsIndex({
     );
     const [dateFrom, setDateFrom] = useState(filters.date_from || '');
     const [dateTo, setDateTo] = useState(filters.date_to || '');
-    const formatDateTime = (value: string | null) => {
-        if (!value) return '-';
-        return new Intl.DateTimeFormat('id-ID', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-        }).format(new Date(value));
-    };
-
     return (
         <AppSidebarLayout
             breadcrumbs={[

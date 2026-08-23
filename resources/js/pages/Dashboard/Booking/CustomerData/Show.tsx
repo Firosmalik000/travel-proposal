@@ -14,6 +14,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate } from '@/lib/date-format';
 import { Head, Link } from '@inertiajs/react';
 import {
     AlertCircle,
@@ -47,18 +48,6 @@ type Props = {
 };
 
 type ParticipantDocument = Participant['documents'][number];
-
-function formatDate(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric',
-    }).format(new Date(value));
-}
 
 function genderLabel(value: string | null): string {
     if (value === 'male') {

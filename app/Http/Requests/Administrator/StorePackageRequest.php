@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests\Administrator;
 
+use App\Models\HotelCity;
+use App\Models\TravelProduct;
 use App\Models\VendorPricePeriod;
 use App\Support\ParticipantUploadLimit;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StorePackageRequest extends FormRequest
 {
@@ -95,6 +98,14 @@ class StorePackageRequest extends FormRequest
             $decoded = json_decode($productMultipliers, true);
             $this->merge([
                 'product_multipliers' => is_array($decoded) ? $decoded : [],
+            ]);
+        }
+
+        $customProducts = $this->input('custom_products');
+        if (is_string($customProducts)) {
+            $decoded = json_decode($customProducts, true);
+            $this->merge([
+                'custom_products' => is_array($decoded) ? $decoded : [],
             ]);
         }
 
@@ -233,11 +244,45 @@ class StorePackageRequest extends FormRequest
             'itineraries.*.title' => ['nullable', 'string', 'max:255'],
             'itineraries.*.description' => ['nullable', 'string'],
             'itineraries.*.product_ids' => ['nullable', 'array'],
-            'itineraries.*.product_ids.*' => ['integer', 'exists:products,id'],
+            'itineraries.*.product_ids.*' => [
+                'integer',
+                Rule::exists('products', 'id')->where('visibility', TravelProduct::VISIBILITY_MASTER),
+            ],
             'product_ids' => ['nullable', 'array'],
-            'product_ids.*' => ['integer', 'exists:products,id'],
+            'product_ids.*' => [
+                'integer',
+                Rule::exists('products', 'id')->where('visibility', TravelProduct::VISIBILITY_MASTER),
+            ],
             'product_multipliers' => ['nullable', 'array'],
             'product_multipliers.*' => ['integer', 'min:1'],
+            'custom_products' => ['nullable', 'array', 'max:50'],
+            'custom_products.*.id' => ['nullable', 'integer'],
+            'custom_products.*.client_key' => ['required', 'string', 'max:80', 'distinct'],
+            'custom_products.*.estimate_id' => ['required', 'integer', 'distinct'],
+            'custom_products.*.name' => ['required', 'string', 'max:200'],
+            'custom_products.*.product_type' => [
+                'required',
+                'string',
+                Rule::exists('product_categories', 'key')->where('is_active', true),
+            ],
+            'custom_products.*.description' => ['nullable', 'string', 'max:1000'],
+            'custom_products.*.currency' => [
+                'required',
+                'string',
+                Rule::in(array_keys((array) config('services.currency.supported', []))),
+            ],
+            'custom_products.*.price' => ['nullable', 'numeric', 'min:0'],
+            'custom_products.*.multiplier_per_pax' => ['required', 'integer', 'min:1'],
+            'custom_products.*.country_id' => ['nullable', 'integer'],
+            'custom_products.*.city_id' => ['nullable', 'integer'],
+            'custom_products.*.country' => ['nullable', 'string', 'max:100'],
+            'custom_products.*.city' => ['nullable', 'string', 'max:100'],
+            'custom_products.*.pricing' => ['nullable', 'array'],
+            'custom_products.*.pricing.*.broker_name' => ['required', 'string', 'max:150'],
+            'custom_products.*.pricing.*.room_type' => ['required', Rule::in(['DBL', 'TRPL', 'QUAD'])],
+            'custom_products.*.pricing.*.period_start' => ['required', 'date'],
+            'custom_products.*.pricing.*.period_end' => ['required', 'date', 'after_or_equal:custom_products.*.pricing.*.period_start'],
+            'custom_products.*.pricing.*.price' => ['required', 'numeric', 'min:0'],
             'is_featured' => ['boolean'],
             'is_active' => ['boolean'],
         ];
@@ -263,13 +308,117 @@ class StorePackageRequest extends FormRequest
             'content.hpp_estimate.operational_costs.human_resources.*.name.required' => 'Nama atau peran SDM wajib diisi.',
             'content.hpp_estimate.operational_costs.guide_tips.*.country.required' => 'Negara untuk tips guide wajib diisi.',
             'content.hpp_estimate.operational_costs.driver_tips.*.country.required' => 'Negara untuk tips sopir wajib diisi.',
+            'custom_products.*.client_key.required' => 'Identitas produk khusus tidak valid. Muat ulang halaman dan coba lagi.',
+            'custom_products.*.name.required' => 'Nama produk khusus wajib diisi.',
+            'custom_products.*.product_type.required' => 'Kategori produk khusus wajib dipilih.',
+            'custom_products.*.currency.required' => 'Mata uang produk khusus wajib dipilih.',
+            'custom_products.*.multiplier_per_pax.min' => 'Pengali produk khusus minimal 1 kali per pax.',
+            'custom_products.*.currency.in' => 'Mata uang produk khusus tidak tersedia pada master currency.',
+            'custom_products.*.pricing.*.broker_name.required' => 'Nama broker hotel khusus wajib diisi.',
+            'custom_products.*.pricing.*.room_type.required' => 'Tipe kamar hotel khusus wajib dipilih.',
+            'custom_products.*.pricing.*.period_start.required' => 'Tanggal mulai harga hotel khusus wajib diisi.',
+            'custom_products.*.pricing.*.period_end.required' => 'Tanggal akhir harga hotel khusus wajib diisi.',
+            'custom_products.*.pricing.*.price.min' => 'Harga kamar hotel khusus tidak boleh negatif.',
         ];
     }
 
-    public function withValidator($validator): void
+    public function withValidator(Validator $validator): void
     {
-        $validator->after(function ($validator): void {
+        $validator->after(function (Validator $validator): void {
             $package = $this->route('package');
+            $validHotelCities = HotelCity::query()
+                ->whereIn(
+                    'id',
+                    collect($this->input('custom_products', []))
+                        ->where('product_type', 'hotel')
+                        ->pluck('city_id')
+                        ->filter(fn (mixed $id): bool => is_numeric($id))
+                        ->map(fn (mixed $id): int => (int) $id)
+                        ->unique()
+                        ->all(),
+                )
+                ->where('is_active', true)
+                ->whereHas('country', fn ($query) => $query->where('is_active', true))
+                ->pluck('country_id', 'id');
+
+            collect($this->input('custom_products', []))
+                ->filter(fn (mixed $item): bool => is_array($item))
+                ->each(function (array $item, int $index) use ($validator, $package, $validHotelCities): void {
+                    $isHotel = ($item['product_type'] ?? null) === 'hotel';
+
+                    if (! $isHotel && (! is_numeric($item['price'] ?? null) || (float) $item['price'] < 0)) {
+                        $validator->errors()->add(
+                            "custom_products.{$index}.price",
+                            'Harga produk khusus wajib diisi.',
+                        );
+                    }
+
+                    if ($isHotel && empty($item['pricing'])) {
+                        $validator->errors()->add(
+                            "custom_products.{$index}.pricing",
+                            'Hotel khusus harus memiliki minimal satu periode harga.',
+                        );
+                    }
+
+                    if ($isHotel) {
+                        $duplicatePricingKeys = collect($item['pricing'] ?? [])
+                            ->filter(fn (mixed $row): bool => is_array($row))
+                            ->map(fn (array $row): string => implode('|', [
+                                mb_strtolower(trim((string) ($row['broker_name'] ?? ''))),
+                                strtoupper(trim((string) ($row['room_type'] ?? ''))),
+                                (string) ($row['period_start'] ?? ''),
+                                (string) ($row['period_end'] ?? ''),
+                            ]))
+                            ->duplicates();
+
+                        if ($duplicatePricingKeys->isNotEmpty()) {
+                            $validator->errors()->add(
+                                "custom_products.{$index}.pricing",
+                                'Kombinasi broker, session, dan tipe kamar tidak boleh duplikat.',
+                            );
+                        }
+
+                        $countryId = isset($item['country_id']) && is_numeric($item['country_id'])
+                            ? (int) $item['country_id']
+                            : null;
+                        $cityId = isset($item['city_id']) && is_numeric($item['city_id'])
+                            ? (int) $item['city_id']
+                            : null;
+
+                        if ($countryId === null) {
+                            $validator->errors()->add(
+                                "custom_products.{$index}.country_id",
+                                'Negara hotel khusus wajib dipilih dari master hotel.',
+                            );
+                        }
+
+                        $cityIsValid = $countryId !== null
+                            && $cityId !== null
+                            && (int) $validHotelCities->get($cityId) === $countryId;
+
+                        if (! $cityIsValid) {
+                            $validator->errors()->add(
+                                "custom_products.{$index}.city_id",
+                                'Kota hotel khusus wajib dipilih dan harus sesuai dengan negara.',
+                            );
+                        }
+                    }
+
+                    if (! isset($item['id']) || ! is_numeric($item['id'])) {
+                        return;
+                    }
+
+                    $ownsProduct = $package !== null && $package->ownedProducts()
+                        ->whereKey((int) $item['id'])
+                        ->exists();
+
+                    if (! $ownsProduct) {
+                        $validator->errors()->add(
+                            "custom_products.{$index}.id",
+                            'Produk khusus bukan milik package ini.',
+                        );
+                    }
+                });
 
             if ($package !== null && $this->integer('seats_total') < $package->bookedPassengerCount()) {
                 $validator->errors()->add(

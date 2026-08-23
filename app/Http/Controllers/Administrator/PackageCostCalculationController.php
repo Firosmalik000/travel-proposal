@@ -8,7 +8,6 @@ use App\Http\Requests\Administrator\UpdatePackageCostCalculationRequest;
 use App\Models\HotelAssignment;
 use App\Models\PackageCostCalculation;
 use App\Models\TravelPackage;
-use App\Models\TravelProduct;
 use App\Services\PackageCostCalculationService;
 use App\Services\PackageCurrencySnapshotService;
 use App\Services\PackageHppEstimateService;
@@ -33,7 +32,12 @@ class PackageCostCalculationController extends Controller
         ];
 
         $rows = PackageCostCalculation::query()
-            ->with(['package:id,code,name,departure_city,start_date,price,original_price,currency,content', 'items'])
+            ->with([
+                'package:id,code,name,departure_city,start_date,price,original_price,currency,content',
+                'package.products',
+                'package.allInConfig',
+                'items',
+            ])
             ->when($filters['travel_package_id'], fn ($query) => $query->where('package_id', (int) $filters['travel_package_id']))
             ->latest('calculated_at')
             ->get()
@@ -53,7 +57,9 @@ class PackageCostCalculationController extends Controller
                 'package_discount_percent' => $calculation->package?->discountPercent(),
                 'package_room_prices' => data_get($calculation->package?->content, 'room_prices', []),
                 'package_room_original_prices' => data_get($calculation->package?->content, 'room_original_prices', []),
-                'hpp_estimate' => data_get($calculation->package?->content, 'hpp_estimate'),
+                'hpp_estimate' => $calculation->package
+                    ? $this->hppEstimateService->calculateForPackage($calculation->package)
+                    : null,
                 'departure_date' => $calculation->package?->start_date?->toDateString(),
                 'departure_city' => $calculation->package?->departure_city,
                 'booking_count' => (int) $calculation->booking_count,
@@ -91,6 +97,7 @@ class PackageCostCalculationController extends Controller
             ->withSum([
                 'registrations as total_customers' => fn ($query) => $query->where('status', 'registered'),
             ], 'passenger_count')
+            ->with(['products', 'allInConfig'])
             ->get(['id', 'code', 'name', 'departure_city', 'start_date', 'price', 'original_price', 'currency', 'content']);
 
         $hotelAssignmentsCount = HotelAssignment::query()
@@ -146,6 +153,7 @@ class PackageCostCalculationController extends Controller
 
         $sourceRows = $packageStats
             ->map(function (TravelPackage $package) use ($hotelAssignmentsCount, $latestCalculationMap): array {
+                $hppEstimate = $this->hppEstimateService->calculateForPackage($package);
                 $latest = $latestCalculationMap->get((int) $package->id);
                 $calculationMode = (string) data_get(
                     $latest,
@@ -203,7 +211,7 @@ class PackageCostCalculationController extends Controller
                     'package_discount_percent' => $package?->discountPercent(),
                     'package_room_prices' => data_get($package?->content, 'room_prices', []),
                     'package_room_original_prices' => data_get($package?->content, 'room_original_prices', []),
-                    'hpp_estimate' => data_get($package?->content, 'hpp_estimate'),
+                    'hpp_estimate' => $hppEstimate,
                     'departure_date' => $package?->start_date?->toDateString(),
                     'departure_city' => $package?->departure_city,
                     'total_bookings' => (int) $package->total_bookings,
@@ -294,25 +302,7 @@ class PackageCostCalculationController extends Controller
         $estimate = data_get($content, 'hpp_estimate');
 
         if (is_array($estimate)) {
-            $package->load('products');
-            $currencyCode = strtoupper((string) ($package->currency ?: 'IDR'));
-            $currencyRate = data_get($content, "hpp_currency_snapshots.{$currencyCode}", []);
-            $content['hpp_estimate'] = $this->hppEstimateService->calculate(
-                $estimate,
-                (int) round((float) $package->price),
-                data_get($content, 'room_prices', []),
-                (float) data_get($currencyRate, 'rate_to_idr', 0),
-                $currencyCode,
-                (string) data_get($currencyRate, 'source', 'unavailable'),
-                data_get($currencyRate, 'fetched_at'),
-                $package->products,
-                $package->products->mapWithKeys(fn (TravelProduct $product): array => [
-                    (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
-                ])->all(),
-                $package->start_date?->toDateString(),
-                data_get($content, 'hotel_product_brokers', []),
-                data_get($content, 'hpp_currency_snapshots', []),
-            );
+            $content['hpp_estimate'] = $this->hppEstimateService->calculateForPackage($package);
             $package->update(['content' => $content]);
         }
 

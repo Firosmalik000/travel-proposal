@@ -173,10 +173,48 @@ export type Package = {
     is_active: boolean;
     product_ids: number[];
     product_multipliers: Record<string, number>;
+    custom_products: PackageSpecificProduct[];
     itineraries: Itinerary[];
     rating_avg: number | null;
     rating_count: number;
     all_in: PackageAllInConfiguration;
+};
+
+export type PackageDraftTemporaryImage = {
+    id: string;
+    path: string;
+    original_name: string;
+    mime_type: string | null;
+    size: number;
+};
+
+export type PackageDraftPayload = Partial<
+    Omit<
+        PackageFormData,
+        'images' | 'name.id' | 'name.en' | 'summary.id' | 'summary.en'
+    >
+> & {
+    name?: { id?: string; en?: string };
+    summary?: { id?: string; en?: string };
+    existing_images?: string[];
+};
+
+export type PackageDraft = {
+    id: number;
+    package_id: number | null;
+    payload: PackageDraftPayload;
+    temporary_images: PackageDraftTemporaryImage[];
+    base_package_updated_at: string | null;
+    last_autosaved_at: string | null;
+    expires_at: string | null;
+    has_conflict: boolean;
+};
+
+export type PackageDraftSummary = Omit<
+    PackageDraft,
+    'payload' | 'temporary_images' | 'base_package_updated_at'
+> & {
+    name: string;
 };
 
 export type PackageAllInConfiguration = {
@@ -197,6 +235,18 @@ export type ProductCategoryOption = {
     id: number;
     key: string;
     name: { id?: string; en?: string } | string;
+};
+
+export type HotelCountryOption = {
+    id: number;
+    name: string;
+};
+
+export type HotelCityOption = {
+    id: number;
+    country_id: number;
+    name: string;
+    country_name: string;
 };
 
 export type VendorPricePeriodOption = {
@@ -236,6 +286,32 @@ export type ProductOption = {
             price: number | string | null;
         }>;
     } | null;
+    is_package_specific?: boolean;
+};
+
+export type PackageSpecificProductPricing = {
+    broker_name: string;
+    room_type: 'DBL' | 'TRPL' | 'QUAD';
+    period_start: string;
+    period_end: string;
+    price: number;
+};
+
+export type PackageSpecificProduct = {
+    id?: number | null;
+    client_key: string;
+    estimate_id: number;
+    name: string;
+    product_type: string;
+    description: string;
+    currency: string;
+    price: number | null;
+    multiplier_per_pax: number;
+    country_id: number | null;
+    city_id: number | null;
+    country: string;
+    city: string;
+    pricing: PackageSpecificProductPricing[];
 };
 
 export type CurrencyOption = {
@@ -281,6 +357,7 @@ export type PackageFormData = {
     itineraries: ItineraryInput[];
     product_ids: number[];
     product_multipliers: Record<string, number>;
+    custom_products: PackageSpecificProduct[];
     is_featured: boolean;
     is_active: boolean;
     refresh_currency_rates?: boolean;

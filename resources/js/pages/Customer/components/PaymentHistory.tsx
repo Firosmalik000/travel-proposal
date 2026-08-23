@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import CustomerLayout from '@/layouts/customer-layout';
+import { formatDate, formatDateTime } from '@/lib/date-format';
 import { Head, Link } from '@inertiajs/react';
 import {
     ArrowLeft,
@@ -58,21 +59,6 @@ const money = (amount: number, currency: string) =>
         currency,
         maximumFractionDigits: 0,
     }).format(amount);
-
-const formatDate = (value: string | null) =>
-    value
-        ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(
-              new Date(`${value}T00:00:00`),
-          )
-        : '-';
-
-const formatDateTime = (value: string | null) =>
-    value
-        ? new Intl.DateTimeFormat('id-ID', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-          }).format(new Date(value))
-        : '-';
 
 const methodLabel: Record<string, string> = {
     transfer: 'Transfer Bank',

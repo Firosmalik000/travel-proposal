@@ -45,6 +45,204 @@ class HppPackageManagementTest extends TestCase
                 ->has('calculationModes', 2));
     }
 
+    public function test_user_with_edit_permission_can_open_package_hpp_estimate_editor(): void
+    {
+        $user = $this->createUserWithHppPermissions(['edit']);
+        $package = TravelPackage::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.estimate.edit', $package))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/ProductManagement/Packages/Page')
+                ->where('mode', 'hpp')
+                ->where('package.id', $package->id));
+    }
+
+    public function test_user_without_edit_permission_cannot_open_package_hpp_estimate_editor(): void
+    {
+        $user = $this->createUserWithHppPermissions(['view']);
+        $package = TravelPackage::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.estimate.edit', $package))
+            ->assertForbidden();
+    }
+
+    public function test_hpp_estimate_update_preserves_non_financial_package_data(): void
+    {
+        $user = $this->createUserWithHppPermissions(['edit']);
+        $package = TravelPackage::factory()->create([
+            'name' => 'Package Tetap',
+            'departure_city' => 'Jakarta',
+            'price' => 20_000_000,
+            'original_price' => null,
+            'currency' => 'IDR',
+            'image_path' => '/storage/packages/cover.jpg',
+            'content' => [
+                'gallery' => ['/storage/packages/gallery.jpg'],
+                'public_note' => 'Tidak boleh berubah',
+                'hpp_currency_snapshots' => [
+                    'IDR' => [
+                        'currency' => 'IDR',
+                        'rate_to_idr' => 1,
+                        'source' => 'identity',
+                        'fetched_at' => null,
+                    ],
+                ],
+            ],
+        ]);
+        $specificProduct = TravelProduct::factory()->create([
+            'name' => 'Tiket Khusus HPP',
+            'product_type' => 'tiket',
+            'visibility' => TravelProduct::VISIBILITY_PACKAGE,
+            'package_id' => $package->id,
+            'content' => [
+                'currency' => 'IDR',
+                'price' => 2_000_000,
+            ],
+            'is_active' => true,
+        ]);
+        $package->products()->attach($specificProduct->id, [
+            'sort_order' => 1,
+            'multiplier_per_pax' => 2,
+        ]);
+
+        $payload = [
+            'slug' => $package->slug,
+            'name' => 'Nama yang tidak boleh tersimpan',
+            'package_type' => $package->package_type,
+            'departure_city' => 'Surabaya',
+            'start_date' => $package->start_date->toDateString(),
+            'end_date' => $package->end_date->toDateString(),
+            'seats_total' => $package->seats_total,
+            'booking_status' => $package->booking_status,
+            'duration_days' => $package->duration_days,
+            'price' => 25_000_000,
+            'original_price' => 30_000_000,
+            'discount_label' => 'HPP TEST',
+            'currency' => 'IDR',
+            'content' => [
+                'public_note' => 'Diubah dari request HPP',
+                'gallery' => [],
+                'room_original_prices' => [
+                    'dbl' => 31_000_000,
+                    'trpl' => 32_000_000,
+                    'quad' => 33_000_000,
+                ],
+                'hpp_currency_snapshots' => [
+                    'IDR' => [
+                        'currency' => 'IDR',
+                        'rate_to_idr' => 1,
+                        'source' => 'identity',
+                        'fetched_at' => null,
+                    ],
+                ],
+                'hpp_estimate' => [
+                    'customers' => [
+                        'single' => 0,
+                        'dbl' => $package->seats_total,
+                        'trpl' => 0,
+                        'quad' => 0,
+                    ],
+                    'customers_is_manual' => false,
+                    'other_cost' => 1_000_000,
+                ],
+            ],
+            'product_ids' => [],
+            'product_multipliers' => [],
+            'custom_products' => [],
+            'itineraries' => [],
+            'all_in' => ['enabled' => false],
+            'is_featured' => false,
+            'is_active' => true,
+        ];
+
+        $this->actingAs($user)
+            ->post(route('hpp-package.estimate.update', $package), $payload)
+            ->assertRedirect(route('hpp-package.index'))
+            ->assertSessionHas('success');
+
+        $package->refresh();
+
+        $this->assertSame('Package Tetap', $package->name);
+        $this->assertSame('Jakarta', $package->departure_city);
+        $this->assertSame('/storage/packages/cover.jpg', $package->image_path);
+        $this->assertSame(['/storage/packages/gallery.jpg'], data_get($package->content, 'gallery'));
+        $this->assertSame('Tidak boleh berubah', data_get($package->content, 'public_note'));
+        $this->assertSame(25_000_000.0, (float) $package->price);
+        $this->assertSame(30_000_000.0, (float) $package->original_price);
+        $this->assertSame(1_000_000, data_get($package->content, 'hpp_estimate.other_cost'));
+        $this->assertSame(
+            $specificProduct->id,
+            data_get($package->content, 'hpp_estimate.items.0.reference_id'),
+        );
+        $this->assertSame(
+            2_000_000 * $package->seats_total * 2,
+            data_get($package->content, 'hpp_estimate.product_total'),
+        );
+    }
+
+    public function test_hpp_drawer_recalculates_estimate_with_package_specific_products(): void
+    {
+        $user = $this->createUserWithHppPermissions(['view', 'edit']);
+        $package = TravelPackage::factory()->create([
+            'name' => 'Package Produk Khusus',
+            'currency' => 'IDR',
+            'price' => 25_000_000,
+            'content' => [
+                'hpp_currency_snapshots' => [
+                    'IDR' => [
+                        'currency' => 'IDR',
+                        'rate_to_idr' => 1,
+                        'source' => 'identity',
+                    ],
+                ],
+                'hpp_estimate' => [
+                    'customers' => [
+                        'single' => 0,
+                        'dbl' => 0,
+                        'trpl' => 0,
+                        'quad' => 4,
+                    ],
+                    'customers_is_manual' => true,
+                    'product_total' => 0,
+                    'grand_total' => 0,
+                ],
+            ],
+        ]);
+        $specificProduct = TravelProduct::factory()->create([
+            'name' => 'Perlengkapan Khusus Drawer',
+            'product_type' => 'perlengkapan',
+            'visibility' => TravelProduct::VISIBILITY_PACKAGE,
+            'package_id' => $package->id,
+            'content' => [
+                'currency' => 'IDR',
+                'price' => 500_000,
+            ],
+            'is_active' => true,
+        ]);
+        $package->products()->attach($specificProduct->id, [
+            'sort_order' => 1,
+            'multiplier_per_pax' => 2,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('sourceRows.0.hpp_estimate.product_total', 4_000_000)
+                ->where('sourceRows.0.hpp_estimate.items.0.reference_id', $specificProduct->id)
+                ->where('sourceRows.0.hpp_estimate.items.0.label', 'Perlengkapan Khusus Drawer'));
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.estimate.edit', $package))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('package.content.hpp_estimate.product_total', 4_000_000)
+                ->where('package.content.hpp_estimate.items.0.reference_id', $specificProduct->id));
+    }
+
     public function test_it_orders_hpp_package_rows_by_latest_departure_schedule_and_shows_package_name(): void
     {
         $user = $this->createUserWithHppPermissions(['view']);
@@ -881,6 +1079,79 @@ class HppPackageManagementTest extends TestCase
         $this->assertSame(900_000, $preview['grand_total']);
         $this->assertSame(800_000, collect($preview['items'])->firstWhere('cost_type', 'all_in')['total_price']);
         $this->assertNull(collect($preview['items'])->firstWhere('cost_type', 'hotel'));
+    }
+
+    public function test_actual_hpp_calculates_package_specific_products_with_the_regular_product_flow(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'start_date' => '2026-09-10',
+            'end_date' => '2026-09-19',
+            'content' => [
+                'hpp_currency_snapshots' => [
+                    'IDR' => ['currency' => 'IDR', 'rate_to_idr' => 1, 'source' => 'identity'],
+                ],
+            ],
+        ]);
+        $hotel = TravelProduct::query()->includingPackageSpecific()->create([
+            'code' => 'PKG-HOTEL-ACTUAL',
+            'slug' => 'pkg-hotel-actual',
+            'name' => 'Hotel Khusus Actual',
+            'product_type' => 'hotel',
+            'visibility' => TravelProduct::VISIBILITY_PACKAGE,
+            'package_id' => $package->id,
+            'content' => [
+                'currency' => 'IDR',
+                'pricing' => [[
+                    'broker_name' => 'Broker Package',
+                    'room_type' => 'QUAD',
+                    'period_start' => '2026-09-01',
+                    'period_end' => '2026-09-30',
+                    'price' => 1_000_000,
+                ]],
+            ],
+            'is_active' => true,
+        ]);
+        $ticket = TravelProduct::query()->includingPackageSpecific()->create([
+            'code' => 'PKG-TICKET-ACTUAL',
+            'slug' => 'pkg-ticket-actual',
+            'name' => 'Tiket Khusus Actual',
+            'product_type' => 'tiket',
+            'visibility' => TravelProduct::VISIBILITY_PACKAGE,
+            'package_id' => $package->id,
+            'content' => ['currency' => 'IDR', 'price' => 2_000_000],
+            'is_active' => true,
+        ]);
+        $package->products()->sync([
+            $hotel->id => ['sort_order' => 1, 'multiplier_per_pax' => 3],
+            $ticket->id => ['sort_order' => 2, 'multiplier_per_pax' => 2],
+        ]);
+        $package->update([
+            'content' => [
+                'hotel_product_brokers' => [(string) $hotel->id => 'Broker Package'],
+                'hpp_currency_snapshots' => [
+                    'IDR' => ['currency' => 'IDR', 'rate_to_idr' => 1, 'source' => 'identity'],
+                ],
+            ],
+        ]);
+        Booking::factory()->create([
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'passenger_count' => 4,
+            'room_configuration' => ['quad' => 1],
+            'status' => 'registered',
+        ]);
+
+        $preview = app(PackageCostCalculationService::class)->preview(
+            $package->id,
+            null,
+            calculationMode: PackageCostCalculationService::MODE_PER_PAX_MULTIPLIER,
+        );
+
+        $this->assertSame(3_000_000, $preview['hotel_total']);
+        $this->assertSame(16_000_000, $preview['product_total']);
+        $this->assertSame(19_000_000, $preview['grand_total']);
+        $this->assertSame($hotel->id, collect($preview['items'])->firstWhere('cost_type', 'hotel')['reference_id']);
+        $this->assertSame($ticket->id, collect($preview['items'])->firstWhere('cost_type', 'product')['reference_id']);
     }
 
     private function createUserWithHppPermissions(array $actions): User

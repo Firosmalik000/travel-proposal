@@ -22,13 +22,17 @@ use App\Http\Controllers\Administrator\InvitationController;
 use App\Http\Controllers\Administrator\MenuController;
 use App\Http\Controllers\Administrator\PackageController;
 use App\Http\Controllers\Administrator\PackageCostCalculationController;
+use App\Http\Controllers\Administrator\PackageDraftController;
 use App\Http\Controllers\Administrator\PackageVendorController;
 use App\Http\Controllers\Administrator\ProductManagement\ProductCategoryHotelController;
 use App\Http\Controllers\Administrator\RoleManagementController;
 use App\Http\Controllers\Administrator\SeoController;
 use App\Http\Controllers\Administrator\UserManagementController;
 use App\Http\Controllers\Administrator\VendorPricePeriodController;
+use App\Http\Controllers\Agent\AccountController as AgentAccountController;
+use App\Http\Controllers\Agent\CommissionExportController as AgentCommissionExportController;
 use App\Http\Controllers\Agent\PortalController as AgentPortalController;
+use App\Http\Controllers\Agent\ReferralQrCodeController as AgentReferralQrCodeController;
 use App\Http\Controllers\Auth\AcceptInvitationController;
 use App\Http\Controllers\Customer\AccountController as CustomerAccountController;
 use App\Http\Controllers\Customer\BookingParticipantController as CustomerBookingParticipantController;
@@ -247,6 +251,18 @@ Route::middleware(['auth', 'customer'])->prefix('customer')->name('customer.')->
 
 Route::middleware(['auth', 'agent'])->prefix('agent')->name('agent.')->group(function (): void {
     Route::get('', [AgentPortalController::class, 'index'])->name('dashboard');
+    Route::get('leads', [AgentPortalController::class, 'leads'])->name('leads.index');
+    Route::get('bookings', [AgentPortalController::class, 'bookings'])->name('bookings.index');
+    Route::get('bookings/{booking:booking_code}', [AgentPortalController::class, 'show'])->name('bookings.show');
+    Route::get('commissions', [AgentPortalController::class, 'commissions'])->name('commissions.index');
+    Route::get('commissions/export', AgentCommissionExportController::class)->name('commissions.export');
+    Route::get('packages', [AgentPortalController::class, 'packages'])->name('packages.index');
+    Route::get('referral/qr', AgentReferralQrCodeController::class)->name('referral.qr');
+    Route::get('packages/{travelPackage}/qr', AgentReferralQrCodeController::class)->name('packages.qr');
+    Route::get('account', [AgentAccountController::class, 'edit'])->name('account.edit');
+    Route::put('account', [AgentAccountController::class, 'update'])->name('account.update');
+    Route::get('password', [AgentAccountController::class, 'editPassword'])->name('password.edit');
+    Route::put('password', [AgentAccountController::class, 'updatePassword'])->middleware('throttle:6,1')->name('password.update');
 });
 
 Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {     /* Get user menus (for sidebar) */ Route::get('api/user-menus', [MenuController::class, 'getUserMenus'])->name('user.menus');
@@ -299,6 +315,8 @@ Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {    
             $nameRoute(Route::get('categories', [ContentController::class, 'productCategories']), 'product-categories.index');
             $nameRoute(Route::get('products', [ContentController::class, 'products']), 'products.index');
             $nameRoute(Route::post('products/hotels', [ProductCategoryHotelController::class, 'store'])->middleware('check.menu.permission:create'), 'products.hotels.store');
+            $nameRoute(Route::post('products/hotels/import/pdf', [ProductCategoryHotelController::class, 'parsePdf'])->middleware('check.menu.permission:create'), 'products.hotels.import.pdf');
+            $nameRoute(Route::post('products/hotels/import/reconcile', [ProductCategoryHotelController::class, 'reconcileImport'])->middleware('check.menu.permission:create'), 'products.hotels.import.reconcile');
             $nameRoute(Route::post('products/hotels/bulk', [ProductCategoryHotelController::class, 'bulkStore'])->middleware('check.menu.permission:create'), 'products.hotels.bulk-store');
             $nameRoute(Route::post('products/hotels/bulk-delete', [ProductCategoryHotelController::class, 'bulkDelete'])->middleware('check.menu.permission:delete'), 'products.hotels.bulk-delete');
             $nameRoute(Route::put('products/hotels/{hotel}', [ProductCategoryHotelController::class, 'update'])->middleware('check.menu.permission:edit'), 'products.hotels.update');
@@ -309,8 +327,16 @@ Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {    
             $nameRoute(Route::delete('activities/{activity}', [ActivityController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'activities.destroy');
             $nameRoute(Route::get('packages', [PackageController::class, 'index'])->middleware('check.menu.permission:view'), 'packages.index');
             $nameRoute(Route::get('packages/create', [PackageController::class, 'create'])->middleware('check.menu.permission:create'), 'packages.create');
+            $nameRoute(Route::put('packages/drafts/create', [PackageDraftController::class, 'upsertCreate'])->middleware('check.menu.permission:create'), 'packages.drafts.create.upsert');
+            $nameRoute(Route::delete('packages/drafts/create', [PackageDraftController::class, 'destroyCreate'])->middleware('check.menu.permission:create'), 'packages.drafts.create.destroy');
+            $nameRoute(Route::post('packages/drafts/create/images', [PackageDraftController::class, 'uploadCreateImages'])->middleware('check.menu.permission:create'), 'packages.drafts.create.images.store');
+            $nameRoute(Route::delete('packages/drafts/create/images/{imageId}', [PackageDraftController::class, 'deleteCreateImage'])->middleware('check.menu.permission:create'), 'packages.drafts.create.images.destroy');
             $nameRoute(Route::get('packages/{package}', [PackageController::class, 'show'])->middleware('check.menu.permission:view'), 'packages.show');
             $nameRoute(Route::get('packages/{package}/edit', [PackageController::class, 'edit'])->middleware('check.menu.permission:edit'), 'packages.edit');
+            $nameRoute(Route::put('packages/{package}/draft', [PackageDraftController::class, 'upsertEdit'])->middleware('check.menu.permission:edit'), 'packages.drafts.edit.upsert');
+            $nameRoute(Route::delete('packages/{package}/draft', [PackageDraftController::class, 'destroyEdit'])->middleware('check.menu.permission:edit'), 'packages.drafts.edit.destroy');
+            $nameRoute(Route::post('packages/{package}/draft/images', [PackageDraftController::class, 'uploadEditImages'])->middleware('check.menu.permission:edit'), 'packages.drafts.edit.images.store');
+            $nameRoute(Route::delete('packages/{package}/draft/images/{imageId}', [PackageDraftController::class, 'deleteEditImage'])->middleware('check.menu.permission:edit'), 'packages.drafts.edit.images.destroy');
             $nameRoute(Route::post('packages', [PackageController::class, 'store'])->middleware('check.menu.permission:create'), 'packages.store');
             $nameRoute(Route::post('packages/{package}', [PackageController::class, 'update'])->middleware('check.menu.permission:edit'), 'packages.update');
             $nameRoute(Route::delete('packages/{package}', [PackageController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'packages.destroy');
@@ -368,6 +394,8 @@ Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {    
             $nameRoute(Route::put('cashflow/{cashflow}', [CashflowController::class, 'update'])->middleware('check.menu.permission:edit'), 'cashflow.update');
             $nameRoute(Route::delete('cashflow/{cashflow}', [CashflowController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'cashflow.destroy');
             $nameRoute(Route::get('hpp-package', [PackageCostCalculationController::class, 'index'])->middleware('check.menu.permission:view'), 'hpp-package.index');
+            $nameRoute(Route::get('hpp-package/{package}/estimate/edit', [PackageController::class, 'editHppEstimate'])->middleware('check.menu.permission:edit'), 'hpp-package.estimate.edit');
+            $nameRoute(Route::post('hpp-package/{package}/estimate', [PackageController::class, 'updateHppEstimate'])->middleware('check.menu.permission:edit'), 'hpp-package.estimate.update');
             $nameRoute(Route::post('hpp-package', [PackageCostCalculationController::class, 'store'])->middleware('check.menu.permission:create'), 'hpp-package.store');
             $nameRoute(Route::put('hpp-package/{hppPackage}', [PackageCostCalculationController::class, 'update'])->middleware('check.menu.permission:edit'), 'hpp-package.update');
             $nameRoute(Route::post('hpp-package/{hppPackage}/recalculate', [PackageCostCalculationController::class, 'recalculate'])->middleware('check.menu.permission:edit'), 'hpp-package.recalculate');

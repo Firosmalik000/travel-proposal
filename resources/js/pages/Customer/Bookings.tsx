@@ -11,6 +11,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import CustomerLayout from '@/layouts/customer-layout';
+import { formatDate } from '@/lib/date-format';
 import { Head, Link } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
@@ -68,13 +69,6 @@ const money = (amount: number, currency: string) =>
         currency,
         maximumFractionDigits: 0,
     }).format(amount);
-
-const formatDate = (value: string | null) =>
-    value
-        ? new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(
-              new Date(`${value}T00:00:00`),
-          )
-        : 'Belum ditentukan';
 
 const bookingStatusLabel: Record<string, string> = {
     registered: 'Terdaftar',

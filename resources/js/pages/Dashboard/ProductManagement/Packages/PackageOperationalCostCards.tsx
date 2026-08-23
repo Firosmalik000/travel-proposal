@@ -266,14 +266,9 @@ export function PackageOperationalCostCards({
 
                     <div className="border-t border-border/60 pt-3">
                         <div className="mb-2 flex items-center justify-between gap-2">
-                            <div>
-                                <p className="text-xs font-semibold">
-                                    SDM opsional
-                                </p>
-                                <p className="text-[11px] text-muted-foreground">
-                                    Tambahkan hanya SDM yang dibutuhkan package.
-                                </p>
-                            </div>
+                            <p className="text-xs font-semibold">
+                                SDM opsional
+                            </p>
                             <Button
                                 type="button"
                                 size="sm"
@@ -581,11 +576,6 @@ export function PackageOperationalCostCards({
                                 })
                             }
                         />
-                        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                            Nilai ini dipakai sebagai total budget marketing.
-                            Saat estimasi HPP, totalnya dibagi jumlah jamaah
-                            untuk melihat beban per jamaah.
-                        </p>
                     </CostField>
                     <BreakdownBox title="Rumus marketing">
                         <BreakdownLine
@@ -596,11 +586,7 @@ export function PackageOperationalCostCards({
                         />
                         <BreakdownLine
                             label="Dipakai di HPP"
-                            value={
-                                value.marketing.amount_per_pax > 0
-                                    ? '÷ jumlah jamaah = beban per pax'
-                                    : 'Isi total budget untuk melihat beban per pax'
-                            }
+                            value="÷ jumlah jamaah = beban per pax"
                         />
                     </BreakdownBox>
                 </div>

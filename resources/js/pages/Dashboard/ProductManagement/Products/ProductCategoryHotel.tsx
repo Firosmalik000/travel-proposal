@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -22,11 +23,23 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { usePermission } from '@/hooks/use-permission';
+import { formatDate } from '@/lib/date-format';
 import { router, useForm } from '@inertiajs/react';
-import { MoreHorizontal, Plus, SquarePen, Trash2 } from 'lucide-react';
+import {
+    AlertTriangle,
+    Loader2,
+    MoreHorizontal,
+    Plus,
+    SquarePen,
+    Trash2,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import FormValidationSummary, {
+    firstValidationMessage,
+    type FormValidationErrors,
+} from './FormValidationSummary';
 
 type PriceRow = {
     room_type_id: number | string;
@@ -66,9 +79,54 @@ type PeriodRateRow = {
     broker_name?: string;
     period_start: string;
     period_end: string;
-    dbl_price: number;
-    trpl_price: number;
-    quad_price: number;
+    dbl_price: number | null;
+    trpl_price: number | null;
+    quad_price: number | null;
+    import_status?: ImportStatus;
+    warnings?: string[];
+    conflicts?: string[];
+    comparison?: Record<
+        ProductHotelRoomType,
+        {
+            existing: number | null;
+            incoming: number | null;
+            action: string;
+        }
+    >;
+};
+
+type ImportStatus =
+    | 'create'
+    | 'update'
+    | 'new_period'
+    | 'no_change'
+    | 'warning'
+    | 'conflict';
+
+type HotelImportRow = {
+    country: string | null;
+    city: string | null;
+    hotel: string;
+    currency: string | null;
+    period_start: string;
+    period_end: string;
+    dbl: number | null;
+    trpl: number | null;
+    quad: number | null;
+    source: 'csv' | 'xls' | 'xlsx' | 'pdf';
+    warnings: string[];
+};
+
+type ImportSummary = {
+    hotels_detected: number;
+    periods_detected: number;
+    hotels_to_create: number;
+    hotels_existing: number;
+    periods_to_create: number;
+    rates_to_update: number;
+    rates_unchanged: number;
+    warnings: number;
+    conflicts: number;
 };
 
 type HotelPeriodRateRow = PeriodRateRow & {
@@ -169,6 +227,10 @@ type BulkHotelForm = {
     currency: string;
     is_active: boolean;
     period_rates: PeriodRateRow[];
+    existing_hotel_id?: number | null;
+    import_status?: ImportStatus;
+    warnings?: string[];
+    conflicts?: string[];
 };
 
 type BulkHotelPayload = {
@@ -178,6 +240,7 @@ type BulkHotelPayload = {
     currency: string;
     is_active: boolean;
     prices: PriceRow[];
+    existing_hotel_id?: number | null;
 };
 
 const blankPeriodRate = (
@@ -218,6 +281,183 @@ const blankBulkHotel = (currency = 'IDR'): BulkHotelForm => ({
     period_rates: [blankPeriodRate()],
 });
 
+const duplicatePeriodConflictPattern =
+    /^Periode .+ (muncul|digunakan) lebih dari sekali/i;
+
+function warningMatchesResolvedRate(
+    warning: string,
+    roomType: ProductHotelRoomType,
+): boolean {
+    const normalized = warning.toUpperCase();
+    const labels: Record<ProductHotelRoomType, string[]> = {
+        DBL: ['RATE DOUBLE', 'RATE DBL', 'DBL TIDAK TERBACA'],
+        TRPL: ['RATE TRIPLE', 'RATE TRPL', 'TRPL TIDAK TERBACA'],
+        QUAD: ['RATE QUAD', 'QUAD TIDAK TERBACA'],
+    };
+
+    return labels[roomType].some((label) => normalized.includes(label));
+}
+
+function revalidateHotelDraft(hotel: BulkHotelForm): BulkHotelForm {
+    const periodRates = hotel.period_rates.map((periodRate) => {
+        const warnings = (periodRate.warnings ?? []).filter((warning) => {
+            if (hotel.currency && /mata uang tidak terdeteksi/i.test(warning)) {
+                return false;
+            }
+            if (
+                periodRate.dbl_price !== null &&
+                warningMatchesResolvedRate(warning, 'DBL')
+            ) {
+                return false;
+            }
+            if (
+                periodRate.trpl_price !== null &&
+                warningMatchesResolvedRate(warning, 'TRPL')
+            ) {
+                return false;
+            }
+            if (
+                periodRate.quad_price !== null &&
+                warningMatchesResolvedRate(warning, 'QUAD')
+            ) {
+                return false;
+            }
+
+            return true;
+        });
+
+        const conflicts = (periodRate.conflicts ?? []).filter(
+            (conflict) => !duplicatePeriodConflictPattern.test(conflict),
+        );
+
+        return {
+            ...periodRate,
+            warnings,
+            conflicts,
+            import_status:
+                conflicts.length === 0 &&
+                periodRate.import_status === 'conflict'
+                    ? hotel.existing_hotel_id
+                        ? 'update'
+                        : 'create'
+                    : periodRate.import_status,
+        };
+    });
+
+    const duplicateGroups = new Map<string, number[]>();
+    periodRates.forEach((periodRate, index) => {
+        if (!periodRate.period_start || !periodRate.period_end) {
+            return;
+        }
+
+        const brokerKey = normalizeKey(
+            periodRate.broker_key ||
+                periodRate.broker_group_id ||
+                periodRate.broker_name ||
+                'broker-1',
+        );
+        const periodKey = `${brokerKey}|${periodRate.period_start}|${periodRate.period_end}`;
+        duplicateGroups.set(periodKey, [
+            ...(duplicateGroups.get(periodKey) ?? []),
+            index,
+        ]);
+    });
+
+    duplicateGroups.forEach((indexes) => {
+        if (indexes.length < 2) {
+            return;
+        }
+
+        const firstPeriod = periodRates[indexes[0]];
+        const message = `Periode ${firstPeriod.period_start} sampai ${firstPeriod.period_end} digunakan lebih dari sekali. Ubah tanggal atau hapus salah satu periode.`;
+        indexes.forEach((index) => {
+            periodRates[index] = {
+                ...periodRates[index],
+                import_status: 'conflict',
+                conflicts: [...(periodRates[index].conflicts ?? []), message],
+            };
+        });
+    });
+
+    const conflicts = (hotel.conflicts ?? []).flatMap((conflict) => {
+        if (duplicatePeriodConflictPattern.test(conflict)) {
+            return [];
+        }
+        if (hotel.currency && conflict === 'Mata uang belum ditentukan.') {
+            return [];
+        }
+        if (
+            hotel.currency &&
+            conflict.startsWith('Mata uang dalam file tidak konsisten:')
+        ) {
+            return [];
+        }
+        const databaseCurrency = conflict.match(
+            /^Konflik mata uang: database ([A-Z]{3}), file [A-Z]{3}\.$/,
+        )?.[1];
+        if (databaseCurrency) {
+            return hotel.currency === databaseCurrency
+                ? []
+                : [
+                      `Konflik mata uang: database ${databaseCurrency}, file ${hotel.currency}.`,
+                  ];
+        }
+        if (
+            hotel.country_id &&
+            hotel.city_id &&
+            conflict === 'Negara atau kota belum cocok dengan data master.'
+        ) {
+            return [];
+        }
+
+        return [conflict];
+    });
+
+    if (!hotel.currency) {
+        conflicts.push('Mata uang belum ditentukan.');
+    }
+    if (!hotel.country_id || !hotel.city_id) {
+        conflicts.push('Negara atau kota belum cocok dengan data master.');
+    }
+
+    const hasPeriodConflict = periodRates.some(
+        (periodRate) => (periodRate.conflicts?.length ?? 0) > 0,
+    );
+
+    return {
+        ...hotel,
+        period_rates: periodRates,
+        warnings: (hotel.warnings ?? []).filter((warning) => {
+            if (
+                hotel.currency &&
+                /mata uang (tidak terdeteksi|belum ditentukan)/i.test(warning)
+            ) {
+                return false;
+            }
+            if (
+                hotel.country_id &&
+                hotel.city_id &&
+                /^(Negara|Kota).*(tidak ditemukan|ambigu)|^Kota belum terdeteksi/i.test(
+                    warning,
+                )
+            ) {
+                return false;
+            }
+
+            return true;
+        }),
+        conflicts: [...new Set(conflicts)],
+        import_status:
+            conflicts.length > 0 || hasPeriodConflict
+                ? 'conflict'
+                : hotel.import_status === 'conflict'
+                  ? hotel.existing_hotel_id
+                      ? 'update'
+                      : 'create'
+                  : hotel.import_status,
+    };
+}
+
 const createUiId = (prefix: string): string =>
     `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -232,23 +472,6 @@ const normalizeKey = (value: string): string =>
         .toLowerCase()
         .replace(/[^\p{L}\p{N}]+/gu, '');
 
-const formatDateDisplay = (value: string): string => {
-    if (!value) {
-        return '-';
-    }
-
-    const parsed = new Date(`${value}T00:00:00`);
-    if (Number.isNaN(parsed.getTime())) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    }).format(parsed);
-};
-
 const toNumber = (value: unknown): number => {
     const cleaned = String(value ?? '')
         .trim()
@@ -256,6 +479,22 @@ const toNumber = (value: unknown): number => {
         .replace(/[^\d.-]/g, '');
     const parsed = Number(cleaned);
     return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeImportDate = (value: unknown): string => {
+    const text = normalizeCell(value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+        return text;
+    }
+
+    const matched = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+    if (!matched) {
+        return text;
+    }
+
+    const year = matched[3].length === 2 ? `20${matched[3]}` : matched[3];
+
+    return `${year}-${matched[2].padStart(2, '0')}-${matched[1].padStart(2, '0')}`;
 };
 
 function downloadBulkTemplate(): void {
@@ -501,7 +740,7 @@ function BrokerPricingEditor({
     function setPeriodRate(
         index: number,
         key: keyof PeriodRateRow,
-        value: string | number,
+        value: string | number | null,
     ): void {
         const nextPeriodRates = [...periodRates];
         nextPeriodRates[index] = {
@@ -694,12 +933,59 @@ function BrokerPricingEditor({
                                     const isEditingSession =
                                         inlineEdit ||
                                         editingSessionId === row.ui_id;
+                                    const hasRowConflict =
+                                        (row.conflicts?.length ?? 0) > 0;
+                                    const hasRowWarning =
+                                        (row.warnings?.length ?? 0) > 0;
 
                                     return isEditingSession ? (
                                         <div
                                             key={`${group.group_id}-${row.ui_id}`}
-                                            className="grid gap-2 rounded-xl border border-border/30 bg-background p-2 sm:grid-cols-2 lg:grid-cols-12"
+                                            className={`grid gap-2 rounded-xl border p-2 transition-colors sm:grid-cols-2 lg:grid-cols-12 ${
+                                                hasRowConflict
+                                                    ? 'border-red-400 bg-red-50 ring-2 ring-red-200/70 dark:border-red-800 dark:bg-red-950/25 dark:ring-red-950'
+                                                    : hasRowWarning
+                                                      ? 'border-amber-300 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/15'
+                                                      : 'border-border/30 bg-background'
+                                            }`}
                                         >
+                                            {row.import_status ||
+                                            (row.warnings?.length ?? 0) > 0 ||
+                                            (row.conflicts?.length ?? 0) > 0 ? (
+                                                <div
+                                                    className={`space-y-1.5 rounded-lg p-2.5 sm:col-span-2 lg:col-span-12 ${
+                                                        hasRowConflict
+                                                            ? 'bg-red-100/80 text-red-950 dark:bg-red-950/50 dark:text-red-100'
+                                                            : 'bg-amber-100/70 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100'
+                                                    }`}
+                                                >
+                                                    <ImportStatusBadge
+                                                        status={
+                                                            row.import_status
+                                                        }
+                                                    />
+                                                    {row.conflicts?.map(
+                                                        (message) => (
+                                                            <p
+                                                                key={message}
+                                                                className="text-xs font-medium break-words text-red-800 dark:text-red-200"
+                                                            >
+                                                                {message}
+                                                            </p>
+                                                        ),
+                                                    )}
+                                                    {row.warnings?.map(
+                                                        (message) => (
+                                                            <p
+                                                                key={message}
+                                                                className="text-xs break-words text-amber-800 dark:text-amber-200"
+                                                            >
+                                                                {message}
+                                                            </p>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            ) : null}
                                             <div className="lg:col-span-2">
                                                 <Label className="mb-1 block text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                                                     From
@@ -741,16 +1027,25 @@ function BrokerPricingEditor({
                                                 <Input
                                                     type="number"
                                                     min={0}
-                                                    className="h-9"
-                                                    value={row.dbl_price}
+                                                    placeholder="Kosong"
+                                                    className={`h-9 ${
+                                                        row.dbl_price === null
+                                                            ? 'border-amber-400 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20'
+                                                            : ''
+                                                    }`}
+                                                    value={row.dbl_price ?? ''}
                                                     onChange={(event) =>
                                                         setPeriodRate(
                                                             index,
                                                             'dbl_price',
-                                                            Number(
-                                                                event.target
-                                                                    .value,
-                                                            ),
+                                                            event.target
+                                                                .value === ''
+                                                                ? null
+                                                                : Number(
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                                  ),
                                                         )
                                                     }
                                                 />
@@ -762,16 +1057,25 @@ function BrokerPricingEditor({
                                                 <Input
                                                     type="number"
                                                     min={0}
-                                                    className="h-9"
-                                                    value={row.trpl_price}
+                                                    placeholder="Kosong"
+                                                    className={`h-9 ${
+                                                        row.trpl_price === null
+                                                            ? 'border-amber-400 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20'
+                                                            : ''
+                                                    }`}
+                                                    value={row.trpl_price ?? ''}
                                                     onChange={(event) =>
                                                         setPeriodRate(
                                                             index,
                                                             'trpl_price',
-                                                            Number(
-                                                                event.target
-                                                                    .value,
-                                                            ),
+                                                            event.target
+                                                                .value === ''
+                                                                ? null
+                                                                : Number(
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                                  ),
                                                         )
                                                     }
                                                 />
@@ -783,16 +1087,25 @@ function BrokerPricingEditor({
                                                 <Input
                                                     type="number"
                                                     min={0}
-                                                    className="h-9"
-                                                    value={row.quad_price}
+                                                    placeholder="Kosong"
+                                                    className={`h-9 ${
+                                                        row.quad_price === null
+                                                            ? 'border-amber-400 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20'
+                                                            : ''
+                                                    }`}
+                                                    value={row.quad_price ?? ''}
                                                     onChange={(event) =>
                                                         setPeriodRate(
                                                             index,
                                                             'quad_price',
-                                                            Number(
-                                                                event.target
-                                                                    .value,
-                                                            ),
+                                                            event.target
+                                                                .value === ''
+                                                                ? null
+                                                                : Number(
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                                  ),
                                                         )
                                                     }
                                                 />
@@ -835,22 +1148,20 @@ function BrokerPricingEditor({
                                         >
                                             <div className="min-w-0 space-y-0.5">
                                                 <span className="block font-medium text-foreground">
-                                                    {formatDateDisplay(
+                                                    {formatDate(
                                                         row.period_start,
                                                     )}
                                                     {' - '}
-                                                    {formatDateDisplay(
-                                                        row.period_end,
-                                                    )}
+                                                    {formatDate(row.period_end)}
                                                 </span>
                                                 <span className="block text-muted-foreground">
-                                                    DBL: {row.dbl_price || '-'}
+                                                    DBL: {row.dbl_price ?? '-'}
                                                     {' / '}
                                                     TRPL:{' '}
-                                                    {row.trpl_price || '-'}
+                                                    {row.trpl_price ?? '-'}
                                                     {' / '}
                                                     Quad:{' '}
-                                                    {row.quad_price || '-'}
+                                                    {row.quad_price ?? '-'}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -893,6 +1204,67 @@ function BrokerPricingEditor({
     );
 }
 
+function ImportSummaryItem({
+    label,
+    value,
+    attention = false,
+}: {
+    label: string;
+    value: number;
+    attention?: boolean;
+}) {
+    return (
+        <div
+            className={`rounded-lg border px-3 py-2 ${
+                attention
+                    ? 'border-amber-300 bg-amber-50 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100'
+                    : 'border-border/40 bg-muted/20'
+            }`}
+        >
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-lg font-semibold">{value}</p>
+        </div>
+    );
+}
+
+function ImportStatusBadge({ status }: { status?: ImportStatus }) {
+    if (!status) {
+        return null;
+    }
+
+    const labels: Record<ImportStatus, string> = {
+        create: 'CREATE',
+        update: 'UPDATE',
+        new_period: 'NEW PERIOD',
+        no_change: 'NO CHANGE',
+        warning: 'WARNING',
+        conflict: 'CONFLICT',
+    };
+
+    return (
+        <Badge
+            variant={status === 'conflict' ? 'destructive' : 'secondary'}
+            className={
+                status === 'create' || status === 'new_period'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                    : status === 'update'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200'
+                      : status === 'warning'
+                        ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100'
+                        : undefined
+            }
+        >
+            {labels[status]}
+        </Badge>
+    );
+}
+
+function hotelStatusBadgeClass(isActive: boolean): string {
+    return isActive
+        ? 'bg-emerald-100 text-emerald-800'
+        : 'bg-slate-100 text-slate-900';
+}
+
 export default function ProductCategoryHotel({
     hotels,
     filters,
@@ -916,14 +1288,52 @@ export default function ProductCategoryHotel({
         null,
     );
     const [bulkOpen, setBulkOpen] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
+    const [importSummary, setImportSummary] = useState<ImportSummary | null>(
+        null,
+    );
+    const [pdfDefaultCountryId, setPdfDefaultCountryId] = useState('');
+    const [pdfDefaultCurrency, setPdfDefaultCurrency] = useState('');
     const [bulkSelectMode, setBulkSelectMode] = useState(false);
     const [selectedHotelIds, setSelectedHotelIds] = useState<number[]>([]);
+    const [hotelSubmissionErrors, setHotelSubmissionErrors] =
+        useState<FormValidationErrors>({});
+    const [bulkSubmissionErrors, setBulkSubmissionErrors] =
+        useState<FormValidationErrors>({});
+    const [isSavingHotel, setIsSavingHotel] = useState(false);
+    const [isSavingBulk, setIsSavingBulk] = useState(false);
 
     const defaultCurrency = getDefaultCurrency(currencyOptions);
     const form = useForm<HotelForm>(blankForm(defaultCurrency));
     const bulkForm = useForm<{ hotels: BulkHotelForm[] }>({
         hotels: [blankBulkHotel(defaultCurrency)],
     });
+    const draftIssueSummary = useMemo(
+        () =>
+            bulkForm.data.hotels.reduce(
+                (summary, hotel) => ({
+                    conflicts:
+                        summary.conflicts +
+                        (hotel.conflicts?.length ?? 0) +
+                        hotel.period_rates.reduce(
+                            (count, period) =>
+                                count + (period.conflicts?.length ?? 0),
+                            0,
+                        ),
+                    warnings:
+                        summary.warnings +
+                        (hotel.warnings?.length ?? 0) +
+                        hotel.period_rates.reduce(
+                            (count, period) =>
+                                count + (period.warnings?.length ?? 0),
+                            0,
+                        ),
+                }),
+                { conflicts: 0, warnings: 0 },
+            ),
+        [bulkForm.data.hotels],
+    );
+    const hasImportConflicts = draftIssueSummary.conflicts > 0;
 
     const citySelection = useMemo(
         () =>
@@ -1094,6 +1504,7 @@ export default function ProductCategoryHotel({
     function openCreate(): void {
         form.setData(blankForm(defaultCurrency));
         form.clearErrors();
+        setHotelSubmissionErrors({});
         setEditingBrokerGroupId(null);
         setEditingSessionId(null);
         setEditingHotel('new');
@@ -1110,6 +1521,7 @@ export default function ProductCategoryHotel({
             period_rates: toPeriodRates(hotel.prices),
         });
         form.clearErrors();
+        setHotelSubmissionErrors({});
         setEditingBrokerGroupId(null);
         setEditingSessionId(null);
         setEditingHotel(hotel);
@@ -1128,7 +1540,7 @@ export default function ProductCategoryHotel({
                 continue;
             }
 
-            if (dblRoomTypeId) {
+            if (dblRoomTypeId && periodRate.dbl_price !== null) {
                 prices.push({
                     broker_key:
                         periodRate.broker_key || periodRate.broker_group_id,
@@ -1136,10 +1548,10 @@ export default function ProductCategoryHotel({
                     room_type_id: dblRoomTypeId,
                     period_start: periodRate.period_start,
                     period_end: periodRate.period_end,
-                    price: Number(periodRate.dbl_price || 0),
+                    price: Number(periodRate.dbl_price),
                 });
             }
-            if (trplRoomTypeId) {
+            if (trplRoomTypeId && periodRate.trpl_price !== null) {
                 prices.push({
                     broker_key:
                         periodRate.broker_key || periodRate.broker_group_id,
@@ -1147,10 +1559,10 @@ export default function ProductCategoryHotel({
                     room_type_id: trplRoomTypeId,
                     period_start: periodRate.period_start,
                     period_end: periodRate.period_end,
-                    price: Number(periodRate.trpl_price || 0),
+                    price: Number(periodRate.trpl_price),
                 });
             }
-            if (quadRoomTypeId) {
+            if (quadRoomTypeId && periodRate.quad_price !== null) {
                 prices.push({
                     broker_key:
                         periodRate.broker_key || periodRate.broker_group_id,
@@ -1158,7 +1570,7 @@ export default function ProductCategoryHotel({
                     room_type_id: quadRoomTypeId,
                     period_start: periodRate.period_start,
                     period_end: periodRate.period_end,
-                    price: Number(periodRate.quad_price || 0),
+                    price: Number(periodRate.quad_price),
                 });
             }
         }
@@ -1176,11 +1588,175 @@ export default function ProductCategoryHotel({
         value: string | boolean | PeriodRateRow[],
     ): void {
         const hotelsPayload = [...bulkForm.data.hotels];
-        hotelsPayload[hotelIndex] = {
+        const nextHotel = {
             ...hotelsPayload[hotelIndex],
             [key]: value,
         } as BulkHotelForm;
+
+        if (
+            key === 'country_id' &&
+            !cityOptions.some(
+                (city) =>
+                    String(city.id) === nextHotel.city_id &&
+                    String(city.country_id) === value,
+            )
+        ) {
+            nextHotel.city_id = '';
+        }
+
+        hotelsPayload[hotelIndex] = revalidateHotelDraft(nextHotel);
         bulkForm.setData('hotels', hotelsPayload);
+    }
+
+    function applyCollectiveCurrency(value: string): void {
+        const currency = value === 'none' ? '' : value;
+        setPdfDefaultCurrency(currency);
+
+        if (currency === '') {
+            return;
+        }
+
+        bulkForm.setData(
+            'hotels',
+            bulkForm.data.hotels.map((hotel) =>
+                revalidateHotelDraft({ ...hotel, currency }),
+            ),
+        );
+        setBulkSubmissionErrors({});
+        toast.success(`Mata uang ${currency} diterapkan ke semua draft hotel.`);
+    }
+
+    function csrfToken(): string {
+        return (
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') ?? ''
+        );
+    }
+
+    async function readImportResponse(response: Response): Promise<{
+        hotels: BulkHotelForm[];
+        summary: ImportSummary;
+    }> {
+        const body = (await response.json()) as {
+            message?: string;
+            errors?: FormValidationErrors;
+            hotels?: BulkHotelForm[];
+            summary?: ImportSummary;
+        };
+
+        if (!response.ok || !body.hotels || !body.summary) {
+            throw new Error(
+                body.errors
+                    ? firstValidationMessage(
+                          body.errors,
+                          body.message ?? 'File import gagal diproses.',
+                      )
+                    : (body.message ?? 'File import gagal diproses.'),
+            );
+        }
+
+        return { hotels: body.hotels, summary: body.summary };
+    }
+
+    function applyImportResult(result: {
+        hotels: BulkHotelForm[];
+        summary: ImportSummary;
+    }): void {
+        bulkForm.setData(
+            'hotels',
+            result.hotels.map((hotel) => revalidateHotelDraft(hotel)),
+        );
+        setImportSummary(result.summary);
+        toast.success(
+            `Import berhasil: ${result.summary.hotels_detected} hotel dan ${result.summary.periods_detected} periode dimuat.`,
+        );
+
+        if (result.summary.warnings > 0 || result.summary.conflicts > 0) {
+            toast.warning(
+                `${result.summary.warnings} warning dan ${result.summary.conflicts} conflict perlu diperiksa.`,
+            );
+        }
+    }
+
+    async function reconcileImportRows(rows: HotelImportRow[]): Promise<void> {
+        const response = await fetch(
+            '/admin/product-management/products/hotels/import/reconcile',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+                body: JSON.stringify({ rows }),
+            },
+        );
+
+        applyImportResult(await readImportResponse(response));
+    }
+
+    async function reviewCurrentDraft(): Promise<void> {
+        const rows: HotelImportRow[] = bulkForm.data.hotels.flatMap((hotel) => {
+            const country = countryOptions.find(
+                (item) => String(item.id) === hotel.country_id,
+            );
+            const city = cityOptions.find(
+                (item) => String(item.id) === hotel.city_id,
+            );
+
+            return hotel.period_rates.map((period) => ({
+                country: country?.name ?? null,
+                city: city?.name ?? null,
+                hotel: hotel.name,
+                currency: hotel.currency || null,
+                period_start: period.period_start,
+                period_end: period.period_end,
+                dbl: period.dbl_price,
+                trpl: period.trpl_price,
+                quad: period.quad_price,
+                source: 'csv' as const,
+                warnings: [],
+            }));
+        });
+
+        setIsImporting(true);
+        try {
+            await reconcileImportRows(rows);
+        } catch (error: unknown) {
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : 'Draft gagal diperiksa ulang.',
+            );
+        } finally {
+            setIsImporting(false);
+        }
+    }
+
+    async function importPdfFile(file: File): Promise<void> {
+        const payload = new FormData();
+        payload.append('file', file);
+        if (pdfDefaultCountryId !== '') {
+            payload.append('default_country_id', pdfDefaultCountryId);
+        }
+        if (pdfDefaultCurrency !== '') {
+            payload.append('default_currency', pdfDefaultCurrency);
+        }
+
+        const response = await fetch(
+            '/admin/product-management/products/hotels/import/pdf',
+            {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrfToken(),
+                },
+                body: payload,
+            },
+        );
+
+        applyImportResult(await readImportResponse(response));
     }
 
     function importBulkFile(event: React.ChangeEvent<HTMLInputElement>): void {
@@ -1191,15 +1767,25 @@ export default function ProductCategoryHotel({
 
         const extension = file.name.split('.').pop()?.toLowerCase();
         if (extension === 'pdf') {
-            toast.error(
-                'Import PDF belum didukung otomatis. Gunakan format Excel/CSV untuk auto-generate.',
-            );
-            event.target.value = '';
+            setIsImporting(true);
+            void importPdfFile(file)
+                .catch((error: unknown) =>
+                    toast.error(
+                        error instanceof Error
+                            ? error.message
+                            : 'PDF gagal diproses.',
+                    ),
+                )
+                .finally(() => {
+                    setIsImporting(false);
+                    event.target.value = '';
+                });
             return;
         }
 
         const reader = new FileReader();
-        reader.onload = (loadEvent) => {
+        reader.onload = async (loadEvent) => {
+            setIsImporting(true);
             try {
                 const workbook = XLSX.read(loadEvent.target?.result, {
                     type: 'array',
@@ -1270,39 +1856,20 @@ export default function ProductCategoryHotel({
                     return;
                 }
 
-                const countryMap = new Map(
-                    countryOptions.map((country) => [
-                        normalizeKey(country.name),
-                        String(country.id),
-                    ]),
-                );
-                const cityMap = new Map(
-                    cityOptions.map((city) => [
-                        `${city.country_id}|${normalizeKey(city.name)}`,
-                        String(city.id),
-                    ]),
-                );
-                const cityGlobalMap = new Map<string, string[]>();
-                for (const city of cityOptions) {
-                    const cityKey = normalizeKey(city.name);
-                    const list = cityGlobalMap.get(cityKey) ?? [];
-                    list.push(String(city.id));
-                    cityGlobalMap.set(cityKey, list);
-                }
-
-                const groupedHotels = new Map<string, BulkHotelForm>();
+                const normalizedRows: HotelImportRow[] = [];
                 let skippedRows = 0;
-                let unresolvedLocationRows = 0;
 
                 for (let rowIndex = 1; rowIndex < rawRows.length; rowIndex++) {
                     const row = rawRows[rowIndex];
                     const countryName = normalizeCell(row[columnIndex.country]);
                     const cityName = normalizeCell(row[columnIndex.city]);
                     const hotelName = normalizeCell(row[columnIndex.hotel]);
-                    const periodStart = normalizeCell(
+                    const periodStart = normalizeImportDate(
                         row[columnIndex.periodStart],
                     );
-                    const periodEnd = normalizeCell(row[columnIndex.periodEnd]);
+                    const periodEnd = normalizeImportDate(
+                        row[columnIndex.periodEnd],
+                    );
 
                     if (
                         countryName === '' ||
@@ -1315,77 +1882,44 @@ export default function ProductCategoryHotel({
                         continue;
                     }
 
-                    const normalizedCountryKey = normalizeKey(countryName);
-                    const normalizedCityKey = normalizeKey(cityName);
-                    let countryId = countryMap.get(normalizedCountryKey) ?? '';
-                    let cityId =
-                        countryId !== ''
-                            ? (cityMap.get(
-                                  `${countryId}|${normalizedCityKey}`,
-                              ) ?? '')
-                            : '';
-
-                    if (cityId === '') {
-                        const cityCandidates =
-                            cityGlobalMap.get(normalizedCityKey) ?? [];
-                        if (cityCandidates.length === 1) {
-                            cityId = cityCandidates[0];
-                            const matchedCity = cityOptions.find(
-                                (city) => String(city.id) === cityId,
-                            );
-                            if (matchedCity) {
-                                countryId = String(matchedCity.country_id);
-                            }
-                        }
-                    }
                     const currencyValue =
                         normalizeCell(row[columnIndex.currency]) || 'IDR';
-                    const periodRate: PeriodRateRow = {
+
+                    normalizedRows.push({
+                        country: countryName,
+                        city: cityName,
+                        hotel: hotelName,
+                        currency: currencyValue.toUpperCase(),
                         period_start: periodStart,
                         period_end: periodEnd,
-                        dbl_price: toNumber(row[columnIndex.dbl]),
-                        trpl_price: toNumber(row[columnIndex.trpl]),
-                        quad_price: toNumber(row[columnIndex.quad]),
-                    };
-
-                    if (countryId === '' || cityId === '') {
-                        unresolvedLocationRows++;
-                    }
-
-                    const groupKey = `${countryId}|${cityId}|${hotelName}|${currencyValue}`;
-                    const existing = groupedHotels.get(groupKey);
-                    if (existing) {
-                        existing.period_rates.push(periodRate);
-                    } else {
-                        groupedHotels.set(groupKey, {
-                            country_id: countryId,
-                            city_id: cityId,
-                            name: hotelName,
-                            currency: currencyValue.toUpperCase(),
-                            is_active: true,
-                            period_rates: [periodRate],
-                        });
-                    }
+                        dbl: toNumber(row[columnIndex.dbl]),
+                        trpl: toNumber(row[columnIndex.trpl]),
+                        quad: toNumber(row[columnIndex.quad]),
+                        source:
+                            extension === 'xls' || extension === 'xlsx'
+                                ? extension
+                                : 'csv',
+                        warnings: [],
+                    });
                 }
 
-                const importedHotels = Array.from(groupedHotels.values());
-                if (importedHotels.length === 0) {
+                if (normalizedRows.length === 0) {
                     toast.error('Tidak ada data valid yang bisa diimport.');
                     return;
                 }
 
-                bulkForm.setData('hotels', importedHotels);
-                toast.success(
-                    `Import berhasil: ${importedHotels.length} hotel draft dimuat${skippedRows > 0 ? `, ${skippedRows} baris dilewati` : ''}.`,
-                );
-                if (unresolvedLocationRows > 0) {
-                    toast.error(
-                        `${unresolvedLocationRows} baris belum match negara/kota. Cek penamaan master data.`,
-                    );
+                await reconcileImportRows(normalizedRows);
+                if (skippedRows > 0) {
+                    toast.warning(`${skippedRows} baris kosong dilewati.`);
                 }
-            } catch {
-                toast.error('Gagal membaca file import. Periksa format file.');
+            } catch (error: unknown) {
+                toast.error(
+                    error instanceof Error
+                        ? error.message
+                        : 'Gagal membaca file import. Periksa format file.',
+                );
             } finally {
+                setIsImporting(false);
                 event.target.value = '';
             }
         };
@@ -1395,6 +1929,7 @@ export default function ProductCategoryHotel({
 
     function submit(event: React.FormEvent): void {
         event.preventDefault();
+        setHotelSubmissionErrors({});
         const payload = {
             ...form.data,
             prices: buildPricesPayload(),
@@ -1403,10 +1938,21 @@ export default function ProductCategoryHotel({
         if (editingHotel === 'new') {
             router.post('/admin/product-management/products/hotels', payload, {
                 preserveScroll: true,
+                onStart: () => setIsSavingHotel(true),
                 onSuccess: () => {
                     toast.success('Hotel berhasil ditambahkan.');
                     setEditingHotel(null);
                 },
+                onError: (errors) => {
+                    setHotelSubmissionErrors(errors);
+                    toast.error(
+                        firstValidationMessage(
+                            errors,
+                            'Hotel gagal disimpan. Periksa kembali data yang diisi.',
+                        ),
+                    );
+                },
+                onFinish: () => setIsSavingHotel(false),
             });
             return;
         }
@@ -1417,10 +1963,21 @@ export default function ProductCategoryHotel({
                 payload,
                 {
                     preserveScroll: true,
+                    onStart: () => setIsSavingHotel(true),
                     onSuccess: () => {
                         toast.success('Hotel berhasil diperbarui.');
                         setEditingHotel(null);
                     },
+                    onError: (errors) => {
+                        setHotelSubmissionErrors(errors);
+                        toast.error(
+                            firstValidationMessage(
+                                errors,
+                                'Hotel gagal diperbarui. Periksa kembali data yang diisi.',
+                            ),
+                        );
+                    },
+                    onFinish: () => setIsSavingHotel(false),
                 },
             );
         }
@@ -1428,11 +1985,20 @@ export default function ProductCategoryHotel({
 
     function submitBulk(event: React.FormEvent): void {
         event.preventDefault();
+        setBulkSubmissionErrors({});
+
+        if (hasImportConflicts) {
+            toast.error(
+                `Masih ada ${draftIssueSummary.conflicts} conflict. Perbaiki baris merah sebelum menyimpan.`,
+            );
+            return;
+        }
 
         const payload: { hotels: BulkHotelPayload[] } = {
             hotels: bulkForm.data.hotels.map((hotel) => ({
                 country_id: hotel.country_id,
                 city_id: hotel.city_id,
+                existing_hotel_id: hotel.existing_hotel_id,
                 name: hotel.name,
                 currency: hotel.currency,
                 is_active: hotel.is_active,
@@ -1442,10 +2008,14 @@ export default function ProductCategoryHotel({
 
         router.post('/admin/product-management/products/hotels/bulk', payload, {
             preserveScroll: true,
+            onStart: () => setIsSavingBulk(true),
             onSuccess: (page) => {
                 const flash = (page.props as Record<string, unknown>).flash as
                     | {
                           bulk_created_count?: number;
+                          bulk_updated_count?: number;
+                          bulk_new_period_count?: number;
+                          bulk_unchanged_count?: number;
                           bulk_skipped_hotels?: Array<{
                               index: number;
                               name: string;
@@ -1454,10 +2024,15 @@ export default function ProductCategoryHotel({
                       }
                     | undefined;
                 const createdCount = Number(flash?.bulk_created_count ?? 0);
+                const updatedCount = Number(flash?.bulk_updated_count ?? 0);
+                const newPeriodCount = Number(
+                    flash?.bulk_new_period_count ?? 0,
+                );
+                const unchangedCount = Number(flash?.bulk_unchanged_count ?? 0);
                 const skippedHotels = flash?.bulk_skipped_hotels ?? [];
 
                 toast.success(
-                    `Bulk selesai. Data baru tersimpan: ${createdCount}.`,
+                    `Bulk selesai: ${createdCount} hotel baru, ${updatedCount} hotel diperbarui, ${newPeriodCount} periode baru, ${unchangedCount} tanpa perubahan.`,
                 );
                 if (skippedHotels.length > 0) {
                     const skippedPreview = skippedHotels
@@ -1476,13 +2051,19 @@ export default function ProductCategoryHotel({
                     );
                 }
                 bulkForm.setData({ hotels: [blankBulkHotel(defaultCurrency)] });
+                setImportSummary(null);
                 setBulkOpen(false);
             },
-            onError: () => {
+            onError: (errors) => {
+                setBulkSubmissionErrors(errors);
                 toast.error(
-                    'Bulk create gagal. Ada data hotel yang sudah ada, termasuk yang nonaktif.',
+                    firstValidationMessage(
+                        errors,
+                        'Bulk create/update gagal. Periksa field, warning, dan conflict pada draft.',
+                    ),
                 );
             },
+            onFinish: () => setIsSavingBulk(false),
         });
     }
 
@@ -1578,7 +2159,7 @@ export default function ProductCategoryHotel({
                                                         {hotel.name}
                                                     </h3>
                                                     <span
-                                                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${hotel.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}
+                                                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${hotelStatusBadgeClass(hotel.is_active)}`}
                                                     >
                                                         {hotel.is_active
                                                             ? 'Aktif'
@@ -1746,6 +2327,11 @@ export default function ProductCategoryHotel({
                                                 onSubmit={submit}
                                                 className="space-y-3 rounded-2xl border border-border/40 bg-background p-3 shadow-sm"
                                             >
+                                                <FormValidationSummary
+                                                    errors={
+                                                        hotelSubmissionErrors
+                                                    }
+                                                />
                                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                     <div>
                                                         <p className="text-sm font-semibold text-foreground">
@@ -2093,7 +2679,8 @@ export default function ProductCategoryHotel({
                                                                                                     }
                                                                                                     className="h-9"
                                                                                                     value={
-                                                                                                        row.dbl_price
+                                                                                                        row.dbl_price ??
+                                                                                                        ''
                                                                                                     }
                                                                                                     onChange={(
                                                                                                         event,
@@ -2121,7 +2708,8 @@ export default function ProductCategoryHotel({
                                                                                                     }
                                                                                                     className="h-9"
                                                                                                     value={
-                                                                                                        row.trpl_price
+                                                                                                        row.trpl_price ??
+                                                                                                        ''
                                                                                                     }
                                                                                                     onChange={(
                                                                                                         event,
@@ -2149,7 +2737,8 @@ export default function ProductCategoryHotel({
                                                                                                     }
                                                                                                     className="h-9"
                                                                                                     value={
-                                                                                                        row.quad_price
+                                                                                                        row.quad_price ??
+                                                                                                        ''
                                                                                                     }
                                                                                                     onChange={(
                                                                                                         event,
@@ -2201,13 +2790,13 @@ export default function ProductCategoryHotel({
                                                                                         >
                                                                                             <div className="min-w-0 space-y-0.5">
                                                                                                 <span className="block font-medium text-foreground">
-                                                                                                    {formatDateDisplay(
+                                                                                                    {formatDate(
                                                                                                         row.period_start,
                                                                                                     )}
                                                                                                     {
                                                                                                         ' - '
                                                                                                     }
-                                                                                                    {formatDateDisplay(
+                                                                                                    {formatDate(
                                                                                                         row.period_end,
                                                                                                     )}
                                                                                                 </span>
@@ -2283,11 +2872,9 @@ export default function ProductCategoryHotel({
                                                     </Button>
                                                     <Button
                                                         type="submit"
-                                                        disabled={
-                                                            form.processing
-                                                        }
+                                                        disabled={isSavingHotel}
                                                     >
-                                                        {form.processing
+                                                        {isSavingHotel
                                                             ? 'Menyimpan...'
                                                             : 'Simpan Perubahan'}
                                                     </Button>
@@ -2349,6 +2936,8 @@ export default function ProductCategoryHotel({
                             hotels: [blankBulkHotel(defaultCurrency)],
                         });
                         bulkForm.clearErrors();
+                        setBulkSubmissionErrors({});
+                        setImportSummary(null);
                     }
                 }}
             >
@@ -2357,10 +2946,75 @@ export default function ProductCategoryHotel({
                     className="w-full overflow-y-auto sm:max-w-6xl"
                 >
                     <SheetHeader>
-                        <SheetTitle>Bulk Create Hotel</SheetTitle>
+                        <SheetTitle>Bulk Create & Update Hotel</SheetTitle>
                     </SheetHeader>
                     <form onSubmit={submitBulk} className="mt-6 space-y-4">
-                        <div className="rounded-xl border border-border/40 bg-muted/20 p-2">
+                        <FormValidationSummary errors={bulkSubmissionErrors} />
+                        <div className="space-y-3 rounded-xl border border-border/40 bg-muted/20 p-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <Label className="mb-1.5 block">
+                                        Default Negara PDF
+                                    </Label>
+                                    <Select
+                                        value={pdfDefaultCountryId || 'none'}
+                                        onValueChange={(value) =>
+                                            setPdfDefaultCountryId(
+                                                value === 'none' ? '' : value,
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih jika PDF tidak mencantumkan negara" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">
+                                                Tidak ditentukan
+                                            </SelectItem>
+                                            {countryOptions.map((country) => (
+                                                <SelectItem
+                                                    key={country.id}
+                                                    value={String(country.id)}
+                                                >
+                                                    {country.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label className="mb-1.5 block">
+                                        Mata Uang Kolektif
+                                    </Label>
+                                    <Select
+                                        value={pdfDefaultCurrency || 'none'}
+                                        onValueChange={applyCollectiveCurrency}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Pilih jika PDF tidak mencantumkan mata uang" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">
+                                                Tidak ditentukan
+                                            </SelectItem>
+                                            {currencyOptions.map((currency) => (
+                                                <SelectItem
+                                                    key={currency.code}
+                                                    value={currency.code}
+                                                >
+                                                    {currency.code} -{' '}
+                                                    {currency.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Negara dipakai sebagai default saat PDF tidak
+                                lengkap. Mata uang langsung diterapkan ke semua
+                                draft dan status validasi diperbarui otomatis.
+                            </p>
                             <div className="grid gap-2 md:grid-cols-3">
                                 <Button
                                     type="button"
@@ -2368,14 +3022,27 @@ export default function ProductCategoryHotel({
                                     onClick={downloadBulkTemplate}
                                     className="w-full"
                                 >
-                                    Download Template
+                                    Download Template Excel
                                 </Button>
-                                <Input
-                                    type="file"
-                                    accept=".xlsx,.xls,.csv,.pdf"
-                                    onChange={importBulkFile}
-                                    className="w-full"
-                                />
+                                <div className="space-y-1.5">
+                                    <Label>Upload CSV / Excel / PDF</Label>
+                                    <div className="relative">
+                                        <Input
+                                            type="file"
+                                            aria-label="Upload CSV, Excel, atau PDF"
+                                            accept=".xlsx,.xls,.csv,.pdf"
+                                            onChange={importBulkFile}
+                                            disabled={isImporting}
+                                            className="w-full"
+                                        />
+                                        {isImporting ? (
+                                            <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/90 text-sm font-medium">
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Reading file...
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -2392,6 +3059,50 @@ export default function ProductCategoryHotel({
                             </div>
                         </div>
 
+                        {importSummary ? (
+                            <div className="grid gap-2 rounded-xl border border-border/40 bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <ImportSummaryItem
+                                    label="Hotel terdeteksi"
+                                    value={importSummary.hotels_detected}
+                                />
+                                <ImportSummaryItem
+                                    label="Periode terdeteksi"
+                                    value={importSummary.periods_detected}
+                                />
+                                <ImportSummaryItem
+                                    label="Hotel baru"
+                                    value={importSummary.hotels_to_create}
+                                />
+                                <ImportSummaryItem
+                                    label="Hotel existing"
+                                    value={importSummary.hotels_existing}
+                                />
+                                <ImportSummaryItem
+                                    label="Periode baru"
+                                    value={importSummary.periods_to_create}
+                                />
+                                <ImportSummaryItem
+                                    label="Rate berubah"
+                                    value={importSummary.rates_to_update}
+                                />
+                                <ImportSummaryItem
+                                    label="Tanpa perubahan"
+                                    value={importSummary.rates_unchanged}
+                                />
+                                <ImportSummaryItem
+                                    label="Perlu diperiksa"
+                                    value={
+                                        draftIssueSummary.warnings +
+                                        draftIssueSummary.conflicts
+                                    }
+                                    attention={
+                                        draftIssueSummary.warnings > 0 ||
+                                        draftIssueSummary.conflicts > 0
+                                    }
+                                />
+                            </div>
+                        ) : null}
+
                         <div className="space-y-4">
                             {bulkForm.data.hotels.map(
                                 (hotelItem, hotelIndex) => {
@@ -2405,12 +3116,30 @@ export default function ProductCategoryHotel({
                                     return (
                                         <div
                                             key={hotelIndex}
-                                            className="space-y-4 rounded-xl border border-border/40 p-4"
+                                            className={`space-y-4 rounded-xl border p-4 transition-colors ${
+                                                (hotelItem.conflicts?.length ??
+                                                    0) > 0 ||
+                                                hotelItem.period_rates.some(
+                                                    (period) =>
+                                                        (period.conflicts
+                                                            ?.length ?? 0) > 0,
+                                                )
+                                                    ? 'border-red-300 bg-red-50/40 dark:border-red-900 dark:bg-red-950/10'
+                                                    : 'border-border/40 bg-card'
+                                            }`}
                                         >
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-sm font-semibold">
-                                                    Hotel #{hotelIndex + 1}
-                                                </p>
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                                    <p className="min-w-0 text-sm font-semibold break-words">
+                                                        {hotelItem.name ||
+                                                            `Hotel #${hotelIndex + 1}`}
+                                                    </p>
+                                                    <ImportStatusBadge
+                                                        status={
+                                                            hotelItem.import_status
+                                                        }
+                                                    />
+                                                </div>
                                                 <Button
                                                     type="button"
                                                     size="sm"
@@ -2433,6 +3162,46 @@ export default function ProductCategoryHotel({
                                                     Hapus Hotel
                                                 </Button>
                                             </div>
+
+                                            {(hotelItem.conflicts?.length ??
+                                                0) > 0 ? (
+                                                <div className="space-y-1.5 rounded-lg border border-red-300 bg-red-50 p-3 text-xs text-red-950 dark:border-red-900 dark:bg-red-950/30 dark:text-red-100">
+                                                    <div className="flex items-center gap-2 font-semibold">
+                                                        <AlertTriangle className="h-4 w-4" />
+                                                        Conflict data hotel
+                                                    </div>
+                                                    {hotelItem.conflicts?.map(
+                                                        (message) => (
+                                                            <p
+                                                                key={`conflict-${message}`}
+                                                                className="break-words"
+                                                            >
+                                                                {message}
+                                                            </p>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            ) : null}
+
+                                            {(hotelItem.warnings?.length ?? 0) >
+                                            0 ? (
+                                                <div className="space-y-1.5 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                                                    <div className="flex items-center gap-2 font-semibold">
+                                                        <AlertTriangle className="h-4 w-4" />
+                                                        Catatan import
+                                                    </div>
+                                                    {hotelItem.warnings?.map(
+                                                        (message) => (
+                                                            <p
+                                                                key={`warning-${message}`}
+                                                                className="break-words"
+                                                            >
+                                                                {message}
+                                                            </p>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            ) : null}
 
                                             <div className="grid gap-3 lg:grid-cols-12">
                                                 <div className="lg:col-span-3">
@@ -2608,22 +3377,68 @@ export default function ProductCategoryHotel({
                             )}
                         </div>
 
-                        <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t bg-background/95 pt-2 pb-1 backdrop-blur">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setBulkOpen(false)}
+                        <div className="sticky bottom-0 flex flex-col gap-3 border-t bg-background/95 pt-3 pb-1 backdrop-blur sm:flex-row sm:items-center">
+                            <div
+                                aria-live="polite"
+                                className="min-w-0 flex-1 text-xs"
                             >
-                                Batal
-                            </Button>
-                            <Button
-                                type="submit"
-                                disabled={bulkForm.processing}
-                            >
-                                {bulkForm.processing
-                                    ? 'Menyimpan...'
-                                    : 'Simpan Semua Hotel'}
-                            </Button>
+                                {hasImportConflicts ? (
+                                    <p className="font-medium text-red-700 dark:text-red-300">
+                                        {draftIssueSummary.conflicts} conflict
+                                        masih perlu diperbaiki. Baris merah
+                                        menunjukkan lokasi masalah.
+                                    </p>
+                                ) : draftIssueSummary.warnings > 0 ? (
+                                    <p className="font-medium text-amber-700 dark:text-amber-300">
+                                        Draft siap disimpan dengan{' '}
+                                        {draftIssueSummary.warnings} catatan.
+                                        Rate kosong tidak akan dibuat.
+                                    </p>
+                                ) : (
+                                    <p className="font-medium text-emerald-700 dark:text-emerald-300">
+                                        Semua conflict sudah selesai. Draft siap
+                                        disimpan.
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap justify-end gap-2">
+                                {importSummary ? (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            void reviewCurrentDraft()
+                                        }
+                                        disabled={isImporting}
+                                    >
+                                        Periksa Ulang Draft
+                                    </Button>
+                                ) : null}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setBulkOpen(false)}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={
+                                        isSavingBulk ||
+                                        isImporting ||
+                                        hasImportConflicts
+                                    }
+                                    title={
+                                        hasImportConflicts
+                                            ? 'Perbaiki semua baris merah sebelum menyimpan.'
+                                            : undefined
+                                    }
+                                >
+                                    {isSavingBulk
+                                        ? 'Menyimpan...'
+                                        : 'Simpan Semua Hotel'}
+                                </Button>
+                            </div>
                         </div>
                     </form>
                 </SheetContent>
@@ -2631,7 +3446,12 @@ export default function ProductCategoryHotel({
 
             <Sheet
                 open={editingHotel === 'new'}
-                onOpenChange={(open) => !open && setEditingHotel(null)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setEditingHotel(null);
+                        setHotelSubmissionErrors({});
+                    }
+                }}
             >
                 <SheetContent
                     side="right"
@@ -2641,6 +3461,7 @@ export default function ProductCategoryHotel({
                         <SheetTitle>Tambah Hotel</SheetTitle>
                     </SheetHeader>
                     <form onSubmit={submit} className="mt-6 space-y-5">
+                        <FormValidationSummary errors={hotelSubmissionErrors} />
                         <div className="space-y-3 rounded-xl border border-border/40 bg-card p-3">
                             <p className="text-sm font-semibold text-foreground">
                                 Informasi Hotel
@@ -2653,7 +3474,11 @@ export default function ProductCategoryHotel({
                                     <Select
                                         value={form.data.country_id}
                                         onValueChange={(value) =>
-                                            form.setData('country_id', value)
+                                            form.setData((current) => ({
+                                                ...current,
+                                                country_id: value,
+                                                city_id: '',
+                                            }))
                                         }
                                     >
                                         <SelectTrigger>
@@ -2763,8 +3588,8 @@ export default function ProductCategoryHotel({
                             >
                                 Batal
                             </Button>
-                            <Button type="submit" disabled={form.processing}>
-                                {form.processing ? 'Menyimpan...' : 'Simpan'}
+                            <Button type="submit" disabled={isSavingHotel}>
+                                {isSavingHotel ? 'Menyimpan...' : 'Simpan'}
                             </Button>
                         </div>
                     </form>

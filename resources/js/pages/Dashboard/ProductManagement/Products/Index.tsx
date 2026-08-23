@@ -36,6 +36,10 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import FormValidationSummary, {
+    firstValidationMessage,
+    type FormValidationErrors,
+} from './FormValidationSummary';
 import ProductCategoryHotel from './ProductCategoryHotel';
 
 type ProductItem = {
@@ -524,8 +528,13 @@ export default function ProductsIndex({
     const [activeFormTab, setActiveFormTab] = useState('general');
     const [bulkSelectMode, setBulkSelectMode] = useState(false);
     const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+    const [submissionErrors, setSubmissionErrors] =
+        useState<FormValidationErrors>({});
+    const [isSubmittingProduct, setIsSubmittingProduct] = useState(false);
     const defaultHotelCurrency = hotelCurrencyOptions[0]?.code ?? 'IDR';
-    const formProductTypeOptions = productTypeOptions;
+    const formProductTypeOptions = productTypeOptions.filter(
+        (option) => !isHotelProductType(option.value),
+    );
 
     const form = useForm<ProductFormData>(
         buildFormData(null, defaultHotelCurrency),
@@ -644,6 +653,7 @@ export default function ProductsIndex({
             ),
         });
         form.clearErrors();
+        setSubmissionErrors({});
         setActiveFormTab('general');
         setEditingProduct('new');
     }
@@ -662,6 +672,7 @@ export default function ProductsIndex({
                 (sourceHotel ? String(sourceHotel.id) : ''),
         });
         form.clearErrors();
+        setSubmissionErrors({});
         setActiveFormTab('general');
         setEditingProduct(product);
     }
@@ -682,6 +693,7 @@ export default function ProductsIndex({
         setEditingProduct(null);
         form.reset();
         form.clearErrors();
+        setSubmissionErrors({});
         setActiveFormTab('general');
     }
 
@@ -691,6 +703,7 @@ export default function ProductsIndex({
 
     function submit(event: React.FormEvent) {
         event.preventDefault();
+        setSubmissionErrors({});
 
         const parsedPrice = Number(form.data.price);
 
@@ -734,10 +747,21 @@ export default function ProductsIndex({
                 payload,
                 {
                     preserveScroll: true,
+                    onStart: () => setIsSubmittingProduct(true),
                     onSuccess: () => {
                         toast.success('Produk berhasil ditambahkan.');
                         closeSheet();
                     },
+                    onError: (errors) => {
+                        setSubmissionErrors(errors);
+                        toast.error(
+                            firstValidationMessage(
+                                errors,
+                                'Produk gagal disimpan. Periksa kembali data yang diisi.',
+                            ),
+                        );
+                    },
+                    onFinish: () => setIsSubmittingProduct(false),
                 },
             );
 
@@ -750,10 +774,21 @@ export default function ProductsIndex({
                 payload,
                 {
                     preserveScroll: true,
+                    onStart: () => setIsSubmittingProduct(true),
                     onSuccess: () => {
                         toast.success('Produk berhasil diperbarui.');
                         closeSheet();
                     },
+                    onError: (errors) => {
+                        setSubmissionErrors(errors);
+                        toast.error(
+                            firstValidationMessage(
+                                errors,
+                                'Produk gagal diperbarui. Periksa kembali data yang diisi.',
+                            ),
+                        );
+                    },
+                    onFinish: () => setIsSubmittingProduct(false),
                 },
             );
         }
@@ -1064,6 +1099,7 @@ export default function ProductsIndex({
                     </SheetHeader>
 
                     <form onSubmit={submit} className="mt-6 space-y-5">
+                        <FormValidationSummary errors={submissionErrors} />
                         <div className="rounded-2xl border border-border/40 bg-card p-3 shadow-sm">
                             <div className="mb-4">
                                 <p className="text-sm font-semibold text-foreground">
@@ -1385,18 +1421,20 @@ export default function ProductsIndex({
                                 type="button"
                                 variant="outline"
                                 onClick={closeSheet}
-                                disabled={form.processing}
+                                disabled={isSubmittingProduct}
                             >
                                 Batal
                             </Button>
                             <Button
                                 type="submit"
                                 disabled={
-                                    form.processing ||
+                                    isSubmittingProduct ||
                                     isEditingExistingHotelProduct
                                 }
                             >
-                                {form.processing ? 'Menyimpan...' : 'Simpan'}
+                                {isSubmittingProduct
+                                    ? 'Menyimpan...'
+                                    : 'Simpan'}
                             </Button>
                         </div>
                     </form>

@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Agent\CreateBookingCommission;
+use App\Actions\Agent\RecordAgentReferralVisit;
 use App\Models\AgentCommission;
 use App\Models\AgentPackageFee;
 use App\Models\AgentProfile;
@@ -11,6 +12,7 @@ use App\Models\TravelPackage;
 use App\Models\User;
 use App\Support\MenuPermissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class AgentReferralBookingTest extends TestCase
@@ -160,6 +162,11 @@ class AgentReferralBookingTest extends TestCase
             ->assertOk()
             ->assertSessionHas('agent_referral_code', 'PERSIST-01');
 
+        $this->assertDatabaseHas('agent_referral_visits', [
+            'agent_profile_id' => $agent->id,
+            'visit_count' => 1,
+        ]);
+
         $this->post(route('public.paket-register.store', $package), [
             'full_name' => 'Jamaah Persist',
             'phone' => '628111111111',
@@ -172,6 +179,45 @@ class AgentReferralBookingTest extends TestCase
         $this->assertDatabaseHas('package_registrations', [
             'agent_profile_id' => $agent->id,
             'referral_code' => 'PERSIST-01',
+        ]);
+    }
+
+    public function test_repeated_referral_clicks_increment_hits_without_duplicating_unique_visitor(): void
+    {
+        $agent = AgentProfile::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'referral_code' => 'CLICKS-01',
+            'is_active' => true,
+        ]);
+        $request = Request::create('/paket-umroh', 'GET');
+        $request->cookies->set('agent_referral_visitor', 'stable-visitor-token');
+
+        app(RecordAgentReferralVisit::class)->handle($request, $agent);
+        app(RecordAgentReferralVisit::class)->handle($request, $agent);
+
+        $this->assertDatabaseCount('agent_referral_visits', 1);
+        $this->assertDatabaseHas('agent_referral_visits', [
+            'agent_profile_id' => $agent->id,
+            'visitor_hash' => hash('sha256', 'stable-visitor-token'),
+            'visit_count' => 2,
+        ]);
+    }
+
+    public function test_bot_referral_previews_do_not_inflate_agent_analytics(): void
+    {
+        $agent = AgentProfile::query()->create([
+            'user_id' => User::factory()->create()->id,
+            'referral_code' => 'BOT-SAFE',
+            'is_active' => true,
+        ]);
+
+        $this->withHeader('User-Agent', 'TelegramBot 1.0')
+            ->get('/paket-umroh?ref=BOT-SAFE')
+            ->assertOk()
+            ->assertSessionHas('agent_referral_code', 'BOT-SAFE');
+
+        $this->assertDatabaseMissing('agent_referral_visits', [
+            'agent_profile_id' => $agent->id,
         ]);
     }
 }

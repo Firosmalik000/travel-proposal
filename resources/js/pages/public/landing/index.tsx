@@ -15,6 +15,7 @@ import type { SharedData } from '@/types';
 import { Head, usePage } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import {
+    ArrowRight,
     Bolt,
     CalendarDays,
     Camera,
@@ -25,6 +26,7 @@ import {
     Headset,
     Hotel,
     Instagram,
+    Landmark,
     MapPin,
     MessageCircle,
     Music2,
@@ -32,6 +34,7 @@ import {
     PlayCircle,
     ShieldCheck,
     Soup,
+    Star,
     UserRound,
     Users,
     X,
@@ -457,7 +460,11 @@ function normalizeContent(content: CmsRecord): CmsRecord {
                 ],
             ),
             stats: normalizeItems(
-                (content.reasons as CmsRecord)?.stats ?? stats,
+                Array.isArray((content.reasons as CmsRecord)?.stats)
+                    ? ((content.reasons as CmsRecord).stats as Array<
+                          Record<string, string>
+                      >)
+                    : (stats as Array<Record<string, string>>),
                 [
                     {
                         value: '10+',
@@ -630,10 +637,10 @@ function normalizeContent(content: CmsRecord): CmsRecord {
 }
 
 const sectionMotion = {
-    initial: { y: 24 },
-    whileInView: { y: 0 },
+    initial: { y: 30, opacity: 0.72, filter: 'blur(6px)' },
+    whileInView: { y: 0, opacity: 1, filter: 'blur(0px)' },
     viewport: { once: true, amount: 0.18 },
-    transition: { duration: 0.5, ease: 'easeOut' },
+    transition: { duration: 0.72, ease: [0.16, 1, 0.3, 1] },
 } as const;
 
 export default function PublicLandingPage() {
@@ -690,28 +697,28 @@ export default function PublicLandingPage() {
     const reasonHeadingLines = splitLines(text(reasons.heading));
     const reasonCardStyles = [
         {
-            iconWrap: 'bg-[#fff7ee] text-[#d59a3d] border-[#e6c691]',
-            title: 'text-[#8c0a16]',
+            iconWrap: 'bg-[#e8f0ed] text-[#0d3b32]',
+            title: 'text-[#321e19]',
         },
         {
-            iconWrap: 'bg-[#fff5ea] text-[#ff8f7a] border-[#e6c691]',
-            title: 'text-[#8c0a16]',
+            iconWrap: 'bg-[#f2e8e9] text-[#76101f]',
+            title: 'text-[#321e19]',
         },
         {
-            iconWrap: 'bg-[#f4f1ff] text-[#7390e8] border-[#dcd5ff]',
-            title: 'text-[#8c0a16]',
+            iconWrap: 'bg-[#f4ecdd] text-[#9a6a2a]',
+            title: 'text-[#321e19]',
         },
         {
-            iconWrap: 'bg-[#fff5f6] text-[#c97f8a] border-[#e6c691]',
-            title: 'text-[#8c0a16]',
+            iconWrap: 'bg-[#e8f0ed] text-[#0d3b32]',
+            title: 'text-[#321e19]',
         },
         {
-            iconWrap: 'bg-[#f5f3ff] text-[#8b7fd6] border-[#ddd7ff]',
-            title: 'text-[#8c0a16]',
+            iconWrap: 'bg-[#f2e8e9] text-[#76101f]',
+            title: 'text-[#321e19]',
         },
         {
-            iconWrap: 'bg-[#fff4ee] text-[#ee8a58] border-[#e6c691]',
-            title: 'text-[#8c0a16]',
+            iconWrap: 'bg-[#f4ecdd] text-[#9a6a2a]',
+            title: 'text-[#321e19]',
         },
     ];
     const packageHeadingLines = splitLines(
@@ -809,20 +816,28 @@ export default function PublicLandingPage() {
 
             <style>{`
                 html{scroll-behavior:smooth}
-                body{background:#f6e7c6;color:#40241d;overflow-x:hidden}
+                body{background:#faf9f6;color:#33251f;overflow-x:hidden}
+                ::selection{background:#8c0a16;color:#fff}
+                :focus-visible{outline:3px solid rgba(200,154,75,.48);outline-offset:4px}
                 .font-display{font-family:'Playfair Display',serif}
-                .wrap{width:100%;max-width:1140px;margin:0 auto;padding-left:20px;padding-right:20px}
+                .wrap{width:100%;max-width:1220px;margin:0 auto;padding-left:20px;padding-right:20px}
                 .hero-bleed{position:relative;left:50%;transform:translateX(-50%);width:100vw;max-width:100vw}
                 .full-bleed{width:100vw;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw)}
-                .landing-shell{border:1px solid rgba(113,2,20,.08);background:rgba(255,252,247,.98);box-shadow:0 16px 40px rgba(113,2,20,.055)}
+                .landing-shell{background:#fff;box-shadow:0 22px 60px -40px rgba(58,29,21,.35)}
                 .wave-divider{line-height:0;overflow:hidden}
                 .wave-divider svg{display:block;width:100%;height:50px}
+                .landing-section{position:relative;isolation:isolate}
+                .landing-section::before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(circle at 88% 8%,rgba(200,154,75,.08),transparent 24%)}
+                .islamic-line{height:1px;background:linear-gradient(90deg,transparent,rgba(200,154,75,.72),transparent)}
+                .landing-scrollbar{scrollbar-width:thin;scrollbar-color:#c89a4b transparent}
+                .landing-scrollbar::-webkit-scrollbar{height:5px;width:5px}
+                .landing-scrollbar::-webkit-scrollbar-thumb{background:#c89a4b;border-radius:999px}
                 @media(min-width:640px){.wrap{padding-left:28px;padding-right:28px}}
                 @media(min-width:1024px){.wrap{padding-left:40px;padding-right:40px}}
             `}</style>
 
-            <header className="fixed top-0 right-0 left-0 z-40 border-b border-[#e0c9a0] bg-[#f6e7c6]/95 backdrop-blur-[16px]">
-                <div className="wrap flex h-[68px] items-center justify-between gap-3">
+            <header className="fixed top-0 right-0 left-0 z-40 border-b border-[#8c0a16]/8 bg-white/92 backdrop-blur-[18px]">
+                <div className="wrap flex h-[76px] items-center justify-between gap-3">
                     <a
                         href="#landing-top"
                         className="flex items-center gap-[10px]"
@@ -830,26 +845,26 @@ export default function PublicLandingPage() {
                         <img
                             src={resolvedLogoPath}
                             alt={companyName}
-                            className="h-10 w-auto object-contain"
+                            className="h-11 w-auto object-contain"
                         />
                         <div>
-                            <div className="font-display text-[16px] leading-none font-bold text-[#8c0a16]">
+                            <div className="font-display text-[17px] leading-none font-bold text-[#76101f]">
                                 {companyName.toUpperCase()}
                             </div>
-                            <div className="mt-[2px] text-[9px] font-bold tracking-[2px] text-[#ff9200] uppercase">
+                            <div className="mt-[3px] text-[9px] font-bold tracking-[2.2px] text-[#b77a26] uppercase">
                                 {companySubtitle}
                             </div>
                         </div>
                     </a>
-                    <nav className="hidden items-center gap-6 md:flex">
+                    <nav className="hidden items-center gap-7 md:flex">
                         {LANDING_NAV_ITEMS.map((item) => (
                             <a
                                 key={item.href}
                                 href={item.href}
                                 className={
                                     item.href === '#detail'
-                                        ? 'text-[13px] font-medium text-[#8c0a16]'
-                                        : 'text-[13px] font-medium text-[#7a5c50] transition hover:text-[#8c0a16]'
+                                        ? 'text-[13px] font-bold text-[#76101f]'
+                                        : 'text-[13px] font-semibold text-[#705f58] transition hover:text-[#76101f]'
                                 }
                             >
                                 {item.label}
@@ -858,7 +873,7 @@ export default function PublicLandingPage() {
                     </nav>
                     <a
                         href="#cta"
-                        className="inline-flex items-center gap-[7px] rounded-[22px] bg-[linear-gradient(135deg,#8c0a16,#c80012)] px-5 py-2.5 text-[13px] font-bold text-white shadow-[0_4px_14px_rgba(200,0,18,.25)] transition hover:-translate-y-[1px] hover:shadow-[0_8px_22px_rgba(200,0,18,.35)]"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#76101f] px-4 py-2.5 text-[13px] font-bold text-white shadow-[0_12px_28px_-14px_rgba(118,16,31,.72)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#5f0d19] sm:px-5"
                     >
                         <MessageCircle className="h-3.5 w-3.5" />
                         Konsultasi Gratis
@@ -869,55 +884,55 @@ export default function PublicLandingPage() {
             <main className="pb-0">
                 <div id="landing-top" />
                 {/* hero */}
-                <section className="hero-bleed relative overflow-hidden bg-[linear-gradient(160deg,#fff8f0_0%,#fdf3e3_48%,#f6e7c6_100%)] pt-[68px]">
-                    <div className="absolute inset-0 z-[1] bg-[linear-gradient(120deg,rgba(246,231,198,.96)_0%,rgba(253,243,227,.92)_42%,rgba(246,231,198,.82)_100%)]" />
+                <section className="hero-bleed relative overflow-hidden bg-[#faf9f6] pt-[76px]">
+                    <div className="absolute inset-0 z-[1] bg-[radial-gradient(circle_at_82%_38%,rgba(13,59,50,.09),transparent_27%),radial-gradient(circle_at_12%_12%,rgba(200,154,75,.11),transparent_24%)]" />
                     <div
                         className="absolute inset-0 z-[1] opacity-[.04]"
                         style={{
                             backgroundImage:
-                                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 6L74 24v32L40 74 6 56V24Z' fill='none' stroke='%238c0a16' stroke-width='1'/%3E%3C/svg%3E\")",
-                            backgroundSize: '80px',
+                                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cpath d='M48 8 82 27v42L48 88 14 69V27Z' fill='none' stroke='%23a16d29' stroke-width='.8'/%3E%3Cpath d='M48 18 72 31v30L48 74 24 61V31Z' fill='none' stroke='%23a16d29' stroke-width='.55'/%3E%3C/svg%3E\")",
+                            backgroundSize: '96px',
                         }}
                     />
-                    <div className="wrap relative z-[2] grid items-center gap-8 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-10 lg:py-12">
+                    <div className="wrap relative z-[2] grid items-center gap-10 py-12 sm:py-16 lg:min-h-[720px] lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,.75fr)] lg:gap-16 lg:py-20">
                         <motion.div className="px-0 py-0" {...sectionMotion}>
-                            <span className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#c80012]/25 bg-[#c80012]/10 px-[13px] py-[5px] text-[11px] font-bold tracking-[1.5px] text-[#c80012] uppercase">
+                            <span className="mb-5 inline-flex items-center gap-2 text-[11px] font-bold tracking-[.2em] text-[#9a6a2a] uppercase">
+                                <span className="h-px w-8 bg-[#c89a4b]" />
                                 {text(hero.promo_pill)}
                             </span>
-                            <span className="mb-1.5 block text-[12px] font-bold tracking-[2.4px] text-[#8c0a16] uppercase">
+                            <span className="mb-2 block text-[12px] font-bold tracking-[2.4px] text-[#76101f] uppercase">
                                 {text(hero.badge)}
                             </span>
-                            <h1 className="font-display mb-1.5 max-w-[500px] text-[clamp(32px,5vw,56px)] leading-[.98] font-extrabold tracking-normal text-[#8c0a16]">
+                            <h1 className="font-display mb-3 max-w-[620px] text-[clamp(42px,6.4vw,76px)] leading-[.96] font-bold tracking-[-.03em] text-[#321e19]">
                                 <span className="block">
-                                    {' '}
                                     {heroPrimaryTitle || 'SPECIAL UMROH'}
                                 </span>
-                                <span className="block text-[#ff9200] italic">
+                                <span className="block text-[#8c0a16] italic">
                                     {heroHighlightTitle || 'AGUSTUS'}
                                 </span>
                             </h1>
-                            <p className="mb-5 flex max-w-[500px] flex-wrap items-center gap-2 text-[14px] leading-[1.7] font-medium text-[#7a5c50]">
+                            <p className="mb-7 flex max-w-[560px] flex-wrap items-center gap-3 text-[15px] leading-[1.7] font-medium text-[#705f58]">
                                 <span>{text(hero.subtitle)}</span>
-                                <span className="rounded-lg bg-[#ff9200] px-2.5 py-1 text-[11px] font-bold text-white">
+                                <span className="rounded-md bg-[#0d3b32] px-2.5 py-1 text-[11px] font-bold text-white">
                                     {text(
                                         hero.subtitle_badge,
                                         `${text(hero.duration_value)} ${text(hero.duration_suffix)} Program`,
                                     )}
                                 </span>
                             </p>
-                            <div className="max-w-[600px] rounded-[18px] border-[1.5px] border-[#e0c9a0] bg-white p-[18px] shadow-[0_8px_32px_rgba(140,10,22,.09)]">
+                            <div className="max-w-[620px] rounded-2xl bg-white p-5 shadow-[0_24px_70px_-42px_rgba(55,30,20,.45)] sm:p-6">
                                 <div className="mb-3 flex items-center gap-2 text-[10px] font-bold tracking-[2px] text-[#7a5c50] uppercase">
                                     <span>MULAI DARI</span>
-                                    <span className="h-px flex-1 bg-[#e0c9a0]" />
+                                    <span className="h-px flex-1 bg-[#e5ddd5]" />
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     {pricingCards.map((card, index) => (
                                         <motion.div
                                             key={`pricing-${index}`}
-                                            className={`flex cursor-default items-center justify-between rounded-xl border-[1.5px] px-[12px] py-[8px] transition ${
+                                            className={`flex cursor-default flex-col gap-2 px-0 py-3 transition sm:flex-row sm:items-center sm:justify-between ${
                                                 index === 0
-                                                    ? 'border-[#c80012] bg-[#c80012]/[.05]'
-                                                    : 'border-[#e0c9a0] bg-[#fdf3e3]'
+                                                    ? ''
+                                                    : 'border-t border-[#ece6e1]'
                                             }`}
                                             whileHover={{ y: -2 }}
                                         >
@@ -925,8 +940,8 @@ export default function PublicLandingPage() {
                                                 <span
                                                     className={`rounded-lg px-2.5 py-1 text-[11px] font-extrabold tracking-[.04em] ${
                                                         index === 0
-                                                            ? 'bg-[#c80012] text-white'
-                                                            : 'bg-[#c80012]/10 text-[#c80012]'
+                                                            ? 'bg-[#76101f] text-white'
+                                                            : 'bg-[#f3ebe7] text-[#76101f]'
                                                     }`}
                                                 >
                                                     {text(card.label)}
@@ -939,7 +954,7 @@ export default function PublicLandingPage() {
                                                           : 'Kamar Berdua'}
                                                 </span>
                                             </div>
-                                            <div className="font-display text-[18px] font-bold text-[#8c0a16]">
+                                            <div className="font-display text-[19px] font-bold text-[#321e19]">
                                                 {text(card.price)}
                                                 <sub className="ml-1 font-sans text-[11px] font-normal text-[#7a5c50]">
                                                     {text(card.note)}
@@ -949,24 +964,24 @@ export default function PublicLandingPage() {
                                     ))}
                                 </div>
                             </div>
-                            <div className="mt-3 grid max-w-[600px] grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-[8px]">
+                            <div className="mt-4 grid max-w-[620px] grid-cols-2 gap-x-5 gap-y-4 border-y border-[#e5ddd5] py-5 lg:grid-cols-4">
                                 {heroFeatureCards.map((item, index) => {
                                     const Icon = heroFeatureIconFor(item.icon);
 
                                     return (
                                         <div
                                             key={`hero-mini-feature-${index}`}
-                                            className="min-w-0 rounded-xl border border-[#e0c9a0] bg-white px-[7px] py-[9px] text-center transition hover:border-[#ff9200]"
+                                            className="group min-w-0 text-left"
                                         >
-                                            <div className="mb-1 flex justify-center">
-                                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#c80012]/10 text-[#8c0a16]">
+                                            <div className="mb-2 flex">
+                                                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f1ebe5] text-[#76101f] transition group-hover:bg-[#76101f] group-hover:text-white">
                                                     <Icon className="h-4 w-4" />
                                                 </span>
                                             </div>
-                                            <div className="text-[10px] leading-tight font-bold text-[#8c0a16]">
+                                            <div className="text-[11px] leading-tight font-bold text-[#321e19]">
                                                 {text(item.title)}
                                             </div>
-                                            <div className="mt-0.5 text-[9px] leading-tight text-[#7a5c50]">
+                                            <div className="mt-1 text-[10px] leading-snug text-[#75665f]">
                                                 {text(item.description)
                                                     .replace(
                                                         'Lion Air / Saudia',
@@ -974,11 +989,11 @@ export default function PublicLandingPage() {
                                                     )
                                                     .replace(
                                                         'Maysan Al Maqom',
-                                                        '★★★★ 550m',
+                                                        'Bintang 4 · 550m',
                                                     )
                                                     .replace(
                                                         'Arkan Al Manar',
-                                                        '★★★ 200m',
+                                                        'Bintang 3 · 200m',
                                                     )
                                                     .replace(
                                                         'Makan 3x Sehari',
@@ -990,12 +1005,12 @@ export default function PublicLandingPage() {
                                 })}
                             </div>
 
-                            <div className="mt-5 mb-4 flex max-w-[600px] flex-col gap-[9px]">
+                            <div className="mt-6 mb-5 flex max-w-[620px] flex-col gap-3 sm:flex-row">
                                 <a
                                     href={whatsappHref}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[14px] bg-[linear-gradient(135deg,#25d366,#1a9e4e)] px-[26px] py-[13px] text-[14px] font-extrabold text-white shadow-[0_8px_24px_rgba(37,211,102,.3)] transition hover:-translate-y-[2px] hover:shadow-[0_14px_32px_rgba(37,211,102,.45)]"
+                                    className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#0d3b32] px-6 py-3 text-[14px] font-extrabold text-white shadow-[0_16px_32px_-18px_rgba(13,59,50,.8)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#082c25]"
                                 >
                                     <MessageCircle className="h-4 w-4" />
                                     {text(hero.cta_label, 'Konsultasi Gratis')}
@@ -1007,12 +1022,13 @@ export default function PublicLandingPage() {
                                             '/paket-umroh',
                                         ) || '#detail'
                                     }
-                                    className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-[14px] border border-[#f0c9c2] bg-transparent px-[24px] py-[11px] text-[13px] font-bold text-[#8c0a16] transition hover:border-[#c80012] hover:bg-[#8c0a16]/[.04]"
+                                    className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-[#76101f]/18 bg-white/60 px-6 py-3 text-[13px] font-bold text-[#76101f] transition duration-300 hover:bg-white"
                                 >
                                     {text(
                                         hero.secondary_cta_label,
                                         'Lihat Paket',
                                     )}
+                                    <ArrowRight className="h-4 w-4" />
                                 </a>
                             </div>
 
@@ -1039,7 +1055,7 @@ export default function PublicLandingPage() {
 
                         <div className="relative hidden lg:block">
                             <motion.div
-                                className="relative flex h-[360px] items-center justify-center overflow-hidden rounded-[24px] bg-[linear-gradient(180deg,#69000f_0%,#8c0a16_48%,#69000f_100%)] shadow-[0_24px_60px_rgba(140,10,22,.25)]"
+                                className="relative flex h-[540px] items-center justify-center overflow-hidden rounded-2xl bg-[linear-gradient(165deg,#163e35_0%,#0d2f29_56%,#081e1a_100%)] shadow-[0_40px_90px_-42px_rgba(13,59,50,.8)]"
                                 {...sectionMotion}
                             >
                                 <div
@@ -1047,13 +1063,14 @@ export default function PublicLandingPage() {
                                     style={{
                                         backgroundImage:
                                             "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cpath d='M36 10 58 20v22L36 62 14 42V20Z' fill='none' stroke='%23ffbf73' stroke-width='1.25'/%3E%3C/svg%3E\")",
-                                        backgroundSize: '72px',
+                                        backgroundSize: '88px',
                                     }}
                                 />
-                                <div className="relative z-[1] flex h-[88px] w-[88px] items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#2f2a3e,#5c4868)] text-[#ffbe52] shadow-[0_10px_28px_rgba(0,0,0,.18)]">
+                                <div className="absolute inset-x-10 bottom-10 h-px bg-[linear-gradient(90deg,transparent,rgba(218,180,113,.72),transparent)]" />
+                                <div className="relative z-[1] flex h-[116px] w-[116px] items-center justify-center rounded-2xl bg-[#18161c] text-[#d9ad5f] shadow-[0_24px_50px_rgba(0,0,0,.35)] ring-1 ring-[#d9ad5f]/35">
                                     <svg
                                         viewBox="0 0 64 64"
-                                        className="h-[44px] w-[44px]"
+                                        className="h-[60px] w-[60px]"
                                         aria-hidden="true"
                                     >
                                         <path
@@ -1101,14 +1118,14 @@ export default function PublicLandingPage() {
                                         />
                                     </svg>
                                 </div>
-                                <div className="absolute right-[16px] bottom-[16px] flex h-[96px] w-[96px] flex-col items-center justify-center rounded-full bg-[linear-gradient(135deg,#ff9200,#d97700)] text-center text-white shadow-[0_8px_24px_rgba(255,146,0,.4)]">
+                                <div className="absolute right-5 bottom-5 flex h-[104px] w-[104px] flex-col items-center justify-center rounded-full bg-[#c99a4b] text-center text-[#2d2011] shadow-[0_18px_38px_-18px_rgba(201,154,75,.85)] ring-4 ring-white/10">
                                     <p className="text-[10px] leading-none font-extrabold">
                                         {text(hero.free_badge_title)}
                                     </p>
                                     <p className="text-[13px] leading-none font-black">
                                         {text(hero.free_badge_label)}
                                     </p>
-                                    <p className="mt-1 text-[9px] font-bold text-white/85">
+                                    <p className="mt-1 text-[9px] font-bold text-[#2d2011]/70">
                                         {text(hero.free_badge_note)}
                                     </p>
                                 </div>
@@ -1116,8 +1133,8 @@ export default function PublicLandingPage() {
                         </div>
                     </div>
 
-                    <div className="relative z-[2] bg-[linear-gradient(135deg,#8c0a16,#3d0508)] px-5 py-4 sm:px-10">
-                        <div className="wrap flex overflow-x-auto text-white">
+                    <div className="relative z-[2] bg-[#76101f] px-5 py-5 sm:px-10">
+                        <div className="landing-scrollbar wrap flex overflow-x-auto text-white">
                             {heroFeatureCards.map((item, index) => {
                                 return (
                                     <motion.div
@@ -1129,14 +1146,15 @@ export default function PublicLandingPage() {
                                         }`}
                                         whileHover={{ y: -2 }}
                                     >
-                                        <span className="shrink-0 text-[22px]">
-                                            {item.icon === 'plane'
-                                                ? '✈️'
-                                                : item.icon === 'hotel'
-                                                  ? index === 2
-                                                      ? '🕌'
-                                                      : '🏨'
-                                                  : '🍽️'}
+                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-[#e7bd73]">
+                                            {(() => {
+                                                const Icon = heroFeatureIconFor(
+                                                    item.icon,
+                                                );
+                                                return (
+                                                    <Icon className="h-4 w-4" />
+                                                );
+                                            })()}
                                         </span>
                                         <div>
                                             <div className="text-[10px] tracking-[.05em] text-white/55 uppercase">
@@ -1363,19 +1381,19 @@ export default function PublicLandingPage() {
                         <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
                             <path
                                 d="M0,0 C480,46 960,46 1440,0 L1440,50 L0,50Z"
-                                fill="#f6e7c6"
+                                fill="#f3f0ea"
                             />
                         </svg>
                     </div>
 
-                    <section className="full-bleed bg-[#f6e7c6] px-0 py-[96px] sm:py-[112px]">
+                    <section className="landing-section full-bleed bg-[#f3f0ea] px-0 py-[104px] sm:py-[124px]">
                         <div className="wrap text-center">
                             <span className="inline-flex rounded-full border border-[#deb579] bg-[#fff8ed] px-3 py-1 text-[9px] font-black tracking-[.18em] text-[#c8871f]">
                                 {text(included.section_badge)}
                             </span>
                             <h2 className="font-display my-4 text-[24px] leading-[1.12] font-black text-[#8c0a16] lg:text-[36px]">
                                 <span>{includedHeadingPrefix} </span>
-                                <em className="font-display text-[#ff9200] italic">
+                                <em className="font-display text-[#a8732c] italic">
                                     {includedHeadingHighlight}
                                 </em>{' '}
                                 <span>{includedHeadingSuffix}</span>
@@ -1464,7 +1482,7 @@ export default function PublicLandingPage() {
                         </div>
                     </section>
 
-                    <div className="full-bleed wave-divider bg-[#f6e7c6]">
+                    <div className="full-bleed wave-divider bg-[#f3f0ea]">
                         <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
                             <path
                                 d="M0,50 C480,0 960,0 1440,50 L1440,50 L0,50Z"
@@ -1475,7 +1493,7 @@ export default function PublicLandingPage() {
 
                     <motion.section
                         id="why"
-                        className="bg-white px-4 py-[96px] sm:px-6 lg:px-8 lg:py-[116px]"
+                        className="landing-section bg-white px-4 py-[104px] sm:px-6 lg:px-8 lg:py-[128px]"
                         {...sectionMotion}
                     >
                         <div className="wrap mx-auto max-w-[980px] text-center">
@@ -1488,7 +1506,7 @@ export default function PublicLandingPage() {
                                         text(reasons.heading)}
                                 </p>
                                 {reasonHeadingLines.length > 1 ? (
-                                    <p className="font-display mt-[2px] text-[28px] leading-[1.05] font-bold text-[#ff9200] italic lg:text-[44px]">
+                                    <p className="font-display mt-[2px] text-[28px] leading-[1.05] font-bold text-[#a8732c] italic lg:text-[44px]">
                                         {reasonHeadingLines.slice(1).join(' ')}
                                     </p>
                                 ) : null}
@@ -1506,10 +1524,10 @@ export default function PublicLandingPage() {
                                     return (
                                         <div
                                             key={`reason-${index}`}
-                                            className="relative overflow-hidden rounded-[18px] border border-[#e0c9a0] bg-[#fbf1dd] px-5 py-6 transition hover:-translate-y-1 hover:border-[rgba(200,0,18,.2)] hover:shadow-[0_14px_36px_rgba(140,10,22,.1)]"
+                                            className="relative overflow-hidden rounded-2xl bg-[#f8f6f2] px-5 py-6 transition duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-[0_22px_46px_-30px_rgba(79,45,30,.48)]"
                                         >
                                             <div
-                                                className={`mb-4 inline-flex h-[40px] w-[40px] items-center justify-center rounded-[12px] border ${cardStyle.iconWrap}`}
+                                                className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl ${cardStyle.iconWrap}`}
                                             >
                                                 <Icon className="h-[18px] w-[18px]" />
                                             </div>
@@ -1519,7 +1537,7 @@ export default function PublicLandingPage() {
                                                 >
                                                     {text(item.title)}
                                                 </b>
-                                                <span className="mt-2 block text-[13px] leading-[1.7] font-normal text-[#a77d69]">
+                                                <span className="mt-2 block text-[13px] leading-[1.75] font-normal text-[#75665f]">
                                                     {text(item.description)}
                                                 </span>
                                             </p>
@@ -1527,7 +1545,7 @@ export default function PublicLandingPage() {
                                     );
                                 })}
                             </div>
-                            <div className="mt-12 grid rounded-[20px] bg-[linear-gradient(135deg,#8c0a16,#3d0508)] px-8 py-7 sm:grid-cols-3">
+                            <div className="mt-12 grid rounded-2xl bg-[#0d3b32] px-8 py-8 shadow-[0_28px_60px_-42px_rgba(13,59,50,.8)] sm:grid-cols-3">
                                 {reasonStats.map((item, index) => (
                                     <div
                                         key={`reason-stat-${index}`}
@@ -1540,7 +1558,7 @@ export default function PublicLandingPage() {
                                             {text(item.label)}
                                         </p>
                                         {text(item.note) ? (
-                                            <p className="mt-1 text-[10px] font-semibold text-[#ffc578]">
+                                            <p className="mt-1 text-[10px] font-semibold text-[#dfba78]">
                                                 {text(item.note)}
                                             </p>
                                         ) : null}
@@ -1554,13 +1572,13 @@ export default function PublicLandingPage() {
                         <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
                             <path
                                 d="M0,50 C360,0 1080,0 1440,50 L1440,50 L0,50Z"
-                                fill="#f6e7c6"
+                                fill="#f3f0ea"
                             />
                         </svg>
                     </div>
 
                     <motion.section
-                        className="full-bleed relative -mt-px bg-[#f6e7c6] px-4 pt-[68px] pb-[110px] sm:px-6 lg:px-8 lg:pt-[78px] lg:pb-[120px]"
+                        className="landing-section full-bleed relative -mt-px bg-[#f3f0ea] px-4 pt-[88px] pb-[120px] sm:px-6 lg:px-8 lg:pt-[108px] lg:pb-[140px]"
                         {...sectionMotion}
                     >
                         <div className="wrap">
@@ -1583,82 +1601,83 @@ export default function PublicLandingPage() {
                             <div className="mt-8 grid grid-cols-1 gap-3 lg:grid-cols-[2fr_1fr_1fr] lg:grid-rows-[170px_170px]">
                                 {[
                                     {
-                                        icon: '🕋',
+                                        icon: Landmark,
                                         title: "Jamaah di Ka'bah",
                                         label: 'Momen di Masjidil Haram',
                                         className:
-                                            'bg-[linear-gradient(135deg,#5f0710_0%,#840a16_55%,#a60d18_100%)] text-white lg:row-span-2',
+                                            'bg-[#76101f] text-white lg:row-span-2',
                                     },
                                     {
-                                        icon: '🏨',
+                                        icon: Hotel,
                                         title: 'Hotel Makkah',
                                         label: 'Maysan Al Maqom',
-                                        className:
-                                            'bg-[linear-gradient(135deg,#9b5a00_0%,#d27a00_100%)] text-white',
+                                        className: 'bg-[#9a6a2a] text-white',
                                     },
                                     {
-                                        icon: '🕌',
+                                        icon: Landmark,
                                         title: 'Hotel Madinah',
                                         label: 'Arkan Al Manar',
-                                        className:
-                                            'bg-[linear-gradient(135deg,#b70014_0%,#cf0b18_100%)] text-white',
+                                        className: 'bg-[#5f0d19] text-white',
                                     },
                                     {
-                                        icon: '🤲',
+                                        icon: Users,
                                         title: 'Momen Ibadah',
                                         label: 'Kekhusyukan Ibadah',
-                                        className:
-                                            'bg-[linear-gradient(135deg,#00785e_0%,#00906f_100%)] text-white',
+                                        className: 'bg-[#0d3b32] text-white',
                                     },
                                     {
-                                        icon: '✈️',
+                                        icon: Plane,
                                         title: 'Keberangkatan',
                                         label: 'Momen menuju Tanah Suci',
-                                        className:
-                                            'bg-[linear-gradient(135deg,#0a4f8d_0%,#0864c7_100%)] text-white',
+                                        className: 'bg-[#36534d] text-white',
                                     },
-                                ].map((item, index) => (
-                                    <div
-                                        key={`gallery-${index}`}
-                                        className={`relative flex min-h-[170px] items-center justify-center overflow-hidden rounded-[20px] px-5 py-6 text-center shadow-[0_10px_24px_rgba(140,10,22,.06)] ${
-                                            index === 0
-                                                ? 'lg:col-span-1 lg:h-full'
-                                                : 'lg:h-full'
-                                        } ${item.className}`}
-                                    >
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="text-[34px] leading-none">
-                                                {item.icon}
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-[11px] font-black tracking-[.18em] text-white/70 uppercase">
-                                                    {item.title}
-                                                </p>
-                                                <p className="text-[10px] leading-[1.5] font-semibold text-white/85">
-                                                    {item.label}
-                                                </p>
+                                ].map((item, index) => {
+                                    const Icon = item.icon;
+
+                                    return (
+                                        <div
+                                            key={`gallery-${index}`}
+                                            className={`relative flex min-h-[170px] items-center justify-center overflow-hidden rounded-2xl px-5 py-6 text-center shadow-[0_18px_42px_-30px_rgba(40,24,18,.65)] transition duration-300 hover:-translate-y-1 ${
+                                                index === 0
+                                                    ? 'lg:col-span-1 lg:h-full'
+                                                    : 'lg:h-full'
+                                            } ${item.className}`}
+                                        >
+                                            <div className="flex flex-col items-center gap-3">
+                                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-[#e7bd73]">
+                                                    <Icon className="h-6 w-6" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-[11px] font-black tracking-[.18em] text-white/70 uppercase">
+                                                        {item.title}
+                                                    </p>
+                                                    <p className="text-[10px] leading-[1.5] font-semibold text-white/85">
+                                                        {item.label}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                             <div className="mt-5 text-center">
                                 <a
                                     href={whatsappHref}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex rounded-[12px] bg-[linear-gradient(135deg,#8c0a16,#c80012)] px-5 py-3 text-[11px] font-black text-white shadow-[0_8px_18px_rgba(140,10,22,.18)]"
+                                    className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#76101f] px-5 py-3 text-[11px] font-black text-white shadow-[0_16px_28px_-18px_rgba(118,16,31,.72)] transition hover:-translate-y-0.5"
                                 >
                                     {text(
                                         (content.gallery as CmsRecord)
                                             .cta_label,
                                     )}
+                                    <ArrowRight className="h-4 w-4" />
                                 </a>
                             </div>
                         </div>
                     </motion.section>
 
-                    <div className="wave-divider bg-[#f6e7c6]">
+                    <div className="wave-divider bg-[#f3f0ea]">
                         <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
                             <path
                                 d="M0,0 C480,50 960,50 1440,0 L1440,50 L0,50Z"
@@ -1669,7 +1688,7 @@ export default function PublicLandingPage() {
 
                     <motion.section
                         id="testi"
-                        className="bg-white px-4 py-[92px] sm:px-6 lg:px-8 lg:py-[112px]"
+                        className="landing-section bg-white px-4 py-[104px] sm:px-6 lg:px-8 lg:py-[128px]"
                         {...sectionMotion}
                     >
                         <div className="wrap relative text-center">
@@ -1680,7 +1699,7 @@ export default function PublicLandingPage() {
                             </h2>
                             <div className="font-display mt-3 text-[clamp(26px,4vw,42px)] leading-[1.05] font-bold whitespace-nowrap text-[#8c0a16]">
                                 <span>{testimonialHeading.prefix} </span>
-                                <span className="text-[#ff9200] italic">
+                                <span className="text-[#a8732c] italic">
                                     {testimonialHeading.highlight}
                                 </span>
                                 <span>{testimonialHeading.suffix}</span>
@@ -1706,19 +1725,29 @@ export default function PublicLandingPage() {
                                 (item, index) => (
                                     <motion.div
                                         key={`testimonial-${index + 1}`}
-                                        className={`rounded-[18px] border px-6 py-6 transition hover:-translate-y-[3px] hover:shadow-[0_10px_24px_rgba(140,10,22,.08)] ${
+                                        className={`rounded-2xl px-6 py-7 transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_46px_-32px_rgba(79,45,30,.48)] ${
                                             index === 0
-                                                ? 'border-[rgba(200,0,18,.2)] bg-white'
-                                                : 'border-[#ead9ce] bg-[#fdf3e3]'
+                                                ? 'bg-[#f7f3ed]'
+                                                : 'bg-[#faf9f6]'
                                         }`}
                                         whileHover={{ y: -4 }}
                                     >
                                         <p className="font-display text-[52px] leading-none text-[#c80012]/35">
                                             "
                                         </p>
-                                        <p className="mt-2 text-[11px] tracking-[.22em] text-[#ff9200]">
-                                            ★★★★★
-                                        </p>
+                                        <div
+                                            className="mt-2 flex gap-0.5 text-[#b98232]"
+                                            aria-label="Rating 5 dari 5"
+                                        >
+                                            {Array.from({ length: 5 }).map(
+                                                (_, starIndex) => (
+                                                    <Star
+                                                        key={starIndex}
+                                                        className="h-3.5 w-3.5 fill-current"
+                                                    />
+                                                ),
+                                            )}
+                                        </div>
                                         <p className="mt-4 min-h-[112px] text-[12.5px] leading-[1.95] font-normal text-[#806d64] italic">
                                             {text(item.quote)}
                                         </p>
@@ -1760,17 +1789,17 @@ export default function PublicLandingPage() {
                     <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
                         <path
                             d="M0,50 C360,0 1080,0 1440,50 L1440,50 L0,50Z"
-                            fill="#f6e7c6"
+                            fill="#f3f0ea"
                         />
                     </svg>
                 </div>
 
                 <motion.section
                     id="faq"
-                    className="relative -mt-px overflow-hidden bg-[#f6e7c6] px-4 pt-[68px] pb-[110px] sm:px-6 lg:px-8 lg:pt-[78px] lg:pb-[120px]"
+                    className="landing-section relative -mt-px overflow-hidden bg-[#f3f0ea] px-4 pt-[88px] pb-[120px] sm:px-6 lg:px-8 lg:pt-[108px] lg:pb-[140px]"
                     {...sectionMotion}
                 >
-                    <div className="absolute inset-0 -z-10 bg-[#f6e7c6]" />
+                    <div className="absolute inset-0 -z-10 bg-[#f3f0ea]" />
                     <div className="wrap relative z-[1]">
                         <div className="text-center">
                             <h2 className="inline-flex rounded-full border border-[#e7c79b] bg-[#fff8ed] px-[14px] py-[5px] text-[11px] font-bold tracking-[.16em] text-[#a10a16] uppercase">
@@ -1778,7 +1807,7 @@ export default function PublicLandingPage() {
                             </h2>
                             <p className="font-display mt-5 text-[28px] leading-[1.1] font-bold text-[#8c0a16] lg:text-[42px]">
                                 {faqHeading.prefix}{' '}
-                                <span className="text-[#ff9200] italic">
+                                <span className="text-[#a8732c] italic">
                                     {faqHeading.highlight}
                                 </span>
                                 {faqHeading.suffix}
@@ -1794,15 +1823,15 @@ export default function PublicLandingPage() {
                                 return (
                                     <div
                                         key={`faq-${index}`}
-                                        className={`mb-3 overflow-hidden rounded-[14px] border bg-white transition ${
+                                        className={`mb-3 overflow-hidden rounded-2xl bg-white transition ${
                                             isOpen
-                                                ? 'border-[rgba(200,0,18,.2)] shadow-[0_6px_20px_rgba(140,10,22,.09)]'
-                                                : 'border-[#e0c9a0]'
+                                                ? 'shadow-[0_20px_45px_-32px_rgba(79,45,30,.5)]'
+                                                : 'shadow-[0_1px_0_rgba(76,48,38,.05)]'
                                         }`}
                                     >
                                         <button
                                             type="button"
-                                            className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left text-[15px] font-semibold text-[#8c0a16]"
+                                            className="flex min-h-14 w-full items-center justify-between gap-3 px-5 py-4 text-left text-[15px] font-semibold text-[#5f0d19]"
                                             onClick={() =>
                                                 setActiveFaq(
                                                     isOpen ? null : index,
@@ -1814,7 +1843,7 @@ export default function PublicLandingPage() {
                                                 className={`flex h-7 w-7 items-center justify-center rounded-full border text-[17px] transition ${
                                                     isOpen
                                                         ? 'rotate-45 border-[#c80012] bg-[#c80012] text-white'
-                                                        : 'border-[#e0c9a0] bg-white text-[#c80012]'
+                                                        : 'border-[#ded5ce] bg-[#faf9f6] text-[#76101f]'
                                                 }`}
                                             >
                                                 +
@@ -1831,7 +1860,7 @@ export default function PublicLandingPage() {
                         </div>
                     </div>
                 </motion.section>
-                <div className="wave-divider bg-[#f6e7c6]">
+                <div className="wave-divider bg-[#f3f0ea]">
                     <svg viewBox="0 0 1440 50" preserveAspectRatio="none">
                         <path
                             d="M0,0 C480,50 960,50 1440,0 L1440,50 L0,50Z"
@@ -1841,7 +1870,7 @@ export default function PublicLandingPage() {
                 </div>
                 <motion.section
                     id="alamat"
-                    className="bg-white px-4 py-[92px] sm:px-6 lg:px-8 lg:py-[110px]"
+                    className="landing-section bg-white px-4 py-[104px] sm:px-6 lg:px-8 lg:py-[128px]"
                     {...sectionMotion}
                 >
                     <div className="wrap">
@@ -1851,7 +1880,7 @@ export default function PublicLandingPage() {
                             </span>
                             <h2 className="font-display mt-5 text-[28px] font-bold text-[#8c0a16] lg:text-[42px]">
                                 {locationHeading.prefix}{' '}
-                                <span className="text-[#ff9200] italic">
+                                <span className="text-[#a8732c] italic">
                                     {locationHeading.highlight}
                                 </span>
                                 {locationHeading.suffix}
@@ -1864,8 +1893,8 @@ export default function PublicLandingPage() {
                         <div className="mt-12 grid items-start gap-8 lg:grid-cols-[1.02fr_.98fr] lg:gap-10">
                             <div>
                                 <div className="mb-5 flex flex-col gap-3">
-                                    <div className="flex items-start gap-3 rounded-[14px] border border-[#e0c9a0] bg-[#fdf3e3] px-4 py-4 shadow-[0_6px_18px_rgba(140,10,22,.05)] transition hover:border-[#c80012]/20">
-                                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[#c80012]/10 text-[#c80012]">
+                                    <div className="flex items-start gap-3 rounded-2xl bg-[#f8f6f2] px-5 py-5 transition hover:bg-[#f3f0ea]">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e8f0ed] text-[#0d3b32]">
                                             <MapPin className="h-4 w-4" />
                                         </div>
                                         <div>
@@ -1881,8 +1910,8 @@ export default function PublicLandingPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-start gap-3 rounded-[14px] border border-[#e0c9a0] bg-[#fdf3e3] px-4 py-4 shadow-[0_6px_18px_rgba(140,10,22,.05)] transition hover:border-[#c80012]/20">
-                                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[#c80012]/10 text-[#c80012]">
+                                    <div className="flex items-start gap-3 rounded-2xl bg-[#f8f6f2] px-5 py-5 transition hover:bg-[#f3f0ea]">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f4ecdd] text-[#9a6a2a]">
                                             <Clock3 className="h-4 w-4" />
                                         </div>
                                         <div>
@@ -1897,8 +1926,8 @@ export default function PublicLandingPage() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-start gap-3 rounded-[14px] border border-[#e0c9a0] bg-[#fdf3e3] px-4 py-4 shadow-[0_6px_18px_rgba(140,10,22,.05)] transition hover:border-[#c80012]/20">
-                                        <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[#c80012]/10 text-[#c80012]">
+                                    <div className="flex items-start gap-3 rounded-2xl bg-[#f8f6f2] px-5 py-5 transition hover:bg-[#f3f0ea]">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#f2e8e9] text-[#76101f]">
                                             <MessageCircle className="h-4 w-4" />
                                         </div>
                                         <div>
@@ -1922,7 +1951,7 @@ export default function PublicLandingPage() {
                                     ).map((item, index) => (
                                         <div
                                             key={`visit-${index}`}
-                                            className="flex items-center gap-2 rounded-[12px] border border-[#e0c9a0] bg-[#fdf3e3] px-3 py-3 text-[13px] font-semibold text-[#8c0a16]"
+                                            className="flex items-center gap-2 rounded-xl bg-[#faf9f6] px-3 py-3 text-[13px] font-semibold text-[#5f0d19]"
                                         >
                                             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#c80012]/10 text-[#c80012]">
                                                 <Check className="h-3 w-3" />
@@ -1954,7 +1983,7 @@ export default function PublicLandingPage() {
                                 </div>
                             </div>
 
-                            <div className="overflow-hidden rounded-[20px] border border-[#e0c9a0] shadow-[0_12px_36px_rgba(140,10,22,.1)]">
+                            <div className="overflow-hidden rounded-2xl shadow-[0_28px_65px_-42px_rgba(49,30,22,.55)]">
                                 <iframe
                                     className="block h-[420px] w-full border-0"
                                     src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
@@ -1986,7 +2015,7 @@ export default function PublicLandingPage() {
 
             <motion.section
                 id="cta"
-                className="relative overflow-hidden bg-[linear-gradient(135deg,#8c0a16_0%,#b70714_55%,#7b0710_100%)] px-4 py-[104px] text-center text-white sm:px-6 lg:px-8 lg:py-[124px]"
+                className="relative overflow-hidden bg-[#76101f] px-4 py-[112px] text-center text-white sm:px-6 lg:px-8 lg:py-[140px]"
                 {...sectionMotion}
             >
                 <div
@@ -1998,8 +2027,8 @@ export default function PublicLandingPage() {
                     }}
                 />
                 <div className="wrap relative z-[1] mx-auto max-w-[640px]">
-                    <p className="mb-[18px] inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/12 px-[14px] py-[5px] text-[11px] font-bold tracking-[.2em] text-[#ffc578] uppercase">
-                        <span className="text-[12px]">🕌</span>
+                    <p className="mb-6 inline-flex items-center gap-2 text-[11px] font-bold tracking-[.2em] text-[#e7bd73] uppercase">
+                        <Landmark className="h-4 w-4" />
                         {text(cta.badge)}
                     </p>
                     <h2 className="font-display text-[34px] leading-[1.12] font-bold whitespace-pre-line text-white lg:text-[48px]">
@@ -2012,7 +2041,7 @@ export default function PublicLandingPage() {
                         href={whatsappHref}
                         target="_blank"
                         rel="noreferrer"
-                        className="mt-8 inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#25d366,#1a9e4e)] px-10 py-[16px] text-[15px] font-extrabold text-white shadow-[0_8px_28px_rgba(37,211,102,.3)] transition hover:-translate-y-[3px] hover:shadow-[0_16px_40px_rgba(37,211,102,.5)]"
+                        className="mt-8 inline-flex min-h-13 items-center gap-2 rounded-xl bg-[#0d3b32] px-10 py-4 text-[15px] font-extrabold text-white shadow-[0_18px_38px_-20px_rgba(13,59,50,.9)] transition duration-300 hover:-translate-y-1 hover:bg-[#082c25]"
                     >
                         <MessageCircle className="h-5 w-5" />
                         {text(cta.button_label)}
@@ -2071,7 +2100,7 @@ export default function PublicLandingPage() {
                 </div>
             </motion.section>
 
-            <footer className="bg-[#3d0508] px-4 pt-12 pb-6 text-white sm:px-6 lg:px-8">
+            <footer className="bg-[#081f1b] px-4 pt-16 pb-7 text-white sm:px-6 lg:px-8">
                 <div className="wrap">
                     <div className="mb-10 grid gap-9 md:grid-cols-2 xl:grid-cols-[2fr_1fr_1fr_1fr]">
                         <div>
@@ -2090,7 +2119,7 @@ export default function PublicLandingPage() {
                                     </div>
                                 </div>
                             </div>
-                            <p className="mt-4 max-w-[240px] text-[13px] leading-[1.75] font-light text-white/35">
+                            <p className="mt-5 max-w-[300px] text-[13px] leading-[1.8] font-light text-white/55">
                                 Jelas Rencananya, Terjamin Amanahnya. Melayani
                                 perjalanan umroh dengan sistem transparan &
                                 amanah sejak 2015.
@@ -2123,10 +2152,10 @@ export default function PublicLandingPage() {
                             </div>
                         </div>
                         <div>
-                            <h3 className="text-[11px] font-bold tracking-[.12em] text-white/50 uppercase">
+                            <h3 className="text-[11px] font-bold tracking-[.12em] text-[#dfba78] uppercase">
                                 Paket
                             </h3>
-                            <div className="mt-4 space-y-2 text-[13px] font-light text-white/35">
+                            <div className="mt-4 space-y-2.5 text-[13px] font-light text-white/55">
                                 {LANDING_FOOTER_PACKAGE_LINKS.map(
                                     (item, index) => (
                                         <a
@@ -2141,10 +2170,10 @@ export default function PublicLandingPage() {
                             </div>
                         </div>
                         <div>
-                            <h3 className="text-[11px] font-bold tracking-[.12em] text-white/50 uppercase">
+                            <h3 className="text-[11px] font-bold tracking-[.12em] text-[#dfba78] uppercase">
                                 Perusahaan
                             </h3>
-                            <div className="mt-4 space-y-2 text-[13px] font-light text-white/35">
+                            <div className="mt-4 space-y-2.5 text-[13px] font-light text-white/55">
                                 {LANDING_FOOTER_COMPANY_LINKS.map(
                                     (item, index) => (
                                         <a
@@ -2159,10 +2188,10 @@ export default function PublicLandingPage() {
                             </div>
                         </div>
                         <div>
-                            <h3 className="text-[11px] font-bold tracking-[.12em] text-white/50 uppercase">
+                            <h3 className="text-[11px] font-bold tracking-[.12em] text-[#dfba78] uppercase">
                                 Legal
                             </h3>
-                            <div className="mt-4 space-y-2 text-[13px] font-light text-white/35">
+                            <div className="mt-4 space-y-2.5 text-[13px] font-light text-white/55">
                                 {LANDING_FOOTER_LEGAL_LINKS.map(
                                     (item, index) => (
                                         <a
@@ -2177,7 +2206,7 @@ export default function PublicLandingPage() {
                             </div>
                         </div>
                     </div>
-                    <div className="flex flex-col gap-3 border-t border-white/7 pt-5 text-[12px] text-white/20 md:flex-row md:items-center md:justify-between">
+                    <div className="flex flex-col gap-3 border-t border-white/10 pt-6 text-[12px] text-white/40 md:flex-row md:items-center md:justify-between">
                         <p>
                             (c) 2026 Asfar Tour. Terdaftar Kemenag RI.
                             PPIU-2026-001. Jakarta Selatan.

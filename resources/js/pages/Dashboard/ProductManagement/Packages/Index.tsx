@@ -2,10 +2,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDateTime } from '@/lib/date-format';
 import packages from '@/routes/packages';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     CalendarCheck,
+    FileClock,
     Package2,
     Plus,
     Search,
@@ -15,10 +17,12 @@ import {
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { PackageCard } from './PackageCard';
-import type { Package } from './types';
+import type { Package, PackageDraftSummary } from './types';
 
 type Props = {
     packages: Package[];
+    packageDrafts: PackageDraftSummary[];
+    createDraft: PackageDraftSummary | null;
 };
 
 function resolvePackageName(
@@ -61,7 +65,11 @@ function resolvePackageName(
     return fallback;
 }
 
-export default function PackagesIndex({ packages: packageList }: Props) {
+export default function PackagesIndex({
+    packages: packageList,
+    packageDrafts,
+    createDraft,
+}: Props) {
     const locale: 'id' | 'en' = 'id';
     const { can } = usePermission('package');
     const canCreate = can('create');
@@ -69,6 +77,10 @@ export default function PackagesIndex({ packages: packageList }: Props) {
     const canDelete = can('delete');
     const safePackageList = Array.isArray(packageList) ? packageList : [];
     const [search, setSearch] = useState('');
+    const [visibleCreateDraft, setVisibleCreateDraft] = useState(createDraft);
+    const draftsByPackageId = new Map(
+        packageDrafts.map((draft) => [draft.package_id, draft]),
+    );
 
     const filtered = safePackageList.filter((pkg) => {
         const localizedName = resolvePackageName(pkg.name, locale, '');
@@ -97,6 +109,41 @@ export default function PackagesIndex({ packages: packageList }: Props) {
             onSuccess: () => toast.success('Package dihapus.'),
             onError: () => toast.error('Gagal menghapus package.'),
         });
+    }
+
+    async function discardCreateDraft() {
+        if (!confirm('Buang seluruh isian draft package baru ini?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                '/admin/product-management/packages/drafts/create',
+                {
+                    method: 'DELETE',
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN':
+                            document
+                                .querySelector<HTMLMetaElement>(
+                                    'meta[name="csrf-token"]',
+                                )
+                                ?.getAttribute('content') ?? '',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error();
+            }
+
+            setVisibleCreateDraft(null);
+            toast.success('Draft package baru dibuang.');
+        } catch {
+            toast.error('Draft package baru gagal dibuang.');
+        }
     }
 
     const stats = [
@@ -181,6 +228,43 @@ export default function PackagesIndex({ packages: packageList }: Props) {
                     ))}
                 </div>
 
+                {visibleCreateDraft && canCreate ? (
+                    <section className="flex flex-col gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sky-950 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-sky-900 dark:bg-sky-950/35 dark:text-sky-100">
+                        <div className="flex min-w-0 items-start gap-3">
+                            <div className="rounded-xl bg-sky-100 p-2 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300">
+                                <FileClock className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="font-semibold">
+                                    Package baru belum selesai
+                                </p>
+                                <p className="truncate text-sm text-sky-800 dark:text-sky-200">
+                                    {visibleCreateDraft.name} · tersimpan{' '}
+                                    {visibleCreateDraft.last_autosaved_at
+                                        ? formatDateTime(
+                                              visibleCreateDraft.last_autosaved_at,
+                                          )
+                                        : 'baru saja'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex shrink-0 gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => void discardCreateDraft()}
+                            >
+                                Buang
+                            </Button>
+                            <Button asChild>
+                                <Link href="/admin/product-management/packages/create">
+                                    Lanjutkan Draft
+                                </Link>
+                            </Button>
+                        </div>
+                    </section>
+                ) : null}
+
                 <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
                     <div className="relative w-full max-w-md">
                         <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -234,6 +318,7 @@ export default function PackagesIndex({ packages: packageList }: Props) {
                                 onDelete={handleDelete}
                                 canEdit={canEdit}
                                 canDelete={canDelete}
+                                draft={draftsByPackageId.get(pkg.id) ?? null}
                             />
                         ))}
                     </div>

@@ -1,10 +1,12 @@
 import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/date-format';
 import { Link } from '@inertiajs/react';
 import {
     Calendar,
     Clock,
     ExternalLink,
     Eye,
+    FileClock,
     MapPin,
     Package as PackageIcon,
     Pencil,
@@ -12,7 +14,7 @@ import {
     Trash2,
     Zap,
 } from 'lucide-react';
-import type { Package as PackageType } from './types';
+import type { PackageDraftSummary, Package as PackageType } from './types';
 
 type Props = {
     pkg: PackageType;
@@ -20,6 +22,7 @@ type Props = {
     onDelete: (pkg: PackageType) => void;
     canEdit: boolean;
     canDelete: boolean;
+    draft: PackageDraftSummary | null;
 };
 
 const typeConfig: Record<
@@ -99,6 +102,7 @@ export function PackageCard({
     onDelete,
     canEdit,
     canDelete,
+    draft,
 }: Props) {
     const name = resolvePackageName(pkg.name, locale, pkg.code);
     const type = typeConfig[pkg.package_type] ?? typeConfig.reguler;
@@ -154,6 +158,12 @@ export function PackageCard({
                                     Featured
                                 </span>
                             ) : null}
+                            {draft ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                    <FileClock className="h-3 w-3" />
+                                    Draft perubahan
+                                </span>
+                            ) : null}
                         </div>
 
                         <h3 className="mt-1.5 truncate text-base font-bold text-foreground">
@@ -203,15 +213,9 @@ export function PackageCard({
                             {pkg.start_date ? (
                                 <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                                     <Calendar className="h-3 w-3" />
-                                    Berangkat{' '}
-                                    {new Intl.DateTimeFormat('id-ID', {
-                                        day: 'numeric',
-                                        month: 'short',
-                                        year: 'numeric',
-                                    }).format(
-                                        new Date(`${pkg.start_date}T00:00:00`),
-                                    )}{' '}
-                                    - {pkg.seats_available} seat tersisa
+                                    Berangkat {formatDate(
+                                        pkg.start_date,
+                                    )} - {pkg.seats_available} seat tersisa
                                 </p>
                             ) : (
                                 <p className="mt-0.5 text-xs text-muted-foreground">

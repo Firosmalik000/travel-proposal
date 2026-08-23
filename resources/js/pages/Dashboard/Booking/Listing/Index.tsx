@@ -49,6 +49,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useDebounce } from '@/hooks/use-debounce';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate, formatDateTime } from '@/lib/date-format';
 import { requestMessageFrom } from '@/lib/request-toasts';
 import { Head, router, useForm } from '@inertiajs/react';
 import {
@@ -458,27 +459,6 @@ function emptyParticipantDocumentPreviewMap(): ParticipantDocumentPreviewMap {
         photo: null,
         meningitis_vaccine_scan: null,
     };
-}
-
-function formatDateTime(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    }).format(new Date(value));
-}
-
-function formatDate(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', {
-        dateStyle: 'medium',
-    }).format(new Date(`${value}T00:00:00`));
 }
 
 function formatParticipantImportSkipSummary(
@@ -4119,7 +4099,7 @@ export default function BookingListingIndex({
                                                                                 {row.birth_place ||
                                                                                     'Tempat lahir belum diisi'}
                                                                                 {row.birth_date
-                                                                                    ? `, ${row.birth_date}`
+                                                                                    ? `, ${formatDate(row.birth_date)}`
                                                                                     : ''}
                                                                             </p>
                                                                             <p className="text-xs text-muted-foreground">
@@ -5716,7 +5696,7 @@ export default function BookingListingIndex({
                                                                 {participantForm
                                                                     .data
                                                                     .birth_date
-                                                                    ? `, ${participantForm.data.birth_date}`
+                                                                    ? `, ${formatDate(participantForm.data.birth_date)}`
                                                                     : ''}
                                                             </p>
                                                         </div>

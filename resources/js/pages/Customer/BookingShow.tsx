@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CustomerLayout from '@/layouts/customer-layout';
+import { formatDate } from '@/lib/date-format';
 import BookingParticipantSheet, {
     type BookingParticipant,
 } from '@/pages/Customer/components/BookingParticipantSheet';
@@ -107,16 +108,6 @@ const money = (amount: number, currency: string) =>
         currency,
         maximumFractionDigits: 0,
     }).format(amount);
-
-const formatDate = (value: string | null) => {
-    if (!value) {
-        return '-';
-    }
-
-    return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(
-        new Date(`${value}T00:00:00`),
-    );
-};
 
 const roomConfigurationLabel = (
     roomConfiguration: Record<string, number> | null,

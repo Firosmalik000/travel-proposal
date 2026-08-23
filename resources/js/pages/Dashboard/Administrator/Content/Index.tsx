@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatDate } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import { Head, router, useForm } from '@inertiajs/react';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -2233,8 +2234,10 @@ function getColumns(
                 cell: ({ row }) => (
                     <div className="text-right">
                         <span className="rounded-2xl border-b-4 border-primary-foreground/20 bg-primary px-5 py-2.5 text-[12px] font-black tracking-tighter text-white shadow-xl shadow-primary/20">
-                            {formatDateLabel(
-                                row.original.payload.departure_date,
+                            {formatDate(
+                                stringValue(
+                                    row.original.payload.departure_date,
+                                ),
                             )}
                         </span>
                     </div>
@@ -2505,17 +2508,4 @@ function productCategoryOptions(o: any) {
               value: c.key,
           }))
         : [];
-}
-function formatDateLabel(v: any): string {
-    const rv = stringValue(v);
-    if (!rv) return '-';
-    try {
-        return new Intl.DateTimeFormat('id-ID', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        }).format(new Date(rv));
-    } catch {
-        return rv;
-    }
 }

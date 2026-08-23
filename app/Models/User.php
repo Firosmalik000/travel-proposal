@@ -66,6 +66,11 @@ class User extends Authenticatable
         return $this->hasMany(Booking::class, 'customer_id');
     }
 
+    public function packageDrafts(): HasMany
+    {
+        return $this->hasMany(PackageDraft::class);
+    }
+
     public function agentProfile(): HasOne
     {
         return $this->hasOne(AgentProfile::class);
