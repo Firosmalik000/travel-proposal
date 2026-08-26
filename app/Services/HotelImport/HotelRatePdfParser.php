@@ -329,7 +329,7 @@ class HotelRatePdfParser
             return null;
         }
 
-        return $candidate;
+        return $this->cleanOcrHotelName($candidate);
     }
 
     private function isFallbackStructuralLine(string $text): bool
@@ -477,12 +477,22 @@ class HotelRatePdfParser
      */
     private function cleanOcrHotelName(string $name): string
     {
+        $exactAliases = [
+            'malilalinqreeuemq' => 'Millineum Al Aqeeq',
+            'odrest' => 'Odest',
+            'snoodajyrad' => 'Snood Ajyad',
+            'almassagrarnd' => 'Al Massa Grand',
+        ];
+        $exactAlias = $exactAliases[$this->normalize($name)] ?? null;
+        if ($exactAlias !== null) {
+            return $exactAlias;
+        }
+
         // Common OCR character replacements
         $replacements = [
             // Letter confusion
             'yrad' => 'yad',      // Ajyrad -> Ajyad
             'Grarnd' => 'Grand',  // Al Massa Grarnd -> Al Massa Grand
-            'Odest' => 'Odrest',  // Odest -> Odrest
             // Multiple character issues
             'MAlil' => 'Mill',    // MAlilAlinqreeuemq -> Millineum
             'inqreeuemq' => 'ineum',

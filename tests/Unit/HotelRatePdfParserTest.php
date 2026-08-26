@@ -197,6 +197,29 @@ class HotelRatePdfParserTest extends TestCase
     }
 
     #[Test]
+    public function it_normalizes_known_hotel_name_artifacts_from_layout_pdf_text(): void
+    {
+        $parser = new HotelRatePdfParser;
+
+        foreach ([
+            'MAlilAlinqreeuemq' => 'Millineum Al Aqeeq',
+            'Odrest' => 'Odest',
+            'Snood Ajyrad' => 'Snood Ajyad',
+            'Al Massa Grarnd' => 'Al Massa Grand',
+        ] as $extractedName => $expectedName) {
+            $rows = $parser->parse([
+                1 => [
+                    $this->fallbackWord($extractedName, 0, 0),
+                    ...$this->fallbackHeaderWords(24),
+                    ...$this->fallbackRateWords(48, '16/06/26', '30/08/26', '100', '200', '300'),
+                ],
+            ], 'Arab Saudi', 'SAR');
+
+            self::assertSame($expectedName, $rows[0]['hotel']);
+        }
+    }
+
+    #[Test]
     public function it_detects_image_only_pdf_extraction_output(): void
     {
         $extractor = new PdfTextExtractor;

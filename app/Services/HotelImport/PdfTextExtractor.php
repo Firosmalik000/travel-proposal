@@ -158,6 +158,17 @@ class PdfTextExtractor
             try {
                 $result = Process::timeout(5)->run([$binary, '-h']);
                 $help = $result->output().$result->errorOutput();
+                $normalizedHelp = mb_strtolower($help);
+
+                if (
+                    trim($help) === ''
+                    || str_contains($normalizedHelp, 'cannot find the path')
+                    || str_contains($normalizedHelp, 'command not found')
+                    || str_contains($normalizedHelp, 'no such file')
+                ) {
+                    throw new RuntimeException('Binary pdftotext tidak dapat dijalankan.');
+                }
+
                 $capabilities[$binary] = str_contains($help, '-bbox-layout');
             } catch (Throwable $exception) {
                 throw new RuntimeException('PDF parser dependency "pdftotext" tidak tersedia pada server.', previous: $exception);
