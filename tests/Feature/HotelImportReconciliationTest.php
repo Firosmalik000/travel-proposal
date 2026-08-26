@@ -107,6 +107,58 @@ class HotelImportReconciliationTest extends TestCase
         );
     }
 
+    #[Test]
+    public function it_marks_a_different_existing_hotel_currency_as_an_update_instead_of_a_conflict(): void
+    {
+        $hotel = $this->hotel('Currency Update Hotel', currency: 'IDR');
+
+        $result = $this->service()->reconcile([
+            $this->row($hotel->name, '2026-06-01', '2026-06-30', 100, 200, 300, 'SAR'),
+        ]);
+        $draft = $result['hotels'][0];
+
+        self::assertSame($hotel->id, $draft['existing_hotel_id']);
+        self::assertSame('IDR', $draft['existing_currency']);
+        self::assertSame('SAR', $draft['currency']);
+        self::assertSame('update', $draft['import_status']);
+        self::assertSame([], $draft['conflicts']);
+        self::assertContains(
+            'Mata uang hotel existing akan diperbarui dari IDR menjadi SAR saat disimpan.',
+            $draft['warnings'],
+        );
+    }
+
+    #[Test]
+    public function it_infers_a_missing_city_from_one_exact_existing_hotel(): void
+    {
+        $hotel = $this->hotel('Taibah Front');
+        $row = $this->row('Taibah Front', '2026-06-01', '2026-06-30', 100, 200, 300);
+        $row['city'] = null;
+
+        $result = $this->service()->reconcile([$row]);
+        $draft = $result['hotels'][0];
+
+        self::assertSame((string) $this->city->id, $draft['city_id']);
+        self::assertSame($hotel->id, $draft['existing_hotel_id']);
+        self::assertNotContains('Negara atau kota belum cocok dengan data master.', $draft['conflicts']);
+    }
+
+    #[Test]
+    public function it_matches_one_character_pdf_noise_to_one_unique_existing_hotel(): void
+    {
+        $hotel = $this->hotel('Snood Ajyad');
+
+        $result = $this->service()->reconcile([
+            $this->row('Snood Ajyrad', '2026-06-01', '2026-06-30', 100, 200, 300),
+        ]);
+        $draft = $result['hotels'][0];
+
+        self::assertSame($hotel->id, $draft['existing_hotel_id']);
+        self::assertTrue(collect($draft['warnings'])->contains(
+            fn (string $warning): bool => str_contains($warning, 'Snood Ajyad'),
+        ));
+    }
+
     private function service(): HotelImportReconciliationService
     {
         return $this->app->make(HotelImportReconciliationService::class);

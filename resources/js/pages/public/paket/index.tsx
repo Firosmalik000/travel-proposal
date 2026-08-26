@@ -7,7 +7,9 @@ import { formatMonth } from '@/lib/date-format';
 import {
     formatDate,
     formatPrice,
+    hasPackageDiscount,
     localize,
+    packageDiscountLabel,
     usePublicData,
     usePublicPageContent,
     whatsappLinkFromSeo,
@@ -88,6 +90,8 @@ type PackageCard = {
     title: string;
     originalPrice?: string;
     discountLabel?: string;
+    discountType?: 'percent' | 'nominal';
+    discountNominal?: number;
     ratingAvg?: number | null;
     ratingCount?: number;
     price: string;
@@ -131,20 +135,19 @@ export default function Paket() {
                       ? 'Menyesuaikan jadwal'
                       : 'Flexible by schedule',
               );
+              const hasDiscount = hasPackageDiscount(item);
 
               return {
                   slug: item.slug,
                   title: localize(item.name, locale),
                   price: formatPrice(item.price, locale, item.currency),
                   numericPrice: Number(item.price ?? 0),
-                  originalPrice: item.original_price
+                  originalPrice: hasDiscount
                       ? formatPrice(item.original_price, locale, item.currency)
                       : undefined,
-                  discountLabel:
-                      item.discount_label ??
-                      (item.discount_percent
-                          ? `HEMAT ${item.discount_percent}%`
-                          : undefined),
+                  discountType: item.discount_type ?? 'percent',
+                  discountNominal: item.discount_nominal ?? undefined,
+                  discountLabel: packageDiscountLabel(item) || undefined,
                   ratingAvg: item.rating_avg ?? null,
                   ratingCount: Number(item.rating_count ?? 0),
                   date: formatDate(departureDate, locale),
@@ -401,11 +404,19 @@ export default function Paket() {
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
                                             {/* Discount badge */}
-                                            {item.discountLabel && (
-                                                <span className="absolute top-3 right-3 rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow">
+                                            {item.originalPrice &&
+                                            item.discountLabel ? (
+                                                <span
+                                                    className={`absolute top-3 right-3 rounded-full px-2.5 py-1 text-xs font-bold text-white shadow ${
+                                                        item.discountType ===
+                                                        'nominal'
+                                                            ? 'bg-amber-500'
+                                                            : 'bg-red-500'
+                                                    }`}
+                                                >
                                                     {item.discountLabel}
                                                 </span>
-                                            )}
+                                            ) : null}
 
                                             {/* City + duration overlay */}
                                             <div className="absolute right-3 bottom-3 left-3 flex items-end justify-between">

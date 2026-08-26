@@ -116,11 +116,20 @@ export function PackageCard({
                 !pkg.is_active ? 'opacity-60' : '',
             ].join(' ')}
         >
-            {pkg.original_price ? (
+            {pkg.original_price && pkg.discount_type ? (
                 <div className="absolute top-0 right-0 z-10">
-                    <div className="flex items-center gap-1 rounded-bl-xl bg-rose-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                    <div
+                        className={`flex items-center gap-1 rounded-bl-xl px-3 py-1 text-xs font-bold text-white shadow-sm ${
+                            pkg.discount_type === 'percent'
+                                ? 'bg-rose-500'
+                                : 'bg-amber-500'
+                        }`}
+                    >
                         <Zap className="h-3 w-3" />
-                        {pkg.discount_label || `HEMAT ${pkg.discount_percent}%`}
+                        {pkg.discount_label ||
+                            (pkg.discount_type === 'percent'
+                                ? `HEMAT ${pkg.discount_percent}%`
+                                : `POTONGAN Rp${pkg.discount_nominal?.toLocaleString('id-ID')}`)}
                     </div>
                 </div>
             ) : null}

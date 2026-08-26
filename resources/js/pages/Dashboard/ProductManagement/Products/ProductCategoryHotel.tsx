@@ -23,6 +23,7 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { usePermission } from '@/hooks/use-permission';
+import { fetchWithCsrf } from '@/lib/csrf-fetch';
 import { formatDate } from '@/lib/date-format';
 import { router, useForm } from '@inertiajs/react';
 import {
@@ -228,6 +229,7 @@ type BulkHotelForm = {
     is_active: boolean;
     period_rates: PeriodRateRow[];
     existing_hotel_id?: number | null;
+    existing_currency?: string | null;
     import_status?: ImportStatus;
     warnings?: string[];
     conflicts?: string[];
@@ -392,15 +394,12 @@ function revalidateHotelDraft(hotel: BulkHotelForm): BulkHotelForm {
         ) {
             return [];
         }
-        const databaseCurrency = conflict.match(
-            /^Konflik mata uang: database ([A-Z]{3}), file [A-Z]{3}\.$/,
-        )?.[1];
-        if (databaseCurrency) {
-            return hotel.currency === databaseCurrency
-                ? []
-                : [
-                      `Konflik mata uang: database ${databaseCurrency}, file ${hotel.currency}.`,
-                  ];
+        if (
+            /^Konflik mata uang: database [A-Z]{3}, file [A-Z]{3}\.$/.test(
+                conflict,
+            )
+        ) {
+            return [];
         }
         if (
             hotel.country_id &&
@@ -423,38 +422,65 @@ function revalidateHotelDraft(hotel: BulkHotelForm): BulkHotelForm {
     const hasPeriodConflict = periodRates.some(
         (periodRate) => (periodRate.conflicts?.length ?? 0) > 0,
     );
+    const existingCurrency = hotel.existing_currency?.toUpperCase() ?? '';
+    const incomingCurrency = hotel.currency.toUpperCase();
+    const currencyWillChange = Boolean(
+        hotel.existing_hotel_id &&
+            existingCurrency &&
+            incomingCurrency &&
+            existingCurrency !== incomingCurrency,
+    );
+    const warnings = (hotel.warnings ?? []).filter(
+        (warning) =>
+            !/^Mata uang hotel existing akan diperbarui dari /i.test(warning) &&
+            !/^Mata uang berbeda: database /i.test(warning),
+    );
+
+    if (currencyWillChange) {
+        warnings.push(
+            `Mata uang hotel existing akan diperbarui dari ${existingCurrency} menjadi ${incomingCurrency} saat disimpan.`,
+        );
+    }
 
     return {
         ...hotel,
         period_rates: periodRates,
-        warnings: (hotel.warnings ?? []).filter((warning) => {
-            if (
-                hotel.currency &&
-                /mata uang (tidak terdeteksi|belum ditentukan)/i.test(warning)
-            ) {
-                return false;
-            }
-            if (
-                hotel.country_id &&
-                hotel.city_id &&
-                /^(Negara|Kota).*(tidak ditemukan|ambigu)|^Kota belum terdeteksi/i.test(
-                    warning,
-                )
-            ) {
-                return false;
-            }
+        warnings: [
+            ...new Set(
+                warnings.filter((warning) => {
+                    if (
+                        hotel.currency &&
+                        /mata uang (tidak terdeteksi|belum ditentukan)/i.test(
+                            warning,
+                        )
+                    ) {
+                        return false;
+                    }
+                    if (
+                        hotel.country_id &&
+                        hotel.city_id &&
+                        /^(Negara|Kota).*(tidak ditemukan|ambigu)|^Kota belum terdeteksi/i.test(
+                            warning,
+                        )
+                    ) {
+                        return false;
+                    }
 
-            return true;
-        }),
+                    return true;
+                }),
+            ),
+        ],
         conflicts: [...new Set(conflicts)],
         import_status:
             conflicts.length > 0 || hasPeriodConflict
                 ? 'conflict'
-                : hotel.import_status === 'conflict'
-                  ? hotel.existing_hotel_id
-                      ? 'update'
-                      : 'create'
-                  : hotel.import_status,
+                : currencyWillChange
+                  ? 'update'
+                  : hotel.import_status === 'conflict'
+                    ? hotel.existing_hotel_id
+                        ? 'update'
+                        : 'create'
+                    : hotel.import_status,
     };
 }
 
@@ -1622,22 +1648,26 @@ export default function ProductCategoryHotel({
                 revalidateHotelDraft({ ...hotel, currency }),
             ),
         );
-        setBulkSubmissionErrors({});
-        toast.success(`Mata uang ${currency} diterapkan ke semua draft hotel.`);
-    }
 
-    function csrfToken(): string {
-        return (
-            document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') ?? ''
-        );
+        // Clear old validation errors after currency change
+        setBulkSubmissionErrors({});
+
+        // Re-reconcile current draft to clear currency conflicts
+        void reviewCurrentDraft();
+
+        toast.success(`Mata uang ${currency} diterapkan ke semua draft hotel.`);
     }
 
     async function readImportResponse(response: Response): Promise<{
         hotels: BulkHotelForm[];
         summary: ImportSummary;
     }> {
+        if (response.status === 419) {
+            throw new Error(
+                'Sesi berakhir. Muat ulang halaman, lalu pilih kembali file import.',
+            );
+        }
+
         const body = (await response.json()) as {
             message?: string;
             errors?: FormValidationErrors;
@@ -1668,9 +1698,33 @@ export default function ProductCategoryHotel({
             result.hotels.map((hotel) => revalidateHotelDraft(hotel)),
         );
         setImportSummary(result.summary);
-        toast.success(
-            `Import berhasil: ${result.summary.hotels_detected} hotel dan ${result.summary.periods_detected} periode dimuat.`,
-        );
+
+        // Auto-detect currency if all hotels have same currency
+        const hotelCurrencies = result.hotels
+            .map((hotel) => hotel.currency)
+            .filter(Boolean)
+            .filter((curr, idx, arr) => arr.indexOf(curr) === idx);
+
+        if (hotelCurrencies.length === 1) {
+            const detectedCurrency = hotelCurrencies[0];
+            setPdfDefaultCurrency(detectedCurrency);
+            bulkForm.setData(
+                'hotels',
+                result.hotels.map((hotel) =>
+                    revalidateHotelDraft({
+                        ...hotel,
+                        currency: detectedCurrency,
+                    }),
+                ),
+            );
+            toast.success(
+                `Import berhasil: ${result.summary.hotels_detected} hotel, ${result.summary.periods_detected} periode, dan mata uang ${detectedCurrency} sudah diterapkan.`,
+            );
+        } else {
+            toast.success(
+                `Import berhasil: ${result.summary.hotels_detected} hotel dan ${result.summary.periods_detected} periode dimuat.`,
+            );
+        }
 
         if (result.summary.warnings > 0 || result.summary.conflicts > 0) {
             toast.warning(
@@ -1680,14 +1734,13 @@ export default function ProductCategoryHotel({
     }
 
     async function reconcileImportRows(rows: HotelImportRow[]): Promise<void> {
-        const response = await fetch(
+        const response = await fetchWithCsrf(
             '/admin/product-management/products/hotels/import/reconcile',
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
-                    'X-CSRF-TOKEN': csrfToken(),
                 },
                 body: JSON.stringify({ rows }),
             },
@@ -1744,13 +1797,12 @@ export default function ProductCategoryHotel({
             payload.append('default_currency', pdfDefaultCurrency);
         }
 
-        const response = await fetch(
+        const response = await fetchWithCsrf(
             '/admin/product-management/products/hotels/import/pdf',
             {
                 method: 'POST',
                 headers: {
                     Accept: 'application/json',
-                    'X-CSRF-TOKEN': csrfToken(),
                 },
                 body: payload,
             },
@@ -1766,6 +1818,25 @@ export default function ProductCategoryHotel({
         }
 
         const extension = file.name.split('.').pop()?.toLowerCase();
+
+        // Validate file extension
+        const supportedFormats = ['pdf', 'csv', 'xls', 'xlsx'];
+        if (!supportedFormats.includes(extension || '')) {
+            toast.error(
+                `Format file tidak didukung. Gunakan: ${supportedFormats.join(', ')}`,
+            );
+            event.target.value = '';
+            return;
+        }
+
+        // Validate file size (max 10MB)
+        const maxSizeMB = 10;
+        if (file.size > maxSizeMB * 1024 * 1024) {
+            toast.error(`Ukuran file terlalu besar. Maksimal ${maxSizeMB}MB.`);
+            event.target.value = '';
+            return;
+        }
+
         if (extension === 'pdf') {
             setIsImporting(true);
             void importPdfFile(file)
@@ -1784,14 +1855,37 @@ export default function ProductCategoryHotel({
         }
 
         const reader = new FileReader();
+        reader.onerror = () => {
+            toast.error('Gagal membaca file. Coba lagi.');
+            setIsImporting(false);
+            event.target.value = '';
+        };
+
         reader.onload = async (loadEvent) => {
             setIsImporting(true);
             try {
-                const workbook = XLSX.read(loadEvent.target?.result, {
+                if (!loadEvent.target?.result) {
+                    toast.error('File kosong atau tidak dapat dibaca.');
+                    return;
+                }
+
+                const workbook = XLSX.read(loadEvent.target.result, {
                     type: 'array',
                 });
+
+                if (!workbook.SheetNames.length) {
+                    toast.error('File Excel tidak mengandung sheet.');
+                    return;
+                }
+
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
+
+                if (!worksheet) {
+                    toast.error('Tidak dapat membaca sheet.');
+                    return;
+                }
+
                 const rawRows = XLSX.utils.sheet_to_json(worksheet, {
                     header: 1,
                     raw: false,
@@ -1799,7 +1893,9 @@ export default function ProductCategoryHotel({
                 }) as unknown[][];
 
                 if (rawRows.length < 2) {
-                    toast.error('File import kosong atau format tidak valid.');
+                    toast.error(
+                        'File import kosong atau format tidak valid. Minimal harus ada header dan 1 baris data.',
+                    );
                     return;
                 }
 
@@ -1851,7 +1947,7 @@ export default function ProductCategoryHotel({
                     columnIndex.periodEnd === -1
                 ) {
                     toast.error(
-                        'Header wajib: country, city, hotel, period_start/from, period_end/to.',
+                        'Header wajib: country/negara, city/kota, hotel/namahotel, period_start/from/start/tanggalmulai, period_end/to/end/tanggalselesai.',
                     );
                     return;
                 }
@@ -1910,14 +2006,26 @@ export default function ProductCategoryHotel({
 
                 await reconcileImportRows(normalizedRows);
                 if (skippedRows > 0) {
-                    toast.warning(`${skippedRows} baris kosong dilewati.`);
+                    toast.warning(
+                        `${skippedRows} baris kosong/tidak lengkap dilewati.`,
+                    );
                 }
             } catch (error: unknown) {
-                toast.error(
+                const errorMessage =
                     error instanceof Error
                         ? error.message
-                        : 'Gagal membaca file import. Periksa format file.',
-                );
+                        : 'Gagal membaca file import. Periksa format file.';
+
+                // Better error messages for common issues
+                if (errorMessage.includes('does not support')) {
+                    toast.error(
+                        'Format file tidak didukung. Gunakan CSV, XLS, atau XLSX.',
+                    );
+                } else if (errorMessage.includes('Cannot read')) {
+                    toast.error('File corrupt atau format tidak valid.');
+                } else {
+                    toast.error(errorMessage);
+                }
             } finally {
                 setIsImporting(false);
                 event.target.value = '';
@@ -2014,6 +2122,7 @@ export default function ProductCategoryHotel({
                     | {
                           bulk_created_count?: number;
                           bulk_updated_count?: number;
+                          bulk_currency_updated_count?: number;
                           bulk_new_period_count?: number;
                           bulk_unchanged_count?: number;
                           bulk_skipped_hotels?: Array<{
@@ -2025,6 +2134,9 @@ export default function ProductCategoryHotel({
                     | undefined;
                 const createdCount = Number(flash?.bulk_created_count ?? 0);
                 const updatedCount = Number(flash?.bulk_updated_count ?? 0);
+                const currencyUpdatedCount = Number(
+                    flash?.bulk_currency_updated_count ?? 0,
+                );
                 const newPeriodCount = Number(
                     flash?.bulk_new_period_count ?? 0,
                 );
@@ -2032,7 +2144,7 @@ export default function ProductCategoryHotel({
                 const skippedHotels = flash?.bulk_skipped_hotels ?? [];
 
                 toast.success(
-                    `Bulk selesai: ${createdCount} hotel baru, ${updatedCount} hotel diperbarui, ${newPeriodCount} periode baru, ${unchangedCount} tanpa perubahan.`,
+                    `Bulk selesai: ${createdCount} hotel baru, ${updatedCount} hotel diperbarui (${currencyUpdatedCount} mata uang), ${newPeriodCount} periode baru, ${unchangedCount} tanpa perubahan.`,
                 );
                 if (skippedHotels.length > 0) {
                     const skippedPreview = skippedHotels
@@ -2948,13 +3060,19 @@ export default function ProductCategoryHotel({
                     <SheetHeader>
                         <SheetTitle>Bulk Create & Update Hotel</SheetTitle>
                     </SheetHeader>
-                    <form onSubmit={submitBulk} className="mt-6 space-y-4">
+                    <form onSubmit={submitBulk} className="mt-6 space-y-6">
                         <FormValidationSummary errors={bulkSubmissionErrors} />
-                        <div className="space-y-3 rounded-xl border border-border/40 bg-muted/20 p-3">
+
+                        {/* Import Section */}
+                        <div className="space-y-3 rounded-lg border border-border/40 bg-background p-4">
+                            <h3 className="text-sm font-semibold">
+                                Import Data
+                            </h3>
+
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <div>
-                                    <Label className="mb-1.5 block">
-                                        Default Negara PDF
+                                    <Label className="mb-2 block text-sm">
+                                        Default Negara
                                     </Label>
                                     <Select
                                         value={pdfDefaultCountryId || 'none'}
@@ -2964,8 +3082,8 @@ export default function ProductCategoryHotel({
                                             )
                                         }
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Pilih jika PDF tidak mencantumkan negara" />
+                                        <SelectTrigger className="text-sm">
+                                            <SelectValue placeholder="Tidak ditentukan" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="none">
@@ -2983,15 +3101,15 @@ export default function ProductCategoryHotel({
                                     </Select>
                                 </div>
                                 <div>
-                                    <Label className="mb-1.5 block">
-                                        Mata Uang Kolektif
+                                    <Label className="mb-2 block text-sm">
+                                        Mata Uang
                                     </Label>
                                     <Select
                                         value={pdfDefaultCurrency || 'none'}
                                         onValueChange={applyCollectiveCurrency}
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Pilih jika PDF tidak mencantumkan mata uang" />
+                                        <SelectTrigger className="text-sm">
+                                            <SelectValue placeholder="Tidak ditentukan" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="none">
@@ -3002,43 +3120,65 @@ export default function ProductCategoryHotel({
                                                     key={currency.code}
                                                     value={currency.code}
                                                 >
-                                                    {currency.code} -{' '}
-                                                    {currency.name}
+                                                    {currency.code}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                                Negara dipakai sebagai default saat PDF tidak
-                                lengkap. Mata uang langsung diterapkan ke semua
-                                draft dan status validasi diperbarui otomatis.
-                            </p>
-                            <div className="grid gap-2 md:grid-cols-3">
+
+                            <div className="grid gap-2 sm:grid-cols-3">
                                 <Button
                                     type="button"
                                     variant="outline"
+                                    size="sm"
                                     onClick={downloadBulkTemplate}
                                     className="w-full"
                                 >
-                                    Download Template Excel
+                                    Download Template
                                 </Button>
-                                <div className="space-y-1.5">
-                                    <Label>Upload CSV / Excel / PDF</Label>
+                                <div>
+                                    <Label className="mb-1.5 block text-xs font-medium">
+                                        Upload File
+                                    </Label>
                                     <div className="relative">
-                                        <Input
+                                        <input
+                                            ref={(ref) => {
+                                                if (ref) {
+                                                    ref.addEventListener(
+                                                        'dragover',
+                                                        (e) => {
+                                                            e.preventDefault();
+                                                            ref.classList.add(
+                                                                'border-primary',
+                                                                'bg-primary/5',
+                                                            );
+                                                        },
+                                                    );
+                                                    ref.addEventListener(
+                                                        'dragleave',
+                                                        (e) => {
+                                                            e.preventDefault();
+                                                            ref.classList.remove(
+                                                                'border-primary',
+                                                                'bg-primary/5',
+                                                            );
+                                                        },
+                                                    );
+                                                }
+                                            }}
                                             type="file"
                                             aria-label="Upload CSV, Excel, atau PDF"
                                             accept=".xlsx,.xls,.csv,.pdf"
                                             onChange={importBulkFile}
                                             disabled={isImporting}
-                                            className="w-full"
+                                            className="w-full text-sm transition-colors duration-200"
                                         />
                                         {isImporting ? (
-                                            <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/90 text-sm font-medium">
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Reading file...
+                                            <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/90 text-xs font-medium">
+                                                <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                                                Membaca...
                                             </div>
                                         ) : null}
                                     </div>
@@ -3046,6 +3186,7 @@ export default function ProductCategoryHotel({
                                 <Button
                                     type="button"
                                     variant="outline"
+                                    size="sm"
                                     onClick={() =>
                                         bulkForm.setData('hotels', [
                                             ...bulkForm.data.hotels,
@@ -3054,55 +3195,39 @@ export default function ProductCategoryHotel({
                                     }
                                     className="w-full"
                                 >
-                                    Tambah Baris Hotel
+                                    + Tambah Baris
                                 </Button>
                             </div>
                         </div>
 
+                        {/* Summary Section */}
                         {importSummary ? (
-                            <div className="grid gap-2 rounded-xl border border-border/40 bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
-                                <ImportSummaryItem
-                                    label="Hotel terdeteksi"
-                                    value={importSummary.hotels_detected}
-                                />
-                                <ImportSummaryItem
-                                    label="Periode terdeteksi"
-                                    value={importSummary.periods_detected}
-                                />
-                                <ImportSummaryItem
-                                    label="Hotel baru"
-                                    value={importSummary.hotels_to_create}
-                                />
-                                <ImportSummaryItem
-                                    label="Hotel existing"
-                                    value={importSummary.hotels_existing}
-                                />
-                                <ImportSummaryItem
-                                    label="Periode baru"
-                                    value={importSummary.periods_to_create}
-                                />
-                                <ImportSummaryItem
-                                    label="Rate berubah"
-                                    value={importSummary.rates_to_update}
-                                />
-                                <ImportSummaryItem
-                                    label="Tanpa perubahan"
-                                    value={importSummary.rates_unchanged}
-                                />
-                                <ImportSummaryItem
-                                    label="Perlu diperiksa"
-                                    value={
-                                        draftIssueSummary.warnings +
-                                        draftIssueSummary.conflicts
-                                    }
-                                    attention={
-                                        draftIssueSummary.warnings > 0 ||
-                                        draftIssueSummary.conflicts > 0
-                                    }
-                                />
+                            <div className="rounded-lg border border-border/40 bg-background p-4">
+                                <h3 className="mb-3 text-sm font-semibold">
+                                    Ringkasan Import
+                                </h3>
+                                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                    <ImportSummaryItem
+                                        label="Hotel"
+                                        value={importSummary.hotels_detected}
+                                    />
+                                    <ImportSummaryItem
+                                        label="Periode"
+                                        value={importSummary.periods_detected}
+                                    />
+                                    <ImportSummaryItem
+                                        label="Baru"
+                                        value={importSummary.hotels_to_create}
+                                    />
+                                    <ImportSummaryItem
+                                        label="Update"
+                                        value={importSummary.rates_to_update}
+                                    />
+                                </div>
                             </div>
                         ) : null}
 
+                        {/* Hotels List Section */}
                         <div className="space-y-4">
                             {bulkForm.data.hotels.map(
                                 (hotelItem, hotelIndex) => {
@@ -3318,7 +3443,8 @@ export default function ProductCategoryHotel({
                                                                 hotelIndex,
                                                                 'currency',
                                                                 value === 'none'
-                                                                    ? defaultCurrency
+                                                                    ? pdfDefaultCurrency ||
+                                                                          defaultCurrency
                                                                     : value,
                                                             )
                                                         }

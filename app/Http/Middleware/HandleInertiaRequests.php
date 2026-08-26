@@ -209,6 +209,8 @@ class HandleInertiaRequests extends Middleware
                     'duration_days' => $package->duration_days,
                     'price' => $package->price,
                     'original_price' => $package->original_price,
+                    'discount_type' => $package->discount_type ?? 'percent',
+                    'discount_nominal' => $package->discount_nominal,
                     'discount_label' => $package->discount_label,
                     'discount_percent' => $package->discountPercent(),
                     'currency' => $package->currency,

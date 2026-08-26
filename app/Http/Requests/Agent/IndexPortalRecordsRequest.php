@@ -24,8 +24,11 @@ class IndexPortalRecordsRequest extends FormRequest
         };
 
         return [
-            'search' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', 'string', Rule::in($statuses)],
-            'from' => ['nullable', 'date'], 'to' => ['nullable', 'date', 'after_or_equal:from'], 'page' => ['nullable', 'integer', 'min:1'],
+            'search' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'string', Rule::in($statuses)],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+            'page' => ['nullable', 'integer', 'min:1'],
         ];
     }
 }

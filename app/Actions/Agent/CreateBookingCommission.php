@@ -8,6 +8,10 @@ use App\Models\Booking;
 
 class CreateBookingCommission
 {
+    /**
+     * Create or update booking commission based on agent package fee configuration.
+     * Handles commission calculation for percentage or per-pax fee types.
+     */
     public function handle(Booking $booking, ?AgentPackageFee $configuredFee = null): ?AgentCommission
     {
         $existingCommission = AgentCommission::query()->where('booking_id', $booking->id)->first();

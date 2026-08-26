@@ -138,6 +138,8 @@ class StorePackageRequest extends FormRequest
             'duration_days' => ['required', 'integer', 'min:1'],
             'price' => ['required', 'numeric', 'min:0'],
             'original_price' => ['nullable', 'numeric', 'min:0', 'gt:price'],
+            'discount_type' => ['nullable', 'string', Rule::in(['percent', 'nominal'])],
+            'discount_nominal' => ['nullable', 'numeric', 'min:0'],
             'discount_label' => ['nullable', 'string', 'max:50'],
             'discount_ends_at' => ['nullable', 'date'],
             'currency' => ['required', 'string', 'size:3'],

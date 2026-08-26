@@ -4,7 +4,9 @@ import {
     getPublicAddress,
     getPublicEmail,
     getPublicPhoneNumber,
+    hasPackageDiscount,
     localize,
+    packageDiscountLabel,
     usePublicData,
     usePublicPageContent,
     whatsappLinkFromSeo,
@@ -1235,6 +1237,15 @@ export default function PublicHomeLanding() {
                                             pkg.price,
                                             pkg.currency,
                                         );
+                                    const hasDiscount = hasPackageDiscount(pkg);
+                                    const discountLabel =
+                                        packageDiscountLabel(pkg);
+                                    const originalPriceLabel = hasDiscount
+                                        ? formatCompactPackagePrice(
+                                              pkg.original_price,
+                                              pkg.currency,
+                                          )
+                                        : '';
                                     const ratingAvg = Number(
                                         pkg.rating_avg ?? 0,
                                     );
@@ -1249,13 +1260,10 @@ export default function PublicHomeLanding() {
                                             variants={cardVariants}
                                         >
                                             <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
-                                                {pkg.original_price ? (
+                                                {hasDiscount ? (
                                                     <div className="inline-flex items-center gap-1 rounded-full bg-rose-600/95 px-3 py-1 text-[11px] font-extrabold text-white shadow-sm ring-1 ring-white/20">
                                                         <Zap className="h-3.5 w-3.5" />
-                                                        {pkg.discount_label ??
-                                                            (pkg.discount_percent
-                                                                ? `HEMAT ${pkg.discount_percent}%`
-                                                                : 'DISKON')}
+                                                        {discountLabel}
                                                     </div>
                                                 ) : null}
 
@@ -1328,10 +1336,19 @@ export default function PublicHomeLanding() {
                                                 </div>
 
                                                 <div className="mt-auto border-t border-black/10 pt-3">
-                                                    <div className="flex items-baseline justify-between gap-3">
-                                                        <p className="text-lg font-extrabold text-[#64132e]">
-                                                            {priceLabel}
-                                                        </p>
+                                                    <div className="flex items-end justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-lg font-extrabold text-[#64132e]">
+                                                                {priceLabel}
+                                                            </p>
+                                                            {originalPriceLabel ? (
+                                                                <p className="mt-0.5 text-xs font-semibold text-[#2a120c]/45 line-through">
+                                                                    {
+                                                                        originalPriceLabel
+                                                                    }
+                                                                </p>
+                                                            ) : null}
+                                                        </div>
                                                         <Link
                                                             href={`/paket-umroh/${String(
                                                                 pkg.slug ?? '',

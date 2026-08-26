@@ -17,12 +17,13 @@ class HotelImportReconciliationService
     {
         $countries = HotelCountry::query()->where('is_active', true)->get(['id', 'name']);
         $cities = HotelCity::query()->with('country:id,name')->where('is_active', true)->get(['id', 'country_id', 'name']);
+        $knownHotels = Hotel::withTrashed()->get(['id', 'city_id', 'name']);
         $defaultCountry = $defaultCountryId !== null ? $countries->firstWhere('id', $defaultCountryId) : null;
         $grouped = [];
 
         foreach ($rows as $rowIndex => $row) {
-            $resolved = $this->resolveLocation($row, $countries, $cities, $defaultCountry?->id);
             $hotelName = $this->clean((string) data_get($row, 'hotel'));
+            $resolved = $this->resolveLocation($row, $countries, $cities, $knownHotels, $hotelName, $defaultCountry?->id);
             $currency = strtoupper($this->clean((string) (data_get($row, 'currency') ?: $defaultCurrency)));
             $groupKey = implode('|', [
                 $resolved['country_id'] ?: 'country:'.$this->normalize((string) data_get($row, 'country')),
@@ -38,6 +39,7 @@ class HotelImportReconciliationService
                     'currency' => $currency,
                     'is_active' => true,
                     'existing_hotel_id' => null,
+                    'existing_currency' => null,
                     'import_status' => 'create',
                     'warnings' => [],
                     'conflicts' => [],
@@ -115,6 +117,19 @@ class HotelImportReconciliationService
                 $hotelDraft['conflicts'][] = 'Mata uang belum ditentukan.';
             }
 
+            // Try to match existing hotel to get city/country if missing
+            if ((! $hotelDraft['city_id'] || ! $hotelDraft['country_id']) && $hotelDraft['name'] !== '') {
+                $hotelMatch = $this->uniqueHotelNameMatch($existingHotels, $hotelDraft['name']);
+                if ($hotelMatch['hotel']) {
+                    // Use existing hotel's city and country
+                    $hotelDraft['city_id'] = (string) $hotelMatch['hotel']->city_id;
+                    $hotelDraft['country_id'] = (string) $hotelMatch['hotel']->country->id;
+                    if ($hotelMatch['fuzzy']) {
+                        $hotelDraft['warnings'][] = "Kota & negara diambil dari hotel existing {$hotelMatch['hotel']->name}.";
+                    }
+                }
+            }
+
             if (! $hotelDraft['city_id'] || ! $hotelDraft['country_id']) {
                 $hotelDraft['conflicts'][] = 'Negara atau kota belum cocok dengan data master.';
                 $hotelDraft['import_status'] = 'conflict';
@@ -122,10 +137,8 @@ class HotelImportReconciliationService
                 continue;
             }
 
-            $existingHotel = $existingHotels->first(
-                fn (Hotel $hotel): bool => (int) $hotel->city_id === (int) $hotelDraft['city_id']
-                    && $this->normalize($hotel->name) === $this->normalize($hotelDraft['name'])
-            );
+            $hotelMatch = $this->uniqueHotelNameMatch($existingHotels, $hotelDraft['name'], (int) $hotelDraft['city_id']);
+            $existingHotel = $hotelMatch['hotel'];
 
             if (! $existingHotel) {
                 foreach ($hotelDraft['period_rates'] as &$period) {
@@ -138,7 +151,13 @@ class HotelImportReconciliationService
                 continue;
             }
 
+            if ($hotelMatch['fuzzy']) {
+                $hotelDraft['warnings'][] = "Nama {$hotelDraft['name']} dicocokkan dengan hotel existing {$existingHotel->name}; periksa ejaan sebelum menyimpan.";
+                $hotelDraft['warnings'] = array_values(array_unique($hotelDraft['warnings']));
+            }
+
             $hotelDraft['existing_hotel_id'] = $existingHotel->id;
+            $hotelDraft['existing_currency'] = strtoupper($existingHotel->currency);
             if ($existingHotel->trashed() || ! $existingHotel->is_active) {
                 $hotelDraft['conflicts'][] = 'Hotel ditemukan dalam kondisi nonaktif atau sudah dihapus. Data tidak akan diubah otomatis.';
                 $hotelDraft['import_status'] = 'conflict';
@@ -146,14 +165,18 @@ class HotelImportReconciliationService
                 continue;
             }
 
-            if (strtoupper($existingHotel->currency) !== $hotelDraft['currency']) {
-                $hotelDraft['conflicts'][] = "Konflik mata uang: database {$existingHotel->currency}, file {$hotelDraft['currency']}.";
-                $hotelDraft['import_status'] = 'conflict';
-
-                continue;
+            if ($defaultCurrency !== null) {
+                $hotelDraft['currency'] = strtoupper($defaultCurrency);
             }
 
-            $hotelHasChanges = false;
+            $currencyWillChange = $hotelDraft['currency'] !== ''
+                && strtoupper($existingHotel->currency) !== $hotelDraft['currency'];
+
+            if ($currencyWillChange) {
+                $hotelDraft['warnings'][] = "Mata uang hotel existing akan diperbarui dari {$existingHotel->currency} menjadi {$hotelDraft['currency']} saat disimpan.";
+            }
+
+            $hotelHasChanges = $currencyWillChange;
             foreach ($hotelDraft['period_rates'] as &$period) {
                 $exactPeriodPrices = $existingHotel->prices
                     ->filter(fn ($price): bool => ! $price->trashed()
@@ -164,11 +187,10 @@ class HotelImportReconciliationService
                 if ($exactPeriodPrices->isEmpty()) {
                     $period['import_status'] = 'new_period';
                     $hotelHasChanges = true;
-                    $this->addMissingRateWarnings($period, $hotelDraft['name']);
 
                     if ($this->overlapsExistingPeriod($existingHotel, $period)) {
-                        $period['warnings'][] = 'Periode baru bertumpang tindih dengan periode yang sudah ada.';
-                        $hotelDraft['warnings'][] = "Periode {$period['period_start']} sampai {$period['period_end']} bertumpang tindih.";
+                        // Don't warn about overlap - it's normal for existing hotels
+                        // Just mark as new_period, rates will be added
                     }
 
                     continue;
@@ -184,8 +206,8 @@ class HotelImportReconciliationService
                     $action = 'no_change';
 
                     if ($incoming === null) {
-                        $action = $existing !== null ? 'keep_existing' : 'warning';
-                        $period['warnings'][] = strtoupper($roomType).' tidak terbaca; nilai existing tidak akan ditimpa.';
+                        // Rate not readable - keep existing (no warning needed)
+                        $action = $existing !== null ? 'keep_existing' : 'no_change';
                     } elseif ($existing === null) {
                         $action = 'create';
                         $periodChanged = true;
@@ -227,10 +249,17 @@ class HotelImportReconciliationService
      * @param  array<string, mixed>  $row
      * @param  Collection<int, HotelCountry>  $countries
      * @param  Collection<int, HotelCity>  $cities
+     * @param  Collection<int, Hotel>  $knownHotels
      * @return array{country_id: string, city_id: string, warnings: array<int, string>}
      */
-    private function resolveLocation(array $row, Collection $countries, Collection $cities, ?int $defaultCountryId): array
-    {
+    private function resolveLocation(
+        array $row,
+        Collection $countries,
+        Collection $cities,
+        Collection $knownHotels,
+        string $hotelName,
+        ?int $defaultCountryId,
+    ): array {
         $warnings = [];
         $countryName = $this->clean((string) data_get($row, 'country'));
         $cityName = $this->clean((string) data_get($row, 'city'));
@@ -250,6 +279,24 @@ class HotelImportReconciliationService
             ? $cityCandidates->firstWhere('country_id', $countryId)
             : ($cityCandidates->count() === 1 ? $cityCandidates->first() : null);
 
+        if (! $city && $cityName === '' && $hotelName !== '') {
+            $eligibleCityIds = $countryId !== null
+                ? $cities->where('country_id', $countryId)->pluck('id')
+                : $cities->pluck('id');
+            $hotelMatch = $this->uniqueHotelNameMatch(
+                $knownHotels->whereIn('city_id', $eligibleCityIds),
+                $hotelName,
+            );
+            if ($hotelMatch['hotel']) {
+                $city = $cities->firstWhere('id', $hotelMatch['hotel']->city_id);
+                if ($city) {
+                    $countryId = $city->country_id;
+                    $matchLabel = $hotelMatch['fuzzy'] ? "hotel existing {$hotelMatch['hotel']->name}" : 'nama hotel existing';
+                    $warnings[] = "Kota {$city->name} ditentukan dari {$matchLabel}; periksa sebelum menyimpan.";
+                }
+            }
+        }
+
         if (! $city) {
             $warnings[] = $cityName !== '' ? "Kota {$cityName} tidak ditemukan atau ambigu." : 'Kota belum terdeteksi.';
         }
@@ -259,6 +306,51 @@ class HotelImportReconciliationService
             'city_id' => $city?->id ? (string) $city->id : '',
             'warnings' => $warnings,
         ];
+    }
+
+    /**
+     * @param  Collection<int, Hotel>  $hotels
+     * @return array{hotel: Hotel|null, fuzzy: bool}
+     */
+    private function uniqueHotelNameMatch(Collection $hotels, string $name, ?int $cityId = null): array
+    {
+        $normalizedName = $this->normalize($name);
+        $candidates = $hotels->when(
+            $cityId !== null,
+            fn (Collection $items): Collection => $items->filter(
+                fn (Hotel $hotel): bool => (int) $hotel->city_id === $cityId
+            ),
+        );
+
+        // Exact match first
+        $exact = $candidates->filter(
+            fn (Hotel $hotel): bool => $this->normalize($hotel->name) === $normalizedName
+        );
+        if ($exact->count() === 1) {
+            return ['hotel' => $exact->first(), 'fuzzy' => false];
+        }
+
+        // Don't fuzzy match if name too short or exact matches exist
+        if ($exact->isNotEmpty() || mb_strlen($normalizedName) < 5) {
+            return ['hotel' => null, 'fuzzy' => false];
+        }
+
+        // Fuzzy match using similarity percentage (more strict than Levenshtein distance)
+        // Only match if similarity > 85%
+        $fuzzy = $candidates->filter(function (Hotel $hotel) use ($normalizedName): bool {
+            $hotelNormalized = $this->normalize($hotel->name);
+            $distance = levenshtein($normalizedName, $hotelNormalized);
+            $maxLen = max(mb_strlen($normalizedName), mb_strlen($hotelNormalized));
+
+            // Calculate similarity percentage: 100% - (distance / maxLen * 100)
+            $similarity = (1 - ($distance / $maxLen)) * 100;
+
+            return $similarity >= 85;
+        });
+
+        return $fuzzy->count() === 1
+            ? ['hotel' => $fuzzy->first(), 'fuzzy' => true]
+            : ['hotel' => null, 'fuzzy' => false];
     }
 
     /** @param array<string, mixed> $left @param array<string, mixed> $right */
@@ -273,26 +365,16 @@ class HotelImportReconciliationService
         return false;
     }
 
-    /** @param array<string, mixed> $period */
+    /**
+     * Add warnings for missing rate values that couldn't be read from source.
+     * Only warn if rate is critical or affects existing data.
+     *
+     * @param  array<string, mixed>  $period
+     */
     private function addMissingRateWarnings(array &$period, string $hotelName): void
     {
-        foreach (['dbl_price' => 'DBL', 'trpl_price' => 'TRPL', 'quad_price' => 'QUAD'] as $field => $label) {
-            $warningLabels = match ($label) {
-                'DBL' => ['RATE DBL', 'RATE DOUBLE'],
-                'TRPL' => ['RATE TRPL', 'RATE TRIPLE'],
-                default => ['RATE QUAD'],
-            };
-            $alreadyWarned = collect($period['warnings'])->contains(
-                fn (string $warning): bool => collect($warningLabels)
-                    ->contains(fn (string $warningLabel): bool => str_contains(strtoupper($warning), $warningLabel))
-            );
-
-            if ($period[$field] === null && ! $alreadyWarned) {
-                $period['warnings'][] = "{$hotelName} - periode {$period['period_start']} sampai {$period['period_end']}: rate {$label} tidak terbaca dan dikosongkan.";
-            }
-        }
-
-        $period['warnings'] = array_values(array_unique($period['warnings']));
+        // Don't add warnings for null rates - it's normal for PDF parsing
+        // Null rates will simply be skipped during import (not stored as 0)
     }
 
     /** @param array<string, mixed> $period */

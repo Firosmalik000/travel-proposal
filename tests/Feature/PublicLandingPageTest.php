@@ -32,6 +32,8 @@ class PublicLandingPageTest extends TestCase
             ],
             'price' => 29029000,
             'original_price' => 31000000,
+            'discount_type' => 'nominal',
+            'discount_nominal' => 1971000,
             'content' => [
                 'room_prices' => [
                     'quad' => 33500000,
@@ -50,6 +52,8 @@ class PublicLandingPageTest extends TestCase
                 ->where('travelPackage.id', $package->id)
                 ->where('travelPackage.slug', 'umroh-basic-landing')
                 ->where('travelPackage.price', 29029000.0)
+                ->where('travelPackage.discount_type', 'nominal')
+                ->where('travelPackage.discount_nominal', 1971000.0)
                 ->where('travelPackage.content.room_prices.quad', 33500000));
     }
 
@@ -84,7 +88,9 @@ class PublicLandingPageTest extends TestCase
             'slug' => 'umroh-promo-landing',
             'price' => 31900000,
             'original_price' => 35900000,
-            'discount_label' => 'Promo Spesial',
+            'discount_type' => 'nominal',
+            'discount_nominal' => 4000000,
+            'discount_label' => null,
         ]);
 
         DepartureSchedule::query()->create([
@@ -106,7 +112,9 @@ class PublicLandingPageTest extends TestCase
                 ->has('publicData.packages', 1)
                 ->where('publicData.packages.0.slug', 'umroh-promo-landing')
                 ->where('publicData.packages.0.original_price', '35900000.00')
-                ->where('publicData.packages.0.discount_label', 'Promo Spesial')
+                ->where('publicData.packages.0.discount_type', 'nominal')
+                ->where('publicData.packages.0.discount_nominal', '4000000.00')
+                ->where('publicData.packages.0.discount_label', null)
                 ->where('publicData.packages.0.discount_percent', 11));
     }
 

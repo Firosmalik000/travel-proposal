@@ -12,10 +12,23 @@ use Throwable;
 class PdfTextExtractor
 {
     /**
+     * Extract text from PDF file with bounding box information.
+     *
      * @return array<int, array<int, array{text: string, x_min: float, y_min: float, x_max: float, y_max: float}>>
+     *
+     * @throws RuntimeException
      */
     public function extract(string $pdfPath): array
     {
+        if (! is_file($pdfPath)) {
+            throw new RuntimeException("File PDF tidak ditemukan: {$pdfPath}");
+        }
+
+        $fileSize = filesize($pdfPath);
+        if ($fileSize === false || $fileSize === 0) {
+            throw new RuntimeException('File PDF kosong atau tidak dapat dibaca.');
+        }
+
         $binary = $this->resolveBinary();
         $supportsBoundingBoxes = $this->supportsBoundingBoxes($binary);
         $arguments = $supportsBoundingBoxes
@@ -26,7 +39,7 @@ class PdfTextExtractor
             $result = Process::timeout((int) config('services.hotel_pdf.timeout', 30))
                 ->run($arguments);
         } catch (ProcessTimedOutException) {
-            throw new RuntimeException('Proses membaca PDF melewati batas waktu.');
+            throw new RuntimeException('Proses membaca PDF melewati batas waktu (timeout). PDF mungkin terlalu besar atau kompleks.');
         } catch (Throwable $exception) {
             throw new RuntimeException('PDF parser dependency "pdftotext" tidak tersedia pada server.', previous: $exception);
         }
@@ -38,7 +51,11 @@ class PdfTextExtractor
                 throw new RuntimeException('PDF terenkripsi atau dilindungi password dan tidak dapat dibaca.');
             }
 
-            throw new RuntimeException('PDF tidak valid atau gagal diekstrak.');
+            if (str_contains($error, 'command not found') || str_contains($error, 'no such file')) {
+                throw new RuntimeException('PDF parser "pdftotext" tidak ditemukan di server.');
+            }
+
+            throw new RuntimeException('PDF tidak valid, corrupt, atau format tidak didukung.');
         }
 
         return $supportsBoundingBoxes

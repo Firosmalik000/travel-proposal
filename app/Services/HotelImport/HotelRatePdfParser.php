@@ -31,19 +31,52 @@ class HotelRatePdfParser
         $rows = [];
         $cityContext = null;
         $currencyContext = $defaultCurrency !== null ? strtoupper($defaultCurrency) : null;
+        $parsedTablePage = false;
         $this->cityLookup = self::CITY_ALIASES;
         foreach ($knownCities as $city) {
             $this->cityLookup[$this->normalize((string) $city)] = (string) $city;
         }
 
+        if ($currencyContext === null) {
+            foreach ($pages as $words) {
+                $currencyContext = $this->detectCurrency(implode(' ', array_column($words, 'text')));
+                if ($currencyContext !== null) {
+                    break;
+                }
+            }
+        }
+
         foreach ($pages as $pageNumber => $words) {
             $lines = $this->groupWordsIntoLines($words);
 
-            foreach ($lines as $lineIndex => $line) {
+            foreach ($lines as $line) {
                 $detectedCity = $this->detectCity($line['text']);
                 if ($detectedCity !== null) {
                     $cityContext = $detectedCity;
                 }
+            }
+
+            if ((bool) data_get($words, '0.layout_fallback', false)) {
+                $fallbackRows = $this->parseLayoutFallbackPage(
+                    $lines,
+                    (int) $pageNumber,
+                    $defaultCountry,
+                    $currencyContext,
+                    $cityContext,
+                );
+
+                if ($fallbackRows !== []) {
+                    array_push($rows, ...$fallbackRows);
+                    $parsedTablePage = true;
+                } elseif ($parsedTablePage && count($words) <= 10) {
+                    // A sparse separator page usually starts a new city section.
+                    $cityContext = null;
+                }
+
+                continue;
+            }
+
+            foreach ($lines as $lineIndex => $line) {
                 $detectedCurrency = $this->detectCurrency($line['text']);
                 if ($detectedCurrency !== null) {
                     $currencyContext = $detectedCurrency;
@@ -101,10 +134,247 @@ class HotelRatePdfParser
         }
 
         if ($rows === []) {
-            throw new RuntimeException('Tidak ada tabel rate hotel yang dapat dikenali dari PDF.');
+            throw new RuntimeException('Tidak ada tabel rate hotel yang dapat dikenali dari PDF. Pastikan PDF berisi tabel dengan kolom: periode (From-To), DBL, TRPL, QUAD, dan data hotel name.');
         }
 
         return $rows;
+    }
+
+    /**
+     * The old Xpdf fallback reconstructs rows from character positions. Hotel names and
+     * prices can land on adjacent rows, so each table block is parsed as ordered columns.
+     *
+     * @param  array<int, array{text: string, y: float, words: array<int, array<string, mixed>>}>  $lines
+     * @return array<int, array<string, mixed>>
+     */
+    private function parseLayoutFallbackPage(
+        array $lines,
+        int $pageNumber,
+        ?string $defaultCountry,
+        ?string $currency,
+        ?string $city,
+    ): array {
+        $headers = [];
+        foreach ($lines as $lineIndex => $line) {
+            $anchors = $this->detectFallbackHeaderAnchors($lines, $lineIndex);
+            if ($anchors !== null) {
+                $headers[$lineIndex] = $anchors;
+            }
+        }
+
+        if ($headers === []) {
+            return [];
+        }
+
+        $rows = [];
+        $headerIndexes = array_keys($headers);
+        foreach ($headerIndexes as $headerOffset => $headerIndex) {
+            $anchors = $headers[$headerIndex];
+            $endIndex = $headerIndexes[$headerOffset + 1] ?? count($lines);
+            $blockLines = array_slice($lines, $headerIndex + 1, $endIndex - $headerIndex - 1);
+            $hotelName = $this->detectFallbackHotelName($blockLines, $anchors['start'])
+                ?? $this->detectHotelName($lines, $headerIndex);
+            if ($hotelName === null) {
+                continue;
+            }
+
+            $periods = [];
+            $inlinePeriodRates = [];
+            $columnRates = ['dbl' => [], 'trpl' => [], 'quad' => []];
+            foreach ($blockLines as $line) {
+                $dates = [];
+                $numericValues = [];
+                foreach ($line['words'] as $word) {
+                    $date = $this->normalizeDate((string) $word['text']);
+                    if ($date !== null) {
+                        $dates[] = $date;
+                    } elseif (preg_match('/^\d[\d.,]*$/', trim((string) $word['text'])) === 1) {
+                        $price = $this->normalizePrice((string) $word['text']);
+                        if ($price !== null) {
+                            $numericValues[] = $price;
+                        }
+                    }
+                }
+                if (count($dates) >= 2) {
+                    $periods[] = ['start' => $dates[0], 'end' => $dates[1]];
+                    $rateKeys = collect($anchors)
+                        ->only(['dbl', 'trpl', 'quad'])
+                        ->filter(fn (?float $value): bool => $value !== null)
+                        ->sort()
+                        ->keys()
+                        ->values()
+                        ->all();
+                    if (count($numericValues) === count($rateKeys)) {
+                        $inlinePeriodRates[] = array_combine($rateKeys, $numericValues) ?: [];
+                    } else {
+                        $inlinePeriodRates[] = [];
+                    }
+                }
+
+                foreach ($line['words'] as $word) {
+                    $text = trim((string) $word['text']);
+                    if ($this->normalizeDate($text) !== null || preg_match('/^\d[\d.,]*$/', $text) !== 1) {
+                        continue;
+                    }
+
+                    $column = $this->fallbackRateColumn((float) $word['x_min'], $anchors);
+                    $price = $this->normalizePrice($text);
+                    if ($column !== null && $price !== null) {
+                        $columnRates[$column][] = $price;
+                    }
+                }
+            }
+
+            foreach ($columnRates as $key => $rates) {
+                $columnRates[$key] = $this->rejectFallbackRateOutliers($rates);
+            }
+
+            foreach ($periods as $periodIndex => $period) {
+                $warnings = [];
+                $rates = [];
+                foreach (['dbl' => 'Double', 'trpl' => 'Triple', 'quad' => 'Quad'] as $key => $label) {
+                    $hasInlineRate = array_key_exists($key, $inlinePeriodRates[$periodIndex] ?? []);
+                    $columnRateWasRejected = array_key_exists($periodIndex, $columnRates[$key])
+                        && $columnRates[$key][$periodIndex] === null;
+                    $rates[$key] = $hasInlineRate && ! $columnRateWasRejected
+                        ? $inlinePeriodRates[$periodIndex][$key]
+                        : ($columnRates[$key][$periodIndex] ?? null);
+                    if ($rates[$key] === null) {
+                        $warnings[] = "{$hotelName} - periode {$period['start']} sampai {$period['end']}: rate {$label} tidak dapat dibaca. Nilai dikosongkan.";
+                    }
+                }
+                if ($period['end'] < $period['start']) {
+                    $warnings[] = "Tanggal akhir {$period['end']} sebelum tanggal mulai {$period['start']}.";
+                }
+                if ($city === null) {
+                    $warnings[] = "Kota tidak terdeteksi untuk {$hotelName} pada halaman {$pageNumber}.";
+                }
+                if ($currency === null || trim($currency) === '') {
+                    $warnings[] = "Mata uang tidak terdeteksi untuk {$hotelName}.";
+                }
+
+                $rows[] = [
+                    'country' => $defaultCountry,
+                    'city' => $city,
+                    'hotel' => $hotelName,
+                    'currency' => $currency,
+                    'period_start' => $period['start'],
+                    'period_end' => $period['end'],
+                    'dbl' => $rates['dbl'],
+                    'trpl' => $rates['trpl'],
+                    'quad' => $rates['quad'],
+                    'source' => 'pdf',
+                    'warnings' => array_values(array_unique($warnings)),
+                ];
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<int, array{text: string, y: float, words: array<int, array<string, mixed>>}>  $lines
+     * @return array{start: float, end: float, dbl: ?float, trpl: ?float, quad: ?float}|null
+     */
+    private function detectFallbackHeaderAnchors(array $lines, int $lineIndex): ?array
+    {
+        $lineTokens = array_map(fn (array $word): string => $this->normalize((string) $word['text']), $lines[$lineIndex]['words']);
+        $hasStart = collect($lineTokens)->contains(fn (string $token): bool => in_array($token, ['from', 'start'], true));
+        $hasEnd = collect($lineTokens)->contains(fn (string $token): bool => in_array($token, ['to', 'end'], true));
+        if (! $hasStart || ! $hasEnd) {
+            return null;
+        }
+
+        $headerWords = [];
+        for ($index = max(0, $lineIndex - 2); $index <= min(count($lines) - 1, $lineIndex + 2); $index++) {
+            foreach ($lines[$index]['words'] as $word) {
+                $token = $this->normalize((string) $word['text']);
+                if (in_array($token, ['from', 'start', 'to', 'end', 'dbl', 'double', 'trpl', 'trp', 'triple', 'quad', 'qd', 'quadruple'], true)) {
+                    $headerWords[] = $word;
+                }
+            }
+        }
+
+        return $this->detectHeaderAnchors($headerWords);
+    }
+
+    /**
+     * @param  array<int, array{text: string, y: float, words: array<int, array<string, mixed>>}>  $lines
+     */
+    private function detectFallbackHotelName(array $lines, float $startAnchor): ?string
+    {
+        $parts = [];
+        foreach ($lines as $line) {
+            if ($this->isFallbackStructuralLine($line['text'])) {
+                continue;
+            }
+
+            foreach ($line['words'] as $word) {
+                if ((float) $word['x_min'] >= $startAnchor - 6) {
+                    continue;
+                }
+
+                $text = trim((string) $word['text']);
+                $normalized = $this->normalize($text);
+                if (preg_match('/\pL/u', $text) !== 1 || in_array($normalized, ['hotel', 'hortel', 'hrotel'], true)) {
+                    continue;
+                }
+                $parts[] = $text;
+            }
+        }
+
+        $candidate = preg_replace('/\s+/', ' ', implode(' ', $parts)) ?: '';
+        $normalized = $this->normalize($candidate);
+        if ($candidate === '' || str_starts_with($normalized, 'update') || $this->isLikelyTableHeading($candidate)) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    private function isFallbackStructuralLine(string $text): bool
+    {
+        $normalized = $this->normalize($text);
+
+        return str_starts_with($normalized, 'update')
+            || (str_contains($normalized, 'period') && (str_contains($normalized, 'roomtype') || str_contains($normalized, 'mealplan')))
+            || in_array($normalized, ['hotel', 'hortel', 'hrotel', 'roomtype', 'mealplan'], true);
+    }
+
+    /**
+     * @param  array{start: float, end: float, dbl: ?float, trpl: ?float, quad: ?float}  $anchors
+     */
+    private function fallbackRateColumn(float $x, array $anchors): ?string
+    {
+        $rateAnchors = collect($anchors)
+            ->only(['dbl', 'trpl', 'quad'])
+            ->filter(fn (?float $value): bool => $value !== null)
+            ->sort()
+            ->all();
+        if ($rateAnchors === []) {
+            return null;
+        }
+
+        $entries = array_values(array_map(
+            fn (string $key, float $value): array => ['key' => $key, 'x' => $value],
+            array_keys($rateAnchors),
+            array_values($rateAnchors),
+        ));
+        foreach ($entries as $index => $entry) {
+            $left = $index === 0
+                ? ($anchors['end'] + $entry['x']) / 2
+                : ($entries[$index - 1]['x'] + $entry['x']) / 2;
+            $right = isset($entries[$index + 1])
+                ? ($entry['x'] + $entries[$index + 1]['x']) / 2
+                : $entry['x'] + ($index === 0
+                    ? max(24, ($entry['x'] - $anchors['end']) / 2)
+                    : ($entry['x'] - $entries[$index - 1]['x']) / 2);
+            if ($x >= $left && $x < $right) {
+                return $entry['key'];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -180,6 +450,9 @@ class HotelRatePdfParser
             if ($candidate === '' || $this->detectCity($candidate) !== null) {
                 continue;
             }
+            if (str_starts_with($normalized, 'update') || $this->detectHeaderAnchors($lines[$index]['words']) !== null) {
+                continue;
+            }
             if ($this->isLikelyTableHeading($candidate)) {
                 continue;
             }
@@ -190,10 +463,45 @@ class HotelRatePdfParser
                 continue;
             }
 
-            return preg_replace('/\s+/', ' ', $candidate) ?: null;
+            // Clean up common OCR errors
+            $cleaned = $this->cleanOcrHotelName($candidate);
+
+            return preg_replace('/\s+/', ' ', $cleaned) ?: null;
         }
 
         return null;
+    }
+
+    /**
+     * Clean up common OCR character mistakes in hotel names.
+     */
+    private function cleanOcrHotelName(string $name): string
+    {
+        // Common OCR character replacements
+        $replacements = [
+            // Letter confusion
+            'yrad' => 'yad',      // Ajyrad -> Ajyad
+            'Grarnd' => 'Grand',  // Al Massa Grarnd -> Al Massa Grand
+            'Odest' => 'Odrest',  // Odest -> Odrest
+            // Multiple character issues
+            'MAlil' => 'Mill',    // MAlilAlinqreeuemq -> Millineum
+            'inqreeuemq' => 'ineum',
+            'Alinq' => 'ium',
+            // Common patterns
+            'rn' => 'm',          // if obviously wrong
+            'ii' => 'n',          // double i to n
+            '1' => 'l',           // digit 1 to letter l (if in word context)
+            '0' => 'o',           // digit 0 to letter o
+        ];
+
+        $cleaned = $name;
+        foreach ($replacements as $from => $to) {
+            if (stripos($cleaned, $from) !== false) {
+                $cleaned = str_ireplace($from, $to, $cleaned);
+            }
+        }
+
+        return $cleaned;
     }
 
     private function isLikelyTableHeading(string $candidate): bool
@@ -274,6 +582,32 @@ class HotelRatePdfParser
         ];
     }
 
+    /**
+     * @param  array<int, int>  $rates
+     * @return array<int, int|null>
+     */
+    private function rejectFallbackRateOutliers(array $rates): array
+    {
+        if (count($rates) < 3) {
+            return $rates;
+        }
+
+        $sorted = $rates;
+        sort($sorted);
+        $middle = intdiv(count($sorted), 2);
+        $median = count($sorted) % 2 === 0
+            ? ($sorted[$middle - 1] + $sorted[$middle]) / 2
+            : $sorted[$middle];
+        if ($median <= 0) {
+            return $rates;
+        }
+
+        return array_map(
+            fn (int $rate): ?int => $rate > $median * 20 ? null : $rate,
+            $rates,
+        );
+    }
+
     private function normalizeDate(string $value): ?string
     {
         $value = trim($value);
@@ -322,6 +656,11 @@ class HotelRatePdfParser
             if (in_array($currency, $supported, true)) {
                 return $currency;
             }
+        }
+
+        $normalized = $this->normalize($value);
+        if (str_contains($normalized, 'saudiriyal') || str_contains($normalized, 'saudiriyals')) {
+            return 'SAR';
         }
 
         return null;

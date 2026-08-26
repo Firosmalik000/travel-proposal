@@ -7,7 +7,9 @@ import {
 import {
     formatDate,
     formatPrice,
+    hasPackageDiscount,
     localize,
+    packageDiscountLabel,
     whatsappLinkFromSeo,
 } from '@/lib/public/content';
 import {
@@ -92,6 +94,8 @@ export default function PaketDetail() {
     const seo = (seoSettings as Record<string, any>) ?? {};
     const pkg = travelPackage;
     const safePackage = pkg ?? ({} as TravelPackageData);
+    const hasDiscount = hasPackageDiscount(safePackage);
+    const discountLabel = packageDiscountLabel(safePackage);
     const content = safePackage.content ?? {};
     const name = localize(safePackage.name, locale);
     const summary = localize(safePackage.summary, locale);
@@ -373,12 +377,17 @@ export default function PaketDetail() {
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent lg:bg-gradient-to-r" />
                             {/* Discount ribbon */}
-                            {pkg.original_price && (
-                                <div className="absolute top-4 right-4 rounded-xl bg-red-500 px-3 py-1.5 text-sm font-bold text-white shadow-lg">
-                                    {pkg.discount_label ||
-                                        `HEMAT ${pkg.discount_percent}%`}
+                            {hasDiscount && discountLabel ? (
+                                <div
+                                    className={`absolute top-4 right-4 rounded-xl px-3 py-1.5 text-sm font-bold text-white shadow-lg ${
+                                        pkg.discount_type === 'percent'
+                                            ? 'bg-red-500'
+                                            : 'bg-amber-500'
+                                    }`}
+                                >
+                                    {discountLabel}
                                 </div>
-                            )}
+                            ) : null}
 
                             {packageImages.length > 1 ? (
                                 <div className="absolute right-0 bottom-0 left-0 z-10 p-3">
@@ -584,7 +593,7 @@ export default function PaketDetail() {
                                             pkg.currency,
                                         )}
                                     </span>
-                                    {pkg.original_price && (
+                                    {hasDiscount ? (
                                         <span className="text-base text-muted-foreground line-through">
                                             {formatPrice(
                                                 pkg.original_price,
@@ -592,11 +601,53 @@ export default function PaketDetail() {
                                                 pkg.currency,
                                             )}
                                         </span>
-                                    )}
+                                    ) : null}
                                 </div>
                                 <p className="mt-0.5 text-xs text-muted-foreground">
                                     per jamaah
                                 </p>
+
+                                {pkg.original_price &&
+                                    pkg.discount_type === 'nominal' &&
+                                    pkg.discount_nominal && (
+                                        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+                                            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                                                💰 Potongan Khusus: Rp
+                                                {pkg.discount_nominal.toLocaleString(
+                                                    'id-ID',
+                                                )}
+                                            </p>
+                                            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                                                Harga standar Rp
+                                                {pkg.original_price.toLocaleString(
+                                                    'id-ID',
+                                                )}{' '}
+                                                dikurangi dengan potongan khusus
+                                                Rp
+                                                {pkg.discount_nominal.toLocaleString(
+                                                    'id-ID',
+                                                )}{' '}
+                                                untuk setiap tipe kamar.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                {pkg.original_price &&
+                                    pkg.discount_type === 'percent' &&
+                                    pkg.discount_percent && (
+                                        <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/30">
+                                            <p className="text-xs font-semibold text-red-700 dark:text-red-300">
+                                                🎉 Diskon Spesial:{' '}
+                                                {pkg.discount_percent}%
+                                            </p>
+                                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                                                Hemat hingga{' '}
+                                                {pkg.discount_percent}% dari
+                                                harga normal dengan diskon
+                                                spesial ini.
+                                            </p>
+                                        </div>
+                                    )}
 
                                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                                     {roomTypePrices.map((roomType) => (

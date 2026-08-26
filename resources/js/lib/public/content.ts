@@ -194,6 +194,66 @@ export function formatPrice(
     }).format(numericValue);
 }
 
+type PackageDiscountData = {
+    currency?: string | null;
+    discount_label?: string | null;
+    discount_nominal?: number | string | null;
+    discount_percent?: number | string | null;
+    discount_type?: 'percent' | 'nominal' | null;
+    original_price?: number | string | null;
+    price?: number | string | null;
+};
+
+function numericPrice(
+    value: number | string | null | undefined,
+): number | null {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    const parsedValue = Number(value);
+
+    return Number.isFinite(parsedValue) ? parsedValue : null;
+}
+
+export function hasPackageDiscount(pkg: PackageDiscountData): boolean {
+    const price = numericPrice(pkg.price);
+    const originalPrice = numericPrice(pkg.original_price);
+
+    return price !== null && originalPrice !== null && originalPrice > price;
+}
+
+export function packageDiscountLabel(pkg: PackageDiscountData): string {
+    if (!hasPackageDiscount(pkg)) {
+        return '';
+    }
+
+    const customLabel = String(pkg.discount_label ?? '').trim();
+
+    if (customLabel) {
+        return customLabel;
+    }
+
+    if (pkg.discount_type === 'nominal') {
+        const nominal = numericPrice(pkg.discount_nominal);
+
+        return nominal && nominal > 0
+            ? `POTONGAN ${formatPrice(nominal, 'id', pkg.currency ?? 'IDR')}`
+            : 'POTONGAN HARGA';
+    }
+
+    const suppliedPercent = numericPrice(pkg.discount_percent);
+    const price = numericPrice(pkg.price);
+    const originalPrice = numericPrice(pkg.original_price);
+    const percent =
+        suppliedPercent ??
+        (price !== null && originalPrice
+            ? Math.round((1 - price / originalPrice) * 100)
+            : null);
+
+    return percent && percent > 0 ? `HEMAT ${percent}%` : 'DISKON';
+}
+
 export function formatDate(
     value: string | null | undefined,
     _locale: 'id' = 'id',

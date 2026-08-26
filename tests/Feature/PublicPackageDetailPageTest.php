@@ -48,4 +48,26 @@ class PublicPackageDetailPageTest extends TestCase
                 ->where('travelPackage.schedules.0.departure_date', now()->addDays(14)->toDateString())
             );
     }
+
+    public function test_it_exposes_nominal_discount_on_package_detail_page(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'price' => 28000000,
+            'original_price' => 32000000,
+            'discount_type' => 'nominal',
+            'discount_nominal' => 4000000,
+            'discount_label' => null,
+        ]);
+
+        $this->get(route('public.paket-detail', $package))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('public/paket/detail/index')
+                ->where('travelPackage.price', 28000000.0)
+                ->where('travelPackage.original_price', 32000000.0)
+                ->where('travelPackage.discount_type', 'nominal')
+                ->where('travelPackage.discount_nominal', 4000000.0)
+                ->where('travelPackage.discount_percent', 13)
+            );
+    }
 }

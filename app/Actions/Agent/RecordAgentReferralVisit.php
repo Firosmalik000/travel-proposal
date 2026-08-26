@@ -10,6 +10,9 @@ use Illuminate\Support\Str;
 
 class RecordAgentReferralVisit
 {
+    /**
+     * Record an agent referral visit from a visitor.
+     */
     public function handle(Request $request, AgentProfile $agent): void
     {
         $visitorToken = $request->cookie('agent_referral_visitor') ?: Str::uuid()->toString();

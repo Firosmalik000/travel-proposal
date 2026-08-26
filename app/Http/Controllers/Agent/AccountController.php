@@ -11,17 +11,28 @@ use Inertia\Response;
 
 class AccountController extends Controller
 {
+    /**
+     * Show agent account edit form.
+     */
     public function edit(): Response
     {
         $user = request()->user();
         $agent = $user->agentProfile;
 
         return Inertia::render('Agent/Account', ['profile' => [
-            'name' => $user->name, 'email' => $user->email, 'phone' => $agent->phone, 'referral_code' => $agent->referral_code,
-            'bank_name' => $agent->bank_name, 'bank_account_name' => $agent->bank_account_name, 'bank_account_number' => $agent->bank_account_number,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $agent->phone,
+            'referral_code' => $agent->referral_code,
+            'bank_name' => $agent->bank_name,
+            'bank_account_name' => $agent->bank_account_name,
+            'bank_account_number' => $agent->bank_account_number,
         ]]);
     }
 
+    /**
+     * Update agent profile and banking information.
+     */
     public function update(UpdateProfileRequest $request): RedirectResponse
     {
         $userData = $request->safe()->only(['name', 'email']);
@@ -32,11 +43,17 @@ class AccountController extends Controller
         return back()->with('success', 'Profil dan rekening berhasil diperbarui.');
     }
 
+    /**
+     * Show password change form.
+     */
     public function editPassword(): Response
     {
         return Inertia::render('Agent/Password');
     }
 
+    /**
+     * Update agent password.
+     */
     public function updatePassword(UpdatePasswordRequest $request): RedirectResponse
     {
         $request->user()->update(['password' => $request->validated('password')]);

@@ -10,7 +10,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class CommissionExportController extends Controller
 {
     /**
-     * Handle the incoming request.
+     * Export agent commissions to CSV file.
      */
     public function __invoke(IndexPortalRecordsRequest $request): StreamedResponse
     {
@@ -62,6 +62,10 @@ class CommissionExportController extends Controller
         ]);
     }
 
+    /**
+     * Escape values for safe spreadsheet display.
+     * Prevents formula injection attacks (=, +, -, @).
+     */
     private function spreadsheetSafe(?string $value): string
     {
         $value = (string) $value;

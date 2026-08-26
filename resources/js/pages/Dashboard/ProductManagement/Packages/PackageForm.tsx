@@ -260,6 +260,8 @@ function buildFormData(pkg: Package | null): PackageFormData {
         price: pkg?.price ?? 0,
         original_price: originalPrice,
         discount_percent: discountPercent,
+        discount_type: pkg?.discount_type ?? 'percent',
+        discount_nominal: pkg?.discount_nominal ?? '',
         discount_label: pkg?.discount_label ?? '',
         discount_ends_at: pkg?.discount_ends_at
             ? pkg.discount_ends_at.slice(0, 16)
@@ -1598,10 +1600,22 @@ export function PackageForm({
               ? packages.update(pkg.id).url
               : packages.store().url;
         const basePrice = Number(form.data.original_price) || 0;
-        const discountPercentValue = Number(form.data.discount_percent) || 0;
-        const hasDiscount = basePrice > 0 && discountPercentValue > 0;
+        const discountType = form.data.discount_type || 'percent';
+        const discountPercentValue =
+            discountType === 'percent'
+                ? Number(form.data.discount_percent) || 0
+                : 0;
+        const discountNominalValue =
+            discountType === 'nominal'
+                ? Number(form.data.discount_nominal) || 0
+                : 0;
+        const hasDiscount =
+            basePrice > 0 &&
+            (discountPercentValue > 0 || discountNominalValue > 0);
         const calculatedSellingPrice = hasDiscount
-            ? Math.round(basePrice * (1 - discountPercentValue / 100))
+            ? discountType === 'percent'
+                ? Math.round(basePrice * (1 - discountPercentValue / 100))
+                : Math.round(basePrice - discountNominalValue)
             : basePrice;
         const resolvedEstimate: PackageHppEstimate = {
             ...hppEstimate,
@@ -1659,24 +1673,48 @@ export function PackageForm({
                     ) ?? null,
             },
             room_prices: {
-                dbl: calculateDiscountedPrice(
-                    normalizeRoomPriceValue(
-                        String(roomOriginalPrices.dbl ?? ''),
-                    ),
-                    discountPercentValue,
-                ),
-                trpl: calculateDiscountedPrice(
-                    normalizeRoomPriceValue(
-                        String(roomOriginalPrices.trpl ?? ''),
-                    ),
-                    discountPercentValue,
-                ),
-                quad: calculateDiscountedPrice(
-                    normalizeRoomPriceValue(
-                        String(roomOriginalPrices.quad ?? ''),
-                    ),
-                    discountPercentValue,
-                ),
+                dbl:
+                    discountType === 'nominal'
+                        ? Math.max(
+                              0,
+                              (normalizeRoomPriceValue(
+                                  String(roomOriginalPrices.dbl ?? ''),
+                              ) ?? 0) - discountNominalValue,
+                          )
+                        : calculateDiscountedPrice(
+                              normalizeRoomPriceValue(
+                                  String(roomOriginalPrices.dbl ?? ''),
+                              ),
+                              discountPercentValue,
+                          ),
+                trpl:
+                    discountType === 'nominal'
+                        ? Math.max(
+                              0,
+                              (normalizeRoomPriceValue(
+                                  String(roomOriginalPrices.trpl ?? ''),
+                              ) ?? 0) - discountNominalValue,
+                          )
+                        : calculateDiscountedPrice(
+                              normalizeRoomPriceValue(
+                                  String(roomOriginalPrices.trpl ?? ''),
+                              ),
+                              discountPercentValue,
+                          ),
+                quad:
+                    discountType === 'nominal'
+                        ? Math.max(
+                              0,
+                              (normalizeRoomPriceValue(
+                                  String(roomOriginalPrices.quad ?? ''),
+                              ) ?? 0) - discountNominalValue,
+                          )
+                        : calculateDiscountedPrice(
+                              normalizeRoomPriceValue(
+                                  String(roomOriginalPrices.quad ?? ''),
+                              ),
+                              discountPercentValue,
+                          ),
             },
         });
 
@@ -1698,6 +1736,11 @@ export function PackageForm({
         formData.append('duration_days', String(form.data.duration_days));
         formData.append('price', String(calculatedSellingPrice));
         formData.append('original_price', hasDiscount ? String(basePrice) : '');
+        formData.append('discount_type', discountType);
+        formData.append(
+            'discount_nominal',
+            discountType === 'nominal' ? String(discountNominalValue) : '',
+        );
         formData.append('discount_label', form.data.discount_label ?? '');
         formData.append('discount_ends_at', form.data.discount_ends_at ?? '');
         formData.append('currency', form.data.currency);
@@ -1775,11 +1818,17 @@ export function PackageForm({
     }
 
     const basePrice = Number(form.data.original_price) || 0;
+    const discountType = form.data.discount_type || 'percent';
     const discountPercent = Number(form.data.discount_percent) || 0;
-    const hasDiscount = basePrice > 0 && discountPercent > 0;
-    const sellingPrice = hasDiscount
-        ? Math.round(basePrice * (1 - discountPercent / 100))
-        : basePrice;
+    const discountNominal = Number(form.data.discount_nominal) || 0;
+    const hasDiscount =
+        basePrice > 0 && (discountPercent > 0 || discountNominal > 0);
+    const sellingPrice =
+        discountType === 'nominal'
+            ? Math.max(0, basePrice - discountNominal)
+            : hasDiscount
+              ? Math.round(basePrice * (1 - discountPercent / 100))
+              : basePrice;
     const generatedCodePreview = buildPackageCodePreview(
         form.data['name.id'] || form.data['name.en'],
         Number(form.data.duration_days) || 0,
@@ -1815,18 +1864,36 @@ export function PackageForm({
             inferOriginalRoomPrice(roomPrices.quad ?? null, discountPercent),
     };
     const effectiveRoomSellingPrices = {
-        dbl: calculateDiscountedPrice(
-            effectiveRoomOriginalPrices.dbl ?? null,
-            discountPercent,
-        ),
-        trpl: calculateDiscountedPrice(
-            effectiveRoomOriginalPrices.trpl ?? null,
-            discountPercent,
-        ),
-        quad: calculateDiscountedPrice(
-            effectiveRoomOriginalPrices.quad ?? null,
-            discountPercent,
-        ),
+        dbl:
+            discountType === 'nominal'
+                ? Math.max(
+                      0,
+                      (effectiveRoomOriginalPrices.dbl ?? 0) - discountNominal,
+                  )
+                : calculateDiscountedPrice(
+                      effectiveRoomOriginalPrices.dbl ?? null,
+                      discountPercent,
+                  ),
+        trpl:
+            discountType === 'nominal'
+                ? Math.max(
+                      0,
+                      (effectiveRoomOriginalPrices.trpl ?? 0) - discountNominal,
+                  )
+                : calculateDiscountedPrice(
+                      effectiveRoomOriginalPrices.trpl ?? null,
+                      discountPercent,
+                  ),
+        quad:
+            discountType === 'nominal'
+                ? Math.max(
+                      0,
+                      (effectiveRoomOriginalPrices.quad ?? 0) - discountNominal,
+                  )
+                : calculateDiscountedPrice(
+                      effectiveRoomOriginalPrices.quad ?? null,
+                      discountPercent,
+                  ),
     };
     const hppEstimate = (contentObject.hpp_estimate ??
         {}) as PackageHppEstimate;
@@ -3380,356 +3447,559 @@ export function PackageForm({
                     <TabsContent value="harga" className="mt-4">
                         <SectionHeader icon={Tag} title="Harga dan Promosi" />
                         <FieldGroup>
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                                <Field
-                                    label="Harga Base / Single (IDR) *"
-                                    error={
-                                        errors.original_price || errors.price
-                                    }
-                                >
-                                    <div className="relative">
-                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                            Rp
-                                        </span>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            step={100000}
-                                            value={form.data.original_price}
-                                            onChange={(event) => {
-                                                const nextOriginalPrice = event
-                                                    .target.value
-                                                    ? Number(event.target.value)
-                                                    : '';
-                                                form.setData(
-                                                    'original_price',
-                                                    nextOriginalPrice,
-                                                );
-
-                                                if (!event.target.value) {
-                                                    form.setData(
-                                                        'discount_percent',
-                                                        '',
-                                                    );
-                                                }
-                                            }}
-                                            className="pl-8"
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                </Field>
-                                <Field label="Diskon (%)">
-                                    <div className="relative">
-                                        <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                            %
-                                        </span>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            max={99}
-                                            value={form.data.discount_percent}
-                                            onChange={(event) => {
-                                                const nextDiscountPercent =
-                                                    event.target.value
-                                                        ? Math.min(
-                                                              99,
-                                                              Math.max(
-                                                                  0,
-                                                                  Number(
+                            <div className="space-y-6">
+                                <div className="rounded-2xl border border-border bg-card p-6">
+                                    <h3 className="mb-4 text-sm font-semibold text-foreground">
+                                        Harga Dasar
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <Field
+                                            label="Harga Base / Single (IDR) *"
+                                            error={
+                                                errors.original_price ||
+                                                errors.price
+                                            }
+                                        >
+                                            <div className="relative">
+                                                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                    Rp
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={100000}
+                                                    value={
+                                                        form.data.original_price
+                                                    }
+                                                    onChange={(event) => {
+                                                        const nextOriginalPrice =
+                                                            event.target.value
+                                                                ? Number(
                                                                       event
                                                                           .target
                                                                           .value,
-                                                                  ),
-                                                              ),
-                                                          )
-                                                        : '';
-                                                form.setData(
-                                                    'discount_percent',
-                                                    nextDiscountPercent,
-                                                );
-                                            }}
-                                            className="pr-8"
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                </Field>
-                            </div>
+                                                                  )
+                                                                : '';
+                                                        form.setData(
+                                                            'original_price',
+                                                            nextOriginalPrice,
+                                                        );
 
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                                <Field label="Harga Asli Double (DBL)">
-                                    <div className="relative">
-                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                            Rp
-                                        </span>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            step={100000}
-                                            value={
-                                                effectiveRoomOriginalPrices.dbl ??
-                                                ''
-                                            }
-                                            onChange={(event) =>
-                                                updateRoomOriginalPrice(
-                                                    'dbl',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="pl-8"
-                                            placeholder="Isi manual jika diperlukan"
-                                        />
+                                                        if (
+                                                            !event.target.value
+                                                        ) {
+                                                            form.setData(
+                                                                'discount_percent',
+                                                                '',
+                                                            );
+                                                            form.setData(
+                                                                'discount_nominal',
+                                                                '',
+                                                            );
+                                                        }
+                                                    }}
+                                                    className="pl-8"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </Field>
                                     </div>
-                                </Field>
-                                <Field label="Harga Asli Triple (TRPL)">
-                                    <div className="relative">
-                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                            Rp
-                                        </span>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            step={100000}
-                                            value={
-                                                effectiveRoomOriginalPrices.trpl ??
-                                                ''
-                                            }
-                                            onChange={(event) =>
-                                                updateRoomOriginalPrice(
-                                                    'trpl',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="pl-8"
-                                            placeholder="Isi manual jika diperlukan"
-                                        />
-                                    </div>
-                                </Field>
-                                <Field label="Harga Asli Quad (QUAD)">
-                                    <div className="relative">
-                                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                                            Rp
-                                        </span>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            step={100000}
-                                            value={
-                                                effectiveRoomOriginalPrices.quad ??
-                                                ''
-                                            }
-                                            onChange={(event) =>
-                                                updateRoomOriginalPrice(
-                                                    'quad',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            className="pl-8"
-                                            placeholder="Isi manual jika diperlukan"
-                                        />
-                                    </div>
-                                </Field>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                                <Field label="Harga Jual Double (DBL)">
-                                    <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
-                                        {formatCurrencyInputPreview(
-                                            effectiveRoomSellingPrices.dbl ??
-                                                null,
-                                        )}
-                                    </div>
-                                </Field>
-                                <Field label="Harga Jual Triple (TRPL)">
-                                    <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
-                                        {formatCurrencyInputPreview(
-                                            effectiveRoomSellingPrices.trpl ??
-                                                null,
-                                        )}
-                                    </div>
-                                </Field>
-                                <Field label="Harga Jual Quad (QUAD)">
-                                    <div className="flex h-11 items-center rounded-xl border border-border bg-muted/30 px-3 text-sm font-medium text-foreground">
-                                        {formatCurrencyInputPreview(
-                                            effectiveRoomSellingPrices.quad ??
-                                                null,
-                                        )}
-                                    </div>
-                                </Field>
-                            </div>
-                            <div className="rounded-2xl border border-border bg-muted/20 p-4">
-                                <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
-                                    Harga Jual Otomatis
-                                </p>
-                                <div className="mt-2 flex flex-wrap items-end gap-3">
-                                    <p className="text-3xl font-bold text-primary">
-                                        Rp{' '}
-                                        {sellingPrice.toLocaleString('id-ID')}
-                                    </p>
-                                    {hasDiscount ? (
-                                        <p className="text-sm text-muted-foreground line-through">
-                                            Rp{' '}
-                                            {basePrice.toLocaleString('id-ID')}
-                                        </p>
-                                    ) : null}
                                 </div>
-                            </div>
 
-                            {hasDiscount ? (
-                                <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-800 dark:bg-emerald-950/30">
-                                    <div className="rounded-full bg-emerald-500 px-3 py-1 text-sm font-bold text-white">
-                                        -{discountPercent}%
-                                    </div>
-                                    <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                                        Diskon aktif
-                                    </p>
-                                </div>
-                            ) : null}
+                                <div className="rounded-2xl border border-border bg-card p-6">
+                                    <h3 className="mb-4 text-sm font-semibold text-foreground">
+                                        Pengaturan Diskon
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <Field label="Tipe Diskon">
+                                            <div className="flex gap-3">
+                                                <label
+                                                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50"
+                                                    style={{
+                                                        backgroundColor:
+                                                            form.data
+                                                                .discount_type ===
+                                                            'percent'
+                                                                ? 'var(--primary)'
+                                                                : 'transparent',
+                                                        borderColor:
+                                                            form.data
+                                                                .discount_type ===
+                                                            'percent'
+                                                                ? 'var(--primary)'
+                                                                : 'var(--border)',
+                                                        color:
+                                                            form.data
+                                                                .discount_type ===
+                                                            'percent'
+                                                                ? 'white'
+                                                                : 'var(--foreground)',
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="discount_type"
+                                                        value="percent"
+                                                        checked={
+                                                            form.data
+                                                                .discount_type ===
+                                                            'percent'
+                                                        }
+                                                        onChange={(e) => {
+                                                            form.setData(
+                                                                'discount_type',
+                                                                e.target
+                                                                    .value as
+                                                                    | 'percent'
+                                                                    | 'nominal',
+                                                            );
+                                                            form.setData(
+                                                                'discount_nominal',
+                                                                '',
+                                                            );
+                                                        }}
+                                                        className="h-4 w-4"
+                                                    />
+                                                    <span className="text-sm font-medium">
+                                                        Persentase (%)
+                                                    </span>
+                                                </label>
+                                                <label
+                                                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/50"
+                                                    style={{
+                                                        backgroundColor:
+                                                            form.data
+                                                                .discount_type ===
+                                                            'nominal'
+                                                                ? 'var(--primary)'
+                                                                : 'transparent',
+                                                        borderColor:
+                                                            form.data
+                                                                .discount_type ===
+                                                            'nominal'
+                                                                ? 'var(--primary)'
+                                                                : 'var(--border)',
+                                                        color:
+                                                            form.data
+                                                                .discount_type ===
+                                                            'nominal'
+                                                                ? 'white'
+                                                                : 'var(--foreground)',
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="discount_type"
+                                                        value="nominal"
+                                                        checked={
+                                                            form.data
+                                                                .discount_type ===
+                                                            'nominal'
+                                                        }
+                                                        onChange={(e) => {
+                                                            form.setData(
+                                                                'discount_type',
+                                                                e.target
+                                                                    .value as
+                                                                    | 'percent'
+                                                                    | 'nominal',
+                                                            );
+                                                            form.setData(
+                                                                'discount_percent',
+                                                                '',
+                                                            );
+                                                        }}
+                                                        className="h-4 w-4"
+                                                    />
+                                                    <span className="text-sm font-medium">
+                                                        Nominal (Rp)
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </Field>
 
-                            <Field label="Label Diskon">
-                                <Input
-                                    value={form.data.discount_label}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'discount_label',
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder="Contoh: EARLY BIRD, FLASH SALE"
-                                />
-                            </Field>
-                            <Field label="Promo Berakhir">
-                                <Input
-                                    type="datetime-local"
-                                    value={form.data.discount_ends_at}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'discount_ends_at',
-                                            event.target.value,
-                                        )
-                                    }
-                                />
-                            </Field>
-                            <Field label="Mata Uang">
-                                <Select
-                                    value={form.data.currency}
-                                    onValueChange={(value) => {
-                                        const liveCurrency = currencies.find(
-                                            (currency) =>
-                                                currency.code === value,
-                                        );
-                                        form.setData((current) => ({
-                                            ...current,
-                                            currency: value,
-                                            content: {
-                                                ...current.content,
-                                                hpp_currency_snapshots: {
-                                                    ...(current.content
-                                                        .hpp_currency_snapshots ??
-                                                        {}),
-                                                    [value]: {
-                                                        currency: value,
-                                                        rate_to_idr:
-                                                            value === 'IDR'
-                                                                ? 1
-                                                                : Number(
-                                                                      liveCurrency?.live_conversion_rate ??
-                                                                          0,
-                                                                  ),
-                                                        source:
-                                                            value === 'IDR'
-                                                                ? 'identity'
-                                                                : 'live',
-                                                        fetched_at:
-                                                            liveCurrency?.rate_fetched_at ??
-                                                            null,
-                                                    },
-                                                },
-                                            },
-                                        }));
-                                    }}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {currencies.map((currency) => (
-                                            <SelectItem
-                                                key={currency.code}
-                                                value={currency.code}
-                                            >
-                                                {currency.code} -{' '}
-                                                {currency.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {form.data.currency !== 'IDR' ? (
-                                    <div className="mt-2 flex gap-2">
-                                        <Input
-                                            type="number"
-                                            min={0.000001}
-                                            step="any"
-                                            value={currencyRateToIdr || ''}
-                                            onChange={(event) => {
-                                                const code =
-                                                    form.data.currency.toUpperCase();
-                                                form.setData('content', {
-                                                    ...form.data.content,
-                                                    hpp_currency_snapshots: {
-                                                        ...(form.data.content
-                                                            .hpp_currency_snapshots ??
-                                                            {}),
-                                                        [code]: {
-                                                            currency: code,
-                                                            rate_to_idr: Number(
+                                        {form.data.discount_type ===
+                                        'percent' ? (
+                                            <Field label="Diskon (%)">
+                                                <div className="relative">
+                                                    <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                        %
+                                                    </span>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        max={99}
+                                                        value={
+                                                            form.data
+                                                                .discount_percent
+                                                        }
+                                                        onChange={(event) => {
+                                                            const nextDiscountPercent =
                                                                 event.target
-                                                                    .value,
-                                                            ),
-                                                            source: 'manual',
-                                                            fetched_at: null,
-                                                        },
-                                                    },
-                                                });
-                                            }}
-                                        />
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            disabled={
-                                                Number(
-                                                    selectedCurrency?.live_conversion_rate ??
-                                                        0,
-                                                ) <= 0
+                                                                    .value
+                                                                    ? Math.min(
+                                                                          99,
+                                                                          Math.max(
+                                                                              0,
+                                                                              Number(
+                                                                                  event
+                                                                                      .target
+                                                                                      .value,
+                                                                              ),
+                                                                          ),
+                                                                      )
+                                                                    : '';
+                                                            form.setData(
+                                                                'discount_percent',
+                                                                nextDiscountPercent,
+                                                            );
+                                                        }}
+                                                        className="pr-8"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </Field>
+                                        ) : (
+                                            <Field label="Diskon (Rp)">
+                                                <div className="relative">
+                                                    <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                        Rp
+                                                    </span>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        step={10000}
+                                                        value={
+                                                            form.data
+                                                                .discount_nominal
+                                                        }
+                                                        onChange={(event) => {
+                                                            const nextDiscountNominal =
+                                                                event.target
+                                                                    .value
+                                                                    ? Number(
+                                                                          event
+                                                                              .target
+                                                                              .value,
+                                                                      )
+                                                                    : '';
+                                                            form.setData(
+                                                                'discount_nominal',
+                                                                nextDiscountNominal,
+                                                            );
+                                                        }}
+                                                        className="pl-8"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </Field>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-border bg-card p-6">
+                                    <h3 className="mb-4 text-sm font-semibold text-foreground">
+                                        Harga Kamar
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                        <Field label="Harga Asli Double (DBL)">
+                                            <div className="relative">
+                                                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                    Rp
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={100000}
+                                                    value={
+                                                        effectiveRoomOriginalPrices.dbl ??
+                                                        ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateRoomOriginalPrice(
+                                                            'dbl',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className="pl-8"
+                                                    placeholder="Isi manual jika diperlukan"
+                                                />
+                                            </div>
+                                        </Field>
+                                        <Field label="Harga Asli Triple (TRPL)">
+                                            <div className="relative">
+                                                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                    Rp
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={100000}
+                                                    value={
+                                                        effectiveRoomOriginalPrices.trpl ??
+                                                        ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateRoomOriginalPrice(
+                                                            'trpl',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className="pl-8"
+                                                    placeholder="Isi manual jika diperlukan"
+                                                />
+                                            </div>
+                                        </Field>
+                                        <Field label="Harga Asli Quad (QUAD)">
+                                            <div className="relative">
+                                                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
+                                                    Rp
+                                                </span>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    step={100000}
+                                                    value={
+                                                        effectiveRoomOriginalPrices.quad ??
+                                                        ''
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateRoomOriginalPrice(
+                                                            'quad',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className="pl-8"
+                                                    placeholder="Isi manual jika diperlukan"
+                                                />
+                                            </div>
+                                        </Field>
+                                    </div>
+
+                                    <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                                        <Field label="Harga Jual Double (DBL)">
+                                            <div className="flex h-11 items-center rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 text-sm font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                                {formatCurrencyInputPreview(
+                                                    effectiveRoomSellingPrices.dbl ??
+                                                        null,
+                                                )}
+                                            </div>
+                                        </Field>
+                                        <Field label="Harga Jual Triple (TRPL)">
+                                            <div className="flex h-11 items-center rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 text-sm font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                                {formatCurrencyInputPreview(
+                                                    effectiveRoomSellingPrices.trpl ??
+                                                        null,
+                                                )}
+                                            </div>
+                                        </Field>
+                                        <Field label="Harga Jual Quad (QUAD)">
+                                            <div className="flex h-11 items-center rounded-xl border border-emerald-200 bg-emerald-50/50 px-3 text-sm font-semibold text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                                {formatCurrencyInputPreview(
+                                                    effectiveRoomSellingPrices.quad ??
+                                                        null,
+                                                )}
+                                            </div>
+                                        </Field>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-6 dark:border-emerald-800 dark:bg-emerald-950/30">
+                                    <p className="text-xs font-semibold tracking-[0.2em] text-emerald-700 uppercase dark:text-emerald-300">
+                                        Harga Jual Otomatis (Single/Base)
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap items-end gap-4">
+                                        <p className="text-4xl font-bold text-emerald-700 dark:text-emerald-300">
+                                            Rp{' '}
+                                            {sellingPrice.toLocaleString(
+                                                'id-ID',
+                                            )}
+                                        </p>
+                                        {hasDiscount ? (
+                                            <p className="text-lg text-emerald-600 line-through dark:text-emerald-400">
+                                                Rp{' '}
+                                                {basePrice.toLocaleString(
+                                                    'id-ID',
+                                                )}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                </div>
+
+                                {hasDiscount ? (
+                                    <div className="flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950/30">
+                                        <div className="rounded-full bg-blue-500 px-3 py-1 text-sm font-bold text-white">
+                                            {form.data.discount_type ===
+                                            'percent'
+                                                ? `-${discountPercent}%`
+                                                : `Rp ${Number(form.data.discount_nominal).toLocaleString('id-ID')}`}
+                                        </div>
+                                        <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                                            Diskon aktif
+                                        </p>
+                                    </div>
+                                ) : null}
+
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <Field label="Label Diskon">
+                                        <Input
+                                            value={form.data.discount_label}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'discount_label',
+                                                    event.target.value,
+                                                )
                                             }
-                                            onClick={() => {
-                                                const code =
-                                                    form.data.currency.toUpperCase();
-                                                form.setData('content', {
-                                                    ...form.data.content,
+                                            placeholder="Contoh: EARLY BIRD, FLASH SALE"
+                                        />
+                                    </Field>
+                                    <Field label="Promo Berakhir">
+                                        <Input
+                                            type="datetime-local"
+                                            value={form.data.discount_ends_at}
+                                            onChange={(event) =>
+                                                form.setData(
+                                                    'discount_ends_at',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+
+                                <Field label="Mata Uang">
+                                    <Select
+                                        value={form.data.currency}
+                                        onValueChange={(value) => {
+                                            const liveCurrency =
+                                                currencies.find(
+                                                    (currency) =>
+                                                        currency.code === value,
+                                                );
+                                            form.setData((current) => ({
+                                                ...current,
+                                                currency: value,
+                                                content: {
+                                                    ...current.content,
                                                     hpp_currency_snapshots: {
-                                                        ...(form.data.content
+                                                        ...(current.content
                                                             .hpp_currency_snapshots ??
                                                             {}),
-                                                        [code]: {
-                                                            currency: code,
-                                                            rate_to_idr: Number(
-                                                                selectedCurrency?.live_conversion_rate ??
-                                                                    0,
-                                                            ),
-                                                            source: 'live',
+                                                        [value]: {
+                                                            currency: value,
+                                                            rate_to_idr:
+                                                                value === 'IDR'
+                                                                    ? 1
+                                                                    : Number(
+                                                                          liveCurrency?.live_conversion_rate ??
+                                                                              0,
+                                                                      ),
+                                                            source:
+                                                                value === 'IDR'
+                                                                    ? 'identity'
+                                                                    : 'live',
                                                             fetched_at:
-                                                                selectedCurrency?.rate_fetched_at ??
+                                                                liveCurrency?.rate_fetched_at ??
                                                                 null,
                                                         },
                                                     },
-                                                });
-                                            }}
-                                        >
-                                            Gunakan Kurs Live
-                                        </Button>
-                                    </div>
-                                ) : null}
-                            </Field>
+                                                },
+                                            }));
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {currencies.map((currency) => (
+                                                <SelectItem
+                                                    key={currency.code}
+                                                    value={currency.code}
+                                                >
+                                                    {currency.code} -{' '}
+                                                    {currency.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    {form.data.currency !== 'IDR' ? (
+                                        <div className="mt-2 flex gap-2">
+                                            <Input
+                                                type="number"
+                                                min={0.000001}
+                                                step="any"
+                                                value={currencyRateToIdr || ''}
+                                                onChange={(event) => {
+                                                    const code =
+                                                        form.data.currency.toUpperCase();
+                                                    form.setData('content', {
+                                                        ...form.data.content,
+                                                        hpp_currency_snapshots:
+                                                            {
+                                                                ...(form.data
+                                                                    .content
+                                                                    .hpp_currency_snapshots ??
+                                                                    {}),
+                                                                [code]: {
+                                                                    currency:
+                                                                        code,
+                                                                    rate_to_idr:
+                                                                        Number(
+                                                                            event
+                                                                                .target
+                                                                                .value,
+                                                                        ),
+                                                                    source: 'manual',
+                                                                    fetched_at:
+                                                                        null,
+                                                                },
+                                                            },
+                                                    });
+                                                }}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                disabled={
+                                                    Number(
+                                                        selectedCurrency?.live_conversion_rate ??
+                                                            0,
+                                                    ) <= 0
+                                                }
+                                                onClick={() => {
+                                                    const code =
+                                                        form.data.currency.toUpperCase();
+                                                    form.setData('content', {
+                                                        ...form.data.content,
+                                                        hpp_currency_snapshots:
+                                                            {
+                                                                ...(form.data
+                                                                    .content
+                                                                    .hpp_currency_snapshots ??
+                                                                    {}),
+                                                                [code]: {
+                                                                    currency:
+                                                                        code,
+                                                                    rate_to_idr:
+                                                                        Number(
+                                                                            selectedCurrency?.live_conversion_rate ??
+                                                                                0,
+                                                                        ),
+                                                                    source: 'live',
+                                                                    fetched_at:
+                                                                        selectedCurrency?.rate_fetched_at ??
+                                                                        null,
+                                                                },
+                                                            },
+                                                    });
+                                                }}
+                                            >
+                                                Gunakan Kurs Live
+                                            </Button>
+                                        </div>
+                                    ) : null}
+                                </Field>
+                            </div>
                         </FieldGroup>
                     </TabsContent>
 

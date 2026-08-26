@@ -17,7 +17,8 @@ use Symfony\Component\HttpFoundation\Response;
 class ReferralQrCodeController extends Controller
 {
     /**
-     * Handle the incoming request.
+     * Generate and return QR code for agent referral URL.
+     * Optionally filter by travel package if provided.
      */
     public function __invoke(ShowReferralQrCodeRequest $request, ?TravelPackage $travelPackage = null): Response
     {

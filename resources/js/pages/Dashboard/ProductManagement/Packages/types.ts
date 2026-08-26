@@ -161,6 +161,8 @@ export type Package = {
     duration_days: number;
     price: number;
     original_price: number | null;
+    discount_type: 'percent' | 'nominal';
+    discount_nominal: number | null;
     discount_label: string | null;
     discount_ends_at: string | null;
     discount_percent: number | null;
@@ -347,6 +349,8 @@ export type PackageFormData = {
     price: number;
     original_price: number | '';
     discount_percent: number | '';
+    discount_type: 'percent' | 'nominal';
+    discount_nominal: number | '';
     discount_label: string;
     discount_ends_at: string;
     currency: string;

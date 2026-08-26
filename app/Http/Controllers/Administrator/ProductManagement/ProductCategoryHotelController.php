@@ -35,19 +35,38 @@ class ProductCategoryHotelController extends Controller
         private readonly HotelImportReconciliationService $hotelImportReconciliationService,
     ) {}
 
+    /**
+     * Parse hotel rates from PDF file.
+     * Handles extraction, parsing, and reconciliation of hotel data.
+     */
     public function parsePdf(ParseProductCategoryHotelPdfRequest $request): JsonResponse
     {
         $startedAt = microtime(true);
+        $fileName = $request->file('file')->getClientOriginalName();
         $storedPath = $request->file('file')->storeAs(
             'hotel-imports',
             Str::uuid().'.pdf',
             'local'
         );
 
-        Log::info('Hotel PDF parsing started');
+        Log::info('Hotel PDF parsing started', [
+            'file_name' => $fileName,
+            'stored_path' => $storedPath,
+        ]);
 
         try {
-            $pages = $this->pdfTextExtractor->extract(Storage::disk('local')->path($storedPath));
+            $pdfFullPath = Storage::disk('local')->path($storedPath);
+
+            if (! is_file($pdfFullPath)) {
+                throw new RuntimeException("File PDF tidak ditemukan: {$fileName}");
+            }
+
+            $pages = $this->pdfTextExtractor->extract($pdfFullPath);
+
+            if (empty($pages)) {
+                throw new RuntimeException("PDF tidak mengandung text yang dapat dibaca: {$fileName}");
+            }
+
             $defaultCountryId = $request->filled('default_country_id') ? $request->integer('default_country_id') : null;
             $defaultCountry = $defaultCountryId !== null
                 ? HotelCountry::query()->find($defaultCountryId)?->name
@@ -56,10 +75,17 @@ class ProductCategoryHotelController extends Controller
                 ? strtoupper((string) $request->string('default_currency')->value())
                 : null;
             $knownCities = HotelCity::query()->where('is_active', true)->pluck('name')->all();
+
             $rows = $this->hotelRatePdfParser->parse($pages, $defaultCountry, $defaultCurrency, $knownCities);
+
+            if (empty($rows)) {
+                throw new RuntimeException("Tidak ada tabel rate hotel yang terdeteksi di PDF: {$fileName}");
+            }
+
             $result = $this->hotelImportReconciliationService->reconcile($rows, $defaultCountryId, $defaultCurrency);
 
             Log::info('Hotel PDF parsing completed', [
+                'file_name' => $fileName,
                 'pages_processed' => count($pages),
                 'hotel_blocks_detected' => $result['summary']['hotels_detected'],
                 'rate_rows_detected' => $result['summary']['periods_detected'],
@@ -74,11 +100,26 @@ class ProductCategoryHotelController extends Controller
             ]);
         } catch (RuntimeException $exception) {
             Log::warning('Hotel PDF parsing failed', [
+                'file_name' => $fileName,
                 'message' => $exception->getMessage(),
+                'code' => $exception->getCode(),
                 'duration_ms' => (int) ((microtime(true) - $startedAt) * 1000),
             ]);
 
-            return response()->json(['message' => $exception->getMessage()], 422);
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        } catch (Throwable $exception) {
+            Log::error('Hotel PDF parsing error', [
+                'file_name' => $fileName,
+                'message' => $exception->getMessage(),
+                'exception' => get_class($exception),
+                'duration_ms' => (int) ((microtime(true) - $startedAt) * 1000),
+            ]);
+
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat memproses PDF. Coba lagi atau hubungi support.',
+            ], 500);
         } finally {
             Storage::disk('local')->delete($storedPath);
         }
@@ -113,12 +154,13 @@ class ProductCategoryHotelController extends Controller
     {
         $createdCount = 0;
         $updatedCount = 0;
+        $currencyUpdatedCount = 0;
         $newPeriodCount = 0;
         $unchangedCount = 0;
         $skippedHotels = [];
         $seenPayloadKeys = [];
 
-        DB::transaction(function () use ($request, &$createdCount, &$updatedCount, &$newPeriodCount, &$unchangedCount, &$skippedHotels, &$seenPayloadKeys): void {
+        DB::transaction(function () use ($request, &$createdCount, &$updatedCount, &$currencyUpdatedCount, &$newPeriodCount, &$unchangedCount, &$skippedHotels, &$seenPayloadKeys): void {
             foreach ((array) $request->validated('hotels') as $index => $hotelPayload) {
                 $cityId = (int) data_get($hotelPayload, 'city_id');
                 $name = trim((string) data_get($hotelPayload, 'name'));
@@ -152,20 +194,17 @@ class ProductCategoryHotelController extends Controller
                     }
 
                     $incomingCurrency = strtoupper((string) data_get($hotelPayload, 'currency'));
-                    if (strtoupper($existingHotel->currency) !== $incomingCurrency) {
-                        $skippedHotels[] = [
-                            'index' => $index + 1,
-                            'name' => $name,
-                            'reason' => "Konflik mata uang {$existingHotel->currency} dan {$incomingCurrency}",
-                        ];
+                    $currencyChanged = strtoupper($existingHotel->currency) !== $incomingCurrency;
 
-                        continue;
+                    if ($currencyChanged) {
+                        $existingHotel->update(['currency' => $incomingCurrency]);
+                        $currencyUpdatedCount++;
                     }
 
                     $priceResult = $this->upsertHotelPrices($existingHotel, (array) data_get($hotelPayload, 'prices', []));
                     $newPeriodCount += $priceResult['new_periods'];
 
-                    if ($priceResult['changed']) {
+                    if ($currencyChanged || $priceResult['changed']) {
                         $updatedCount++;
                         $this->hotelProductSyncService->sync($existingHotel->fresh());
                     } else {
@@ -185,6 +224,7 @@ class ProductCategoryHotelController extends Controller
             ->with('success', 'Bulk create/update hotel berhasil diproses.')
             ->with('bulk_created_count', $createdCount)
             ->with('bulk_updated_count', $updatedCount)
+            ->with('bulk_currency_updated_count', $currencyUpdatedCount)
             ->with('bulk_new_period_count', $newPeriodCount)
             ->with('bulk_unchanged_count', $unchangedCount)
             ->with('bulk_skipped_hotels', $skippedHotels);
@@ -363,6 +403,10 @@ class ProductCategoryHotelController extends Controller
     private function pricePayload(array $prices): array
     {
         return collect($prices)
+            ->filter(function (array $item): bool {
+                // Skip prices with null values - they shouldn't be stored
+                return $item['price'] !== null && (int) $item['price'] >= 0;
+            })
             ->map(fn (array $item): array => [
                 'broker_key' => $this->normalizeBrokerKey($item['broker_key'] ?? null, $item['broker_name'] ?? null),
                 'broker_name' => $this->normalizeBrokerName($item['broker_name'] ?? null),

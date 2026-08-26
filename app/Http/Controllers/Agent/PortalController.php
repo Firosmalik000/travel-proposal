@@ -10,6 +10,7 @@ use App\Models\AgentProfile;
 use App\Models\AgentReferralVisit;
 use App\Models\Booking;
 use App\Models\PackageRegistration;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -181,7 +182,11 @@ class PortalController extends Controller
         return $request->user()->agentProfile;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Build agent payload for Inertia response.
+     *
+     * @return array<string, mixed>
+     */
     private function agentPayload(AgentProfile $agent): array
     {
         return [
@@ -192,37 +197,61 @@ class PortalController extends Controller
         ];
     }
 
-    private function leadQuery(AgentProfile $agent)
+    /**
+     * Build query for agent leads with relationships.
+     */
+    private function leadQuery(AgentProfile $agent): Builder
     {
         return PackageRegistration::query()->where('agent_profile_id', $agent->id)->with('package:id,code,name,start_date,currency')->latest();
     }
 
-    private function bookingQuery(AgentProfile $agent)
+    /**
+     * Build query for agent bookings with relationships.
+     */
+    private function bookingQuery(AgentProfile $agent): Builder
     {
         return Booking::query()->where('agent_profile_id', $agent->id)->with(['package:id,code,name,start_date,currency', 'agentCommission'])->latest();
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Build lead payload for Inertia response.
+     *
+     * @return array<string, mixed>
+     */
     private function leadPayload(PackageRegistration $lead): array
     {
         return [
-            'id' => $lead->id, 'reference' => sprintf('REG-%04d', $lead->id), 'customer_name' => $lead->full_name,
-            'phone' => $lead->phone, 'package_name' => data_get($lead->package?->name, 'id', $lead->package?->code),
-            'departure_date' => $lead->package?->start_date?->toDateString(), 'passenger_count' => (int) $lead->passenger_count,
-            'status' => $lead->status, 'created_at' => $lead->created_at?->toDateTimeString(),
+            'id' => $lead->id,
+            'reference' => sprintf('REG-%04d', $lead->id),
+            'customer_name' => $lead->full_name,
+            'phone' => $lead->phone,
+            'package_name' => data_get($lead->package?->name, 'id', $lead->package?->code),
+            'departure_date' => $lead->package?->start_date?->toDateString(),
+            'passenger_count' => (int) $lead->passenger_count,
+            'status' => $lead->status,
+            'created_at' => $lead->created_at?->toDateTimeString(),
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Build booking payload for Inertia response.
+     *
+     * @return array<string, mixed>
+     */
     private function bookingPayload(Booking $booking): array
     {
         $currency = $booking->agreed_currency ?? $booking->package?->currency ?? 'IDR';
 
         return [
-            'id' => $booking->id, 'booking_code' => $booking->booking_code, 'customer_name' => $booking->full_name,
+            'id' => $booking->id,
+            'booking_code' => $booking->booking_code,
+            'customer_name' => $booking->full_name,
             'package_name' => data_get($booking->package?->name, 'id', $booking->package?->code),
-            'departure_date' => $booking->package?->start_date?->toDateString(), 'passenger_count' => (int) $booking->passenger_count,
-            'total_amount' => (int) ($booking->agreed_total_amount ?? 0), 'currency' => $currency, 'booking_status' => $booking->status,
+            'departure_date' => $booking->package?->start_date?->toDateString(),
+            'passenger_count' => (int) $booking->passenger_count,
+            'total_amount' => (int) ($booking->agreed_total_amount ?? 0),
+            'currency' => $currency,
+            'booking_status' => $booking->status,
             'commission_amount' => (int) ($booking->agentCommission?->commission_amount ?? 0),
             'commission_status' => $booking->agentCommission?->status ?? 'not_configured',
             'created_at' => $booking->created_at?->toDateTimeString(),
@@ -230,19 +259,31 @@ class PortalController extends Controller
         ];
     }
 
-    /** @return Collection<int, array<string, int|string>> */
+    /**
+     * Get commission summary by currency for agent.
+     *
+     * @return Collection<int, array<string, int|string>>
+     */
     private function commissionSummary(AgentProfile $agent): Collection
     {
         return AgentCommission::query()->where('agent_profile_id', $agent->id)->select('currency')
             ->selectRaw("COALESCE(SUM(CASE WHEN status = 'pending' THEN commission_amount ELSE 0 END), 0) as pending")
             ->selectRaw("COALESCE(SUM(CASE WHEN status = 'approved' THEN commission_amount ELSE 0 END), 0) as approved")
             ->selectRaw("COALESCE(SUM(CASE WHEN status = 'paid' THEN commission_amount ELSE 0 END), 0) as paid")
-            ->groupBy('currency')->orderBy('currency')->get()->map(fn ($row): array => [
-                'currency' => (string) $row->currency, 'pending' => (int) $row->pending,
-                'approved' => (int) $row->approved, 'paid' => (int) $row->paid,
+            ->groupBy('currency')
+            ->orderBy('currency')
+            ->get()
+            ->map(fn ($row): array => [
+                'currency' => (string) $row->currency,
+                'pending' => (int) $row->pending,
+                'approved' => (int) $row->approved,
+                'paid' => (int) $row->paid,
             ]);
     }
 
+    /**
+     * Map paginator results through callable and preserve query string.
+     */
     private function paginate(LengthAwarePaginator $paginator, callable $mapper): LengthAwarePaginator
     {
         return $paginator->through($mapper)->withQueryString();

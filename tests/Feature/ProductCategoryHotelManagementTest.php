@@ -10,6 +10,7 @@ use App\Models\Menu;
 use App\Models\ProductCategory;
 use App\Models\TravelProduct;
 use App\Models\User;
+use App\Services\HotelProductSyncService;
 use App\Support\MenuPermissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -503,6 +504,70 @@ class ProductCategoryHotelManagementTest extends TestCase
             ->assertSessionHas('bulk_skipped_hotels');
 
         $this->assertNotNull(Hotel::query()->where('name', 'NEW HOTEL BULK')->first());
+    }
+
+    public function test_hotel_bulk_store_updates_existing_hotel_currency_without_creating_a_duplicate(): void
+    {
+        $user = User::factory()->create();
+
+        $this->ensureProductMenuExists();
+        MenuPermissionService::ensurePermissionsExist();
+        $user->givePermissionTo(['menu.product.view', 'menu.product.create']);
+
+        ProductCategory::query()->firstOrCreate(
+            ['key' => 'hotel'],
+            ['name' => 'Hotel', 'sort_order' => 6, 'is_active' => true]
+        );
+
+        $country = HotelCountry::query()->create(['name' => 'Arab Saudi', 'is_active' => true]);
+        $city = HotelCity::query()->create(['country_id' => $country->id, 'name' => 'Mekkah', 'is_active' => true]);
+        $dbl = HotelRoomType::query()->create(['name' => 'DBL', 'is_active' => true]);
+        $hotel = Hotel::query()->create([
+            'country_id' => $country->id,
+            'city_id' => $city->id,
+            'name' => 'CURRENCY UPDATE HOTEL',
+            'code' => 'HTL-CURRENCY-UPDATE',
+            'currency' => 'IDR',
+            'is_active' => true,
+        ]);
+        $hotel->prices()->create([
+            'broker_name' => 'Broker 1',
+            'room_type_id' => $dbl->id,
+            'period_start' => '2026-06-01',
+            'period_end' => '2026-06-30',
+            'price' => 100,
+        ]);
+        $this->app->make(HotelProductSyncService::class)->sync($hotel);
+
+        $this->actingAs($user)
+            ->post('/admin/product-management/products/hotels/bulk', [
+                'hotels' => [[
+                    'country_id' => $country->id,
+                    'city_id' => $city->id,
+                    'existing_hotel_id' => $hotel->id,
+                    'name' => 'CURRENCY UPDATE HOTEL',
+                    'currency' => 'SAR',
+                    'is_active' => true,
+                    'prices' => [[
+                        'room_type_id' => $dbl->id,
+                        'period_start' => '2026-06-01',
+                        'period_end' => '2026-06-30',
+                        'price' => 100,
+                    ]],
+                ]],
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('bulk_updated_count', 1)
+            ->assertSessionHas('bulk_currency_updated_count', 1)
+            ->assertSessionHas('bulk_new_period_count', 0);
+
+        $hotel->refresh();
+        $product = TravelProduct::query()->find($hotel->product_id);
+
+        $this->assertSame('SAR', $hotel->currency);
+        $this->assertSame(1, Hotel::query()->where('city_id', $city->id)->where('name', $hotel->name)->count());
+        $this->assertSame('SAR', data_get($product?->content, 'currency'));
+        $this->assertSame(100, data_get($product?->content, 'pricing.0.price'));
     }
 
     public function test_hotel_bulk_store_handles_hotel_code_collision(): void

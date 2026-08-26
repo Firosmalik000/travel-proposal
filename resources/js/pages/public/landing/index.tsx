@@ -6,7 +6,9 @@ import {
     getPublicEmail,
     getPublicPhoneNumber,
     getPublicSocialAccounts,
+    hasPackageDiscount,
     localize,
+    packageDiscountLabel,
     usePublicData,
     usePublicPageContent,
     whatsappLinkFromSeo,
@@ -1237,7 +1239,9 @@ export default function PublicLandingPage() {
                                 'id',
                                 text(pkg.currency, 'IDR'),
                             );
-                            const packageOriginalPrice = pkg.original_price
+                            const hasDiscount = hasPackageDiscount(pkg);
+                            const discountLabel = packageDiscountLabel(pkg);
+                            const packageOriginalPrice = hasDiscount
                                 ? formatPrice(
                                       Number(pkg.original_price),
                                       'id',
@@ -1285,12 +1289,9 @@ export default function PublicLandingPage() {
                                     whileHover={{ y: -6 }}
                                 >
                                     <div className="relative h-[170px] overflow-hidden">
-                                        {pkg.original_price ? (
+                                        {hasDiscount ? (
                                             <div className="absolute top-0 right-0 bg-[#f59e0b] px-4 py-2 text-[9px] font-black tracking-[.22em] text-white uppercase [clip-path:polygon(18%_0,100%_0,100%_100%,0_100%)]">
-                                                {text(
-                                                    pkg.discount_label,
-                                                    'Promo',
-                                                )}
+                                                {discountLabel}
                                             </div>
                                         ) : null}
                                         {text(pkg.image_path) ? (

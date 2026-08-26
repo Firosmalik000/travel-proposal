@@ -19,8 +19,10 @@ class UpdateProfileRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:150', Rule::unique('users', 'email')->ignore($this->user()?->id)],
-            'phone' => ['nullable', 'string', 'max:30'], 'bank_name' => ['nullable', 'string', 'max:100'],
-            'bank_account_name' => ['nullable', 'string', 'max:150'], 'bank_account_number' => ['nullable', 'string', 'max:80'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'bank_name' => ['nullable', 'string', 'max:100'],
+            'bank_account_name' => ['nullable', 'string', 'max:150'],
+            'bank_account_number' => ['nullable', 'string', 'max:80'],
         ];
     }
 }
