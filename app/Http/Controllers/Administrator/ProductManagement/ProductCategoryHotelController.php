@@ -9,12 +9,13 @@ use App\Http\Requests\Administrator\ProductCategoryHotel\ParseProductCategoryHot
 use App\Http\Requests\Administrator\ProductCategoryHotel\ReconcileProductCategoryHotelImportRequest;
 use App\Http\Requests\Administrator\ProductCategoryHotel\StoreProductCategoryHotelRequest;
 use App\Http\Requests\Administrator\ProductCategoryHotel\UpdateProductCategoryHotelRequest;
-use App\Jobs\ProcessHotelPdfImport;
 use App\Models\Hotel;
+use App\Models\HotelCity;
+use App\Models\HotelCountry;
 use App\Models\HotelPrice;
 use App\Services\HotelImport\HotelImportReconciliationService;
-use App\Services\HotelImport\HotelPdfImportProcessor;
-use App\Services\HotelImport\HotelPdfImportStatusStore;
+use App\Services\HotelImport\HotelRatePdfParser;
+use App\Services\HotelImport\PdfTextExtractor;
 use App\Services\HotelProductSyncService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -29,9 +30,9 @@ class ProductCategoryHotelController extends Controller
 {
     public function __construct(
         private readonly HotelProductSyncService $hotelProductSyncService,
+        private readonly PdfTextExtractor $pdfTextExtractor,
+        private readonly HotelRatePdfParser $hotelRatePdfParser,
         private readonly HotelImportReconciliationService $hotelImportReconciliationService,
-        private readonly HotelPdfImportProcessor $hotelPdfImportProcessor,
-        private readonly HotelPdfImportStatusStore $hotelPdfImportStatusStore,
     ) {}
 
     /**
@@ -53,27 +54,39 @@ class ProductCategoryHotelController extends Controller
             'stored_path' => $storedPath,
         ]);
 
-        if (config('services.hotel_pdf.force_async') || ! function_exists('proc_open')) {
-            return $this->queuePdfImport(
-                $request,
-                $storedPath,
-                $fileName,
-            );
-        }
-
         try {
+            $pdfFullPath = Storage::disk('local')->path($storedPath);
+
+            if (! is_file($pdfFullPath)) {
+                throw new RuntimeException("File PDF tidak ditemukan: {$fileName}");
+            }
+
+            $pages = $this->pdfTextExtractor->extract($pdfFullPath);
+
+            if (empty($pages)) {
+                throw new RuntimeException("PDF tidak mengandung text yang dapat dibaca: {$fileName}");
+            }
+
             $defaultCountryId = $request->filled('default_country_id') ? $request->integer('default_country_id') : null;
+            $defaultCountry = $defaultCountryId !== null
+                ? HotelCountry::query()->find($defaultCountryId)?->name
+                : null;
             $defaultCurrency = $request->filled('default_currency')
                 ? strtoupper((string) $request->string('default_currency')->value())
                 : null;
-            $result = $this->hotelPdfImportProcessor->handle(
-                Storage::disk('local')->path($storedPath),
-                $defaultCountryId,
-                $defaultCurrency,
-            );
+            $knownCities = HotelCity::query()->where('is_active', true)->pluck('name')->all();
+
+            $rows = $this->hotelRatePdfParser->parse($pages, $defaultCountry, $defaultCurrency, $knownCities);
+
+            if (empty($rows)) {
+                throw new RuntimeException("Tidak ada tabel rate hotel yang terdeteksi di PDF: {$fileName}");
+            }
+
+            $result = $this->hotelImportReconciliationService->reconcile($rows, $defaultCountryId, $defaultCurrency);
 
             Log::info('Hotel PDF parsing completed', [
                 'file_name' => $fileName,
+                'pages_processed' => count($pages),
                 'hotel_blocks_detected' => $result['summary']['hotels_detected'],
                 'rate_rows_detected' => $result['summary']['periods_detected'],
                 'warnings' => $result['summary']['warnings'],
@@ -82,6 +95,7 @@ class ProductCategoryHotelController extends Controller
             ]);
 
             return response()->json([
+                'rows' => $rows,
                 ...$result,
             ]);
         } catch (RuntimeException $exception) {
@@ -109,71 +123,6 @@ class ProductCategoryHotelController extends Controller
         } finally {
             Storage::disk('local')->delete($storedPath);
         }
-    }
-
-    public function pdfImportStatus(string $importId): JsonResponse
-    {
-        if (! Str::isUuid($importId)) {
-            abort(404);
-        }
-
-        $status = $this->hotelPdfImportStatusStore->get($importId);
-        if ($status === null) {
-            return response()->json([
-                'message' => 'Status import tidak ditemukan atau sudah kedaluwarsa.',
-            ], 404);
-        }
-
-        if ((int) data_get($status, 'user_id') !== (int) request()->user()?->getAuthIdentifier()) {
-            abort(403);
-        }
-
-        return response()->json(collect($status)->except('user_id')->all());
-    }
-
-    private function queuePdfImport(
-        ParseProductCategoryHotelPdfRequest $request,
-        string $storedPath,
-        string $fileName,
-    ): JsonResponse {
-        $importId = (string) Str::uuid();
-        $userId = (int) $request->user()->getAuthIdentifier();
-        $defaultCountryId = $request->filled('default_country_id') ? $request->integer('default_country_id') : null;
-        $defaultCurrency = $request->filled('default_currency')
-            ? strtoupper((string) $request->string('default_currency')->value())
-            : null;
-
-        $this->hotelPdfImportStatusStore->put($importId, [
-            'user_id' => $userId,
-            'status' => 'queued',
-            'message' => 'PDF masuk antrean dan akan diproses otomatis oleh server.',
-        ]);
-
-        try {
-            ProcessHotelPdfImport::dispatch(
-                $importId,
-                $userId,
-                $storedPath,
-                $fileName,
-                $defaultCountryId,
-                $defaultCurrency,
-            )->onConnection('database')->onQueue('hotel-pdf-imports');
-        } catch (Throwable $exception) {
-            Storage::disk('local')->delete($storedPath);
-            $this->hotelPdfImportStatusStore->forget($importId);
-            report($exception);
-
-            return response()->json([
-                'message' => 'PDF gagal dimasukkan ke antrean server.',
-            ], 500);
-        }
-
-        return response()->json([
-            'status' => 'queued',
-            'import_id' => $importId,
-            'poll_after_ms' => 2000,
-            'message' => 'PDF sedang menunggu proses otomatis. Drawer tetap dapat digunakan setelah preview selesai.',
-        ], 202);
     }
 
     public function reconcileImport(ReconcileProductCategoryHotelImportRequest $request): JsonResponse
