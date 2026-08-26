@@ -2,17 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ProcessHotelPdfImport;
 use App\Models\Hotel;
 use App\Models\HotelCity;
 use App\Models\HotelCountry;
 use App\Models\HotelRoomType;
 use App\Models\Menu;
 use App\Models\User;
+use App\Services\HotelImport\HotelPdfImportProcessor;
+use App\Services\HotelImport\HotelPdfImportStatusStore;
 use App\Services\HotelImport\PdfTextExtractor;
 use App\Support\MenuPermissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -64,6 +69,93 @@ class HotelImportHttpTest extends TestCase
 
         self::assertSame(0, Hotel::query()->count());
         Storage::disk('local')->assertDirectoryEmpty('hotel-imports');
+    }
+
+    #[Test]
+    public function pdf_parse_queues_the_import_when_web_processes_are_unavailable(): void
+    {
+        config(['services.hotel_pdf.force_async' => true]);
+        Storage::fake('local');
+        Queue::fake();
+        $user = User::factory()->create();
+        $this->prepareProductPermission($user, ['view', 'create']);
+
+        $response = $this->actingAs($user)
+            ->post('/admin/product-management/products/hotels/import/pdf', [
+                'file' => UploadedFile::fake()->create('rates.pdf', 10, 'application/pdf'),
+                'default_currency' => 'SAR',
+            ], ['Accept' => 'application/json'])
+            ->assertAccepted()
+            ->assertJsonPath('status', 'queued');
+
+        $importId = (string) $response->json('import_id');
+        self::assertNotSame('', $importId);
+
+        Queue::assertPushed(ProcessHotelPdfImport::class, function (ProcessHotelPdfImport $job) use ($importId, $user): bool {
+            return $job->importId === $importId
+                && $job->userId === $user->id
+                && $job->defaultCurrency === 'SAR'
+                && $job->connection === 'database'
+                && $job->queue === 'hotel-pdf-imports';
+        });
+
+        $this->getJson("/admin/product-management/products/hotels/import/pdf/{$importId}")
+            ->assertOk()
+            ->assertJsonPath('status', 'queued');
+    }
+
+    #[Test]
+    public function queued_pdf_status_is_only_visible_to_the_uploading_user(): void
+    {
+        config(['services.hotel_pdf.force_async' => true]);
+        Storage::fake('local');
+        Queue::fake();
+        $owner = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $this->prepareProductPermission($owner, ['view', 'create']);
+        $this->prepareProductPermission($otherUser, ['view', 'create']);
+
+        $response = $this->actingAs($owner)->postJson(
+            '/admin/product-management/products/hotels/import/pdf',
+            ['file' => UploadedFile::fake()->create('rates.pdf', 10, 'application/pdf')],
+        );
+        $importId = (string) $response->json('import_id');
+
+        $this->actingAs($otherUser)
+            ->getJson("/admin/product-management/products/hotels/import/pdf/{$importId}")
+            ->assertForbidden();
+    }
+
+    #[Test]
+    public function queued_pdf_job_publishes_its_preview_result_and_removes_the_pdf(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('hotel-imports/queued.pdf', 'pdf-content');
+        $importId = (string) Str::uuid();
+        $processor = $this->mock(HotelPdfImportProcessor::class);
+        $processor->shouldReceive('handle')
+            ->once()
+            ->andReturn([
+                'rows' => [],
+                'hotels' => [['name' => 'Queued Hotel']],
+                'summary' => ['hotels_detected' => 1, 'periods_detected' => 2],
+            ]);
+
+        $job = new ProcessHotelPdfImport(
+            $importId,
+            123,
+            'hotel-imports/queued.pdf',
+            'queued.pdf',
+            null,
+            'SAR',
+        );
+        $statusStore = $this->app->make(HotelPdfImportStatusStore::class);
+
+        $job->handle($processor, $statusStore);
+
+        self::assertSame('completed', data_get($statusStore->get($importId), 'status'));
+        self::assertSame('Queued Hotel', data_get($statusStore->get($importId), 'result.hotels.0.name'));
+        Storage::disk('local')->assertMissing('hotel-imports/queued.pdf');
     }
 
     #[Test]

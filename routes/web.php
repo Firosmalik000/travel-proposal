@@ -318,6 +318,7 @@ Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {    
             $nameRoute(Route::get('products', [ContentController::class, 'products']), 'products.index');
             $nameRoute(Route::post('products/hotels', [ProductCategoryHotelController::class, 'store'])->middleware('check.menu.permission:create'), 'products.hotels.store');
             $nameRoute(Route::post('products/hotels/import/pdf', [ProductCategoryHotelController::class, 'parsePdf'])->middleware('check.menu.permission:create'), 'products.hotels.import.pdf');
+            $nameRoute(Route::get('products/hotels/import/pdf/{importId}', [ProductCategoryHotelController::class, 'pdfImportStatus'])->middleware('check.menu.permission:create'), 'products.hotels.import.pdf-status');
             $nameRoute(Route::post('products/hotels/import/reconcile', [ProductCategoryHotelController::class, 'reconcileImport'])->middleware('check.menu.permission:create'), 'products.hotels.import.reconcile');
             $nameRoute(Route::post('products/hotels/bulk', [ProductCategoryHotelController::class, 'bulkStore'])->middleware('check.menu.permission:create'), 'products.hotels.bulk-store');
             $nameRoute(Route::post('products/hotels/bulk-delete', [ProductCategoryHotelController::class, 'bulkDelete'])->middleware('check.menu.permission:delete'), 'products.hotels.bulk-delete');

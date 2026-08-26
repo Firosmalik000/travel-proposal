@@ -130,6 +130,24 @@ type ImportSummary = {
     conflicts: number;
 };
 
+type ImportResult = {
+    hotels: BulkHotelForm[];
+    summary: ImportSummary;
+};
+
+type QueuedPdfImportResponse = {
+    status: 'queued';
+    import_id: string;
+    poll_after_ms?: number;
+    message?: string;
+};
+
+type PdfImportStatusResponse = {
+    status: 'queued' | 'processing' | 'completed' | 'failed';
+    message?: string;
+    result?: ImportResult;
+};
+
 type HotelPeriodRateRow = PeriodRateRow & {
     pricesByRoomType: {
         DBL: number;
@@ -1658,10 +1676,9 @@ export default function ProductCategoryHotel({
         toast.success(`Mata uang ${currency} diterapkan ke semua draft hotel.`);
     }
 
-    async function readImportResponse(response: Response): Promise<{
-        hotels: BulkHotelForm[];
-        summary: ImportSummary;
-    }> {
+    async function readImportResponse(
+        response: Response,
+    ): Promise<ImportResult> {
         if (response.status === 419) {
             throw new Error(
                 'Sesi berakhir. Muat ulang halaman, lalu pilih kembali file import.',
@@ -1808,7 +1825,69 @@ export default function ProductCategoryHotel({
             },
         );
 
+        if (response.status === 202) {
+            const queued = (await response.json()) as QueuedPdfImportResponse;
+            if (!queued.import_id) {
+                throw new Error('Server tidak mengembalikan ID antrean PDF.');
+            }
+
+            toast.info(
+                queued.message ??
+                    'PDF masuk antrean server. Preview akan terbuka otomatis setelah selesai.',
+            );
+            applyImportResult(
+                await waitForQueuedPdfImport(
+                    queued.import_id,
+                    queued.poll_after_ms ?? 3000,
+                ),
+            );
+            return;
+        }
+
         applyImportResult(await readImportResponse(response));
+    }
+
+    async function waitForQueuedPdfImport(
+        importId: string,
+        pollAfterMs: number,
+    ): Promise<ImportResult> {
+        const timeoutAt = Date.now() + 5 * 60 * 1000;
+        const interval = Math.max(2000, pollAfterMs);
+
+        while (Date.now() < timeoutAt) {
+            await new Promise((resolve) =>
+                window.setTimeout(resolve, interval),
+            );
+
+            const response = await fetchWithCsrf(
+                `/admin/product-management/products/hotels/import/pdf/${encodeURIComponent(importId)}`,
+                {
+                    method: 'GET',
+                    headers: { Accept: 'application/json' },
+                },
+            );
+            const body = (await response.json()) as PdfImportStatusResponse;
+
+            if (!response.ok) {
+                throw new Error(
+                    body.message ?? 'Status antrean PDF gagal diperiksa.',
+                );
+            }
+
+            if (body.status === 'completed' && body.result) {
+                return body.result;
+            }
+
+            if (body.status === 'failed') {
+                throw new Error(
+                    body.message ?? 'PDF gagal diproses oleh server.',
+                );
+            }
+        }
+
+        throw new Error(
+            'PDF masih menunggu antrean server. Pastikan cron pemroses import hotel sudah aktif, lalu coba kembali.',
+        );
     }
 
     function importBulkFile(event: React.ChangeEvent<HTMLInputElement>): void {

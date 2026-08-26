@@ -69,6 +69,7 @@ return [
     'hotel_pdf' => [
         'pdftotext_binary' => env('PDFTOTEXT_BINARY', 'pdftotext'),
         'timeout' => env('HOTEL_PDF_PARSE_TIMEOUT', 30),
+        'force_async' => env('HOTEL_PDF_FORCE_ASYNC', false),
     ],
 
 ];
