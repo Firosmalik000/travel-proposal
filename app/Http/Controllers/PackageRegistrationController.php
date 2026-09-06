@@ -44,7 +44,7 @@ class PackageRegistrationController extends Controller
                 'slug' => $travelPackage->slug,
                 'name' => $travelPackage->name,
                 'summary' => $travelPackage->summary,
-                'price' => (float) $travelPackage->price,
+                'price' => $travelPackage->doubleSellingPrice(),
                 'currency' => $travelPackage->currency,
                 'departure_city' => $travelPackage->departure_city,
                 'start_date' => $travelPackage->start_date?->toDateString(),
@@ -52,6 +52,10 @@ class PackageRegistrationController extends Controller
                 'seats_available' => $travelPackage->availableSeatsCount(),
                 'duration_days' => $travelPackage->duration_days,
                 'image_path' => $travelPackage->image_path,
+                'image_position' => data_get(
+                    $travelPackage->content,
+                    'gallery_positions.'.(string) $travelPackage->image_path,
+                ),
                 'room_prices' => $this->packageRoomConfigurationService->roomPrices($travelPackage),
                 'recommended_room_configuration' => $this->packageRoomConfigurationService->recommendedConfiguration(1),
             ],
@@ -84,9 +88,13 @@ class PackageRegistrationController extends Controller
                 'email' => $customer->email,
                 'origin_city' => $request->string('origin_city')->value(),
                 'passenger_count' => $request->integer('passenger_count'),
-                'room_configuration' => $this->packageRoomConfigurationService->normalizeConfiguration(
-                    (array) $request->input('room_configuration', []),
-                ),
+                'room_configuration' => $request->input('room_configuration_unit') === 'pax'
+                    ? $this->packageRoomConfigurationService->normalizePaxAllocation(
+                        (array) $request->input('room_configuration', []),
+                    )
+                    : $this->packageRoomConfigurationService->normalizeConfiguration(
+                        (array) $request->input('room_configuration', []),
+                    ),
                 'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
                 'status' => 'pending',
             ]);

@@ -16,6 +16,7 @@ class PackageCostCalculationService
 
     public function __construct(
         private readonly PackageCurrencySnapshotService $packageCurrencySnapshotService,
+        private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
     ) {}
 
     public const MODE_LEGACY_ASSIGNMENT = 'legacy_assignment';
@@ -196,19 +197,22 @@ class PackageCostCalculationService
             'passenger_count',
             'room_configuration',
         ]);
+        $focCount = $this->packageFocCount($package);
 
         $hotelPayload = $this->buildHotelBreakdown(
             $package,
             $bookings,
             $package->start_date?->toDateString(),
+            $focCount,
+            $customerCount,
         );
 
         $productPayload = $this->buildProductBreakdown(
             $package,
-            $customerCount,
+            $customerCount + $focCount,
             $calculationMode,
         );
-        $allInPayload = $this->buildAllInBreakdown($package, $customerCount);
+        $allInPayload = $this->buildAllInBreakdown($package, $customerCount + $focCount);
 
         $warnings = [
             ...$hotelPayload['warnings'],
@@ -257,6 +261,8 @@ class PackageCostCalculationService
         TravelPackage $package,
         Collection $bookings,
         ?string $periodDate,
+        int $focCount,
+        int $customerCount,
     ): array {
         $items = [];
         $warnings = [];
@@ -270,12 +276,20 @@ class PackageCostCalculationService
         $productHotelRoomTotals = collect(self::PRODUCT_HOTEL_ROOM_TYPES)
             ->mapWithKeys(fn (string $roomType): array => [$roomType => (int) ($roomTotals[$roomType] ?? 0)])
             ->all();
+        $allocatedCapacity = $productHotelRoomTotals['double'] * 2
+            + $productHotelRoomTotals['triple'] * 3
+            + $productHotelRoomTotals['quad'] * 4;
+        $spareCapacity = max(0, $allocatedCapacity - $customerCount);
+        $uncoveredFocCount = max(0, $focCount - $spareCapacity);
+        if ($uncoveredFocCount > 0) {
+            $productHotelRoomTotals['quad'] += (int) ceil($uncoveredFocCount / 4);
+        }
         $selectedBrokers = data_get($package->content, 'hotel_product_brokers', []);
         $hasUnsupportedRoomConfigurations = $bookings->contains(function (Booking $booking): bool {
             $configuration = is_array($booking->room_configuration) ? $booking->room_configuration : [];
 
             return collect($configuration)->contains(
-                fn (mixed $roomCount, mixed $roomType): bool => ! in_array((string) $roomType, self::PRODUCT_HOTEL_ROOM_TYPES, true)
+                fn (mixed $roomCount, mixed $roomType): bool => ! in_array((string) $roomType, [...self::PRODUCT_HOTEL_ROOM_TYPES, 'single'], true)
                     && (int) $roomCount > 0,
             );
         });
@@ -325,6 +339,8 @@ class PackageCostCalculationService
                         $this->hotelRoomLabel($roomType),
                         is_string($selectedBroker) && $selectedBroker !== '' ? ' - '.$selectedBroker : '',
                     );
+
+                    continue;
                 }
 
                 $originalUnitPrice = (int) data_get($matchedPrice, 'price', 0);
@@ -376,6 +392,7 @@ class PackageCostCalculationService
                         'period_start' => data_get($matchedPrice, 'period_start'),
                         'period_end' => data_get($matchedPrice, 'period_end'),
                         'calculation_source' => 'hotel_product_pricing',
+                        'foc_count' => $focCount,
                     ],
                 ];
             }
@@ -540,6 +557,11 @@ class PackageCostCalculationService
             && in_array($product->product_type, $package->allInConfig->included_category_keys ?? [], true);
     }
 
+    private function packageFocCount(TravelPackage $package): int
+    {
+        return max(0, (int) data_get($package->content, 'hpp_estimate.operational_costs.foc.count', 0));
+    }
+
     /**
      * @return array{double:int,triple:int,quad:int}
      */
@@ -571,11 +593,7 @@ class PackageCostCalculationService
      */
     private function normalizeRoomConfiguration(?array $configuration): array
     {
-        return [
-            'double' => max(0, (int) data_get($configuration, 'double', 0)),
-            'triple' => max(0, (int) data_get($configuration, 'triple', 0)),
-            'quad' => max(0, (int) data_get($configuration, 'quad', 0)),
-        ];
+        return $this->packageRoomConfigurationService->roomCounts($configuration);
     }
 
     private function hotelRoomLabel(string $roomType): string

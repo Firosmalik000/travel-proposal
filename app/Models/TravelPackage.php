@@ -73,7 +73,9 @@ class TravelPackage extends Model
 
     public function hasDiscount(): bool
     {
-        return $this->original_price !== null && $this->original_price > $this->price;
+        $originalPrice = $this->doubleOriginalPrice();
+
+        return $originalPrice !== null && $originalPrice > $this->doubleSellingPrice();
     }
 
     public function discountPercent(): ?int
@@ -82,7 +84,27 @@ class TravelPackage extends Model
             return null;
         }
 
-        return (int) round((1 - $this->price / $this->original_price) * 100);
+        return (int) round((1 - $this->doubleSellingPrice() / $this->doubleOriginalPrice()) * 100);
+    }
+
+    public function doubleSellingPrice(): float
+    {
+        $doublePrice = data_get($this->content, 'room_prices.dbl');
+
+        return is_numeric($doublePrice) ? (float) $doublePrice : (float) ($this->price ?? 0);
+    }
+
+    public function doubleOriginalPrice(): ?float
+    {
+        $sellingPrice = $this->doubleSellingPrice();
+        $doubleOriginalPrice = data_get($this->content, 'room_original_prices.dbl');
+        $originalPrice = is_numeric($doubleOriginalPrice)
+            ? (float) $doubleOriginalPrice
+            : ($this->original_price !== null ? (float) $this->original_price : null);
+
+        return $originalPrice !== null && $originalPrice > $sellingPrice
+            ? $originalPrice
+            : null;
     }
 
     public function schedules(): HasMany

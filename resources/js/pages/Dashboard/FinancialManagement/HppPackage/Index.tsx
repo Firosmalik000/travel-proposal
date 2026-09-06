@@ -54,7 +54,7 @@ type HppEstimate = {
     estimated_profit: number;
     calculated_at: string | null;
     items?: Array<{
-        cost_type: 'hotel' | 'product' | 'all_in' | 'fee' | 'other';
+        cost_type: 'hotel' | 'product' | 'all_in' | 'foc' | 'fee' | 'other';
         reference_id?: number | null;
         label: string;
         quantity: number;
@@ -1347,6 +1347,10 @@ export default function HppPackageIndex({
                                                             [
                                                                 'all_in',
                                                                 'Paket All In Vendor',
+                                                            ],
+                                                            [
+                                                                'foc',
+                                                                'Biaya FOC',
                                                             ],
                                                             [
                                                                 'fee',

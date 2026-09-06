@@ -116,8 +116,14 @@ const roomConfigurationLabel = (
         return '-';
     }
 
+    const normalizedConfiguration = {
+        double:
+            Math.max(Number(roomConfiguration.double ?? 0), 0) +
+            Math.max(Number(roomConfiguration.single ?? 0), 0),
+        triple: Math.max(Number(roomConfiguration.triple ?? 0), 0),
+        quad: Math.max(Number(roomConfiguration.quad ?? 0), 0),
+    };
     const labels = [
-        ['single', 'Single'],
         ['double', 'Double'],
         ['triple', 'Triple'],
         ['quad', 'Quad'],
@@ -126,7 +132,7 @@ const roomConfigurationLabel = (
     return (
         labels
             .map(([key, label]) => {
-                const count = Math.max(Number(roomConfiguration[key] ?? 0), 0);
+                const count = normalizedConfiguration[key];
 
                 return count > 0 ? `${count} ${label}` : null;
             })

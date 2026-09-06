@@ -104,7 +104,7 @@ class PackageDraftService
     }
 
     /**
-     * @param array<int, UploadedFile> $images
+     * @param  array<int, UploadedFile>  $images
      * @return array<int, array<string, mixed>>
      */
     public function uploadImages(User $user, array $images, ?TravelPackage $package = null): array
@@ -189,8 +189,8 @@ class PackageDraftService
     }
 
     /**
-     * @param array<int, string> $submittedImages
-     * @return array{images: array<int, string>, promoted_paths: array<int, string>}
+     * @param  array<int, string>  $submittedImages
+     * @return array{images: array<int, string>, promoted_paths: array<int, string>, path_map: array<string, string>}
      */
     public function prepareImagesForSave(
         User $user,
@@ -205,6 +205,7 @@ class PackageDraftService
         ])->filter()->unique();
         $resolvedImages = [];
         $promotedPaths = [];
+        $pathMap = [];
 
         try {
             foreach (collect($submittedImages)->filter()->unique() as $submittedImage) {
@@ -238,7 +239,9 @@ class PackageDraftService
                 }
 
                 $promotedPaths[] = $targetPath;
-                $resolvedImages[] = '/storage/'.$targetPath;
+                $resolvedPath = '/storage/'.$targetPath;
+                $resolvedImages[] = $resolvedPath;
+                $pathMap[$submittedImage] = $resolvedPath;
             }
         } catch (Throwable $exception) {
             $this->removePromotedImages($promotedPaths);
@@ -249,6 +252,7 @@ class PackageDraftService
         return [
             'images' => $resolvedImages,
             'promoted_paths' => $promotedPaths,
+            'path_map' => $pathMap,
         ];
     }
 

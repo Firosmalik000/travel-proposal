@@ -1,3 +1,4 @@
+import { CurrencyRatesPanel } from '@/components/currency-rates-panel';
 import {
     Sidebar,
     SidebarContent,
@@ -261,7 +262,8 @@ export function DynamicSidebar() {
                 )}
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-white/10 bg-transparent p-2.5">
+            <SidebarFooter className="flex flex-col gap-3 border-t border-white/10 bg-transparent">
+                <CurrencyRatesPanel />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

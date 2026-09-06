@@ -1,5 +1,9 @@
 import PublicLayout from '@/layouts/PublicLayout';
 import {
+    normalizePackageImagePositions,
+    packageImageStyle,
+} from '@/lib/package-image-position';
+import {
     formatPrice,
     getPublicAddress,
     getPublicEmail,
@@ -50,6 +54,12 @@ import {
     type ComponentType,
     type CSSProperties,
 } from 'react';
+
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
 
 type SectionBackgroundConfig = {
     type?: 'default' | 'color' | 'image';
@@ -1275,7 +1285,7 @@ export default function PublicHomeLanding() {
                                                 ) : null}
                                             </div>
 
-                                            <div className="relative h-56 overflow-hidden">
+                                            <div className="relative aspect-video overflow-hidden">
                                                 <img
                                                     src={String(
                                                         pkg.image_path ??
@@ -1283,6 +1293,18 @@ export default function PublicHomeLanding() {
                                                     )}
                                                     alt={name}
                                                     className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                                                    style={packageImageStyle(
+                                                        normalizePackageImagePositions(
+                                                            asRecord(
+                                                                pkg.content,
+                                                            ).gallery_positions,
+                                                        )[
+                                                            String(
+                                                                pkg.image_path ??
+                                                                    '',
+                                                            )
+                                                        ],
+                                                    )}
                                                 />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
                                                 <div className="absolute right-4 bottom-4 left-4">
@@ -1339,7 +1361,13 @@ export default function PublicHomeLanding() {
                                                     <div className="flex items-end justify-between gap-3">
                                                         <div>
                                                             <p className="text-lg font-extrabold text-[#64132e]">
+                                                                <span className="mr-1 text-[10px] font-semibold text-[#2a120c]/55">
+                                                                    Mulai dari
+                                                                </span>
                                                                 {priceLabel}
+                                                            </p>
+                                                            <p className="mt-0.5 text-[10px] font-semibold text-[#2a120c]/55">
+                                                                per jamaah
                                                             </p>
                                                             {originalPriceLabel ? (
                                                                 <p className="mt-0.5 text-xs font-semibold text-[#2a120c]/45 line-through">

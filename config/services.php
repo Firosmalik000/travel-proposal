@@ -41,6 +41,7 @@ return [
             'endpoint' => env('BOOKING_NOTIFICATION_WHATSAPP_ENDPOINT', 'https://api.fonnte.com/send'),
             'admin_number' => env('BOOKING_NOTIFICATION_WHATSAPP'),
             'token' => env('BOOKING_NOTIFICATION_WHATSAPP_TOKEN'),
+            'direct_enabled' => env('BOOKING_NOTIFICATION_WHATSAPP_DIRECT_ENABLED', false),
         ],
     ],
 
@@ -54,6 +55,7 @@ return [
             'SAR' => 'Saudi Riyal',
             'USD' => 'US Dollar',
             'EUR' => 'Euro',
+            'EGP' => 'Egyptian Pound',
             'MYR' => 'Malaysian Ringgit',
             'SGD' => 'Singapore Dollar',
         ],

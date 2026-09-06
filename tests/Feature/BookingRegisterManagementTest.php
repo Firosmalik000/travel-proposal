@@ -678,9 +678,9 @@ class BookingRegisterManagementTest extends TestCase
             ->get(route('booking.listing.index'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('revenue.by_currency.0.amount', 86000000)
-                ->where('registrations.data.0.revenue.amount', 86000000)
-                ->where('registrations.data.0.room_summary', '1 single + 1 double')
+                ->where('revenue.by_currency.0.amount', 84000000)
+                ->where('registrations.data.0.revenue.amount', 84000000)
+                ->where('registrations.data.0.room_summary', '2 double')
             );
     }
 }

@@ -17,7 +17,6 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import { Building2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -165,6 +164,7 @@ function emptyProduct(
     categoryKey: string,
     startDate: string,
     endDate: string,
+    multiplierPerPax = 1,
 ): PackageSpecificProduct {
     const estimateId = temporaryEstimateId--;
 
@@ -177,7 +177,7 @@ function emptyProduct(
         description: '',
         currency: 'IDR',
         price: 0,
-        multiplier_per_pax: 1,
+        multiplier_per_pax: normalizeMultiplier(multiplierPerPax),
         country_id: null,
         city_id: null,
         country: '',
@@ -185,6 +185,10 @@ function emptyProduct(
         pricing:
             categoryKey === 'hotel' ? [emptyPricing(startDate, endDate)] : [],
     };
+}
+
+function normalizeMultiplier(value: number | string): number {
+    return Math.max(1, Math.floor(Number(value) || 1));
 }
 
 export function PackageSpecificProductManager({
@@ -216,6 +220,15 @@ export function PackageSpecificProductManager({
     const visibleProducts = value.filter(
         (product) => product.product_type === resolvedActiveCategoryKey,
     );
+    const visibleMultipliers = [
+        ...new Set(
+            visibleProducts.map((product) =>
+                normalizeMultiplier(product.multiplier_per_pax),
+            ),
+        ),
+    ];
+    const sharedMultiplier =
+        visibleMultipliers.length === 1 ? visibleMultipliers[0] : null;
     const categoryMap = useMemo(
         () =>
             Object.fromEntries(
@@ -248,7 +261,14 @@ export function PackageSpecificProductManager({
             return;
         }
 
-        setDraft(emptyProduct(categoryKey, packageStartDate, packageEndDate));
+        setDraft(
+            emptyProduct(
+                categoryKey,
+                packageStartDate,
+                packageEndDate,
+                sharedMultiplier ?? 1,
+            ),
+        );
         setDialogOpen(true);
     }
 
@@ -506,23 +526,89 @@ export function PackageSpecificProductManager({
         });
     }
 
+    function updateProductMultiplier(
+        product: PackageSpecificProduct,
+        nextValue: string,
+    ) {
+        const multiplier = normalizeMultiplier(nextValue);
+
+        onChange(
+            value.map((item) =>
+                item.client_key === product.client_key
+                    ? { ...item, multiplier_per_pax: multiplier }
+                    : item,
+            ),
+            hotelBrokerSelections,
+        );
+    }
+
+    function updateCategoryMultipliers(nextValue: string) {
+        const multiplier = normalizeMultiplier(nextValue);
+
+        onChange(
+            value.map((product) =>
+                product.product_type === resolvedActiveCategoryKey
+                    ? { ...product, multiplier_per_pax: multiplier }
+                    : product,
+            ),
+            hotelBrokerSelections,
+        );
+    }
+
     return (
         <section className="border-t border-border/70 pt-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
+            <div className="flex flex-col gap-3 rounded-xl bg-muted/35 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-foreground">
                         Produk Khusus {activeCategoryLabel}
                     </h3>
                 </div>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={openCreate}
-                    disabled={!activeCategory || isActiveCategoryLocked}
-                >
-                    <Plus className="h-4 w-4" /> Tambah {activeCategoryLabel}
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="grid gap-1">
+                        <Label
+                            htmlFor={`custom-product-shared-multiplier-${resolvedActiveCategoryKey}`}
+                            className="text-[11px] text-muted-foreground"
+                        >
+                            Terapkan ke semua
+                        </Label>
+                        <div className="flex h-9 items-center gap-1 rounded-lg border border-input bg-background px-2 shadow-xs">
+                            <Input
+                                id={`custom-product-shared-multiplier-${resolvedActiveCategoryKey}`}
+                                type="number"
+                                min={1}
+                                inputMode="numeric"
+                                value={sharedMultiplier ?? ''}
+                                placeholder="Beragam"
+                                disabled={
+                                    visibleProducts.length === 0 ||
+                                    isActiveCategoryLocked
+                                }
+                                onChange={(event) =>
+                                    updateCategoryMultipliers(
+                                        event.target.value,
+                                    )
+                                }
+                                className="h-7 w-16 border-0 bg-transparent px-1 text-right text-xs font-semibold tabular-nums shadow-none focus-visible:ring-0"
+                            />
+                            <span className="text-[11px] whitespace-nowrap text-muted-foreground">
+                                {resolvedActiveCategoryKey === 'hotel'
+                                    ? 'hari / pax'
+                                    : 'x / pax'}
+                            </span>
+                        </div>
+                    </div>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={openCreate}
+                        disabled={!activeCategory || isActiveCategoryLocked}
+                        className="h-9"
+                    >
+                        <Plus className="h-4 w-4" /> Tambah{' '}
+                        {activeCategoryLabel}
+                    </Button>
+                </div>
             </div>
 
             {isActiveCategoryLocked ? (
@@ -552,7 +638,7 @@ export function PackageSpecificProductManager({
                         return (
                             <div
                                 key={product.client_key}
-                                className="grid gap-3 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                                className="grid gap-3 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center"
                             >
                                 <div className="min-w-0">
                                     <div className="flex flex-wrap items-center gap-2">
@@ -573,8 +659,6 @@ export function PackageSpecificProductManager({
                                                   product.price,
                                                   product.currency,
                                               )}
-                                        {' · '}x{product.multiplier_per_pax} /
-                                        pax
                                     </p>
                                     {product.product_type === 'hotel' &&
                                     brokerNames.length > 0 ? (
@@ -614,6 +698,32 @@ export function PackageSpecificProductManager({
                                             </Select>
                                         </div>
                                     ) : null}
+                                </div>
+                                <div className="flex h-9 w-fit items-center gap-1 rounded-lg bg-muted/50 px-2">
+                                    <Label
+                                        htmlFor={`custom-product-multiplier-${product.client_key}`}
+                                        className="text-[11px] whitespace-nowrap text-muted-foreground"
+                                    >
+                                        {product.product_type === 'hotel'
+                                            ? 'hari / pax'
+                                            : 'x / pax'}
+                                    </Label>
+                                    <Input
+                                        id={`custom-product-multiplier-${product.client_key}`}
+                                        type="number"
+                                        min={1}
+                                        inputMode="numeric"
+                                        value={normalizeMultiplier(
+                                            product.multiplier_per_pax,
+                                        )}
+                                        onChange={(event) =>
+                                            updateProductMultiplier(
+                                                product,
+                                                event.target.value,
+                                            )
+                                        }
+                                        className="h-7 w-14 border-0 bg-transparent px-1 text-right text-xs font-semibold tabular-nums shadow-none focus-visible:ring-0"
+                                    />
                                 </div>
                                 <div className="flex items-center gap-1 sm:justify-end">
                                     <Button
@@ -827,31 +937,6 @@ export function PackageSpecificProductManager({
                                     />
                                 </div>
                             )}
-
-                            <div
-                                className={cn(
-                                    'grid gap-2',
-                                    draft.product_type !== 'hotel' &&
-                                        'sm:col-start-2',
-                                )}
-                            >
-                                <Label>
-                                    {draft.product_type === 'hotel'
-                                        ? 'Jumlah Malam / Pax'
-                                        : 'Jumlah / Pax'}
-                                </Label>
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    value={draft.multiplier_per_pax}
-                                    onChange={(event) =>
-                                        updateDraft(
-                                            'multiplier_per_pax',
-                                            Number(event.target.value),
-                                        )
-                                    }
-                                />
-                            </div>
 
                             <div className="grid gap-2 sm:col-span-2">
                                 <Label>Catatan</Label>

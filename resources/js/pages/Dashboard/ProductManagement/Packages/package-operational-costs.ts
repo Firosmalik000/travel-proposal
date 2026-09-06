@@ -1,12 +1,14 @@
 import type { PackageOperationalCosts } from './types';
 
 export const emptyPackageOperationalCosts: PackageOperationalCosts = {
+    foc: { count: 0 },
     overhead: { amount: 0, mode: 'total' },
-    photographer: { count: 0, daily_salary: 0, days: 0 },
+    photographer: { count: 0, daily_salary: 0, days: 0, currency: 'IDR' },
     human_resources: [],
     tour_leader: {
         count: 0,
         salary_per_trip: 0,
+        currency: 'IDR',
         include_hotel: true,
         include_ticket_and_visa: true,
     },
@@ -29,6 +31,9 @@ export function normalizePackageOperationalCosts(
     value?: Partial<PackageOperationalCosts> | null,
 ): PackageOperationalCosts {
     return {
+        foc: {
+            count: nonNegativeNumber(value?.foc?.count),
+        },
         overhead: {
             amount: nonNegativeNumber(value?.overhead?.amount),
             mode: value?.overhead?.mode === 'per_pax' ? 'per_pax' : 'total',
@@ -37,6 +42,9 @@ export function normalizePackageOperationalCosts(
             count: nonNegativeNumber(value?.photographer?.count),
             daily_salary: nonNegativeNumber(value?.photographer?.daily_salary),
             days: nonNegativeNumber(value?.photographer?.days),
+            currency: String(
+                value?.photographer?.currency || 'IDR',
+            ).toUpperCase(),
         },
         human_resources: Array.isArray(value?.human_resources)
             ? value.human_resources.map((item, index) => ({
@@ -50,6 +58,9 @@ export function normalizePackageOperationalCosts(
             salary_per_trip: nonNegativeNumber(
                 value?.tour_leader?.salary_per_trip,
             ),
+            currency: String(
+                value?.tour_leader?.currency || 'IDR',
+            ).toUpperCase(),
             include_hotel: value?.tour_leader?.include_hotel !== false,
             include_ticket_and_visa:
                 value?.tour_leader?.include_ticket_and_visa !== false,
@@ -116,16 +127,22 @@ export function calculateOperationalCostTotals(
             ? nonNegativeNumber(costs.overhead.amount) * pax
             : nonNegativeNumber(costs.overhead.amount);
     const photographer =
+        convertToIdr(
+            nonNegativeNumber(costs.photographer.daily_salary),
+            costs.photographer.currency,
+        ) *
         nonNegativeNumber(costs.photographer.count) *
-        nonNegativeNumber(costs.photographer.daily_salary) *
         nonNegativeNumber(costs.photographer.days);
     const tourLeaderSupport =
         (costs.tour_leader.include_hotel ? hotelPerPax : 0) +
         (costs.tour_leader.include_ticket_and_visa ? ticketAndVisaPerPax : 0);
+    const tourLeaderSalary = convertToIdr(
+        nonNegativeNumber(costs.tour_leader.salary_per_trip),
+        costs.tour_leader.currency,
+    );
     const tourLeader = Math.round(
         nonNegativeNumber(costs.tour_leader.count) *
-            (nonNegativeNumber(costs.tour_leader.salary_per_trip) +
-                tourLeaderSupport),
+            (tourLeaderSalary + tourLeaderSupport),
     );
     const muthawwifSalary = convertToIdr(
         nonNegativeNumber(costs.muthawwif.daily_salary),

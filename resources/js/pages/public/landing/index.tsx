@@ -1,6 +1,10 @@
 import GlobalFaviconHead from '@/components/global-favicon-head';
 import PublicSeoHead from '@/components/public/seo-head';
 import {
+    normalizePackageImagePositions,
+    packageImageStyle,
+} from '@/lib/package-image-position';
+import {
     formatPrice,
     getPublicAddress,
     getPublicEmail,
@@ -44,6 +48,12 @@ import {
 import { useMemo, useState } from 'react';
 
 type CmsRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): CmsRecord {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as CmsRecord)
+        : {};
+}
 
 const LANDING_NAV_ITEMS = [
     { label: 'Paket Umroh', href: '#detail' },
@@ -1288,7 +1298,7 @@ export default function PublicLandingPage() {
                                     className="overflow-hidden rounded-[18px] border border-[#d9c8b3] bg-white shadow-[0_16px_38px_rgba(113,2,20,.09)]"
                                     whileHover={{ y: -6 }}
                                 >
-                                    <div className="relative h-[170px] overflow-hidden">
+                                    <div className="relative aspect-video overflow-hidden">
                                         {hasDiscount ? (
                                             <div className="absolute top-0 right-0 bg-[#f59e0b] px-4 py-2 text-[9px] font-black tracking-[.22em] text-white uppercase [clip-path:polygon(18%_0,100%_0,100%_100%,0_100%)]">
                                                 {discountLabel}
@@ -1299,6 +1309,12 @@ export default function PublicLandingPage() {
                                                 src={text(pkg.image_path)}
                                                 alt={packageName}
                                                 className="h-full w-full object-cover"
+                                                style={packageImageStyle(
+                                                    normalizePackageImagePositions(
+                                                        asRecord(pkg.content)
+                                                            .gallery_positions,
+                                                    )[text(pkg.image_path)],
+                                                )}
                                             />
                                         ) : (
                                             <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#3d0508,#8c0a16)] text-[#f4c577]">
@@ -1315,6 +1331,9 @@ export default function PublicLandingPage() {
                                             {packageName}
                                         </h3>
                                         <div className="mt-5">
+                                            <p className="mb-1 text-[10px] font-bold tracking-[0.12em] text-[#8d7d74] uppercase">
+                                                Mulai dari
+                                            </p>
                                             <div className="flex items-end">
                                                 <p className="font-display text-[30px] leading-none font-black text-[#a60f24]">
                                                     {packagePrice}

@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Mail\NewPackageRegistrationSubmitted;
-use App\Models\DepartureSchedule;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
+use App\Services\PackageRoomConfigurationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -25,33 +25,17 @@ class PublicPackageRegistrationTest extends TestCase
             'package_type' => 'hemat',
             'departure_city' => 'Jakarta',
             'duration_days' => 9,
+            'start_date' => now()->addDays(10)->toDateString(),
+            'end_date' => now()->addDays(18)->toDateString(),
+            'seats_total' => 40,
+            'booking_status' => 'open',
             'price' => 27900000,
             'currency' => 'IDR',
             'image_path' => '/images/dummy.jpg',
             'summary' => ['id' => 'Ringkasan paket', 'en' => 'Package summary'],
-            'content' => [],
-            'is_active' => true,
-        ]);
-
-        DepartureSchedule::query()->create([
-            'package_id' => $package->id,
-            'departure_date' => now()->subDays(5)->toDateString(),
-            'return_date' => now()->subDays(1)->toDateString(),
-            'departure_city' => 'Surabaya',
-            'seats_total' => 40,
-            'seats_available' => 12,
-            'status' => 'open',
-            'is_active' => true,
-        ]);
-
-        DepartureSchedule::query()->create([
-            'package_id' => $package->id,
-            'departure_date' => now()->addDays(10)->toDateString(),
-            'return_date' => now()->addDays(19)->toDateString(),
-            'departure_city' => 'Jakarta',
-            'seats_total' => 40,
-            'seats_available' => 12,
-            'status' => 'open',
+            'content' => [
+                'room_prices' => ['dbl' => 27_900_000, 'trpl' => 26_900_000, 'quad' => 25_900_000],
+            ],
             'is_active' => true,
         ]);
 
@@ -60,8 +44,8 @@ class PublicPackageRegistrationTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('public/paket/register/index')
                 ->where('travelPackage.slug', 'umroh-hemat-9-hari')
-                ->has('travelPackage.schedules', 1)
-                ->where('travelPackage.schedules.0.departure_city', 'Jakarta'),
+                ->where('travelPackage.departure_city', 'Jakarta')
+                ->where('travelPackage.room_prices.double', 27_900_000),
             );
     }
 
@@ -93,57 +77,61 @@ class PublicPackageRegistrationTest extends TestCase
             'price' => 34900000,
             'currency' => 'IDR',
             'summary' => ['id' => 'Ringkasan paket', 'en' => 'Package summary'],
-            'content' => [],
+            'content' => [
+                'room_prices' => [
+                    'dbl' => 34_900_000,
+                    'trpl' => 33_900_000,
+                    'quad' => 32_900_000,
+                ],
+            ],
             'is_active' => true,
         ]);
 
-        $schedule = DepartureSchedule::query()->create([
-            'package_id' => $package->id,
-            'departure_date' => now()->addDays(14)->toDateString(),
-            'return_date' => now()->addDays(24)->toDateString(),
-            'departure_city' => 'Surabaya',
-            'seats_total' => 45,
-            'seats_available' => 18,
-            'status' => 'open',
-            'is_active' => true,
-        ]);
-
-        $this->post(route('public.paket-register.store', ['travelPackage' => $package->slug]), [
-            'departure_schedule_id' => $schedule->id,
+        $response = $this->post(route('public.paket-register.store', ['travelPackage' => $package->slug]), [
             'full_name' => 'Ahmad Fauzi',
             'phone' => '081234567890',
             'email' => 'ahmad@example.com',
             'origin_city' => 'Gresik',
-            'passenger_count' => 2,
+            'passenger_count' => 10,
+            'room_configuration_unit' => 'pax',
             'room_configuration' => [
-                'single' => 0,
-                'double' => 1,
+                'double' => 2,
                 'triple' => 0,
-                'quad' => 0,
+                'quad' => 8,
             ],
             'notes' => 'Mohon info kamar triple.',
-        ])->assertRedirect(route('public.paket-register', ['travelPackage' => $package->slug]));
-        $this->assertSessionHas('success');
+        ]);
+        $response
+            ->assertRedirect(route('public.paket-register', ['travelPackage' => $package->slug]))
+            ->assertSessionHas('success');
 
         $this->assertDatabaseHas('package_registrations', [
             'package_id' => $package->id,
-            'departure_schedule_id' => $schedule->id,
+            'departure_schedule_id' => null,
             'full_name' => 'Ahmad Fauzi',
             'phone' => '081234567890',
             'email' => 'ahmad@example.com',
             'origin_city' => 'Gresik',
-            'passenger_count' => 2,
+            'passenger_count' => 10,
             'status' => 'pending',
         ]);
 
         $registration = PackageRegistration::query()->firstOrFail();
 
-        $this->assertSame([
-            'single' => 0,
-            'double' => 1,
+        $this->assertEquals([
+            'unit' => 'pax',
+            'double' => 2,
             'triple' => 0,
-            'quad' => 0,
+            'quad' => 8,
         ], $registration->room_configuration);
+        $this->assertSame(
+            333_000_000.0,
+            app(PackageRoomConfigurationService::class)->calculateTotalAmount(
+                $package,
+                $registration->room_configuration,
+                $registration->passenger_count,
+            ),
+        );
 
         Mail::assertSent(NewPackageRegistrationSubmitted::class, function (NewPackageRegistrationSubmitted $mail): bool {
             return $mail->hasTo('admin@example.com')
@@ -190,28 +178,21 @@ class PublicPackageRegistrationTest extends TestCase
 
     public function test_it_rejects_invalid_room_composition_for_public_registration(): void
     {
-        $package = TravelPackage::factory()->create();
-        $schedule = DepartureSchedule::query()->create([
-            'package_id' => $package->id,
-            'departure_date' => now()->addDays(14)->toDateString(),
-            'return_date' => now()->addDays(24)->toDateString(),
-            'departure_city' => 'Surabaya',
+        $package = TravelPackage::factory()->create([
+            'start_date' => now()->addDays(14)->toDateString(),
+            'end_date' => now()->addDays(23)->toDateString(),
             'seats_total' => 45,
-            'seats_available' => 18,
-            'status' => 'open',
-            'is_active' => true,
+            'booking_status' => 'open',
         ]);
 
         $this->from(route('public.paket-register', ['travelPackage' => $package->slug]))
             ->post(route('public.paket-register.store', ['travelPackage' => $package->slug]), [
-                'departure_schedule_id' => $schedule->id,
                 'full_name' => 'Ahmad Fauzi',
                 'phone' => '081234567890',
                 'email' => 'ahmad@example.com',
                 'origin_city' => 'Gresik',
                 'passenger_count' => 3,
                 'room_configuration' => [
-                    'single' => 0,
                     'double' => 1,
                     'triple' => 0,
                     'quad' => 0,
@@ -222,30 +203,50 @@ class PublicPackageRegistrationTest extends TestCase
             ->assertSessionHasErrors('room_configuration');
     }
 
-    public function test_it_rejects_past_schedules_for_public_registration(): void
+    public function test_it_rejects_a_public_pax_allocation_that_does_not_match_the_passenger_count(): void
     {
-        $package = TravelPackage::factory()->create();
-        $pastSchedule = DepartureSchedule::query()->create([
-            'package_id' => $package->id,
-            'departure_date' => now()->subDays(3)->toDateString(),
-            'return_date' => now()->subDay()->toDateString(),
-            'departure_city' => 'Surabaya',
+        $package = TravelPackage::factory()->create([
+            'start_date' => now()->addDays(14)->toDateString(),
+            'end_date' => now()->addDays(23)->toDateString(),
             'seats_total' => 45,
-            'seats_available' => 18,
-            'status' => 'open',
-            'is_active' => true,
+            'booking_status' => 'open',
         ]);
 
         $this->from(route('public.paket-register', ['travelPackage' => $package->slug]))
             ->post(route('public.paket-register.store', ['travelPackage' => $package->slug]), [
-                'departure_schedule_id' => $pastSchedule->id,
+                'full_name' => 'Ahmad Fauzi',
+                'phone' => '081234567890',
+                'email' => 'ahmad@example.com',
+                'origin_city' => 'Gresik',
+                'passenger_count' => 10,
+                'room_configuration_unit' => 'pax',
+                'room_configuration' => [
+                    'double' => 1,
+                    'triple' => 0,
+                    'quad' => 8,
+                ],
+            ])
+            ->assertRedirect(route('public.paket-register', ['travelPackage' => $package->slug]))
+            ->assertSessionHasErrors('room_configuration');
+    }
+
+    public function test_it_rejects_a_package_with_a_past_departure(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'start_date' => now()->subDays(3)->toDateString(),
+            'end_date' => now()->subDay()->toDateString(),
+            'seats_total' => 45,
+            'booking_status' => 'open',
+        ]);
+
+        $this->from(route('public.paket-register', ['travelPackage' => $package->slug]))
+            ->post(route('public.paket-register.store', ['travelPackage' => $package->slug]), [
                 'full_name' => 'Ahmad Fauzi',
                 'phone' => '081234567890',
                 'email' => 'ahmad@example.com',
                 'origin_city' => 'Gresik',
                 'passenger_count' => 2,
                 'room_configuration' => [
-                    'single' => 0,
                     'double' => 1,
                     'triple' => 0,
                     'quad' => 0,
@@ -253,6 +254,6 @@ class PublicPackageRegistrationTest extends TestCase
                 'notes' => 'Mohon info kamar triple.',
             ])
             ->assertRedirect(route('public.paket-register', ['travelPackage' => $package->slug]))
-            ->assertSessionHasErrors('departure_schedule_id');
+            ->assertSessionHasErrors('passenger_count');
     }
 }

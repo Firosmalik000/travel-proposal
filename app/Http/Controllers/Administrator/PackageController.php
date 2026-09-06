@@ -78,18 +78,13 @@ class PackageController extends Controller
         return $this->renderPackagePage('edit', $package);
     }
 
-    public function editHppEstimate(TravelPackage $package): Response
-    {
-        return $this->renderPackagePage('hpp', $package);
-    }
-
     public function store(StorePackageRequest $request): RedirectResponse
     {
         $preparedImages = $this->packageDraftService->prepareImagesForSave(
             $request->user(),
             $request->input('existing_images', []),
         );
-        $request->merge(['existing_images' => $preparedImages['images']]);
+        $this->applyPreparedImagesToRequest($request, $preparedImages);
 
         try {
             DB::transaction(function () use ($request): void {
@@ -130,7 +125,7 @@ class PackageController extends Controller
             $request->input('existing_images', []),
             $package,
         );
-        $request->merge(['existing_images' => $preparedImages['images']]);
+        $this->applyPreparedImagesToRequest($request, $preparedImages);
 
         try {
             DB::transaction(function () use ($request, $package): void {
@@ -158,46 +153,6 @@ class PackageController extends Controller
         $this->packageDraftService->discard($request->user(), $package);
 
         return back()->with('success', 'Package berhasil diperbarui.');
-    }
-
-    public function updateHppEstimate(StorePackageRequest $request, TravelPackage $package): RedirectResponse
-    {
-        $package->load('products');
-        $request->merge([
-            'product_ids' => $package->products->pluck('id')->values()->all(),
-            'product_multipliers' => $package->products->mapWithKeys(fn (TravelProduct $product): array => [
-                (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
-            ])->all(),
-        ]);
-
-        $payload = $this->packagePayload($request, $package, preserveImages: true);
-        $existingContent = is_array($package->content) ? $package->content : [];
-        $calculatedContent = is_array($payload['content']) ? $payload['content'] : [];
-
-        foreach ([
-            'hpp_estimate',
-            'hpp_currency_snapshots',
-            'currency_rate_snapshot',
-            'room_original_prices',
-            'room_prices',
-        ] as $financialContentKey) {
-            if (array_key_exists($financialContentKey, $calculatedContent)) {
-                $existingContent[$financialContentKey] = $calculatedContent[$financialContentKey];
-            }
-        }
-
-        $package->update([
-            'price' => $payload['price'],
-            'original_price' => $payload['original_price'],
-            'discount_label' => $payload['discount_label'],
-            'discount_ends_at' => $payload['discount_ends_at'],
-            'currency' => $payload['currency'],
-            'content' => $existingContent,
-        ]);
-
-        return redirect()
-            ->route('hpp-package.index')
-            ->with('success', 'Estimasi HPP berhasil diperbarui.');
     }
 
     public function destroy(TravelPackage $package): RedirectResponse
@@ -299,7 +254,7 @@ class PackageController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function packagePayload(
+    protected function packagePayload(
         StorePackageRequest $request,
         ?TravelPackage $existing = null,
         bool $preserveImages = false,
@@ -311,6 +266,7 @@ class PackageController extends Controller
             ])->filter()->values()->all()
             : $request->input('existing_images', []);
         $allImages = $existingImages;
+        $newImagePathsByClientKey = [];
 
         // Collect existing images that were kept
         if (! empty($existingImages)) {
@@ -337,9 +293,10 @@ class PackageController extends Controller
 
             // Handle newly uploaded images
             if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $file) {
+                foreach ($request->file('images') as $index => $file) {
                     $path = '/storage/'.$file->store('packages', 'public');
                     $allImages[] = $path;
+                    $newImagePathsByClientKey['__new_image_'.$index] = $path;
                 }
             }
 
@@ -359,16 +316,41 @@ class PackageController extends Controller
         $content = is_array($request->input('content'))
             ? $request->input('content')
             : (json_decode($request->input('content', '{}'), true) ?? []);
+        $content['gallery_positions'] = $this->normalizeGalleryPositions(
+            data_get($content, 'gallery_positions', []),
+        );
+        foreach ($newImagePathsByClientKey as $clientKey => $storedPath) {
+            if (! isset($content['gallery_positions'][$clientKey])) {
+                continue;
+            }
+
+            $content['gallery_positions'][$storedPath] = $content['gallery_positions'][$clientKey];
+            unset($content['gallery_positions'][$clientKey]);
+        }
 
         $originalPrice = $request->filled('original_price')
             ? $request->float('original_price')
             : null;
         $sellingPrice = $request->float('price');
+        $discountType = $request->filled('discount_type') ? $request->string('discount_type')->value() : 'percent';
+        $discountNominal = $request->filled('discount_nominal') ? $request->float('discount_nominal') : null;
         $content = $this->applyDiscountToRoomPrices(
             $content,
             $originalPrice,
             $sellingPrice,
+            $discountType,
+            $discountNominal,
         );
+
+        $doubleSellingPrice = data_get($content, 'room_prices.dbl');
+        if (is_numeric($doubleSellingPrice)) {
+            $sellingPrice = (float) $doubleSellingPrice;
+        }
+
+        $doubleOriginalPrice = data_get($content, 'room_original_prices.dbl');
+        $originalPrice = is_numeric($doubleOriginalPrice) && (float) $doubleOriginalPrice > $sellingPrice
+            ? (float) $doubleOriginalPrice
+            : null;
 
         $currencyCode = strtoupper($request->string('currency', 'IDR')->value());
         $submittedSnapshots = collect(data_get($content, 'hpp_currency_snapshots', []))
@@ -451,7 +433,6 @@ class PackageController extends Controller
 
             if (! $hasManualCustomerAssumption && $estimatedCustomerCount === 0) {
                 $estimatePayload['customers'] = [
-                    'single' => 0,
                     'dbl' => $request->integer('seats_total'),
                     'trpl' => 0,
                     'quad' => 0,
@@ -478,6 +459,10 @@ class PackageController extends Controller
 
         // Add gallery to content
         $content['gallery'] = $gallery;
+        $content['gallery_positions'] = array_intersect_key(
+            $content['gallery_positions'],
+            array_fill_keys($allImages, true),
+        );
 
         return [
             'code' => $this->generatePackageCode(
@@ -511,6 +496,75 @@ class PackageController extends Controller
             'is_featured' => $request->boolean('is_featured'),
             'is_active' => $request->boolean('is_active', true),
         ];
+    }
+
+    /**
+     * @return array<string, array{x: float, y: float, scale: float, version?: int, frameScale?: float}>
+     */
+    private function normalizeGalleryPositions(mixed $positions): array
+    {
+        if (! is_array($positions)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($positions as $path => $position) {
+            if (! is_string($path) || ! is_array($position)) {
+                continue;
+            }
+
+            $x = (float) data_get($position, 'x', 0);
+            $y = (float) data_get($position, 'y', 0);
+            $scale = (float) data_get($position, 'scale', 1);
+            $version = (int) data_get($position, 'version', 0);
+            $frameScale = $version === 2
+                ? max(0.4, min(1, (float) data_get($position, 'frameScale', 1)))
+                : 1;
+            if (! is_finite($x) || ! is_finite($y) || ! is_finite($scale)) {
+                continue;
+            }
+
+            $normalized[$path] = [
+                'x' => $version === 2
+                    ? max(0, min(100, $x))
+                    : ($version === 3 ? max(-200, min(200, $x)) : max(-1000, min(1000, $x))),
+                'y' => $version === 2
+                    ? max(0, min(100, $y))
+                    : ($version === 3 ? max(-200, min(200, $y)) : max(-1000, min(1000, $y))),
+                'scale' => max($version === 3 ? 0.25 : 1, min($version === 2 ? 3 * $frameScale : 3, $scale)),
+                ...($version === 2
+                    ? ['version' => 2, 'frameScale' => $frameScale]
+                    : ($version === 3 ? ['version' => 3] : [])),
+            ];
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * @param  array{images: array<int, string>, promoted_paths: array<int, string>, path_map: array<string, string>}  $preparedImages
+     */
+    private function applyPreparedImagesToRequest(StorePackageRequest $request, array $preparedImages): void
+    {
+        $content = is_array($request->input('content')) ? $request->input('content') : [];
+        $positions = is_array(data_get($content, 'gallery_positions'))
+            ? data_get($content, 'gallery_positions')
+            : [];
+
+        foreach ($preparedImages['path_map'] as $draftPath => $storedPath) {
+            if (! isset($positions[$draftPath])) {
+                continue;
+            }
+
+            $positions[$storedPath] = $positions[$draftPath];
+            unset($positions[$draftPath]);
+        }
+
+        data_set($content, 'gallery_positions', $positions);
+        $request->merge([
+            'existing_images' => $preparedImages['images'],
+            'content' => $content,
+        ]);
     }
 
     /**
@@ -657,14 +711,17 @@ class PackageController extends Controller
             ->all();
     }
 
-    private function renderPackagePage(string $mode, ?TravelPackage $package = null): Response
+    protected function renderPackagePage(string $mode, ?TravelPackage $package = null): Response
     {
         if ($package !== null) {
             $package->load($this->packageRelations());
         }
 
-        return Inertia::render('Dashboard/ProductManagement/Packages/Page', [
-            'mode' => $mode,
+        $component = $mode === 'hpp'
+            ? 'Dashboard/FinancialManagement/HppPackage/EstimateEdit'
+            : 'Dashboard/ProductManagement/Packages/Page';
+
+        $props = [
             'package' => $package !== null ? $this->serializePackage($package) : null,
             'productOptions' => $this->productOptions(),
             'currencies' => $this->currencyOptions(),
@@ -679,7 +736,13 @@ class PackageController extends Controller
                     : null)
                 : null,
             'packageImageUploadMaxKilobytes' => ParticipantUploadLimit::kilobytes(4096),
-        ]);
+        ];
+
+        if ($mode !== 'hpp') {
+            $props['mode'] = $mode;
+        }
+
+        return Inertia::render($component, $props);
     }
 
     /** @return array<int, string> */
@@ -776,8 +839,8 @@ class PackageController extends Controller
             'booking_status' => $pkg->booking_status,
             'departure_notes' => $pkg->departure_notes,
             'duration_days' => $pkg->duration_days,
-            'price' => (float) $pkg->price,
-            'original_price' => $pkg->original_price ? (float) $pkg->original_price : null,
+            'price' => $pkg->doubleSellingPrice(),
+            'original_price' => $pkg->doubleOriginalPrice(),
             'discount_type' => $pkg->discount_type ?? 'percent',
             'discount_nominal' => $pkg->discount_nominal ? (float) $pkg->discount_nominal : null,
             'discount_label' => $pkg->discount_label,
@@ -1095,29 +1158,49 @@ class PackageController extends Controller
      * @param  array<string, mixed>  $content
      * @return array<string, mixed>
      */
-    private function applyDiscountToRoomPrices(array $content, ?float $originalPrice, float $sellingPrice): array
-    {
+    private function applyDiscountToRoomPrices(
+        array $content,
+        ?float $originalPrice,
+        float $sellingPrice,
+        string $discountType = 'percent',
+        ?float $discountNominal = null,
+    ): array {
         $roomOriginalPrices = data_get($content, 'room_original_prices', []);
         if (! is_array($roomOriginalPrices)) {
             return $content;
         }
 
-        $discountRatio = 1.0;
-        if ($originalPrice !== null && $originalPrice > 0 && $sellingPrice > 0 && $sellingPrice < $originalPrice) {
-            $discountRatio = $sellingPrice / $originalPrice;
-        }
-
         $roomPrices = [];
-        foreach (['dbl', 'trpl', 'quad'] as $roomType) {
-            $originalRoomPrice = data_get($roomOriginalPrices, $roomType);
 
-            if (! is_numeric($originalRoomPrice)) {
-                $roomPrices[$roomType] = null;
+        if ($discountType === 'nominal' && $discountNominal !== null && $discountNominal > 0) {
+            foreach (['dbl', 'trpl', 'quad'] as $roomType) {
+                $originalRoomPrice = data_get($roomOriginalPrices, $roomType);
 
-                continue;
+                if (! is_numeric($originalRoomPrice)) {
+                    $roomPrices[$roomType] = null;
+
+                    continue;
+                }
+
+                $roomPrices[$roomType] = (int) round(max(0, (float) $originalRoomPrice - $discountNominal));
+            }
+        } else {
+            $discountRatio = 1.0;
+            if ($originalPrice !== null && $originalPrice > 0 && $sellingPrice > 0 && $sellingPrice < $originalPrice) {
+                $discountRatio = $sellingPrice / $originalPrice;
             }
 
-            $roomPrices[$roomType] = (int) round(((float) $originalRoomPrice) * $discountRatio);
+            foreach (['dbl', 'trpl', 'quad'] as $roomType) {
+                $originalRoomPrice = data_get($roomOriginalPrices, $roomType);
+
+                if (! is_numeric($originalRoomPrice)) {
+                    $roomPrices[$roomType] = null;
+
+                    continue;
+                }
+
+                $roomPrices[$roomType] = (int) round(((float) $originalRoomPrice) * $discountRatio);
+            }
         }
 
         $content['room_prices'] = $roomPrices;
@@ -1204,6 +1287,8 @@ class PackageController extends Controller
         }
 
         return collect([
+            data_get($configuration, 'photographer.currency'),
+            data_get($configuration, 'tour_leader.currency'),
             data_get($configuration, 'muthawwif.currency'),
             ...collect(data_get($configuration, 'guide_tips', []))
                 ->pluck('currency')

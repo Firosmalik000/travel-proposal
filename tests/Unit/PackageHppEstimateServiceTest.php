@@ -27,8 +27,10 @@ class PackageHppEstimateServiceTest extends TestCase
         $this->assertSame(16_000_000, $estimate['product_total']);
         $this->assertSame(32_000_000, $estimate['grand_total']);
         $this->assertSame(4_000_000, $estimate['hpp_per_customer']);
-        $this->assertSame(268_400_000, $estimate['revenue_total']);
-        $this->assertSame(236_400_000, $estimate['estimated_profit']);
+        $this->assertSame(267_520_000, $estimate['revenue_total']);
+        $this->assertSame(235_520_000, $estimate['estimated_profit']);
+        $this->assertArrayNotHasKey('single', $estimate['customers']);
+        $this->assertSame(3, $estimate['customers']['dbl']);
     }
 
     public function test_quad_selling_price_changes_revenue_for_the_quad_hotel_scenario(): void
@@ -188,6 +190,56 @@ class PackageHppEstimateServiceTest extends TestCase
         $this->assertSame(5, data_get($twentyCustomers, 'hotel_allocations.40.quad'));
         $this->assertSame(0, data_get($twentyCustomers, 'hotel_allocations.40.trpl'));
         $this->assertSame(0, data_get($twentyCustomers, 'hotel_allocations.40.dbl'));
+    }
+
+    public function test_it_adds_foc_cost_without_increasing_paid_customers_or_revenue(): void
+    {
+        $visa = new TravelProduct([
+            'code' => 'PRD-FOC-VISA',
+            'name' => 'Visa FOC',
+            'product_type' => 'perlengkapan',
+            'content' => ['price' => 100, 'currency' => 'IDR'],
+        ]);
+        $visa->id = 41;
+        $hotel = new TravelProduct([
+            'code' => 'HTL-FOC',
+            'name' => 'Hotel FOC',
+            'product_type' => 'hotel',
+            'content' => [
+                'currency' => 'IDR',
+                'pricing' => [
+                    ['room_type' => 'DBL', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1000],
+                    ['room_type' => 'TRPL', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1200],
+                    ['room_type' => 'QUAD', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1800],
+                ],
+            ],
+        ]);
+        $hotel->id = 42;
+
+        $estimate = app(PackageHppEstimateService::class)->calculate(
+            [
+                'customers' => ['quad' => 35],
+                'operational_costs' => ['foc' => ['count' => 1]],
+            ],
+            10_000,
+            [],
+            products: collect([$visa, $hotel]),
+            periodDate: '2026-09-16',
+            currencySnapshots: ['IDR' => ['rate_to_idr' => 1]],
+        );
+
+        $this->assertSame(35, $estimate['customer_count']);
+        $this->assertSame(1, $estimate['foc_count']);
+        $this->assertSame(350_000, $estimate['revenue_total']);
+        $this->assertSame(35, data_get($estimate, 'product_quantities.41'));
+        $this->assertSame(9, data_get($estimate, 'hotel_allocations.42.quad'));
+        $this->assertSame(1, data_get($estimate, 'hotel_allocations.42.trpl'));
+        $this->assertSame(17_400, $estimate['hotel_total']);
+        $this->assertSame(1800, $estimate['foc_hotel_total']);
+        $this->assertSame(100, $estimate['foc_product_total']);
+        $this->assertSame(1900, $estimate['foc_total']);
+        $this->assertSame(21_000, $estimate['grand_total']);
+        $this->assertCount(2, collect($estimate['items'])->where('cost_type', 'foc'));
     }
 
     public function test_it_only_keeps_product_quantity_when_admin_marked_it_as_manual(): void
@@ -361,6 +413,43 @@ class PackageHppEstimateServiceTest extends TestCase
         $this->assertSame(39_271, $estimate['hpp_per_customer']);
         $this->assertNotNull(collect($estimate['items'])->firstWhere('label', 'SDM - Admin Tambahan'));
         $this->assertNotNull(collect($estimate['items'])->firstWhere('label', 'Tips Guide Mesir'));
+        $this->assertEmpty($estimate['warnings']);
+    }
+
+    public function test_it_converts_photographer_and_tour_leader_salary_to_idr(): void
+    {
+        $estimate = app(PackageHppEstimateService::class)->calculate(
+            [
+                'customers' => ['quad' => 4],
+                'operational_costs' => [
+                    'photographer' => [
+                        'count' => 1,
+                        'daily_salary' => 10,
+                        'days' => 2,
+                        'currency' => 'USD',
+                    ],
+                    'tour_leader' => [
+                        'count' => 1,
+                        'salary_per_trip' => 100,
+                        'currency' => 'USD',
+                        'include_hotel' => false,
+                        'include_ticket_and_visa' => false,
+                    ],
+                ],
+            ],
+            0,
+            [],
+            currencySnapshots: [
+                'USD' => ['rate_to_idr' => 15_000, 'source' => 'snapshot'],
+            ],
+        );
+
+        $this->assertSame(
+            300_000,
+            collect($estimate['items'])->firstWhere('label', 'Fotografer')['total_price'],
+        );
+        $this->assertSame(1_500_000, $estimate['tour_leader_fee']);
+        $this->assertSame(1_800_000, $estimate['operational_total']);
         $this->assertEmpty($estimate['warnings']);
     }
 }

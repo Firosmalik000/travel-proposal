@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendParticipantDataWhatsAppReminder;
 use App\Models\Booking;
 use App\Models\BookingParticipant;
 use App\Models\TravelPackage;
@@ -9,7 +10,9 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class BookingParticipantManagementTest extends TestCase
@@ -494,5 +497,144 @@ class BookingParticipantManagementTest extends TestCase
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['participants.0.full_name']);
+    }
+
+    public function test_booking_listing_marks_existing_but_incomplete_participant_data(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('menu.booking_listing.view');
+        $package = TravelPackage::factory()->create();
+        $booking = Booking::query()->create([
+            'booking_code' => 'BK-WA-0001',
+            'package_id' => $package->id,
+            'full_name' => 'Pemesan Belum Lengkap',
+            'phone' => '081234567890',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 1,
+            'status' => 'registered',
+        ]);
+
+        BookingParticipant::query()->create([
+            'booking_id' => $booking->id,
+            'full_name' => 'Peserta Belum Lengkap',
+            'gender' => 'male',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('booking.listing.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('registrations.data.0.booking_code', 'BK-WA-0001')
+                ->where('registrations.data.0.participant_data_complete', false)
+                ->where('registrations.data.0.participant_outstanding_count', fn (int $count): bool => $count > 0)
+                ->where('registrations.data.0.participant_reminder.can_remind', true)
+                ->where('registrations.data.0.participant_reminder.can_send_direct', false)
+                ->where('registrations.data.0.participant_reminder.whatsapp_url', fn (string $url): bool => str_starts_with($url, 'https://wa.me/6281234567890?text='))
+            );
+    }
+
+    public function test_administrator_can_queue_direct_participant_whatsapp_reminder(): void
+    {
+        Queue::fake();
+        config()->set('services.booking.whatsapp.direct_enabled', true);
+        config()->set('services.booking.whatsapp.token', 'sender-device-token');
+        config()->set('services.booking.whatsapp.endpoint', 'https://api.example.test/send');
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('menu.booking_listing.edit');
+        $booking = Booking::query()->create([
+            'booking_code' => 'BK-WA-0002',
+            'package_id' => TravelPackage::factory()->create()->id,
+            'full_name' => 'Pemesan WhatsApp',
+            'phone' => '081234567891',
+            'origin_city' => 'Bandung',
+            'passenger_count' => 2,
+            'status' => 'registered',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('booking.listing.participants.reminder', $booking))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        Queue::assertPushed(
+            SendParticipantDataWhatsAppReminder::class,
+            fn (SendParticipantDataWhatsAppReminder $job): bool => $job->target === '6281234567891'
+                && str_contains($job->message, 'BK-WA-0002')
+                && str_contains($job->message, 'Peserta belum diisi: 2')
+                && str_contains($job->message, '?tab=participants'),
+        );
+    }
+
+    public function test_participant_whatsapp_reminder_requires_edit_permission(): void
+    {
+        Queue::fake();
+        config()->set('services.booking.whatsapp.direct_enabled', true);
+        config()->set('services.booking.whatsapp.token', 'sender-device-token');
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('menu.booking_listing.view');
+        $booking = Booking::query()->create([
+            'booking_code' => 'BK-WA-0003',
+            'package_id' => TravelPackage::factory()->create()->id,
+            'full_name' => 'Pemesan Read Only',
+            'phone' => '081234567892',
+            'origin_city' => 'Surabaya',
+            'passenger_count' => 1,
+            'status' => 'registered',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('booking.listing.participants.reminder', $booking))
+            ->assertForbidden();
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_direct_participant_whatsapp_reminder_requires_gateway_configuration(): void
+    {
+        Queue::fake();
+        config()->set('services.booking.whatsapp.direct_enabled', false);
+        config()->set('services.booking.whatsapp.token', null);
+
+        $user = User::factory()->create();
+        $user->givePermissionTo('menu.booking_listing.edit');
+        $booking = Booking::query()->create([
+            'booking_code' => 'BK-WA-0004',
+            'package_id' => TravelPackage::factory()->create()->id,
+            'full_name' => 'Pemesan Tanpa Gateway',
+            'phone' => '081234567894',
+            'origin_city' => 'Malang',
+            'passenger_count' => 1,
+            'status' => 'registered',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('booking.listing.participants.reminder', $booking))
+            ->assertRedirect()
+            ->assertSessionHasErrors('reminder');
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_whatsapp_reminder_job_sends_message_to_the_booking_phone(): void
+    {
+        Http::fake([
+            'https://api.example.test/send' => Http::response(['status' => true]),
+        ]);
+        config()->set('services.booking.whatsapp.token', 'sender-device-token');
+        config()->set('services.booking.whatsapp.endpoint', 'https://api.example.test/send');
+
+        $job = new SendParticipantDataWhatsAppReminder(
+            target: '6281234567893',
+            message: 'Reminder data peserta',
+        );
+        $job->handle();
+
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://api.example.test/send'
+            && $request->hasHeader('Authorization', 'sender-device-token')
+            && $request['target'] === '6281234567893'
+            && $request['message'] === 'Reminder data peserta'
+            && $request['countryCode'] === '62');
     }
 }

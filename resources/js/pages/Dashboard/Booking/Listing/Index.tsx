@@ -59,9 +59,12 @@ import {
     Eye,
     FileText,
     ImageIcon,
+    LoaderCircle,
+    MessageCircle,
     MoreHorizontal,
     Plus,
     Search,
+    Send,
     Trash2,
     Upload,
     Users,
@@ -84,6 +87,9 @@ type Registration = {
     origin_city: string;
     passenger_count: number;
     participants_count?: number;
+    participant_data_complete?: boolean;
+    participant_outstanding_count?: number;
+    participant_reminder?: ParticipantReminder;
     revenue?: {
         currency: string;
         amount: number;
@@ -112,6 +118,18 @@ type Registration = {
         departure_city: string | null;
         status: string | null;
     };
+};
+
+type ParticipantReminder = {
+    is_complete: boolean;
+    can_remind: boolean;
+    can_send_direct: boolean;
+    whatsapp_url: string | null;
+    outstanding_count: number;
+    incomplete_participants_count: number;
+    remaining_slots: number;
+    missing_fields_count: number;
+    missing_documents_count: number;
 };
 
 type TravelPackageOption = {
@@ -321,6 +339,9 @@ type ParticipantResponse = {
         passenger_count: number;
         participants_count: number;
         remaining_slots: number;
+        participant_data_complete: boolean;
+        participant_outstanding_count: number;
+        participant_reminder: ParticipantReminder;
     };
     participants: Participant[];
 };
@@ -911,6 +932,8 @@ export default function BookingListingIndex({
         useState<Participant | null>(null);
     const [isParticipantLoading, setIsParticipantLoading] = useState(false);
     const [isParticipantImporting, setIsParticipantImporting] = useState(false);
+    const [participantReminderSendingId, setParticipantReminderSendingId] =
+        useState<number | null>(null);
     const [participantImportPreviewRows, setParticipantImportPreviewRows] =
         useState<ParticipantImportPreviewRow[]>([]);
     const [participantImportFileName, setParticipantImportFileName] =
@@ -1672,6 +1695,11 @@ export default function BookingListingIndex({
             setParticipantBooking({
                 ...registration,
                 participants_count: payload.booking.participants_count,
+                participant_data_complete:
+                    payload.booking.participant_data_complete,
+                participant_outstanding_count:
+                    payload.booking.participant_outstanding_count,
+                participant_reminder: payload.booking.participant_reminder,
             });
             setParticipantItems(payload.participants);
             syncParticipantCount(
@@ -2339,6 +2367,43 @@ export default function BookingListingIndex({
         void loadParticipants(registration);
     }
 
+    function openParticipantReminderWhatsApp(registration: Registration): void {
+        const whatsappUrl = registration.participant_reminder?.whatsapp_url;
+
+        if (!whatsappUrl) {
+            toast.error('Nomor WhatsApp booking belum valid.');
+
+            return;
+        }
+
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    function sendParticipantReminderWhatsApp(registration: Registration): void {
+        if (!canEdit || !registration.participant_reminder?.can_send_direct) {
+            return;
+        }
+
+        setParticipantReminderSendingId(registration.id);
+        router.post(
+            `/admin/booking-management/listing/${registration.id}/participants/reminder`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Reminder WhatsApp berhasil dijadwalkan.');
+                },
+                onError: (errors) => {
+                    toast.error(
+                        requestMessageFrom(errors) ??
+                            'Reminder WhatsApp belum dapat dikirim.',
+                    );
+                },
+                onFinish: () => setParticipantReminderSendingId(null),
+            },
+        );
+    }
+
     function startEditingParticipant(participant: Participant): void {
         setEditingParticipant(participant);
         setExpandedParticipantFormSections([
@@ -2860,7 +2925,9 @@ export default function BookingListingIndex({
                                                         registration.status ===
                                                         'cancelled'
                                                             ? 'bg-rose-50/80 dark:bg-rose-950/20'
-                                                            : undefined
+                                                            : registration.participant_data_complete
+                                                              ? 'bg-green-50 dark:bg-green-950/30'
+                                                              : 'bg-amber-50 dark:bg-amber-950/30'
                                                     }
                                                 >
                                                     <TableCell className="text-center align-top text-sm text-muted-foreground">
@@ -2906,6 +2973,48 @@ export default function BookingListingIndex({
                                                                     >
                                                                         Kelola
                                                                         Peserta
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {registration
+                                                                    .participant_reminder
+                                                                    ?.can_remind ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openParticipantReminderWhatsApp(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <MessageCircle className="h-4 w-4" />
+                                                                        Buka
+                                                                        Reminder
+                                                                        WhatsApp
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {canEdit &&
+                                                                registration
+                                                                    .participant_reminder
+                                                                    ?.can_send_direct ? (
+                                                                    <DropdownMenuItem
+                                                                        disabled={
+                                                                            participantReminderSendingId ===
+                                                                            registration.id
+                                                                        }
+                                                                        onClick={() =>
+                                                                            sendParticipantReminderWhatsApp(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {participantReminderSendingId ===
+                                                                        registration.id ? (
+                                                                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                                                                        ) : (
+                                                                            <Send className="h-4 w-4" />
+                                                                        )}
+                                                                        Kirim
+                                                                        Reminder
+                                                                        Langsung
                                                                     </DropdownMenuItem>
                                                                 ) : null}
                                                                 <DropdownMenuItem
@@ -2995,6 +3104,18 @@ export default function BookingListingIndex({
                                                                     registration.id
                                                                 }
                                                             </p>
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={
+                                                                    registration.participant_data_complete
+                                                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                                        : 'border-amber-200 bg-amber-100/70 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-300'
+                                                                }
+                                                            >
+                                                                {registration.participant_data_complete
+                                                                    ? 'Lengkap'
+                                                                    : `Belum lengkap · ${registration.participant_outstanding_count ?? 0}`}
+                                                            </Badge>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="min-w-56 align-top font-medium">
@@ -3012,14 +3133,13 @@ export default function BookingListingIndex({
                                                                     registration.passenger_count
                                                                 }
                                                             </p>
-                                                            <p className="text-xs font-normal text-muted-foreground">
+                                                            <p className="text-xs text-muted-foreground">
                                                                 {registration.participants_count ??
                                                                     0}
                                                                 /
                                                                 {
                                                                     registration.passenger_count
-                                                                }{' '}
-                                                                terisi
+                                                                }
                                                             </p>
                                                         </div>
                                                     </TableCell>
@@ -3153,6 +3273,48 @@ export default function BookingListingIndex({
                                                                     >
                                                                         Kelola
                                                                         Peserta
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {registration
+                                                                    .participant_reminder
+                                                                    ?.can_remind ? (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() =>
+                                                                            openParticipantReminderWhatsApp(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <MessageCircle className="h-4 w-4" />
+                                                                        Buka
+                                                                        Reminder
+                                                                        WhatsApp
+                                                                    </DropdownMenuItem>
+                                                                ) : null}
+                                                                {canEdit &&
+                                                                registration
+                                                                    .participant_reminder
+                                                                    ?.can_send_direct ? (
+                                                                    <DropdownMenuItem
+                                                                        disabled={
+                                                                            participantReminderSendingId ===
+                                                                            registration.id
+                                                                        }
+                                                                        onClick={() =>
+                                                                            sendParticipantReminderWhatsApp(
+                                                                                registration,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {participantReminderSendingId ===
+                                                                        registration.id ? (
+                                                                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                                                                        ) : (
+                                                                            <Send className="h-4 w-4" />
+                                                                        )}
+                                                                        Kirim
+                                                                        Reminder
+                                                                        Langsung
                                                                     </DropdownMenuItem>
                                                                 ) : null}
                                                                 <DropdownMenuItem
@@ -3803,6 +3965,48 @@ export default function BookingListingIndex({
                                             </p>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
+                                            {participantBooking
+                                                ?.participant_reminder
+                                                ?.can_remind ? (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        openParticipantReminderWhatsApp(
+                                                            participantBooking,
+                                                        )
+                                                    }
+                                                >
+                                                    <MessageCircle className="h-4 w-4" />
+                                                    Buka WhatsApp
+                                                </Button>
+                                            ) : null}
+                                            {participantBooking
+                                                ?.participant_reminder
+                                                ?.can_send_direct ? (
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        sendParticipantReminderWhatsApp(
+                                                            participantBooking,
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        participantReminderSendingId ===
+                                                        participantBooking.id
+                                                    }
+                                                >
+                                                    {participantReminderSendingId ===
+                                                    participantBooking.id ? (
+                                                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Send className="h-4 w-4" />
+                                                    )}
+                                                    Kirim Langsung
+                                                </Button>
+                                            ) : null}
                                             <input
                                                 ref={participantImportInputRef}
                                                 type="file"

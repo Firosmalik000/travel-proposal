@@ -10,6 +10,7 @@ use App\Http\Controllers\Administrator\BookingRegisterController;
 use App\Http\Controllers\Administrator\BrandingController;
 use App\Http\Controllers\Administrator\CashflowController;
 use App\Http\Controllers\Administrator\ContentController;
+use App\Http\Controllers\Administrator\CurrencyRateController;
 use App\Http\Controllers\Administrator\CustomBookingController;
 use App\Http\Controllers\Administrator\CustomUmrohRequestController;
 use App\Http\Controllers\Administrator\FinancialReportController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Administrator\MenuController;
 use App\Http\Controllers\Administrator\PackageController;
 use App\Http\Controllers\Administrator\PackageCostCalculationController;
 use App\Http\Controllers\Administrator\PackageDraftController;
+use App\Http\Controllers\Administrator\PackageHppEstimateController;
 use App\Http\Controllers\Administrator\PackageVendorController;
 use App\Http\Controllers\Administrator\ProductManagement\ProductCategoryHotelController;
 use App\Http\Controllers\Administrator\RoleManagementController;
@@ -92,8 +94,8 @@ Route::get('/landing/{package}', function (string $package) {
             'package_type' => $travelPackage->package_type,
             'departure_city' => $travelPackage->departure_city,
             'duration_days' => $travelPackage->duration_days,
-            'price' => (float) $travelPackage->price,
-            'original_price' => $travelPackage->original_price ? (float) $travelPackage->original_price : null,
+            'price' => $travelPackage->doubleSellingPrice(),
+            'original_price' => $travelPackage->doubleOriginalPrice(),
             'discount_type' => $travelPackage->discount_type ?? 'percent',
             'discount_nominal' => $travelPackage->discount_nominal ? (float) $travelPackage->discount_nominal : null,
             'discount_label' => $travelPackage->discount_label,
@@ -165,7 +167,7 @@ Route::get('paket-umroh', function () {
 Route::get('paket-umroh/{travelPackage:slug}', function (TravelPackage $travelPackage) {
     $travelPackage->load(['products:id,name,product_type', 'testimonials.departureSchedule:id,departure_date,departure_city', 'itineraries.activity:id,code,name,description,sort_order,is_active', 'itineraries.products:id,name,product_type']);
 
-    return Inertia::render('public/paket/detail/index', ['travelPackage' => ['id' => $travelPackage->id,             'code' => $travelPackage->code,             'slug' => $travelPackage->slug,             'name' => $travelPackage->name,             'package_type' => $travelPackage->package_type,             'departure_city' => $travelPackage->departure_city,             'duration_days' => $travelPackage->duration_days,             'price' => (float) $travelPackage->price,             'original_price' => $travelPackage->original_price ? (float) $travelPackage->original_price : null,             'discount_type' => $travelPackage->discount_type ?? 'percent',             'discount_nominal' => $travelPackage->discount_nominal ? (float) $travelPackage->discount_nominal : null,             'discount_label' => $travelPackage->discount_label,             'discount_percent' => $travelPackage->discountPercent(),             'discount_ends_at' => $travelPackage->discount_ends_at?->toDateTimeString(),             'currency' => $travelPackage->currency,             'image_path' => $travelPackage->image_path,             'summary' => $travelPackage->summary,             'content' => $travelPackage->content,             'is_featured' => $travelPackage->is_featured,             'rating_avg' => $travelPackage->testimonials->avg('rating') ? round($travelPackage->testimonials->avg('rating'), 1) : null,             'rating_count' => $travelPackage->testimonials->count(),             'products' => $travelPackage->products->map(fn ($p) => ['name' => $p->name,                 'product_type' => $p->product_type])->values()->all(),             'schedules' => $travelPackage->start_date ? [['id' => $travelPackage->id,                 'departure_date' => $travelPackage->start_date->toDateString(),                 'return_date' => $travelPackage->end_date?->toDateString(),                 'departure_city' => $travelPackage->departure_city,                 'seats_total' => (int) $travelPackage->seats_total,                 'seats_available' => $travelPackage->availableSeatsCount(),                 'status' => $travelPackage->booking_status,                 'notes' => $travelPackage->departure_notes]] : [],             'testimonials' => $travelPackage->testimonials->where('is_active', true)->map(fn ($t) => ['name' => $t->name,                 'origin_city' => $t->origin_city,                 'quote' => $t->quote,                 'rating' => $t->rating,                 'departure_schedule' => $t->departureSchedule ? ['departure_date' => $t->departureSchedule->departure_date?->toDateString(),                         'departure_city' => $t->departureSchedule->departure_city] : null,                 'photos' => $t->photos ?? []])->values()->all(),             'itineraries' => $travelPackage->itineraries->map(function ($itinerary) {
+    return Inertia::render('public/paket/detail/index', ['travelPackage' => ['id' => $travelPackage->id,             'code' => $travelPackage->code,             'slug' => $travelPackage->slug,             'name' => $travelPackage->name,             'package_type' => $travelPackage->package_type,             'departure_city' => $travelPackage->departure_city,             'duration_days' => $travelPackage->duration_days,             'price' => $travelPackage->doubleSellingPrice(),             'original_price' => $travelPackage->doubleOriginalPrice(),             'discount_type' => $travelPackage->discount_type ?? 'percent',             'discount_nominal' => $travelPackage->discount_nominal ? (float) $travelPackage->discount_nominal : null,             'discount_label' => $travelPackage->discount_label,             'discount_percent' => $travelPackage->discountPercent(),             'discount_ends_at' => $travelPackage->discount_ends_at?->toDateTimeString(),             'currency' => $travelPackage->currency,             'image_path' => $travelPackage->image_path,             'summary' => $travelPackage->summary,             'content' => $travelPackage->content,             'is_featured' => $travelPackage->is_featured,             'rating_avg' => $travelPackage->testimonials->avg('rating') ? round($travelPackage->testimonials->avg('rating'), 1) : null,             'rating_count' => $travelPackage->testimonials->count(),             'products' => $travelPackage->products->map(fn ($p) => ['name' => $p->name,                 'product_type' => $p->product_type])->values()->all(),             'schedules' => $travelPackage->start_date ? [['id' => $travelPackage->id,                 'departure_date' => $travelPackage->start_date->toDateString(),                 'return_date' => $travelPackage->end_date?->toDateString(),                 'departure_city' => $travelPackage->departure_city,                 'seats_total' => (int) $travelPackage->seats_total,                 'seats_available' => $travelPackage->availableSeatsCount(),                 'status' => $travelPackage->booking_status,                 'notes' => $travelPackage->departure_notes]] : [],             'testimonials' => $travelPackage->testimonials->where('is_active', true)->map(fn ($t) => ['name' => $t->name,                 'origin_city' => $t->origin_city,                 'quote' => $t->quote,                 'rating' => $t->rating,                 'departure_schedule' => $t->departureSchedule ? ['departure_date' => $t->departureSchedule->departure_date?->toDateString(),                         'departure_city' => $t->departureSchedule->departure_city] : null,                 'photos' => $t->photos ?? []])->values()->all(),             'itineraries' => $travelPackage->itineraries->map(function ($itinerary) {
         $activityIds = collect($itinerary->activity_ids ?? [])->filter(fn ($activityId) => is_numeric($activityId))->map(fn ($activityId) => (int) $activityId)->values();
         if ($activityIds->isEmpty() && $itinerary->activity_id) {
             $activityIds = collect([(int) $itinerary->activity_id]);
@@ -267,7 +269,9 @@ Route::middleware(['auth', 'agent'])->prefix('agent')->name('agent.')->group(fun
     Route::put('password', [AgentAccountController::class, 'updatePassword'])->middleware('throttle:6,1')->name('password.update');
 });
 
-Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {     /* Get user menus (for sidebar) */ Route::get('api/user-menus', [MenuController::class, 'getUserMenus'])->name('user.menus');
+Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {
+    Route::get('api/admin/currency-rates', [CurrencyRateController::class, 'index'])->name('admin.currency-rates');
+    Route::get('api/user-menus', [MenuController::class, 'getUserMenus'])->name('user.menus');
     $registerAdminPortalRoutes = function (string $prefix, bool $withNames = true): void {
         $nameRoute = static function ($route, string $name) use ($withNames) {
             if ($withNames) {
@@ -359,6 +363,7 @@ Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {    
             $nameRoute(Route::get('listing', [BookingRegisterController::class, 'listing'])->middleware('check.menu.permission:view'), 'booking.listing.index');
             $nameRoute(Route::get('listing.pdf', [BookingRegisterController::class, 'listingPdf'])->middleware('check.menu.permission:export'), 'booking.listing.pdf');
             $nameRoute(Route::get('listing/{registration}/participants', [BookingRegisterController::class, 'participants'])->middleware('check.menu.permission:view'), 'booking.listing.participants.index');
+            $nameRoute(Route::post('listing/{registration}/participants/reminder', [BookingRegisterController::class, 'remindParticipants'])->middleware(['check.menu.permission:edit', 'throttle:3,1']), 'booking.listing.participants.reminder');
             $nameRoute(Route::post('listing/{registration}/participants', [BookingRegisterController::class, 'storeParticipant'])->middleware('check.menu.permission:edit'), 'booking.listing.participants.store');
             $nameRoute(Route::post('listing/{registration}/participants/import', [BookingRegisterController::class, 'importParticipants'])->middleware('check.menu.permission:edit'), 'booking.listing.participants.import');
             $nameRoute(Route::put('listing/{registration}/participants/{participant}', [BookingRegisterController::class, 'updateParticipant'])->middleware('check.menu.permission:edit'), 'booking.listing.participants.update');
@@ -396,8 +401,8 @@ Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {    
             $nameRoute(Route::put('cashflow/{cashflow}', [CashflowController::class, 'update'])->middleware('check.menu.permission:edit'), 'cashflow.update');
             $nameRoute(Route::delete('cashflow/{cashflow}', [CashflowController::class, 'destroy'])->middleware('check.menu.permission:delete'), 'cashflow.destroy');
             $nameRoute(Route::get('hpp-package', [PackageCostCalculationController::class, 'index'])->middleware('check.menu.permission:view'), 'hpp-package.index');
-            $nameRoute(Route::get('hpp-package/{package}/estimate/edit', [PackageController::class, 'editHppEstimate'])->middleware('check.menu.permission:edit'), 'hpp-package.estimate.edit');
-            $nameRoute(Route::post('hpp-package/{package}/estimate', [PackageController::class, 'updateHppEstimate'])->middleware('check.menu.permission:edit'), 'hpp-package.estimate.update');
+            $nameRoute(Route::get('hpp-package/{package}/estimate/edit', [PackageHppEstimateController::class, 'edit'])->middleware('check.menu.permission:edit'), 'hpp-package.estimate.edit');
+            $nameRoute(Route::post('hpp-package/{package}/estimate', [PackageHppEstimateController::class, 'updateEstimate'])->middleware('check.menu.permission:edit'), 'hpp-package.estimate.update');
             $nameRoute(Route::post('hpp-package', [PackageCostCalculationController::class, 'store'])->middleware('check.menu.permission:create'), 'hpp-package.store');
             $nameRoute(Route::put('hpp-package/{hppPackage}', [PackageCostCalculationController::class, 'update'])->middleware('check.menu.permission:edit'), 'hpp-package.update');
             $nameRoute(Route::post('hpp-package/{hppPackage}/recalculate', [PackageCostCalculationController::class, 'recalculate'])->middleware('check.menu.permission:edit'), 'hpp-package.recalculate');

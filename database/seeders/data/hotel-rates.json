@@ -1,0 +1,2902 @@
+{
+    "source": "Local database snapshot",
+    "exported_at": "2026-09-01T00:34:12+00:00",
+    "hotels": [
+        {
+            "code": "HTL-MOVENPICK-HAJAR",
+            "name": "Movenpick Hajar",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-08-30",
+                    "price": 1100,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-08-30",
+                    "price": 1325,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-08-30",
+                    "price": 1550,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-31",
+                    "period_end": "2026-10-11",
+                    "price": 1050,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-31",
+                    "period_end": "2026-10-11",
+                    "price": 1275,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-31",
+                    "period_end": "2026-10-11",
+                    "price": 1500,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-10-12",
+                    "period_end": "2026-12-16",
+                    "price": 1250,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-10-12",
+                    "period_end": "2026-12-16",
+                    "price": 1500,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-10-12",
+                    "period_end": "2026-12-16",
+                    "price": 1750,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ALSAFWA-TOWER",
+            "name": "Al Safwa Tower",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 800,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 1000,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 1200,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-08-31",
+                    "price": 925,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-08-31",
+                    "price": 1125,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-08-31",
+                    "price": 1325,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-11",
+                    "price": 850,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-11",
+                    "price": 1050,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-11",
+                    "price": 1250,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-10-12",
+                    "period_end": "2026-12-16",
+                    "price": 1050,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-10-12",
+                    "period_end": "2026-12-16",
+                    "price": 1250,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-10-12",
+                    "period_end": "2026-12-16",
+                    "price": 1500,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ALMARWA-ROTANA",
+            "name": "Al Marwa Rotana",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 1100,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 1370,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 1640,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-09-30",
+                    "price": 1180,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-09-30",
+                    "price": 1450,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-09-30",
+                    "price": 1720,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-10-01",
+                    "period_end": "2026-12-16",
+                    "price": 1250,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-10-01",
+                    "period_end": "2026-12-16",
+                    "price": 1520,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-10-01",
+                    "period_end": "2026-12-16",
+                    "price": 1790,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-AZKA-ALMAQAM",
+            "name": "Azka Al Maqam",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-01",
+                    "price": 540,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-01",
+                    "price": 610,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-01",
+                    "price": 680,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 590,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 680,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 770,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 620,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 720,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 820,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-OLAYAN-AJYAD",
+            "name": "Olayan Ajyad",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 580,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 680,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 780,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-31",
+                    "period_end": "2026-10-04",
+                    "price": 660,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-31",
+                    "period_end": "2026-10-04",
+                    "price": 760,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-31",
+                    "period_end": "2026-10-04",
+                    "price": 860,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-SNOOD-AJYAD",
+            "name": "Snood Ajyad",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 380,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 425,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 470,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 430,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 475,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 520,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-SAWAED-ALKHAIER",
+            "name": "Sawaed Al Khaier",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-19",
+                    "price": 420,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-19",
+                    "price": 465,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-19",
+                    "price": 510,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-MAYSAN-ALMAQAM",
+            "name": "Maysan Al Maqam",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 390,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 440,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 490,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 450,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 500,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 550,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-PRESTIGE-AJYAD",
+            "name": "Prestige Ajyad",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-06-30",
+                    "price": 475,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-06-30",
+                    "price": 550,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-06-30",
+                    "price": 625,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-07-31",
+                    "price": 500,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-07-31",
+                    "price": 575,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-07-31",
+                    "price": 650,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 625,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 725,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 825,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-WAHAT-AJYAD",
+            "name": "Wahat Ajyad",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 290,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 330,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 370,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 310,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 350,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 390,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-NADA-AJYAD",
+            "name": "Nada Ajyad",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 520,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 430,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 480,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 530,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 420,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 470,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 310,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 350,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-31",
+                    "price": 390,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 330,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 370,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-10-04",
+                    "price": 410,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ALMASSA-GRAND",
+            "name": "Al Massa Grand",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 420,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 470,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 520,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 430,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 480,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 530,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 475,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 525,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 575,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ALMASSA-DARFAYZEEN",
+            "name": "Al Massa Dar Fayzeen",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 370,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 310,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 350,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 390,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 290,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 330,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 420,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 470,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 520,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 370,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 420,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 470,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 390,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 440,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 490,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-MAATHER-ALJIWAAR",
+            "name": "Maather Al Jiwaar",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 290,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 330,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 370,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 310,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 350,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-12",
+                    "price": 390,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-TARA-ALHIJRA",
+            "name": "Tara Al Hijra",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 260,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 300,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 340,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 330,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 370,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 410,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-BADR-ALMASSA",
+            "name": "Badr Al Massa",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 285,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 325,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-09-12",
+                    "price": 365,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 300,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 340,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-09-12",
+                    "period_end": "2026-12-16",
+                    "price": 380,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 260,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 300,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-15",
+                    "price": 340,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-SAIF-ALYAMANI",
+            "name": "Saif Al Yamani",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 170,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 170,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 170,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 200,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 200,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 200,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-01",
+                    "price": 150,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-TAIBAH-FRONT",
+            "name": "Taibah Front",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 700,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 825,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 950,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 750,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 875,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 1000,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-DAREIMAN-ALHARAM",
+            "name": "Dar Al Eiman Al Haram",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-15",
+                    "price": 800,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-15",
+                    "price": 925,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-15",
+                    "price": 1050,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 900,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 1025,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 1150,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 1100,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 1225,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 1350,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-MILLINEUM-ALAQEEQ",
+            "name": "Millineum Al Aqeeq",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 750,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 875,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 1000,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 800,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 925,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 1050,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 1100,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 1225,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 1350,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-RUVE",
+            "name": "Ruve",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 700,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 825,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 950,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 725,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 850,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 975,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-GRAND-PLAZA",
+            "name": "Grand Plaza",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 500,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 570,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 640,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 525,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 595,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 665,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ALANSAR-GOLDENTUILP",
+            "name": "Al Ansar Golden Tuilp",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-08-01",
+                    "price": 490,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-08-01",
+                    "price": 535,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-15",
+                    "period_end": "2026-08-01",
+                    "price": 580,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 510,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 555,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 600,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-01",
+                    "price": 530,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-01",
+                    "price": 575,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-01",
+                    "price": 620,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-JIWAR-ALSAHA",
+            "name": "Jiwar Al Saha",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 430,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 480,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-07-31",
+                    "price": 530,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 440,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 490,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 540,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-05",
+                    "price": 450,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-05",
+                    "price": 500,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-09-01",
+                    "period_end": "2026-10-05",
+                    "price": 550,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ZOWAR-INTERNATIONAL",
+            "name": "Zowar International",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "IDR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 485,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 530,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 575,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 460,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 505,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 550,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ODEST",
+            "name": "Odest",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 430,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 475,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 520,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 460,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 505,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 550,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-DEYAR-ALEIMAN",
+            "name": "Deyar Al Eiman",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 475,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 525,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 575,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 525,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 575,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 625,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 575,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 625,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 675,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-DURRAT-ELEIMAN",
+            "name": "Durrat El Eiman",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 425,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 475,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 525,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 475,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 525,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 575,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 525,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 575,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 625,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-GOLDENTULIP-ALSHAKEREEN",
+            "name": "Golden Tulip Alshakereen",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-25",
+                    "price": 390,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-25",
+                    "price": 435,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-25",
+                    "price": 480,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-25",
+                    "period_end": "2026-08-23",
+                    "price": 420,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-25",
+                    "period_end": "2026-08-23",
+                    "price": 465,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-25",
+                    "period_end": "2026-08-23",
+                    "price": 510,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-23",
+                    "period_end": "2026-09-15",
+                    "price": 450,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-23",
+                    "period_end": "2026-09-15",
+                    "price": 495,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-23",
+                    "period_end": "2026-09-15",
+                    "price": 540,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-MANAZEL-ALSAFIYAH",
+            "name": "Manazel Al Safiyah",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-25",
+                    "price": 380,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-25",
+                    "price": 425,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-25",
+                    "price": 470,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-25",
+                    "period_end": "2026-08-23",
+                    "price": 410,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-25",
+                    "period_end": "2026-08-23",
+                    "price": 455,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-25",
+                    "period_end": "2026-08-23",
+                    "price": 500,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-23",
+                    "period_end": "2026-09-15",
+                    "price": 440,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-23",
+                    "period_end": "2026-09-15",
+                    "price": 485,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-23",
+                    "period_end": "2026-09-15",
+                    "price": 530,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ALMOKHTARA-ALGHARBI",
+            "name": "Al Mokhtara Al Gharbi",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 340,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 380,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 420,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 360,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 400,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 440,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 420,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 460,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-11-11",
+                    "period_end": "2026-12-10",
+                    "price": 500,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-NUSK-ALEIMAN",
+            "name": "Nusk Al Eiman",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 370,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 415,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 480,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 460,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 510,
+                    "is_active": true
+                },
+                {
+                    "broker_key": null,
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-11-11",
+                    "price": 560,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-PULLMAN-ZAMZAM",
+            "name": "Pullman Zamzam",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 1000,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 1200,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-16",
+                    "period_end": "2026-07-08",
+                    "price": 1400,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-10-14",
+                    "price": 1050,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-10-14",
+                    "price": 1250,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-09",
+                    "period_end": "2026-10-14",
+                    "price": 1450,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-10-15",
+                    "period_end": "2026-12-16",
+                    "price": 1150,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-10-15",
+                    "period_end": "2026-12-16",
+                    "price": 1350,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-10-15",
+                    "period_end": "2026-12-16",
+                    "price": 1550,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-AZKA-AL-SAFA",
+            "name": "Azka Al Safa",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Mekkah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-01",
+                    "price": 510,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-01",
+                    "price": 560,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-20",
+                    "period_end": "2026-07-01",
+                    "price": 610,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 540,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 615,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-07-01",
+                    "period_end": "2026-08-01",
+                    "price": 690,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 570,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-01",
+                    "period_end": "2026-09-01",
+                    "price": 740,
+                    "is_active": true
+                }
+            ]
+        },
+        {
+            "code": "HTL-ZOWAR-INTEMATIONAL",
+            "name": "Zowar Intemational",
+            "description": null,
+            "country": "Arab Saudi",
+            "city": "Madinah",
+            "currency": "SAR",
+            "is_active": true,
+            "prices": [
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 460,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 505,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-06-30",
+                    "period_end": "2026-08-14",
+                    "price": 550,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "DBL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 485,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "TRPL",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 530,
+                    "is_active": true
+                },
+                {
+                    "broker_key": "broker-1",
+                    "broker_name": "Broker 1",
+                    "room_type": "QUAD",
+                    "period_start": "2026-08-15",
+                    "period_end": "2026-09-20",
+                    "price": 575,
+                    "is_active": true
+                }
+            ]
+        }
+    ]
+}

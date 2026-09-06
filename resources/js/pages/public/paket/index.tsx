@@ -5,6 +5,10 @@ import {
 import PublicLayout from '@/layouts/PublicLayout';
 import { formatMonth } from '@/lib/date-format';
 import {
+    normalizePackageImagePositions,
+    packageImageStyle,
+} from '@/lib/package-image-position';
+import {
     formatDate,
     formatPrice,
     hasPackageDiscount,
@@ -105,6 +109,7 @@ type PackageCard = {
     durationDays: number;
     notes: string;
     image: string;
+    imagePosition?: ReturnType<typeof normalizePackageImagePositions>[string];
 };
 
 export default function Paket() {
@@ -165,6 +170,9 @@ export default function Paket() {
                       )
                       .join(' | '),
                   image: item.image_path || '/images/dummy.jpg',
+                  imagePosition: normalizePackageImagePositions(
+                      item.content?.gallery_positions,
+                  )[item.image_path],
               };
           })
         : [];
@@ -394,12 +402,15 @@ export default function Paket() {
                                         className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
                                     >
                                         {/* Image */}
-                                        <div className="relative h-48 overflow-hidden bg-muted/40">
+                                        <div className="relative aspect-video overflow-hidden bg-muted/40">
                                             <img
                                                 src={item.image}
                                                 alt={item.title}
                                                 className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                                                 loading="lazy"
+                                                style={packageImageStyle(
+                                                    item.imagePosition,
+                                                )}
                                             />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
@@ -492,6 +503,9 @@ export default function Paket() {
                                             {/* Price */}
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-2xl font-extrabold text-primary">
+                                                    <span className="text-xs font-semibold text-muted-foreground">
+                                                        Mulai dari{' '}
+                                                    </span>
                                                     {item.price}
                                                 </span>
                                                 {item.originalPrice && (
@@ -601,7 +615,7 @@ function buildPackageInquiryMessage(
             `Package: ${item.title}`,
             `Departure city: ${item.city}`,
             `Departure date: ${item.date || '-'}`,
-            `Price: ${item.price}`,
+            `Price starts from Double: ${item.price}`,
         ].join('\n');
     }
 
@@ -610,6 +624,6 @@ function buildPackageInquiryMessage(
         `Paket: ${item.title}`,
         `Kota berangkat: ${item.city}`,
         `Tanggal berangkat: ${item.date || '-'}`,
-        `Harga: ${item.price}`,
+        `Harga mulai dari: ${item.price}`,
     ].join('\n');
 }

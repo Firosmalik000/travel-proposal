@@ -26,7 +26,6 @@ class ManagePackageRegistrationRequest extends FormRequest
             'origin_city' => ['required', 'string', 'max:100'],
             'passenger_count' => ['required', 'integer', 'min:1'],
             'room_configuration' => ['nullable', 'array'],
-            'room_configuration.single' => ['nullable', 'integer', 'min:0'],
             'room_configuration.double' => ['nullable', 'integer', 'min:0'],
             'room_configuration.triple' => ['nullable', 'integer', 'min:0'],
             'room_configuration.quad' => ['nullable', 'integer', 'min:0'],
@@ -66,14 +65,17 @@ class ManagePackageRegistrationRequest extends FormRequest
 
             if ($this->filled('room_configuration')) {
                 $roomConfiguration = (array) $this->input('room_configuration', []);
-                $occupiedPax =
-                    max(0, (int) data_get($roomConfiguration, 'single', 0)) +
+                $roomCapacity =
                     (max(0, (int) data_get($roomConfiguration, 'double', 0)) * 2) +
                     (max(0, (int) data_get($roomConfiguration, 'triple', 0)) * 3) +
                     (max(0, (int) data_get($roomConfiguration, 'quad', 0)) * 4);
 
-                if ($occupiedPax !== $this->integer('passenger_count')) {
-                    $validator->errors()->add('room_configuration', 'Komposisi kamar harus sama dengan jumlah jamaah yang dipilih.');
+                $unusedCapacity = $roomCapacity - $this->integer('passenger_count');
+                if ($unusedCapacity < 0 || $unusedCapacity > 1) {
+                    $validator->errors()->add(
+                        'room_configuration',
+                        'Kapasitas kamar harus sesuai jumlah jamaah, dengan maksimal satu slot kosong untuk sisa ganjil.',
+                    );
                 }
             }
         });

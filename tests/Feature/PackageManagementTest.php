@@ -13,6 +13,7 @@ use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use App\Models\User;
 use App\Models\VendorPricePeriod;
+use App\Services\PackageDraftService;
 use App\Support\ParticipantUploadLimit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -529,6 +530,10 @@ class PackageManagementTest extends TestCase
                 'package_type' => 'reguler',
                 'departure_city' => 'Surabaya',
                 'duration_days' => 10,
+                'start_date' => '2027-01-10',
+                'end_date' => '2027-01-19',
+                'seats_total' => 40,
+                'booking_status' => 'open',
                 'price' => 35000000,
                 'currency' => 'IDR',
                 'is_featured' => false,
@@ -537,6 +542,39 @@ class PackageManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertTrue(TravelPackage::query()->where('code', 'ASF-UMROH-BARU-10')->exists());
+    }
+
+    public function test_it_can_create_a_package_without_setting_a_selling_price(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'package-belum-dihargai',
+                'name' => ['id' => 'Package Belum Dihargai', 'en' => 'Unpriced Package'],
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'duration_days' => 9,
+                'start_date' => '2027-02-01',
+                'end_date' => '2027-02-09',
+                'seats_total' => 40,
+                'booking_status' => 'open',
+                'price' => 0,
+                'original_price' => null,
+                'currency' => 'IDR',
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $package = TravelPackage::query()->where('slug', 'package-belum-dihargai')->firstOrFail();
+
+        $this->assertSame(0.0, (float) $package->price);
+        $this->assertNull($package->original_price);
+        $this->assertNull(data_get($package->content, 'room_prices.dbl'));
+        $this->assertNull(data_get($package->content, 'room_prices.trpl'));
+        $this->assertNull(data_get($package->content, 'room_prices.quad'));
     }
 
     public function test_it_snapshots_live_rates_for_non_idr_products_when_the_package_is_saved(): void
@@ -673,13 +711,18 @@ class PackageManagementTest extends TestCase
                 'duration_days' => 10,
                 'price' => 1_000_000,
                 'currency' => 'IDR',
+                'existing_images' => ['/storage/packages/cover.jpg'],
                 'content' => [
+                    'gallery_positions' => [
+                        '/storage/packages/cover.jpg' => ['x' => 250, 'y' => -250, 'scale' => 0.25, 'version' => 3],
+                    ],
                     'hpp_estimate' => [
                         'customers' => ['single' => 0, 'dbl' => 0, 'trpl' => 0, 'quad' => 4],
                         'customers_is_manual' => true,
                         'operational_costs' => [
+                            'foc' => ['count' => 2],
                             'overhead' => ['amount' => 100, 'mode' => 'total'],
-                            'photographer' => ['count' => 1, 'daily_salary' => 20, 'days' => 2],
+                            'photographer' => ['count' => 1, 'daily_salary' => 20, 'days' => 2, 'currency' => 'IDR'],
                             'human_resources' => [[
                                 'id' => 'admin-extra',
                                 'name' => 'Admin Tambahan',
@@ -688,6 +731,7 @@ class PackageManagementTest extends TestCase
                             'tour_leader' => [
                                 'count' => 1,
                                 'salary_per_trip' => 50,
+                                'currency' => 'IDR',
                                 'include_hotel' => false,
                                 'include_ticket_and_visa' => false,
                             ],
@@ -727,6 +771,68 @@ class PackageManagementTest extends TestCase
         $this->assertSame(275, data_get($package->content, 'hpp_estimate.grand_total'));
         $this->assertSame(68, data_get($package->content, 'hpp_estimate.hpp_per_customer'));
         $this->assertSame('Admin Tambahan', data_get($package->content, 'hpp_estimate.operational_costs.human_resources.0.name'));
+        $this->assertSame('IDR', data_get($package->content, 'hpp_estimate.operational_costs.photographer.currency'));
+        $this->assertSame('IDR', data_get($package->content, 'hpp_estimate.operational_costs.tour_leader.currency'));
+        $this->assertSame(2, data_get($package->content, 'hpp_estimate.operational_costs.foc.count'));
+        $positions = data_get($package->content, 'gallery_positions');
+        $this->assertSame(200, $positions['/storage/packages/cover.jpg']['x']);
+        $this->assertSame(-200, $positions['/storage/packages/cover.jpg']['y']);
+        $this->assertSame(0.25, $positions['/storage/packages/cover.jpg']['scale']);
+        $this->assertSame(3, $positions['/storage/packages/cover.jpg']['version']);
+    }
+
+    public function test_it_keeps_crop_position_for_a_newly_uploaded_package_image(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->create();
+        $temporaryImage = app(PackageDraftService::class)->uploadImages(
+            $user,
+            [UploadedFile::fake()->image('cover.jpg', 1200, 675)],
+        )[0];
+
+        $this->actingAs($user)
+            ->post(route('packages.store'), [
+                'slug' => 'package-dengan-crop-foto',
+                'name' => 'Package Dengan Crop Foto',
+                'package_type' => 'reguler',
+                'departure_city' => 'Jakarta',
+                'start_date' => '2026-10-01',
+                'end_date' => '2026-10-10',
+                'seats_total' => 4,
+                'booking_status' => 'open',
+                'duration_days' => 10,
+                'price' => 1_000_000,
+                'currency' => 'IDR',
+                'existing_images' => [$temporaryImage['path']],
+                'content' => [
+                    'gallery_positions' => [
+                        $temporaryImage['path'] => [
+                            'x' => 18.5,
+                            'y' => -12.25,
+                            'scale' => 0.65,
+                            'version' => 3,
+                        ],
+                    ],
+                ],
+                'is_featured' => false,
+                'is_active' => true,
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $package = TravelPackage::query()
+            ->where('slug', 'package-dengan-crop-foto')
+            ->firstOrFail();
+        $imagePath = $package->image_path;
+
+        $this->assertNotNull($imagePath);
+        Storage::disk('public')->assertExists(str_replace('/storage/', '', $imagePath));
+        $positions = data_get($package->content, 'gallery_positions');
+        $this->assertSame(18.5, $positions[$imagePath]['x']);
+        $this->assertSame(-12.25, $positions[$imagePath]['y']);
+        $this->assertSame(0.65, $positions[$imagePath]['scale']);
+        $this->assertSame(3, $positions[$imagePath]['version']);
+        $this->assertArrayNotHasKey($temporaryImage['path'], $positions);
     }
 
     public function test_it_validates_managed_operational_cost_rows(): void
@@ -1019,6 +1125,10 @@ class PackageManagementTest extends TestCase
                 'package_type' => 'reguler',
                 'departure_city' => 'Jakarta',
                 'duration_days' => 10,
+                'start_date' => '2027-03-01',
+                'end_date' => '2027-03-10',
+                'seats_total' => 40,
+                'booking_status' => 'open',
                 'price' => 33000000,
                 'original_price' => 36000000,
                 'currency' => 'IDR',
@@ -1060,6 +1170,10 @@ class PackageManagementTest extends TestCase
                 'package_type' => 'reguler',
                 'departure_city' => 'Jakarta',
                 'duration_days' => 10,
+                'start_date' => '2027-04-01',
+                'end_date' => '2027-04-10',
+                'seats_total' => 40,
+                'booking_status' => 'open',
                 'price' => 30000000,
                 'original_price' => 36000000,
                 'currency' => 'IDR',

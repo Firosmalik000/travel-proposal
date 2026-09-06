@@ -9,6 +9,7 @@ use App\Models\PackageRegistration;
 use App\Services\BookingParticipantCompletenessService;
 use App\Services\BookingPaymentInvoiceService;
 use App\Services\BookingPaymentService;
+use App\Services\PackageRoomConfigurationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
@@ -22,6 +23,7 @@ class PortalController extends Controller
         private BookingParticipantCompletenessService $completenessService,
         private BookingPaymentService $bookingPaymentService,
         private BookingPaymentInvoiceService $bookingPaymentInvoiceService,
+        private PackageRoomConfigurationService $packageRoomConfigurationService,
     ) {}
 
     public function index(Request $request): Response
@@ -270,28 +272,9 @@ class PortalController extends Controller
      */
     private function formatRoomConfiguration(?array $roomConfiguration): ?string
     {
-        if (! is_array($roomConfiguration)) {
-            return null;
-        }
+        $summary = $this->packageRoomConfigurationService->summarize($roomConfiguration);
 
-        $roomLabels = [
-            'single' => 'Single',
-            'double' => 'Double',
-            'triple' => 'Triple',
-            'quad' => 'Quad',
-        ];
-
-        $parts = [];
-
-        foreach ($roomLabels as $key => $label) {
-            $count = max((int) ($roomConfiguration[$key] ?? 0), 0);
-
-            if ($count > 0) {
-                $parts[] = "{$count} {$label}";
-            }
-        }
-
-        return count($parts) > 0 ? implode(' + ', $parts) : null;
+        return $summary === '-' ? null : $summary;
     }
 
     /**

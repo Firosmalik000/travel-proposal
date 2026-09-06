@@ -1,5 +1,6 @@
 import GlobalFaviconHead from '@/components/global-favicon-head';
 import { formatMonth } from '@/lib/date-format';
+import { normalizePackageImagePositions } from '@/lib/package-image-position';
 import {
     getPublicSocialAccounts,
     localize,
@@ -101,6 +102,9 @@ export default function LandingPackageDetail() {
     const landingPage = usePublicPageContent('home_landing_mockup');
     const landingContent = asRecord(landingPage?.content);
     const packageContent = asRecord(travelPackage.content);
+    const imagePosition = normalizePackageImagePositions(
+        packageContent.gallery_positions,
+    )[text(travelPackage.image_path)];
     const packageDetails = asRecord(landingContent.package_details);
     const includedContent = asRecord(landingContent.included);
     const excludedContent = asRecord(landingContent.excluded);
@@ -138,20 +142,6 @@ export default function LandingPackageDetail() {
         hasCustomRoomPrice
             ? [
                   {
-                      label: 'Quad',
-                      room: 'Kamar Berempat',
-                      price: resolveRoomPrice(roomPrices, ['quad'], basePrice),
-                  },
-                  {
-                      label: 'Triple',
-                      room: 'Kamar Bertiga',
-                      price: resolveRoomPrice(
-                          roomPrices,
-                          ['trpl', 'triple'],
-                          basePrice,
-                      ),
-                  },
-                  {
                       label: 'Double',
                       room: 'Kamar Berdua',
                       price: resolveRoomPrice(
@@ -160,11 +150,25 @@ export default function LandingPackageDetail() {
                           basePrice,
                       ),
                   },
+                  {
+                      label: 'Triple',
+                      room: 'Kamar Bertiga',
+                      price: resolveRoomPrice(
+                          roomPrices,
+                          ['trpl', 'triple'],
+                          null,
+                      ),
+                  },
+                  {
+                      label: 'Quad',
+                      room: 'Kamar Berempat',
+                      price: resolveRoomPrice(roomPrices, ['quad'], null),
+                  },
               ]
             : [
                   {
-                      label: 'Harga',
-                      room: 'Harga Paket',
+                      label: 'Double',
+                      room: 'Kamar Berdua',
                       price: basePrice,
                   },
               ]
@@ -257,6 +261,7 @@ export default function LandingPackageDetail() {
                     departureMonth: monthFromSchedule(departureDate),
                     durationDays,
                     imagePath: text(travelPackage.image_path),
+                    imagePosition,
                     primaryPrice,
                     roomRows,
                 }}

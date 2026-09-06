@@ -1,3 +1,4 @@
+import { packageImageStyle } from '@/lib/package-image-position';
 import { formatDate, formatPrice, localize } from '@/lib/public/content';
 import { Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
@@ -51,6 +52,13 @@ interface PackageSalesExperienceProps {
         departureMonth: string;
         durationDays: number;
         imagePath: string;
+        imagePosition?: {
+            x: number;
+            y: number;
+            scale: number;
+            version?: 2 | 3;
+            frameScale?: number;
+        };
         primaryPrice: number | null;
         roomRows: RoomRow[];
     };
@@ -350,13 +358,16 @@ export default function PackageSalesExperience({
                                         TANPA TEKANAN
                                     </span>
                                 </div>
-                                <div className="relative aspect-[4/5] overflow-hidden rounded-t-[180px] rounded-b-[22px] bg-[#610811] shadow-[0_36px_80px_rgba(61,5,8,.3)]">
+                                <div className="relative aspect-video overflow-hidden rounded-[22px] bg-[#610811] shadow-[0_36px_80px_rgba(61,5,8,.3)]">
                                     <div className="geometry absolute inset-0 opacity-30" />
                                     {offer.imagePath ? (
                                         <img
                                             src={offer.imagePath}
                                             alt={offer.name}
                                             className="absolute inset-0 h-full w-full object-cover"
+                                            style={packageImageStyle(
+                                                offer.imagePosition,
+                                            )}
                                         />
                                     ) : (
                                         <div className="absolute inset-0 grid place-items-center text-[#f1ca7d]">

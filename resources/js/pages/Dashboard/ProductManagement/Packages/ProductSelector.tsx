@@ -4,6 +4,7 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -420,6 +421,38 @@ export function ProductSelector({
         );
     }, [selectedProducts]);
 
+    const selectedMultipliersByType = useMemo(
+        () =>
+            Object.fromEntries(
+                Object.entries(selectedProductsByType).map(
+                    ([typeKey, products]) => {
+                        const multipliers = [
+                            ...new Set(
+                                products.map((product) =>
+                                    Math.max(
+                                        1,
+                                        Math.floor(
+                                            Number(
+                                                productMultipliers[
+                                                    String(product.id)
+                                                ] ?? 1,
+                                            ) || 1,
+                                        ),
+                                    ),
+                                ),
+                            ),
+                        ];
+
+                        return [
+                            typeKey,
+                            multipliers.length === 1 ? multipliers[0] : null,
+                        ];
+                    },
+                ),
+            ) as Record<string, number | null>,
+        [productMultipliers, selectedProductsByType],
+    );
+
     function updateSearch(typeKey: string, value: string) {
         setSearchByType((current) => ({
             ...current,
@@ -433,16 +466,23 @@ export function ProductSelector({
         }
 
         const nextBrokerSelections = { ...hotelBrokerSelections };
+        const selectedProduct = options.find(
+            (product) => product.id === productId,
+        );
+        const selectedTypeKey = selectedProduct
+            ? normalizeType(selectedProduct.product_type)
+            : '';
         const nextProductMultipliers = {
             ...productMultipliers,
             [String(productId)]: Math.max(
                 1,
-                Number(productMultipliers[String(productId)] ?? 1),
+                Number(
+                    productMultipliers[String(productId)] ??
+                        selectedMultipliersByType[selectedTypeKey] ??
+                        1,
+                ),
             ),
         };
-        const selectedProduct = options.find(
-            (product) => product.id === productId,
-        );
 
         if (
             selectedProduct &&
@@ -516,6 +556,31 @@ export function ProductSelector({
         onChange(selected, hotelBrokerSelections, {
             ...productMultipliers,
             [String(productId)]: normalizedMultiplier,
+        });
+    }
+
+    function updateCategoryMultipliers(typeKey: string, value: string) {
+        const parsedMultiplier = Number(value);
+        const normalizedMultiplier =
+            Number.isFinite(parsedMultiplier) && parsedMultiplier >= 1
+                ? Math.floor(parsedMultiplier)
+                : 1;
+        const selectedIds = selectedProductsByType[typeKey]?.map(
+            (product) => product.id,
+        );
+
+        if (!selectedIds?.length) {
+            return;
+        }
+
+        onChange(selected, hotelBrokerSelections, {
+            ...productMultipliers,
+            ...Object.fromEntries(
+                selectedIds.map((productId) => [
+                    String(productId),
+                    normalizedMultiplier,
+                ]),
+            ),
         });
     }
 
@@ -741,15 +806,57 @@ export function ProductSelector({
                             </div>
 
                             <div className="border-t border-border/70 pt-4">
-                                <div className="mb-3 flex items-center justify-between gap-3">
+                                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                                     <p className="text-sm font-semibold text-foreground">
                                         Produk terpilih {cfg.label}
                                     </p>
-                                    <span
-                                        className={`rounded-full border px-3 py-1 text-[11px] font-semibold ${cfg.accent}`}
-                                    >
-                                        {selectedProductsInType.length} dipilih
-                                    </span>
+                                    <div className="flex flex-wrap items-end gap-2">
+                                        <div className="grid gap-1">
+                                            <Label
+                                                htmlFor={`master-product-shared-multiplier-${typeKey}`}
+                                                className="text-[11px] text-muted-foreground"
+                                            >
+                                                Terapkan ke semua
+                                            </Label>
+                                            <div className="flex h-9 items-center gap-1 rounded-lg border border-input bg-background px-2 shadow-xs">
+                                                <Input
+                                                    id={`master-product-shared-multiplier-${typeKey}`}
+                                                    type="number"
+                                                    min={1}
+                                                    inputMode="numeric"
+                                                    value={
+                                                        selectedMultipliersByType[
+                                                            typeKey
+                                                        ] ?? ''
+                                                    }
+                                                    placeholder="Beragam"
+                                                    disabled={
+                                                        selectedProductsInType.length ===
+                                                            0 ||
+                                                        isCoveredByAllIn
+                                                    }
+                                                    onChange={(event) =>
+                                                        updateCategoryMultipliers(
+                                                            typeKey,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className="h-7 w-16 border-0 bg-transparent px-1 text-right text-xs font-semibold tabular-nums shadow-none focus-visible:ring-0"
+                                                />
+                                                <span className="text-[11px] whitespace-nowrap text-muted-foreground">
+                                                    {typeKey === 'hotel'
+                                                        ? 'hari / pax'
+                                                        : 'x / pax'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <span
+                                            className={`mb-0.5 rounded-full border px-3 py-1 text-[11px] font-semibold ${cfg.accent}`}
+                                        >
+                                            {selectedProductsInType.length}{' '}
+                                            dipilih
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {selectedProductsInType.length === 0 ? (
@@ -1115,7 +1222,7 @@ export function ProductSelector({
                                                                         <span className="text-[11px] font-medium text-muted-foreground">
                                                                             {product.product_type ===
                                                                             'hotel'
-                                                                                ? 'x / hari'
+                                                                                ? 'hari / pax'
                                                                                 : 'x / pax'}
                                                                         </span>
                                                                         {product.product_type ===

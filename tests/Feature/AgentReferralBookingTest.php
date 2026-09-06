@@ -25,6 +25,9 @@ class AgentReferralBookingTest extends TestCase
             'start_date' => now()->addMonth(), 'end_date' => now()->addMonth()->addDays(8),
             'seats_total' => 40, 'seats_available' => 40, 'booking_status' => 'open',
             'price' => 25000000, 'currency' => 'IDR',
+            'content' => [
+                'room_prices' => ['dbl' => 25000000, 'trpl' => 25000000, 'quad' => 25000000],
+            ],
         ]);
         $agentUser = User::factory()->create();
         $agent = AgentProfile::query()->create(['user_id' => $agentUser->id, 'referral_code' => 'REF-UMROH', 'is_active' => true]);
@@ -65,6 +68,9 @@ class AgentReferralBookingTest extends TestCase
             'start_date' => now()->addMonth(), 'end_date' => now()->addMonth()->addDays(8),
             'seats_total' => 40, 'seats_available' => 40, 'booking_status' => 'open',
             'price' => 25000000, 'currency' => 'IDR',
+            'content' => [
+                'room_prices' => ['dbl' => 25000000, 'trpl' => 25000000, 'quad' => 25000000],
+            ],
         ]);
         $agent = AgentProfile::query()->create(['user_id' => User::factory()->create()->id, 'referral_code' => 'SYNC-01', 'is_active' => true]);
         AgentPackageFee::query()->create(['agent_profile_id' => $agent->id, 'package_id' => $package->id, 'fee_type' => 'fixed', 'fee_value' => 500000, 'is_active' => true]);
@@ -138,7 +144,7 @@ class AgentReferralBookingTest extends TestCase
         $this->post(route('public.paket-register.store', $package), [
             'full_name' => 'Jamaah', 'phone' => '628111111111', 'email' => 'inactive@example.com',
             'origin_city' => 'Jakarta', 'passenger_count' => 1,
-            'room_configuration' => ['single' => 1, 'double' => 0, 'triple' => 0, 'quad' => 0],
+            'room_configuration' => ['double' => 1, 'triple' => 0, 'quad' => 0],
             'referral_code' => 'INACTIVE',
         ])->assertSessionHasErrors('referral_code');
     }
@@ -173,7 +179,7 @@ class AgentReferralBookingTest extends TestCase
             'email' => 'persist@example.com',
             'origin_city' => 'Jakarta',
             'passenger_count' => 1,
-            'room_configuration' => ['single' => 1, 'double' => 0, 'triple' => 0, 'quad' => 0],
+            'room_configuration' => ['double' => 1, 'triple' => 0, 'quad' => 0],
         ])->assertRedirect()->assertSessionHasNoErrors();
 
         $this->assertDatabaseHas('package_registrations', [

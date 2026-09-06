@@ -8,15 +8,47 @@ use App\Models\TravelPackage;
 class PackageRoomConfigurationService
 {
     /**
-     * @return array{single:int,double:int,triple:int,quad:int}
+     * @return array{unit:string,double:int,triple:int,quad:int}
+     */
+    public function normalizePaxAllocation(?array $configuration): array
+    {
+        return [
+            'unit' => 'pax',
+            'double' => max(0, (int) data_get($configuration, 'double', 0)),
+            'triple' => max(0, (int) data_get($configuration, 'triple', 0)),
+            'quad' => max(0, (int) data_get($configuration, 'quad', 0)),
+        ];
+    }
+
+    /**
+     * @return array{double:int,triple:int,quad:int}
      */
     public function normalizeConfiguration(?array $configuration): array
     {
         return [
-            'single' => max(0, (int) data_get($configuration, 'single', 0)),
-            'double' => max(0, (int) data_get($configuration, 'double', 0)),
+            'double' => max(0, (int) data_get($configuration, 'double', 0))
+                + max(0, (int) data_get($configuration, 'single', 0)),
             'triple' => max(0, (int) data_get($configuration, 'triple', 0)),
             'quad' => max(0, (int) data_get($configuration, 'quad', 0)),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $configuration
+     * @return array{double:int,triple:int,quad:int}
+     */
+    public function roomCounts(?array $configuration): array
+    {
+        if (! $this->isPaxAllocation($configuration)) {
+            return $this->normalizeConfiguration($configuration);
+        }
+
+        $allocation = $this->normalizePaxAllocation($configuration);
+
+        return [
+            'double' => (int) ceil($allocation['double'] / 2),
+            'triple' => (int) ceil($allocation['triple'] / 3),
+            'quad' => (int) ceil($allocation['quad'] / 4),
         ];
     }
 
@@ -25,27 +57,31 @@ class PackageRoomConfigurationService
      */
     public function occupiedPax(?array $configuration): int
     {
+        if ($this->isPaxAllocation($configuration)) {
+            $allocation = $this->normalizePaxAllocation($configuration);
+
+            return $allocation['double'] + $allocation['triple'] + $allocation['quad'];
+        }
+
         $normalized = $this->normalizeConfiguration($configuration);
 
         return
-            $normalized['single'] +
             ($normalized['double'] * 2) +
             ($normalized['triple'] * 3) +
             ($normalized['quad'] * 4);
     }
 
     /**
-     * @return array{single:float,double:float,triple:float,quad:float}
+     * @return array{double:float,triple:float,quad:float}
      */
     public function roomPrices(TravelPackage $travelPackage): array
     {
-        $basePrice = (float) ($travelPackage->price ?? 0);
+        $basePrice = $travelPackage->doubleSellingPrice();
 
         return [
-            'single' => $basePrice,
             'double' => $this->resolveRoomPrice(data_get($travelPackage->content, 'room_prices.dbl'), $basePrice),
-            'triple' => $this->resolveRoomPrice(data_get($travelPackage->content, 'room_prices.trpl'), $basePrice),
-            'quad' => $this->resolveRoomPrice(data_get($travelPackage->content, 'room_prices.quad'), $basePrice),
+            'triple' => $this->resolveRoomPrice(data_get($travelPackage->content, 'room_prices.trpl'), 0),
+            'quad' => $this->resolveRoomPrice(data_get($travelPackage->content, 'room_prices.quad'), 0),
         ];
     }
 
@@ -54,22 +90,24 @@ class PackageRoomConfigurationService
      */
     public function calculateTotalAmount(TravelPackage $travelPackage, ?array $configuration, ?int $fallbackPassengerCount = null): float
     {
-        $normalized = $this->normalizeConfiguration($configuration);
-        $occupiedPax = $this->occupiedPax($normalized);
+        $occupiedPax = $this->occupiedPax($configuration);
 
         if ($occupiedPax === 0) {
             $passengerCount = max(1, (int) ($fallbackPassengerCount ?? 0));
 
-            return $passengerCount * (float) ($travelPackage->price ?? 0);
+            return $passengerCount * $travelPackage->doubleSellingPrice();
         }
 
         $prices = $this->roomPrices($travelPackage);
+        $allocatedPax = $this->allocatedPax(
+            $configuration,
+            max(1, (int) ($fallbackPassengerCount ?? $occupiedPax)),
+        );
 
         return
-            ($normalized['single'] * $prices['single']) +
-            ($normalized['double'] * 2 * $prices['double']) +
-            ($normalized['triple'] * 3 * $prices['triple']) +
-            ($normalized['quad'] * 4 * $prices['quad']);
+            ($allocatedPax['double'] * $prices['double']) +
+            ($allocatedPax['triple'] * $prices['triple']) +
+            ($allocatedPax['quad'] * $prices['quad']);
     }
 
     public function calculateBookingAmount(Booking $booking): float
@@ -93,13 +131,20 @@ class PackageRoomConfigurationService
      * @param  array<string, mixed>|null  $configuration
      * @return array<int, array{type:string,label:string,rooms:int,pax:int,unit_price:float,amount:float}>
      */
-    public function buildLineItems(TravelPackage $travelPackage, ?array $configuration): array
-    {
-        $normalized = $this->normalizeConfiguration($configuration);
+    public function buildLineItems(
+        TravelPackage $travelPackage,
+        ?array $configuration,
+        ?int $passengerCount = null,
+    ): array {
         $prices = $this->roomPrices($travelPackage);
+        $occupiedPax = $this->occupiedPax($configuration);
+        $allocatedPax = $this->allocatedPax(
+            $configuration,
+            max(1, (int) ($passengerCount ?? $occupiedPax)),
+        );
+        $normalizedRooms = $this->roomCounts($configuration);
 
         $types = [
-            'single' => ['label' => 'Single', 'capacity' => 1],
             'double' => ['label' => 'Double', 'capacity' => 2],
             'triple' => ['label' => 'Triple', 'capacity' => 3],
             'quad' => ['label' => 'Quad', 'capacity' => 4],
@@ -108,17 +153,15 @@ class PackageRoomConfigurationService
         $rows = [];
 
         foreach ($types as $type => $meta) {
-            $roomCount = (int) $normalized[$type];
-            if ($roomCount < 1) {
+            $paxCount = $allocatedPax[$type];
+            if ($paxCount < 1) {
                 continue;
             }
-
-            $paxCount = $roomCount * $meta['capacity'];
 
             $rows[] = [
                 'type' => $type,
                 'label' => $meta['label'],
-                'rooms' => $roomCount,
+                'rooms' => (int) $normalizedRooms[$type],
                 'pax' => $paxCount,
                 'unit_price' => (float) $prices[$type],
                 'amount' => (float) ($paxCount * $prices[$type]),
@@ -133,12 +176,24 @@ class PackageRoomConfigurationService
      */
     public function summarize(?array $configuration): string
     {
+        if ($this->isPaxAllocation($configuration)) {
+            $allocation = $this->normalizePaxAllocation($configuration);
+            $segments = [];
+
+            foreach (['double' => 'double', 'triple' => 'triple', 'quad' => 'quad'] as $type => $label) {
+                if ($allocation[$type] > 0) {
+                    $segments[] = sprintf('%d pax %s', $allocation[$type], $label);
+                }
+            }
+
+            return count($segments) > 0 ? implode(' + ', $segments) : '-';
+        }
+
         $normalized = $this->normalizeConfiguration($configuration);
 
         $segments = [];
 
         foreach ([
-            'single' => 'single',
             'double' => 'double',
             'triple' => 'triple',
             'quad' => 'quad',
@@ -155,19 +210,18 @@ class PackageRoomConfigurationService
     }
 
     /**
-     * @return array{single:int,double:int,triple:int,quad:int}
+     * @return array{double:int,triple:int,quad:int}
      */
     public function recommendedConfiguration(int $passengerCount): array
     {
         $remaining = max(1, $passengerCount);
         $configuration = [
-            'single' => 0,
             'double' => 0,
             'triple' => 0,
             'quad' => 0,
         ];
 
-        foreach ([4 => 'quad', 3 => 'triple', 2 => 'double', 1 => 'single'] as $capacity => $type) {
+        foreach ([4 => 'quad', 3 => 'triple', 2 => 'double'] as $capacity => $type) {
             if ($remaining < $capacity) {
                 continue;
             }
@@ -177,7 +231,57 @@ class PackageRoomConfigurationService
             $remaining -= $roomCount * $capacity;
         }
 
+        if ($remaining === 1) {
+            $configuration['double']++;
+        }
+
         return $configuration;
+    }
+
+    /**
+     * @param  array{double:int,triple:int,quad:int}  $configuration
+     * @return array{double:int,triple:int,quad:int}
+     */
+    private function allocatePaxByRoomType(array $configuration, int $passengerCount): array
+    {
+        $remaining = max(0, $passengerCount);
+        $allocated = ['double' => 0, 'triple' => 0, 'quad' => 0];
+
+        foreach (['quad' => 4, 'triple' => 3, 'double' => 2] as $type => $capacity) {
+            $availableCapacity = $configuration[$type] * $capacity;
+            $allocated[$type] = min($remaining, $availableCapacity);
+            $remaining -= $allocated[$type];
+        }
+
+        return $allocated;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $configuration
+     * @return array{double:int,triple:int,quad:int}
+     */
+    private function allocatedPax(?array $configuration, int $passengerCount): array
+    {
+        if ($this->isPaxAllocation($configuration)) {
+            $allocation = $this->normalizePaxAllocation($configuration);
+
+            return [
+                'double' => $allocation['double'],
+                'triple' => $allocation['triple'],
+                'quad' => $allocation['quad'],
+            ];
+        }
+
+        return $this->allocatePaxByRoomType(
+            $this->normalizeConfiguration($configuration),
+            $passengerCount,
+        );
+    }
+
+    /** @param array<string, mixed>|null $configuration */
+    private function isPaxAllocation(?array $configuration): bool
+    {
+        return data_get($configuration, 'unit') === 'pax';
     }
 
     private function resolveRoomPrice(mixed $value, float $fallback): float

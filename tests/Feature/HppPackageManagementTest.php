@@ -54,8 +54,8 @@ class HppPackageManagementTest extends TestCase
             ->get(route('hpp-package.estimate.edit', $package))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Dashboard/ProductManagement/Packages/Page')
-                ->where('mode', 'hpp')
+                ->component('Dashboard/FinancialManagement/HppPackage/EstimateEdit')
+                ->missing('mode')
                 ->where('package.id', $package->id));
     }
 
@@ -77,6 +77,8 @@ class HppPackageManagementTest extends TestCase
             'departure_city' => 'Jakarta',
             'price' => 20_000_000,
             'original_price' => null,
+            'discount_type' => 'percent',
+            'discount_nominal' => null,
             'currency' => 'IDR',
             'image_path' => '/storage/packages/cover.jpg',
             'content' => [
@@ -120,6 +122,8 @@ class HppPackageManagementTest extends TestCase
             'duration_days' => $package->duration_days,
             'price' => 25_000_000,
             'original_price' => 30_000_000,
+            'discount_type' => 'nominal',
+            'discount_nominal' => 5_000_000,
             'discount_label' => 'HPP TEST',
             'currency' => 'IDR',
             'content' => [
@@ -170,8 +174,10 @@ class HppPackageManagementTest extends TestCase
         $this->assertSame('/storage/packages/cover.jpg', $package->image_path);
         $this->assertSame(['/storage/packages/gallery.jpg'], data_get($package->content, 'gallery'));
         $this->assertSame('Tidak boleh berubah', data_get($package->content, 'public_note'));
-        $this->assertSame(25_000_000.0, (float) $package->price);
-        $this->assertSame(30_000_000.0, (float) $package->original_price);
+        $this->assertSame(26_000_000.0, (float) $package->price);
+        $this->assertSame(31_000_000.0, (float) $package->original_price);
+        $this->assertSame('nominal', $package->discount_type);
+        $this->assertSame(5_000_000.0, (float) $package->discount_nominal);
         $this->assertSame(1_000_000, data_get($package->content, 'hpp_estimate.other_cost'));
         $this->assertSame(
             $specificProduct->id,
@@ -1004,10 +1010,7 @@ class HppPackageManagementTest extends TestCase
 
         $this->assertSame(0, $payload['hotel_total']);
         $this->assertEmpty(collect($payload['items'])->where('cost_type', 'hotel'));
-        $this->assertContains(
-            'Ada konfigurasi kamar di luar Double, Triple, dan Quad yang tidak didukung pricing Product Hotel.',
-            $payload['warnings'],
-        );
+        $this->assertContains('Harga hotel belum tersedia untuk Hotel Legacy Room (Double).', $payload['warnings']);
     }
 
     /**
@@ -1152,6 +1155,74 @@ class HppPackageManagementTest extends TestCase
         $this->assertSame(19_000_000, $preview['grand_total']);
         $this->assertSame($hotel->id, collect($preview['items'])->firstWhere('cost_type', 'hotel')['reference_id']);
         $this->assertSame($ticket->id, collect($preview['items'])->firstWhere('cost_type', 'product')['reference_id']);
+    }
+
+    public function test_actual_hpp_adds_foc_costs_without_increasing_paid_customer_count(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'start_date' => '2026-09-10',
+            'end_date' => '2026-09-19',
+            'content' => [
+                'hpp_estimate' => [
+                    'operational_costs' => ['foc' => ['count' => 1]],
+                ],
+                'hpp_currency_snapshots' => [
+                    'IDR' => ['currency' => 'IDR', 'rate_to_idr' => 1, 'source' => 'identity'],
+                ],
+            ],
+        ]);
+        $hotel = TravelProduct::query()->create([
+            'code' => 'HTL-FOC-ACTUAL',
+            'slug' => 'hotel-foc-actual',
+            'name' => 'Hotel FOC Actual',
+            'product_type' => 'hotel',
+            'content' => [
+                'currency' => 'IDR',
+                'pricing' => [
+                    ['room_type' => 'DBL', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1000],
+                    ['room_type' => 'TRPL', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1200],
+                    ['room_type' => 'QUAD', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1800],
+                ],
+            ],
+            'is_active' => true,
+        ]);
+        $ticket = TravelProduct::query()->create([
+            'code' => 'PRD-FOC-ACTUAL',
+            'slug' => 'product-foc-actual',
+            'name' => 'Produk FOC Actual',
+            'product_type' => 'tiket',
+            'content' => ['currency' => 'IDR', 'price' => 100],
+            'is_active' => true,
+        ]);
+        $package->products()->sync([
+            $hotel->id => ['sort_order' => 1, 'multiplier_per_pax' => 1],
+            $ticket->id => ['sort_order' => 2, 'multiplier_per_pax' => 2],
+        ]);
+        Booking::factory()->create([
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'passenger_count' => 35,
+            'room_configuration' => ['quad' => 8, 'triple' => 1],
+            'status' => 'registered',
+        ]);
+
+        $preview = app(PackageCostCalculationService::class)->preview(
+            $package->id,
+            null,
+            calculationMode: PackageCostCalculationService::MODE_PER_PAX_MULTIPLIER,
+        );
+
+        $hotelItems = collect($preview['items'])->where('cost_type', 'hotel');
+        $productItem = collect($preview['items'])->firstWhere('cost_type', 'product');
+
+        $this->assertSame(35, $preview['customer_count']);
+        $this->assertSame(17_400, $preview['hotel_total']);
+        $this->assertSame(7200, $preview['product_total']);
+        $this->assertSame(24_600, $preview['grand_total']);
+        $this->assertSame(702, $preview['hpp_per_customer']);
+        $this->assertSame(9, $hotelItems->firstWhere('meta.room_type', 'quad')['quantity']);
+        $this->assertSame(1, $hotelItems->firstWhere('meta.room_type', 'triple')['quantity']);
+        $this->assertSame(72, $productItem['quantity']);
     }
 
     private function createUserWithHppPermissions(array $actions): User

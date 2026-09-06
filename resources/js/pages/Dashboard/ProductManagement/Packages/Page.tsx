@@ -29,7 +29,7 @@ import type {
     ProductOption,
 } from './types';
 
-type PageMode = 'create' | 'edit' | 'detail' | 'hpp';
+type PageMode = 'create' | 'edit' | 'detail';
 
 type Props = {
     mode: PageMode;
@@ -117,14 +117,9 @@ function PackageDetail({
     const roomPrices = pkg.content.room_prices ?? {};
     const pricingRows = [
         {
-            label: 'Base / Single',
-            original: pkg.original_price,
-            selling: pkg.price,
-        },
-        {
             label: 'Double',
-            original: roomOriginalPrices.dbl,
-            selling: roomPrices.dbl,
+            original: roomOriginalPrices.dbl ?? pkg.original_price,
+            selling: roomPrices.dbl ?? pkg.price,
         },
         {
             label: 'Triple',
@@ -496,32 +491,25 @@ export default function PackagePage({
 }: Props) {
     const { can } = usePermission('package');
     const isDetail = mode === 'detail';
-    const isHppEditor = mode === 'hpp';
     const title =
         mode === 'create'
             ? 'Tambah Package'
             : mode === 'edit'
               ? `Edit ${resolveText(packageData?.name, packageData?.code)}`
-              : mode === 'hpp'
-                ? `Edit Estimasi HPP ${resolveText(packageData?.name, packageData?.code)}`
-                : `Detail ${resolveText(packageData?.name, packageData?.code)}`;
-    const indexHref = isHppEditor
-        ? '/admin/financial-management/hpp-package'
-        : packages.index().url;
+              : `Detail ${resolveText(packageData?.name, packageData?.code)}`;
+    const indexHref = packages.index().url;
     const createHref = '/admin/product-management/packages/create';
     const currentHref = packageData
-        ? isHppEditor
-            ? `/admin/financial-management/hpp-package/${packageData.id}/estimate/edit`
-            : isDetail
-              ? packages.show(packageData.id).url
-              : packages.edit(packageData.id).url
+        ? isDetail
+            ? packages.show(packageData.id).url
+            : packages.edit(packageData.id).url
         : createHref;
 
     return (
         <AppSidebarLayout
             breadcrumbs={[
                 {
-                    label: isHppEditor ? 'HPP Package' : 'Package Management',
+                    label: 'Package Management',
                     href: indexHref,
                 },
                 { label: title, href: currentHref },
@@ -540,20 +528,14 @@ export default function PackagePage({
                         >
                             <Link
                                 href={indexHref}
-                                aria-label={
-                                    isHppEditor
-                                        ? 'Kembali ke HPP Package'
-                                        : 'Kembali ke daftar package'
-                                }
+                                aria-label="Kembali ke daftar package"
                             >
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
                         <div className="min-w-0">
                             <p className="text-xs font-medium text-muted-foreground">
-                                {isHppEditor
-                                    ? 'Financial Management / HPP Package'
-                                    : 'Product Management / Package'}
+                                Product Management / Package
                             </p>
                             <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
                                 {title}
@@ -580,11 +562,7 @@ export default function PackagePage({
                 ) : (
                     <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm sm:p-4 md:p-5 xl:p-6">
                         <PackageForm
-                            pkg={
-                                mode === 'edit' || mode === 'hpp'
-                                    ? packageData
-                                    : null
-                            }
+                            pkg={mode === 'edit' ? packageData : null}
                             productOptions={productOptions}
                             currencies={currencies}
                             activityOptions={activityOptions}
@@ -597,7 +575,6 @@ export default function PackagePage({
                             vendors={vendors}
                             draft={draft}
                             locale="id"
-                            editorMode={isHppEditor ? 'hpp' : 'package'}
                             onSuccess={() => router.visit(indexHref)}
                         />
                     </div>

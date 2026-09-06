@@ -26,7 +26,6 @@ class PackageHppEstimateService
                 ? $storedCustomerCount
                 : max(0, (int) $package->seats_total);
             $estimate['customers'] = [
-                'single' => 0,
                 'dbl' => $customerCount,
                 'trpl' => 0,
                 'quad' => 0,
@@ -41,7 +40,7 @@ class PackageHppEstimateService
 
         return $this->calculate(
             $estimate,
-            (int) round((float) $package->price),
+            (int) round($package->doubleSellingPrice()),
             data_get($content, 'room_prices', []),
             (float) data_get($currencySnapshot, 'rate_to_idr', $currencyCode === 'IDR' ? 1 : 0),
             $currencyCode,
@@ -107,12 +106,14 @@ class PackageHppEstimateService
         array $currencySnapshots = [],
         array $allInConfiguration = [],
     ): array {
-        $customers = collect(['single', 'dbl', 'trpl', 'quad'])
+        $customers = collect(['dbl', 'trpl', 'quad'])
             ->mapWithKeys(fn (string $roomType): array => [
                 $roomType => $this->nonNegativeInteger(data_get($estimate, "customers.{$roomType}")),
             ])
             ->all();
+        $customers['dbl'] += $this->nonNegativeInteger(data_get($estimate, 'customers.single'));
         $customerCount = array_sum($customers);
+        $focCount = $this->nonNegativeInteger(data_get($estimate, 'operational_costs.foc.count'));
         $coveredCategoryKeys = (bool) data_get($allInConfiguration, 'enabled', false)
             ? collect(data_get($allInConfiguration, 'included_category_keys', []))
                 ->filter(fn (mixed $key): bool => is_string($key))
@@ -129,11 +130,18 @@ class PackageHppEstimateService
             $customerCount,
             $currencySnapshots,
         );
-        [$hotelItems, $hotelTotal, $hotelWarnings, $hotelAllocations] = $this->buildHotelItems(
+        [$focProductItems, $focProductTotal, $focProductWarnings] = $this->buildFocProductItems(
+            $selectedProducts,
+            $productMultipliers,
+            $focCount,
+            $currencySnapshots,
+        );
+        [$hotelItems, $hotelTotal, $hotelWarnings, $hotelAllocations, $paidHotelTotal, $focHotelTotal] = $this->buildHotelItems(
             $selectedProducts,
             $estimate,
             $productMultipliers,
             $customerCount,
+            $focCount,
             $periodDate,
             $hotelBrokerSelections,
             $currencySnapshots,
@@ -143,25 +151,50 @@ class PackageHppEstimateService
             $customerCount,
             $currencySnapshots,
         );
+        [$focAllInItem, $focAllInTotal, $focAllInWarnings] = $this->buildAllInItem(
+            $allInConfiguration,
+            $focCount,
+            $currencySnapshots,
+        );
+        if ($focAllInItem !== null) {
+            $focAllInItem['cost_type'] = 'foc';
+            $focAllInItem['label'] = 'FOC - '.$focAllInItem['label'];
+            $focAllInItem['meta']['foc_component'] = 'all_in';
+            $focAllInItem['meta']['foc_count'] = $focCount;
+        }
         if ($selectedProducts->where('product_type', '!=', 'hotel')->isEmpty()) {
             $productTotal = $this->nonNegativeInteger($estimate['product_cost_per_customer'] ?? null) * $customerCount;
+            $focProductTotal = $this->nonNegativeInteger($estimate['product_cost_per_customer'] ?? null) * $focCount;
+            $focProductItems = $focProductTotal > 0 ? [[
+                'cost_type' => 'foc',
+                'reference_id' => null,
+                'label' => 'FOC - Biaya produk legacy',
+                'quantity' => $focCount,
+                'unit_price' => $this->nonNegativeInteger($estimate['product_cost_per_customer'] ?? null),
+                'total_price' => $focProductTotal,
+                'meta' => ['foc_component' => 'product'],
+            ]] : [];
         }
 
-        $productTotal += $allInTotal;
+        $productTotal += $focProductTotal + $allInTotal + $focAllInTotal;
         $productCostPerCustomer = $customerCount > 0 ? (int) floor($productTotal / $customerCount) : 0;
         if ($allInItem !== null) {
             array_unshift($productItems, $allInItem);
         }
+        $paidProductItemsForOperational = $productItems;
+        $productItems = [...$productItems, ...$focProductItems];
+        if ($focAllInItem !== null && $focCount > 0) {
+            $productItems[] = $focAllInItem;
+        }
 
         if ($selectedProducts->where('product_type', 'hotel')->isEmpty()) {
             $hotelTotal = $this->nonNegativeInteger($estimate['hotel_total'] ?? null);
+            $paidHotelTotal = $hotelTotal;
         }
 
         $revenueInPackageCurrency = collect($customers)
             ->map(function (int $count, string $roomType) use ($baseSellingPrice, $roomSellingPrices): int {
-                $sellingPrice = $roomType === 'single'
-                    ? $baseSellingPrice
-                    : $this->nonNegativeInteger($roomSellingPrices[$roomType] ?? $baseSellingPrice);
+                $sellingPrice = $this->nonNegativeInteger($roomSellingPrices[$roomType] ?? $baseSellingPrice);
 
                 return $count * ($sellingPrice > 0 ? $sellingPrice : $baseSellingPrice);
             })
@@ -174,8 +207,8 @@ class PackageHppEstimateService
             ? $this->buildOperationalItems(
                 data_get($estimate, 'operational_costs', []),
                 $customerCount,
-                $hotelTotal,
-                $productItems,
+                $paidHotelTotal,
+                $paidProductItemsForOperational,
                 $currencySnapshots,
             )
             : [[], ['total' => 0, 'tour_leader' => 0, 'muthawwif' => 0], []];
@@ -243,6 +276,11 @@ class PackageHppEstimateService
             'other_cost' => $otherCost,
             'notes' => trim((string) ($estimate['notes'] ?? '')) ?: null,
             'customer_count' => $customerCount,
+            'foc_count' => $focCount,
+            'foc_total' => $focHotelTotal + $focProductTotal + $focAllInTotal,
+            'foc_hotel_total' => $focHotelTotal,
+            'foc_product_total' => $focProductTotal,
+            'foc_all_in_total' => $focAllInTotal,
             'product_total' => $productTotal,
             'revenue_total' => $revenueTotal,
             'revenue_original_total' => $revenueInPackageCurrency,
@@ -254,8 +292,8 @@ class PackageHppEstimateService
             'hpp_per_customer' => $customerCount > 0 ? (int) floor($grandTotal / $customerCount) : null,
             'estimated_profit' => $revenueTotal - $grandTotal,
             'items' => $items,
-            'warnings' => array_values(array_unique([...$productWarnings, ...$hotelWarnings, ...$allInWarnings, ...$operationalWarnings])),
-            'all_in_total' => $allInTotal,
+            'warnings' => array_values(array_unique([...$productWarnings, ...$focProductWarnings, ...$hotelWarnings, ...$allInWarnings, ...$focAllInWarnings, ...$operationalWarnings])),
+            'all_in_total' => $allInTotal + $focAllInTotal,
             'calculated_at' => now()->toDateTimeString(),
         ];
     }
@@ -309,26 +347,44 @@ class PackageHppEstimateService
         $totals['overhead'] = $overheadTotal;
 
         $photographerCount = $this->nonNegativeInteger(data_get($configuration, 'photographer.count'));
-        $photographerDailySalary = $this->nonNegativeInteger(data_get($configuration, 'photographer.daily_salary'));
+        $photographerCurrency = strtoupper((string) data_get($configuration, 'photographer.currency', 'IDR'));
+        [$photographerDailySalary, $photographerCurrencyMeta] = $this->convertToIdr(
+            data_get($configuration, 'photographer.daily_salary'),
+            $photographerCurrency,
+            $currencySnapshots,
+        );
+        if ($photographerDailySalary === null && $this->nonNegativeInteger(data_get($configuration, 'photographer.daily_salary')) > 0) {
+            $warnings[] = sprintf('Kurs %s untuk gaji Fotografer belum tersedia.', $photographerCurrency);
+        }
         $photographerDays = $this->nonNegativeInteger(data_get($configuration, 'photographer.days'));
-        $photographerTotal = $photographerCount * $photographerDailySalary * $photographerDays;
+        $photographerTotal = $photographerCount * ($photographerDailySalary ?? 0) * $photographerDays;
         $this->appendOperationalItem($items, 'Fotografer', $photographerTotal, 'photographer', [
             'count' => $photographerCount,
-            'daily_salary' => $photographerDailySalary,
+            'daily_salary' => $this->nonNegativeInteger(data_get($configuration, 'photographer.daily_salary')),
             'days' => $photographerDays,
+            ...$photographerCurrencyMeta,
         ]);
         $totals['photographer'] = $photographerTotal;
 
         $tourLeaderCount = $this->nonNegativeInteger(data_get($configuration, 'tour_leader.count'));
-        $tourLeaderSalary = $this->nonNegativeInteger(data_get($configuration, 'tour_leader.salary_per_trip'));
+        $tourLeaderCurrency = strtoupper((string) data_get($configuration, 'tour_leader.currency', 'IDR'));
+        [$tourLeaderSalary, $tourLeaderCurrencyMeta] = $this->convertToIdr(
+            data_get($configuration, 'tour_leader.salary_per_trip'),
+            $tourLeaderCurrency,
+            $currencySnapshots,
+        );
+        if ($tourLeaderSalary === null && $this->nonNegativeInteger(data_get($configuration, 'tour_leader.salary_per_trip')) > 0) {
+            $warnings[] = sprintf('Kurs %s untuk gaji Tour Leader belum tersedia.', $tourLeaderCurrency);
+        }
         $tourLeaderSupport = ((bool) data_get($configuration, 'tour_leader.include_hotel', true) ? $hotelPerCustomer : 0)
             + ((bool) data_get($configuration, 'tour_leader.include_ticket_and_visa', true) ? $ticketAndVisaPerCustomer : 0);
-        $tourLeaderTotal = (int) round($tourLeaderCount * ($tourLeaderSalary + $tourLeaderSupport));
+        $tourLeaderTotal = (int) round($tourLeaderCount * (($tourLeaderSalary ?? 0) + $tourLeaderSupport));
         $this->appendOperationalItem($items, 'Tour Leader', $tourLeaderTotal, 'tour_leader', [
             'count' => $tourLeaderCount,
-            'salary_per_trip' => $tourLeaderSalary,
+            'salary_per_trip' => $this->nonNegativeInteger(data_get($configuration, 'tour_leader.salary_per_trip')),
             'hotel_per_person' => (int) round($hotelPerCustomer),
             'ticket_and_visa_per_person' => (int) round($ticketAndVisaPerCustomer),
+            ...$tourLeaderCurrencyMeta,
         ]);
         $totals['tour_leader'] = $tourLeaderTotal;
 
@@ -510,23 +566,83 @@ class PackageHppEstimateService
 
     /**
      * @param  Collection<int, TravelProduct>  $products
+     * @param  array<string|int, mixed>  $productMultipliers
+     * @param  array<string, mixed>  $currencySnapshots
+     * @return array{array<int, array<string, mixed>>, int, array<int, string>}
+     */
+    private function buildFocProductItems(
+        Collection $products,
+        array $productMultipliers,
+        int $focCount,
+        array $currencySnapshots,
+    ): array {
+        if ($focCount < 1) {
+            return [[], 0, []];
+        }
+
+        $items = [];
+        $total = 0;
+        $warnings = [];
+
+        foreach ($products->where('product_type', '!=', 'hotel') as $product) {
+            $multiplier = max(1, $this->nonNegativeInteger($productMultipliers[(string) $product->id] ?? 1));
+            $quantity = $focCount * $multiplier;
+            [$unitPrice, $currencyMeta] = $this->convertToIdr(
+                data_get($product->content, 'price'),
+                (string) data_get($product->content, 'currency', 'IDR'),
+                $currencySnapshots,
+            );
+
+            if ($unitPrice === null) {
+                $warnings[] = sprintf('Kurs atau harga product FOC belum lengkap: %s', $this->productName($product));
+                $unitPrice = 0;
+            }
+
+            $itemTotal = $quantity * $unitPrice;
+            $total += $itemTotal;
+            $items[] = [
+                'cost_type' => 'foc',
+                'reference_id' => $product->id,
+                'label' => sprintf('FOC - %s', $this->productName($product)),
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'total_price' => $itemTotal,
+                'meta' => [
+                    'foc_component' => 'product',
+                    'foc_count' => $focCount,
+                    'product_code' => $product->code,
+                    'product_type' => $product->product_type,
+                    'multiplier_per_pax' => $multiplier,
+                    ...$currencyMeta,
+                ],
+            ];
+        }
+
+        return [$items, $total, $warnings];
+    }
+
+    /**
+     * @param  Collection<int, TravelProduct>  $products
      * @param  array<string, mixed>  $estimate
      * @param  array<string|int, mixed>  $productMultipliers
      * @param  array<string, mixed>  $hotelBrokerSelections
      * @param  array<string, mixed>  $currencySnapshots
-     * @return array{array<int, array<string, mixed>>, int, array<int, string>, array<string, array<string, int>>}
+     * @return array{array<int, array<string, mixed>>, int, array<int, string>, array<string, array<string, int>>, int, int}
      */
     private function buildHotelItems(
         Collection $products,
         array $estimate,
         array $productMultipliers,
         int $customerCount,
+        int $focCount,
         ?string $periodDate,
         array $hotelBrokerSelections,
         array $currencySnapshots,
     ): array {
         $items = [];
         $total = 0;
+        $paidTotal = 0;
+        $focTotal = 0;
         $warnings = [];
         $resolvedAllocations = [];
 
@@ -547,21 +663,23 @@ class PackageHppEstimateService
 
                 return [$roomType => ['pricing' => $pricing, 'price' => $price, 'currency_meta' => $currencyMeta]];
             });
-            $allocations = $this->resolveHotelAllocations($product, $estimate, $prices, $customerCount);
+            $paidAllocations = $this->resolveHotelAllocations($product, $estimate, $prices, $customerCount);
+            $allocations = $this->addFocToHotelAllocation($paidAllocations, $prices, $customerCount, $focCount);
             $resolvedAllocations[(string) $product->id] = $allocations;
             $allocatedCapacity = collect(array_keys(self::ROOM_CAPACITIES))
                 ->sum(fn (string $roomType): int => ($allocations[$roomType] ?? 0) * self::ROOM_CAPACITIES[$roomType]);
-            if ($customerCount > 0 && $allocatedCapacity < $customerCount) {
+            $targetOccupants = $customerCount + $focCount;
+            if ($targetOccupants > 0 && $allocatedCapacity < $targetOccupants) {
                 $warnings[] = sprintf(
-                    'Kapasitas hotel %s hanya %d dari target %d jamaah.',
+                    'Kapasitas hotel %s hanya %d dari target %d orang termasuk FOC.',
                     $this->productName($product),
                     $allocatedCapacity,
-                    $customerCount,
+                    $targetOccupants,
                 );
             }
             $multiplier = max(1, $this->nonNegativeInteger($productMultipliers[(string) $product->id] ?? 1));
 
-            foreach ($allocations as $roomType => $roomCount) {
+            foreach ($paidAllocations as $roomType => $roomCount) {
                 if ($roomCount < 1) {
                     continue;
                 }
@@ -580,6 +698,7 @@ class PackageHppEstimateService
                 $quantity = $roomCount * $multiplier;
                 $itemTotal = $quantity * $unitPrice;
                 $total += $itemTotal;
+                $paidTotal += $itemTotal;
                 $pricing = data_get($pricePayload, 'pricing', []);
                 $items[] = [
                     'cost_type' => 'hotel',
@@ -603,9 +722,42 @@ class PackageHppEstimateService
                     ],
                 ];
             }
+
+            $finalHotelTotal = collect($allocations)->reduce(function (int $total, int $roomCount, string $roomType) use ($prices, $multiplier): int {
+                $unitPrice = data_get($prices->get($roomType), 'price');
+
+                return $total + $roomCount * $multiplier * (is_int($unitPrice) ? $unitPrice : 0);
+            }, 0);
+            $paidHotelTotal = collect($paidAllocations)->reduce(function (int $total, int $roomCount, string $roomType) use ($prices, $multiplier): int {
+                $unitPrice = data_get($prices->get($roomType), 'price');
+
+                return $total + $roomCount * $multiplier * (is_int($unitPrice) ? $unitPrice : 0);
+            }, 0);
+            $focHotelTotal = max(0, $finalHotelTotal - $paidHotelTotal);
+
+            if ($focCount > 0 && $focHotelTotal > 0) {
+                $total += $focHotelTotal;
+                $focTotal += $focHotelTotal;
+                $items[] = [
+                    'cost_type' => 'foc',
+                    'reference_id' => $product->id,
+                    'label' => sprintf('FOC - %s (Hotel Quad)', $this->productName($product)),
+                    'quantity' => $focCount,
+                    'unit_price' => (int) floor($focHotelTotal / $focCount),
+                    'total_price' => $focHotelTotal,
+                    'meta' => [
+                        'foc_component' => 'hotel',
+                        'foc_count' => $focCount,
+                        'room_type' => 'quad',
+                        'paid_room_count' => array_sum($paidAllocations),
+                        'total_room_count' => array_sum($allocations),
+                        'multiplier_per_pax' => $multiplier,
+                    ],
+                ];
+            }
         }
 
-        return [$items, $total, $warnings, $resolvedAllocations];
+        return [$items, $total, $warnings, $resolvedAllocations, $paidTotal, $focTotal];
     }
 
     /** @return array{0: ?int, 1: array<string, mixed>} */
@@ -681,6 +833,34 @@ class PackageHppEstimateService
         }
 
         return $this->quadFirstRoomAllocation($prices, $customerCount);
+    }
+
+    /**
+     * @param  array<string, int>  $paidAllocations
+     * @param  Collection<string, array<string, mixed>>  $prices
+     * @return array<string, int>
+     */
+    private function addFocToHotelAllocation(
+        array $paidAllocations,
+        Collection $prices,
+        int $customerCount,
+        int $focCount,
+    ): array {
+        if ($focCount < 1) {
+            return $paidAllocations;
+        }
+
+        $allocatedCapacity = collect($paidAllocations)
+            ->reduce(fn (int $capacity, int $roomCount, string $roomType): int => $capacity + $roomCount * (self::ROOM_CAPACITIES[$roomType] ?? 0), 0);
+        $spareCapacity = max(0, $allocatedCapacity - $customerCount);
+        $uncoveredFocCount = max(0, $focCount - $spareCapacity);
+        $focAllocations = $this->quadFirstRoomAllocation($prices, $uncoveredFocCount);
+
+        return collect(array_keys(self::ROOM_CAPACITIES))
+            ->mapWithKeys(fn (string $roomType): array => [
+                $roomType => ($paidAllocations[$roomType] ?? 0) + ($focAllocations[$roomType] ?? 0),
+            ])
+            ->all();
     }
 
     /**

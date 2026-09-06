@@ -14,6 +14,7 @@ use App\Models\BookingParticipant;
 use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
 use App\Services\BookingParticipantImportService;
+use App\Services\BookingParticipantReminderService;
 use App\Services\BookingPaymentService;
 use App\Services\InventoryStockService;
 use App\Services\PackageRoomConfigurationService;
@@ -40,6 +41,7 @@ class BookingRegisterController extends Controller
         private readonly PdfBrandingService $pdfBrandingService,
         private readonly InventoryStockService $inventoryStockService,
         private readonly BookingParticipantImportService $bookingParticipantImportService,
+        private readonly BookingParticipantReminderService $bookingParticipantReminderService,
         private readonly BookingPaymentService $bookingPaymentService,
         private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
         private readonly ResolveCustomerAccount $resolveCustomerAccount,
@@ -220,6 +222,7 @@ class BookingRegisterController extends Controller
     public function participants(Booking $registration): JsonResponse
     {
         $registration->loadMissing('participants');
+        $participantReminder = $this->bookingParticipantReminderService->details($registration);
 
         return response()->json([
             'booking' => [
@@ -228,6 +231,9 @@ class BookingRegisterController extends Controller
                 'passenger_count' => (int) $registration->passenger_count,
                 'participants_count' => $registration->participants->count(),
                 'remaining_slots' => max((int) $registration->passenger_count - $registration->participants->count(), 0),
+                'participant_data_complete' => $participantReminder['is_complete'],
+                'participant_outstanding_count' => $participantReminder['outstanding_count'],
+                'participant_reminder' => $participantReminder,
             ],
             'participants' => $registration->participants
                 ->sortBy('id')
@@ -235,6 +241,13 @@ class BookingRegisterController extends Controller
                 ->map(fn (BookingParticipant $participant): array => $this->participantPayload($participant))
                 ->all(),
         ]);
+    }
+
+    public function remindParticipants(Booking $registration): RedirectResponse
+    {
+        $this->bookingParticipantReminderService->queue($registration);
+
+        return back()->with('success', "Reminder WhatsApp peserta berhasil dijadwalkan ke {$registration->phone}.");
     }
 
     public function storeParticipant(StoreBookingParticipantRequest $request, Booking $registration): RedirectResponse
@@ -464,6 +477,7 @@ class BookingRegisterController extends Controller
             $lineItems = collect($this->packageRoomConfigurationService->buildLineItems(
                 $registration->package,
                 is_array($registration->room_configuration) ? $registration->room_configuration : null,
+                $paxCount,
             ))
                 ->map(fn (array $item): array => [
                     'label' => sprintf('%s x %d kamar (%d pax)', $item['label'], $item['rooms'], $item['pax']),
@@ -877,6 +891,7 @@ class BookingRegisterController extends Controller
         return Booking::query()
             ->with([
                 'package:id,code,slug,name,package_type,departure_city,start_date,end_date,booking_status,price,currency,content',
+                'participants',
             ])
             ->withCount('participants')
             ->withSum(['payments as paid_amount' => fn ($query) => $query->where('status', 'confirmed')], 'amount')
@@ -909,6 +924,7 @@ class BookingRegisterController extends Controller
             ->paginate(10)
             ->withQueryString()
             ->through(function (Booking $booking): array {
+                $participantReminder = $this->bookingParticipantReminderService->details($booking);
                 $currency = $booking->booking_type === 'custom'
                     ? (string) ($booking->custom_currency ?: 'IDR')
                     : (string) ($booking->package?->currency ?: 'IDR');
@@ -944,6 +960,9 @@ class BookingRegisterController extends Controller
                         is_array($booking->room_configuration) ? $booking->room_configuration : null,
                     ),
                     'participants_count' => (int) ($booking->participants_count ?? 0),
+                    'participant_data_complete' => $participantReminder['is_complete'],
+                    'participant_outstanding_count' => $participantReminder['outstanding_count'],
+                    'participant_reminder' => $participantReminder,
                     'custom_unit_price' => $booking->booking_type === 'custom'
                         ? (int) ($booking->custom_unit_price ?? 0)
                         : null,

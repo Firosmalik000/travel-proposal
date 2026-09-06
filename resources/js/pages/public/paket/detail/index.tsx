@@ -5,6 +5,10 @@ import {
     packageHighlightIconMap,
 } from '@/lib/package-highlights';
 import {
+    normalizePackageImagePositions,
+    packageImageStyle,
+} from '@/lib/package-image-position';
+import {
     formatDate,
     formatPrice,
     hasPackageDiscount,
@@ -38,16 +42,12 @@ type PackageSchedule = {
     [key: string]: any;
 };
 
-type PackageProduct = {
-    [key: string]: any;
-};
-
 type PackageTestimonial = {
     [key: string]: any;
 };
 
 type RoomTypePriceRow = {
-    type: 'single' | 'double' | 'triple' | 'quad';
+    type: 'double' | 'triple' | 'quad';
     label: string;
     sellingPrice: number;
     originalPrice: number | null;
@@ -57,14 +57,6 @@ const typeConfig: Record<string, { label: string; color: string }> = {
     reguler: { label: 'Reguler', color: 'bg-blue-100 text-blue-700' },
     vip: { label: 'VIP', color: 'bg-amber-100 text-amber-700' },
     private: { label: 'Private', color: 'bg-purple-100 text-purple-700' },
-};
-
-const productTypeIconMap: Record<string, string> = {
-    dokumen: 'BadgeCheck',
-    transportasi: 'Plane',
-    akomodasi: 'Hotel',
-    layanan: 'ShieldCheck',
-    perlengkapan: 'Sparkles',
 };
 
 function toStringArray(val: unknown): string[] {
@@ -97,6 +89,9 @@ export default function PaketDetail() {
     const hasDiscount = hasPackageDiscount(safePackage);
     const discountLabel = packageDiscountLabel(safePackage);
     const content = safePackage.content ?? {};
+    const imagePositions = normalizePackageImagePositions(
+        content.gallery_positions,
+    );
     const name = localize(safePackage.name, locale);
     const summary = localize(safePackage.summary, locale);
     const type = typeConfig[safePackage.package_type] ?? typeConfig.reguler;
@@ -166,47 +161,24 @@ export default function PaketDetail() {
     );
     const policy = localize(content.policy, locale);
     const roomPrices = {
-        single: normalizeNumericValue(safePackage.price) ?? 0,
         double:
             normalizeNumericValue(content?.room_prices?.dbl) ??
             normalizeNumericValue(safePackage.price) ??
             0,
-        triple:
-            normalizeNumericValue(content?.room_prices?.trpl) ??
-            normalizeNumericValue(safePackage.price) ??
-            0,
-        quad:
-            normalizeNumericValue(content?.room_prices?.quad) ??
-            normalizeNumericValue(safePackage.price) ??
-            0,
+        triple: normalizeNumericValue(content?.room_prices?.trpl) ?? 0,
+        quad: normalizeNumericValue(content?.room_prices?.quad) ?? 0,
     };
     const roomOriginalPrices = {
-        single:
-            normalizeNumericValue(safePackage.original_price) ??
-            normalizeNumericValue(safePackage.price),
         double:
             normalizeNumericValue(content?.room_original_prices?.dbl) ??
             normalizeNumericValue(safePackage.original_price) ??
             normalizeNumericValue(safePackage.price),
         triple:
-            normalizeNumericValue(content?.room_original_prices?.trpl) ??
-            normalizeNumericValue(safePackage.original_price) ??
-            normalizeNumericValue(safePackage.price),
+            normalizeNumericValue(content?.room_original_prices?.trpl) ?? null,
         quad:
-            normalizeNumericValue(content?.room_original_prices?.quad) ??
-            normalizeNumericValue(safePackage.original_price) ??
-            normalizeNumericValue(safePackage.price),
+            normalizeNumericValue(content?.room_original_prices?.quad) ?? null,
     };
     const roomTypePrices: RoomTypePriceRow[] = [
-        {
-            type: 'single',
-            label: 'Single',
-            sellingPrice: roomPrices.single,
-            originalPrice:
-                roomOriginalPrices.single !== roomPrices.single
-                    ? roomOriginalPrices.single
-                    : null,
-        },
         {
             type: 'double',
             label: 'Double',
@@ -237,8 +209,6 @@ export default function PaketDetail() {
     ];
     const packageHighlights = normalizePackageHighlights(content);
     const CalendarDaysIcon = packageHighlightIconMap.CalendarDays;
-    const MapPinIcon = packageHighlightIconMap.MapPin;
-    const PackageIcon = packageHighlightIconMap.BadgeCheck;
     const PolicyIcon = packageHighlightIconMap.ShieldCheck;
     const TestimonialIcon = packageHighlightIconMap.Users;
     const StarIcon = packageHighlightIconMap.Star;
@@ -280,6 +250,22 @@ export default function PaketDetail() {
                 return leftSort - rightSort;
             });
     })();
+    const itineraryDays = itineraries
+        .map((itinerary) => {
+            const activities = Array.isArray(itinerary.activities)
+                ? itinerary.activities
+                : itinerary.activity
+                  ? [itinerary.activity]
+                  : [];
+            const activityLabels = activities
+                .map((activity: { name?: unknown }) =>
+                    localize(activity?.name, locale),
+                )
+                .filter(Boolean);
+
+            return { ...itinerary, activityLabels };
+        })
+        .filter((itinerary) => itinerary.activityLabels.length > 0);
 
     const upcomingSchedules = Array.isArray(safePackage.schedules)
         ? safePackage.schedules
@@ -361,11 +347,11 @@ export default function PaketDetail() {
             </Head>
 
             {/* Hero */}
-            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-6 pb-6 sm:px-6">
-                <MotionCard className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-                    <div className="grid lg:grid-cols-2 lg:items-stretch">
+            <MotionSection className="mx-auto w-full max-w-6xl px-4 pt-5 pb-10 sm:px-6 sm:pt-8">
+                <MotionCard className="overflow-hidden rounded-[2rem] border border-border/70 bg-card shadow-[0_18px_60px_-38px_rgba(87,28,36,0.35)]">
+                    <div className="min-w-0 overflow-hidden">
                         {/* Image */}
-                        <div className="relative aspect-[4/3] overflow-hidden sm:aspect-[16/10] lg:aspect-auto lg:h-[520px]">
+                        <div className="relative isolate aspect-video min-w-0 overflow-hidden bg-[#0b1017] [contain:paint]">
                             <img
                                 src={
                                     packageImages[activeImageIndex] ||
@@ -373,13 +359,18 @@ export default function PaketDetail() {
                                     '/images/dummy.jpg'
                                 }
                                 alt={name}
-                                className="block h-full w-full object-cover object-center"
+                                className="absolute inset-0 block h-full w-full max-w-none object-cover object-center"
+                                style={packageImageStyle(
+                                    imagePositions[
+                                        packageImages[activeImageIndex]
+                                    ],
+                                )}
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent lg:bg-gradient-to-r" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent lg:bg-gradient-to-r lg:from-transparent lg:via-transparent lg:to-black/10" />
                             {/* Discount ribbon */}
                             {hasDiscount && discountLabel ? (
                                 <div
-                                    className={`absolute top-4 right-4 rounded-xl px-3 py-1.5 text-sm font-bold text-white shadow-lg ${
+                                    className={`absolute top-4 right-4 z-20 max-w-[calc(100%-2rem)] rounded-full px-4 py-2 text-xs font-bold tracking-wide text-white shadow-lg ${
                                         pkg.discount_type === 'percent'
                                             ? 'bg-red-500'
                                             : 'bg-amber-500'
@@ -390,8 +381,8 @@ export default function PaketDetail() {
                             ) : null}
 
                             {packageImages.length > 1 ? (
-                                <div className="absolute right-0 bottom-0 left-0 z-10 p-3">
-                                    <div className="flex gap-2 overflow-x-auto rounded-2xl bg-black/35 p-2 backdrop-blur">
+                                <div className="absolute right-0 bottom-0 left-0 z-10 p-4 sm:p-5">
+                                    <div className="flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-black/35 p-2 backdrop-blur-md">
                                         {packageImages.map((src, index) => (
                                             <button
                                                 key={`${src}-${index}`}
@@ -400,7 +391,7 @@ export default function PaketDetail() {
                                                     setActiveImageIndex(index)
                                                 }
                                                 aria-label={`Lihat foto ${index + 1}`}
-                                                className={`aspect-[4/3] h-12 w-16 shrink-0 overflow-hidden rounded-xl ring-2 transition ${index === activeImageIndex ? 'ring-white' : 'ring-white/20 hover:ring-white/40'}`}
+                                                className={`aspect-video h-12 shrink-0 overflow-hidden rounded-xl ring-2 transition ${index === activeImageIndex ? 'ring-white' : 'ring-white/20 hover:ring-white/40'}`}
                                             >
                                                 <img
                                                     src={
@@ -409,6 +400,9 @@ export default function PaketDetail() {
                                                     }
                                                     alt=""
                                                     className="block h-full w-full object-cover object-center"
+                                                    style={packageImageStyle(
+                                                        imagePositions[src],
+                                                    )}
                                                     loading="lazy"
                                                 />
                                             </button>
@@ -419,7 +413,7 @@ export default function PaketDetail() {
                         </div>
 
                         {/* Info */}
-                        <div className="flex flex-col justify-between p-6 lg:p-8">
+                        <div className="relative z-10 grid min-w-0 items-start gap-8 bg-card p-5 sm:p-7 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:p-9">
                             <div>
                                 {/* Badges */}
                                 <div className="flex flex-wrap gap-2">
@@ -437,12 +431,9 @@ export default function PaketDetail() {
                                             Featured
                                         </span>
                                     )}
-                                    <span className="rounded-full bg-muted px-3 py-1 font-mono text-xs text-muted-foreground">
-                                        {pkg.code}
-                                    </span>
                                 </div>
 
-                                <h1 className="public-heading mt-3 text-2xl font-bold text-foreground sm:text-3xl">
+                                <h1 className="public-heading mt-4 max-w-xl text-3xl leading-tight font-bold text-foreground sm:text-4xl lg:text-[2.65rem]">
                                     {name}
                                 </h1>
 
@@ -466,12 +457,12 @@ export default function PaketDetail() {
                                 )}
 
                                 {summary && (
-                                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                                    <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
                                         {summary}
                                     </p>
                                 )}
 
-                                <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+                                <div className="mt-6 grid grid-cols-2 divide-x divide-border/70 border-y border-border/70 py-4 text-sm">
                                     {[
                                         {
                                             id: 'departure-city',
@@ -504,10 +495,10 @@ export default function PaketDetail() {
                                         return (
                                             <div
                                                 key={item.id}
-                                                className="rounded-2xl border border-border bg-muted/35 px-3 py-3"
+                                                className="px-3 first:pl-0 last:pr-0 sm:px-5"
                                             >
                                                 <div className="flex items-start gap-3">
-                                                    <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                                                    <div className="rounded-full bg-primary/10 p-2.5 text-primary">
                                                         <InfoIcon className="h-4 w-4" />
                                                     </div>
                                                     <div className="min-w-0">
@@ -525,7 +516,7 @@ export default function PaketDetail() {
                                 </div>
 
                                 {packageHighlights.length > 0 ? (
-                                    <div className="mt-3 space-y-2">
+                                    <div className="mt-6 space-y-3">
                                         <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                                             {locale === 'id'
                                                 ? 'Highlight Paket'
@@ -556,7 +547,7 @@ export default function PaketDetail() {
                                                     return (
                                                         <div
                                                             key={item.id}
-                                                            className="rounded-2xl border border-border bg-background/80 px-3 py-3"
+                                                            className="px-1 py-2"
                                                         >
                                                             <div className="flex items-start gap-3">
                                                                 <div className="rounded-xl bg-primary/10 p-2 text-primary">
@@ -584,9 +575,12 @@ export default function PaketDetail() {
                             </div>
 
                             {/* Price + CTA */}
-                            <div className="mt-6 border-t border-border pt-5">
-                                <div className="flex items-baseline gap-3">
-                                    <span className="text-3xl font-extrabold text-primary">
+                            <div className="mt-7 border-t border-border pt-6 lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+                                <p className="text-[11px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+                                    Harga mulai
+                                </p>
+                                <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                    <span className="text-3xl font-extrabold text-primary sm:text-4xl">
                                         {formatPrice(
                                             pkg.price,
                                             locale,
@@ -594,7 +588,7 @@ export default function PaketDetail() {
                                         )}
                                     </span>
                                     {hasDiscount ? (
-                                        <span className="text-base text-muted-foreground line-through">
+                                        <span className="text-sm text-muted-foreground line-through">
                                             {formatPrice(
                                                 pkg.original_price,
                                                 locale,
@@ -603,31 +597,19 @@ export default function PaketDetail() {
                                         </span>
                                     ) : null}
                                 </div>
-                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     per jamaah
                                 </p>
 
                                 {pkg.original_price &&
                                     pkg.discount_type === 'nominal' &&
                                     pkg.discount_nominal && (
-                                        <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
-                                            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                                                💰 Potongan Khusus: Rp
+                                        <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-amber-800">
+                                            <p className="text-xs font-semibold">
+                                                Potongan khusus Rp
                                                 {pkg.discount_nominal.toLocaleString(
                                                     'id-ID',
                                                 )}
-                                            </p>
-                                            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                                                Harga standar Rp
-                                                {pkg.original_price.toLocaleString(
-                                                    'id-ID',
-                                                )}{' '}
-                                                dikurangi dengan potongan khusus
-                                                Rp
-                                                {pkg.discount_nominal.toLocaleString(
-                                                    'id-ID',
-                                                )}{' '}
-                                                untuk setiap tipe kamar.
                                             </p>
                                         </div>
                                     )}
@@ -635,32 +617,26 @@ export default function PaketDetail() {
                                 {pkg.original_price &&
                                     pkg.discount_type === 'percent' &&
                                     pkg.discount_percent && (
-                                        <div className="mt-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/30">
-                                            <p className="text-xs font-semibold text-red-700 dark:text-red-300">
-                                                🎉 Diskon Spesial:{' '}
+                                        <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-rose-700">
+                                            <p className="text-xs font-semibold">
+                                                Diskon spesial{' '}
                                                 {pkg.discount_percent}%
-                                            </p>
-                                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                                                Hemat hingga{' '}
-                                                {pkg.discount_percent}% dari
-                                                harga normal dengan diskon
-                                                spesial ini.
                                             </p>
                                         </div>
                                     )}
 
-                                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                                <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
                                     {roomTypePrices.map((roomType) => (
                                         <div
                                             key={roomType.type}
-                                            className="rounded-xl bg-muted/30 px-3 py-2.5"
+                                            className="rounded-2xl bg-muted/35 px-3 py-3"
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div>
-                                                    <p className="text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                                                    <p className="text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">
                                                         {roomType.label}
                                                     </p>
-                                                    <p className="mt-1 text-sm font-bold text-foreground sm:text-base">
+                                                    <p className="mt-1 text-sm font-bold text-foreground">
                                                         {formatPrice(
                                                             roomType.sellingPrice,
                                                             locale,
@@ -669,7 +645,7 @@ export default function PaketDetail() {
                                                     </p>
                                                 </div>
                                                 {roomType.originalPrice ? (
-                                                    <span className="text-xs text-muted-foreground line-through">
+                                                    <span className="text-[10px] text-muted-foreground line-through">
                                                         {formatPrice(
                                                             roomType.originalPrice,
                                                             locale,
@@ -678,16 +654,12 @@ export default function PaketDetail() {
                                                     </span>
                                                 ) : null}
                                             </div>
-                                            <p className="mt-1 text-[11px] text-muted-foreground">
-                                                Harga per jamaah untuk kamar{' '}
-                                                {roomType.label.toLowerCase()}.
-                                            </p>
                                         </div>
                                     ))}
                                 </div>
 
                                 {nextSchedule && (
-                                    <p className="mt-2 inline-flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                                    <p className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-emerald-700">
                                         <CalendarDaysIcon className="h-4 w-4" />
                                         <span>
                                             Berangkat{' '}
@@ -701,17 +673,17 @@ export default function PaketDetail() {
                                     </p>
                                 )}
 
-                                <div className="mt-4 flex gap-3">
+                                <div className="mt-5 grid gap-3 sm:grid-cols-2">
                                     <Link
                                         href={registrationLink}
-                                        className="flex-1 rounded-xl bg-primary py-3 text-center text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+                                        className="rounded-xl bg-primary px-5 py-3.5 text-center text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition hover:-translate-y-0.5 hover:opacity-95"
                                     >
                                         Daftar Sekarang
                                     </Link>
                                     {waLink ? (
                                         <a
                                             href={waLink}
-                                            className="flex-1 rounded-xl border border-border py-3 text-center text-sm font-semibold text-foreground transition hover:bg-muted"
+                                            className="rounded-xl border border-border px-5 py-3.5 text-center text-sm font-semibold text-foreground transition hover:bg-muted"
                                         >
                                             Tanya Admin
                                         </a>
@@ -723,376 +695,124 @@ export default function PaketDetail() {
                 </MotionCard>
             </MotionSection>
 
-            {/* Keberangkatan */}
-            {upcomingSchedules.length > 0 && (
-                <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-                    <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
-                        <CalendarDaysIcon className="h-5 w-5 text-primary" />
-                        Keberangkatan Package
-                    </h2>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {upcomingSchedules.map(
-                            (s: PackageSchedule, i: number) => {
-                                const statusColor =
-                                    s.status === 'open'
-                                        ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30'
-                                        : s.status === 'full'
-                                          ? 'text-amber-600 bg-amber-50'
-                                          : 'text-red-600 bg-red-50';
-                                const seatPct =
-                                    s.seats_total > 0
-                                        ? Math.round(
-                                              (s.seats_available /
-                                                  s.seats_total) *
-                                                  100,
-                                          )
-                                        : 0;
-                                return (
-                                    <div
-                                        key={i}
-                                        className="rounded-xl border border-border bg-card p-4"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <span className="font-semibold text-foreground">
-                                                {formatDate(
-                                                    s.departure_date,
-                                                    'id',
-                                                )}
-                                            </span>
-                                            <span
-                                                className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}
+            {/* Package content */}
+            {(included.length > 0 || excluded.length > 0) && (
+                <section className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6">
+                    <div className="mb-6">
+                        <p className="mb-2 text-xs font-bold tracking-[0.2em] text-primary uppercase">
+                            Detail paket
+                        </p>
+                        <h2 className="public-heading text-2xl font-bold text-foreground sm:text-3xl">
+                            Yang Anda Dapatkan
+                        </h2>
+                    </div>
+
+                    <div className="grid gap-8 border-y border-border py-7 sm:grid-cols-2 sm:gap-12">
+                        {included.length > 0 && (
+                            <div>
+                                <h3 className="mb-4 flex items-center gap-2 font-bold text-emerald-700">
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-xs">
+                                        +
+                                    </span>
+                                    Sudah Termasuk
+                                </h3>
+                                <ul className="grid gap-3">
+                                    {included.map(
+                                        (item: string, index: number) => (
+                                            <li
+                                                key={index}
+                                                className="flex items-start gap-3 text-sm leading-6 text-foreground"
                                             >
-                                                {s.status === 'open'
-                                                    ? 'Open'
-                                                    : s.status === 'full'
-                                                      ? 'Full'
-                                                      : 'Closed'}
-                                            </span>
-                                        </div>
-                                        {s.return_date && (
-                                            <p className="mt-0.5 text-xs text-muted-foreground">
-                                                Pulang:{' '}
-                                                {formatDate(
-                                                    s.return_date,
-                                                    'id',
-                                                )}
-                                            </p>
-                                        )}
-                                        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                                            <MapPinIcon className="h-3.5 w-3.5" />
-                                            {s.departure_city}
-                                        </p>
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                                                <div
-                                                    className={`h-full rounded-full ${seatPct > 50 ? 'bg-emerald-500' : seatPct > 20 ? 'bg-amber-500' : 'bg-red-500'}`}
-                                                    style={{
-                                                        width: `${seatPct}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                            <span className="text-xs text-muted-foreground">
-                                                {s.seats_available}/
-                                                {s.seats_total} seat
-                                            </span>
-                                        </div>
-                                        {s.notes && (
-                                            <p className="mt-1.5 text-xs text-muted-foreground italic">
-                                                {s.notes}
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            },
+                                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                                                {item}
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+                            </div>
+                        )}
+
+                        {excluded.length > 0 && (
+                            <div>
+                                <h3 className="mb-4 flex items-center gap-2 font-bold text-rose-700">
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-xs">
+                                        -
+                                    </span>
+                                    Tidak Termasuk
+                                </h3>
+                                <ul className="grid gap-3">
+                                    {excluded.map(
+                                        (item: string, index: number) => (
+                                            <li
+                                                key={index}
+                                                className="flex items-start gap-3 text-sm leading-6 text-foreground"
+                                            >
+                                                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
+                                                {item}
+                                            </li>
+                                        ),
+                                    )}
+                                </ul>
+                            </div>
                         )}
                     </div>
                 </section>
             )}
 
-            {/* Included / Excluded */}
-            {itineraries.length > 0 && (
-                <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-                    <div className="mb-3">
-                        <h2 className="public-heading text-xl font-bold text-foreground">
-                            Itinerary Perjalanan
-                        </h2>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Daftar activity yang dijalankan pada setiap hari
-                            perjalanan.
+            {itineraryDays.length > 0 && (
+                <section className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6">
+                    <div className="mb-6">
+                        <p className="mb-2 text-xs font-bold tracking-[0.2em] text-primary uppercase">
+                            Rencana perjalanan
                         </p>
+                        <h2 className="public-heading text-2xl font-bold text-foreground sm:text-3xl">
+                            Itinerary
+                        </h2>
                     </div>
 
-                    <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-border text-sm">
-                                <thead className="bg-muted/40">
-                                    <tr className="text-left">
-                                        <th className="px-4 py-3 font-semibold text-foreground sm:px-5">
-                                            Hari
-                                        </th>
-                                        <th className="px-4 py-3 font-semibold text-foreground sm:px-5">
-                                            Activity
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {itineraries.map((itinerary) => (
-                                        <tr
-                                            key={itinerary._key}
-                                            className="align-top"
-                                        >
-                                            <td className="px-4 py-4 sm:px-5">
-                                                <div className="inline-flex items-center justify-center rounded-2xl bg-primary/10 px-3 py-2 text-sm font-bold text-primary">
-                                                    Hari {itinerary.day_number}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-4 sm:px-5">
-                                                {Array.isArray(
-                                                    itinerary.activities,
-                                                ) &&
-                                                itinerary.activities.length >
-                                                    0 ? (
-                                                    <div className="space-y-2">
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {itinerary.activities.map(
-                                                                (activity: {
-                                                                    id?:
-                                                                        | number
-                                                                        | string;
-                                                                    code?: string;
-                                                                    name?: unknown;
-                                                                }) => {
-                                                                    const activityLabel =
-                                                                        localize(
-                                                                            activity?.name,
-                                                                            locale,
-                                                                        ) ||
-                                                                        String(
-                                                                            activity?.code ??
-                                                                                '',
-                                                                        ) ||
-                                                                        'Activity';
-
-                                                                    return (
-                                                                        <span
-                                                                            key={
-                                                                                activity.id ??
-                                                                                activity.code ??
-                                                                                itinerary._key
-                                                                            }
-                                                                            className="inline-flex rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-foreground"
-                                                                        >
-                                                                            {
-                                                                                activityLabel
-                                                                            }
-                                                                        </span>
-                                                                    );
-                                                                },
-                                                            )}
-                                                        </div>
-
-                                                        {(itinerary.title ||
-                                                            itinerary.description) && (
-                                                            <div className="space-y-1">
-                                                                {itinerary.title && (
-                                                                    <div className="text-sm font-semibold text-foreground">
-                                                                        {localize(
-                                                                            itinerary.title,
-                                                                            locale,
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                                {itinerary.description && (
-                                                                    <div className="text-sm text-muted-foreground">
-                                                                        {localize(
-                                                                            itinerary.description,
-                                                                            locale,
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : itinerary.activity ? (
-                                                    <div className="space-y-2">
-                                                        <span className="inline-flex rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-foreground">
-                                                            {localize(
-                                                                itinerary
-                                                                    .activity
-                                                                    ?.name,
-                                                                locale,
-                                                            ) ||
-                                                                String(
-                                                                    itinerary
-                                                                        .activity
-                                                                        ?.code ??
-                                                                        '',
-                                                                ) ||
-                                                                (itinerary.title
-                                                                    ? localize(
-                                                                          itinerary.title,
-                                                                          locale,
-                                                                      )
-                                                                    : 'Activity')}
-                                                        </span>
-
-                                                        {(itinerary.title ||
-                                                            itinerary.description) && (
-                                                            <div className="space-y-1">
-                                                                {itinerary.title && (
-                                                                    <div className="text-sm font-semibold text-foreground">
-                                                                        {localize(
-                                                                            itinerary.title,
-                                                                            locale,
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                                {itinerary.description && (
-                                                                    <div className="text-sm text-muted-foreground">
-                                                                        {localize(
-                                                                            itinerary.description,
-                                                                            locale,
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="space-y-2">
-                                                        {(itinerary.title ||
-                                                            itinerary.description) && (
-                                                            <div className="space-y-1">
-                                                                {itinerary.title && (
-                                                                    <div className="text-sm font-semibold text-foreground">
-                                                                        {localize(
-                                                                            itinerary.title,
-                                                                            locale,
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                                {itinerary.description && (
-                                                                    <div className="text-sm text-muted-foreground">
-                                                                        {localize(
-                                                                            itinerary.description,
-                                                                            locale,
-                                                                        )}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {!itinerary.title &&
-                                                            !itinerary.description && (
-                                                                <span className="text-muted-foreground">
-                                                                    Belum ada
-                                                                    activity
-                                                                    yang
-                                                                    di-assign
-                                                                    untuk hari
-                                                                    ini.
-                                                                </span>
-                                                            )}
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <div className="relative">
+                        <div className="absolute top-5 bottom-5 left-5 w-px bg-border sm:left-7" />
+                        <div className="grid gap-2">
+                            {itineraryDays.map((itinerary) => (
+                                <article
+                                    key={itinerary._key}
+                                    className="relative grid grid-cols-[2.5rem_1fr] gap-4 py-3 sm:grid-cols-[3.5rem_1fr] sm:gap-5"
+                                >
+                                    <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground shadow-sm sm:h-14 sm:w-14">
+                                        {itinerary.day_number}
+                                    </div>
+                                    <div className="min-w-0 pt-1 sm:pt-2">
+                                        <p className="mb-2 text-xs font-semibold tracking-[0.16em] text-muted-foreground uppercase">
+                                            Hari {itinerary.day_number}
+                                        </p>
+                                        <div className="flex flex-wrap gap-x-5 gap-y-2">
+                                            {itinerary.activityLabels.map(
+                                                (activityLabel: string) => (
+                                                    <span
+                                                        key={activityLabel}
+                                                        className="inline-flex items-center gap-2 text-sm font-semibold text-foreground sm:text-base"
+                                                    >
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                                                        {activityLabel}
+                                                    </span>
+                                                ),
+                                            )}
+                                        </div>
+                                    </div>
+                                </article>
+                            ))}
                         </div>
                     </div>
                 </section>
             )}
-
-            {(included.length > 0 || excluded.length > 0) && (
-                <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        {included.length > 0 && (
-                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/20">
-                                <h2 className="mb-3 font-bold text-emerald-700 dark:text-emerald-300">
-                                    <span className="inline-flex items-center gap-2">
-                                        <span className="h-2.5 w-2.5 rounded-full bg-current" />
-                                        Sudah Termasuk
-                                    </span>
-                                </h2>
-                                <ul className="space-y-2">
-                                    {included.map((item: string, i: number) => (
-                                        <li
-                                            key={i}
-                                            className="flex items-start gap-2 text-sm text-foreground"
-                                        >
-                                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-                                            {item}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                        {excluded.length > 0 && (
-                            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 dark:border-red-800 dark:bg-red-950/20">
-                                <h2 className="mb-3 font-bold text-red-700 dark:text-red-300">
-                                    <span className="inline-flex items-center gap-2">
-                                        <span className="h-2.5 w-2.5 rounded-full bg-current" />
-                                        Tidak Termasuk
-                                    </span>
-                                </h2>
-                                <ul className="space-y-2">
-                                    {excluded.map((item: string, i: number) => (
-                                        <li
-                                            key={i}
-                                            className="flex items-start gap-2 text-sm text-foreground"
-                                        >
-                                            <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-red-400" />
-                                            {item}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                    </div>
-                </section>
-            )}
-
-            {/* Produk dalam Paket */}
-            {pkg.products?.length > 0 && (
-                <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
-                    <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
-                        <PackageIcon className="h-5 w-5 text-primary" />
-                        Komponen Paket
-                    </h2>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {pkg.products.map((p: PackageProduct, i: number) => {
-                            const ProductIcon =
-                                packageHighlightIconMap[
-                                    productTypeIconMap[p.product_type] ??
-                                        'Sparkles'
-                                ] ?? packageHighlightIconMap.Sparkles;
-
-                            return (
-                                <div
-                                    key={i}
-                                    className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3"
-                                >
-                                    <ProductIcon className="h-5 w-5 shrink-0 text-primary" />
-                                    <span className="text-sm font-medium text-foreground">
-                                        {localize(p.name, locale)}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </section>
-            )}
-
             {/* Kebijakan */}
             {policy && (
-                <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
+                <section className="mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6">
                     <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
                         <PolicyIcon className="h-5 w-5 text-primary" />
                         Kebijakan
                     </h2>
-                    <div className="rounded-2xl border border-border bg-muted/30 p-5 text-sm leading-relaxed text-foreground">
+                    <div className="rounded-[2rem] bg-muted/30 p-6 text-sm leading-7 text-foreground sm:p-8">
                         {policy}
                         <div className="mt-4 border-t border-border/70 pt-4">
                             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -1120,7 +840,7 @@ export default function PaketDetail() {
 
             {/* Testimoni */}
             {pkg.testimonials?.length > 0 && (
-                <section className="mx-auto w-full max-w-6xl px-4 pb-6 sm:px-6">
+                <section className="mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6">
                     <h2 className="public-heading mb-3 flex items-center gap-2 text-xl font-bold text-foreground">
                         <TestimonialIcon className="h-5 w-5 text-primary" />
                         Testimoni Jamaah
@@ -1130,7 +850,7 @@ export default function PaketDetail() {
                             (t: PackageTestimonial, i: number) => (
                                 <div
                                     key={i}
-                                    className="rounded-2xl border border-border bg-card p-5"
+                                    className="rounded-3xl bg-card p-6 shadow-sm ring-1 ring-black/5"
                                 >
                                     <div className="flex items-center gap-1 text-amber-400">
                                         {[1, 2, 3, 4, 5].map((s) => (
@@ -1227,23 +947,26 @@ export default function PaketDetail() {
             )}
 
             {/* CTA Bottom */}
-            <MotionSection className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
-                <MotionCard className="flex flex-col items-center justify-between gap-4 rounded-2xl bg-primary px-6 py-8 text-center text-primary-foreground sm:flex-row sm:text-left">
-                    <div>
-                        <p className="text-lg font-bold">
-                            Siap berangkat umroh?
-                        </p>
-                        <p className="mt-1 text-sm opacity-80">
-                            Hubungi kami sekarang untuk booking dan informasi
-                            lebih lanjut.
-                        </p>
+            <MotionSection className="mx-auto w-full max-w-7xl px-4 pb-20 sm:px-6">
+                <MotionCard className="relative overflow-hidden rounded-[2rem] bg-[#25171a] px-6 py-9 text-center text-white shadow-[0_24px_70px_-30px_rgba(37,23,26,0.8)] sm:px-10 sm:py-10 sm:text-left">
+                    <div className="pointer-events-none absolute -top-20 -right-16 h-56 w-56 rounded-full bg-primary/25 blur-3xl" />
+                    <div className="relative flex flex-col items-center justify-between gap-6 sm:flex-row">
+                        <div>
+                            <p className="public-heading text-2xl font-bold sm:text-3xl">
+                                Langkah baik dimulai dari sini.
+                            </p>
+                            <p className="mt-2 max-w-xl text-sm leading-6 text-white/65">
+                                Amankan seat Anda, lalu tim Asfar akan
+                                mendampingi proses berikutnya.
+                            </p>
+                        </div>
+                        <Link
+                            href={registrationLink}
+                            className="shrink-0 rounded-xl bg-primary px-7 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/25 transition hover:-translate-y-0.5 hover:opacity-95"
+                        >
+                            Daftar Sekarang
+                        </Link>
                     </div>
-                    <Link
-                        href={registrationLink}
-                        className="shrink-0 rounded-xl bg-white px-6 py-3 text-sm font-bold text-primary transition hover:bg-white/90"
-                    >
-                        Daftar Sekarang
-                    </Link>
                 </MotionCard>
             </MotionSection>
         </PublicLayout>

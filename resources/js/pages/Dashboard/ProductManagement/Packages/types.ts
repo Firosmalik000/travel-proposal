@@ -13,6 +13,16 @@ export type PackageRoomOriginalPrices = {
 };
 
 export type PackageContent = {
+    gallery_positions?: Record<
+        string,
+        {
+            x: number;
+            y: number;
+            scale: number;
+            version?: 2 | 3;
+            frameScale?: number;
+        }
+    >;
     highlights?: PackageHighlightItem[];
     included?: { id?: string[]; en?: string[] };
     excluded?: { id?: string[]; en?: string[] };
@@ -34,7 +44,6 @@ export type CurrencyRateSnapshot = {
 
 export type PackageHppEstimate = {
     customers?: {
-        single?: number;
         dbl?: number;
         trpl?: number;
         quad?: number;
@@ -58,6 +67,11 @@ export type PackageHppEstimate = {
     operational_costs?: PackageOperationalCosts;
     notes?: string | null;
     customer_count?: number;
+    foc_count?: number;
+    foc_total?: number;
+    foc_hotel_total?: number;
+    foc_product_total?: number;
+    foc_all_in_total?: number;
     product_total?: number;
     revenue_total?: number;
     grand_total?: number;
@@ -75,6 +89,9 @@ export type PackageHppEstimate = {
 };
 
 export type PackageOperationalCosts = {
+    foc: {
+        count: number;
+    };
     overhead: {
         amount: number;
         mode: 'total' | 'per_pax';
@@ -83,6 +100,7 @@ export type PackageOperationalCosts = {
         count: number;
         daily_salary: number;
         days: number;
+        currency: string;
     };
     human_resources: Array<{
         id: string;
@@ -92,6 +110,7 @@ export type PackageOperationalCosts = {
     tour_leader: {
         count: number;
         salary_per_trip: number;
+        currency: string;
         include_hotel: boolean;
         include_ticket_and_visa: boolean;
     };
@@ -122,7 +141,7 @@ export type PackageOperationalCosts = {
 };
 
 export type PackageHppEstimateItem = {
-    cost_type: 'hotel' | 'product' | 'all_in' | 'fee' | 'other';
+    cost_type: 'hotel' | 'product' | 'all_in' | 'foc' | 'fee' | 'other';
     reference_id?: number | null;
     label: string;
     quantity: number;

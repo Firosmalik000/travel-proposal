@@ -1,5 +1,10 @@
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -12,6 +17,7 @@ import {
 import {
     Banknote,
     Camera,
+    ChevronDown,
     Megaphone,
     Plus,
     Trash2,
@@ -27,6 +33,9 @@ type Props = {
     ticketAndVisaPerPax?: number;
     tourLeaderTotal?: number;
     muthawwifTotal?: number;
+    focHotelTotal?: number;
+    focProductTotal?: number;
+    focAllInTotal?: number;
     onChange: (value: PackageOperationalCosts) => void;
 };
 
@@ -74,20 +83,50 @@ function BreakdownBox({
 function CostCard({
     icon: Icon,
     title,
+    status,
+    isConfigured,
     children,
 }: {
     icon: React.ElementType;
     title: string;
+    status: string;
+    isConfigured: boolean;
     children: React.ReactNode;
 }) {
     return (
-        <section className="rounded-xl border border-border/70 bg-card p-3 sm:p-4">
-            <div className="mb-3 flex items-center gap-2">
-                <Icon className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-semibold">{title}</h3>
-            </div>
-            {children}
-        </section>
+        <Collapsible className="overflow-hidden rounded-xl border border-border/70 bg-card">
+            <CollapsibleTrigger
+                type="button"
+                className="group flex min-h-14 w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:px-4"
+            >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-foreground">
+                        {title}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                        {status}
+                    </span>
+                </span>
+                <span
+                    className={
+                        isConfigured
+                            ? 'rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                            : 'rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                    }
+                >
+                    {isConfigured ? 'Sudah diisi' : 'Belum diisi'}
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+                <div className="border-t border-border/60 p-3 sm:p-4">
+                    {children}
+                </div>
+            </CollapsibleContent>
+        </Collapsible>
     );
 }
 
@@ -138,16 +177,93 @@ export function PackageOperationalCostCards({
     ticketAndVisaPerPax = 0,
     tourLeaderTotal,
     muthawwifTotal,
+    focHotelTotal = 0,
+    focProductTotal = 0,
+    focAllInTotal = 0,
     onChange,
 }: Props) {
     const patch = <K extends keyof PackageOperationalCosts>(
         key: K,
         nextValue: PackageOperationalCosts[K],
     ) => onChange({ ...value, [key]: nextValue });
+    const hasFoc = value.foc.count > 0;
+    const supportComponentCount = [
+        value.overhead.amount > 0,
+        value.photographer.count > 0 &&
+            value.photographer.daily_salary > 0 &&
+            value.photographer.days > 0,
+        value.human_resources.length > 0,
+    ].filter(Boolean).length;
+    const hasTourLeader =
+        value.tour_leader.count > 0 &&
+        (value.tour_leader.salary_per_trip > 0 ||
+            value.tour_leader.include_hotel ||
+            value.tour_leader.include_ticket_and_visa);
+    const hasMuthawwif =
+        value.muthawwif.count > 0 &&
+        (value.muthawwif.daily_salary > 0 || value.muthawwif.include_hotel);
+    const hasMarketing = value.marketing.amount_per_pax > 0;
+    const tipEntryCount = value.guide_tips.length + value.driver_tips.length;
 
     return (
-        <div className="mt-4 grid gap-3 xl:grid-cols-2">
-            <CostCard icon={UsersRound} title="SDM + Overhead + Fotografer">
+        <div className="mt-4 space-y-3">
+            <CostCard
+                icon={UsersRound}
+                title="FOC - Free of Cost"
+                status={hasFoc ? `${value.foc.count} orang FOC` : 'Opsional'}
+                isConfigured={hasFoc}
+            >
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] sm:items-end">
+                    <CostField label="Jumlah FOC">
+                        <Input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={value.foc.count || ''}
+                            onChange={(event) =>
+                                patch('foc', {
+                                    count: numberValue(event.target.value),
+                                })
+                            }
+                        />
+                    </CostField>
+                    <BreakdownBox title="Estimasi biaya FOC">
+                        <BreakdownLine
+                            label="Hotel Quad"
+                            value={formatCurrency(focHotelTotal)}
+                        />
+                        <BreakdownLine
+                            label="Produk"
+                            value={formatCurrency(focProductTotal)}
+                        />
+                        <BreakdownLine
+                            label="Paket All In"
+                            value={formatCurrency(focAllInTotal)}
+                        />
+                        <div className="border-t border-border/60 pt-1.5">
+                            <BreakdownLine
+                                label={`Total ${value.foc.count || 0} FOC`}
+                                value={formatCurrency(
+                                    focHotelTotal +
+                                        focProductTotal +
+                                        focAllInTotal,
+                                )}
+                            />
+                        </div>
+                    </BreakdownBox>
+                </div>
+            </CostCard>
+
+            <CostCard
+                icon={UsersRound}
+                title="SDM + Overhead + Fotografer"
+                status={
+                    supportComponentCount > 0
+                        ? `${supportComponentCount} komponen biaya terisi`
+                        : 'Opsional'
+                }
+                isConfigured={supportComponentCount > 0}
+            >
                 <div className="space-y-3">
                     <BreakdownBox title="Overhead">
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
@@ -206,7 +322,7 @@ export function PackageOperationalCostCards({
                     </BreakdownBox>
 
                     <BreakdownBox title="Fotografer">
-                        <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             <CostField label="Jumlah fotografer">
                                 <Input
                                     type="number"
@@ -255,11 +371,23 @@ export function PackageOperationalCostCards({
                                     }
                                 />
                             </CostField>
+                            <CostField label="Mata uang">
+                                <CurrencySelect
+                                    value={value.photographer.currency}
+                                    currencies={currencies}
+                                    onChange={(currency) =>
+                                        patch('photographer', {
+                                            ...value.photographer,
+                                            currency,
+                                        })
+                                    }
+                                />
+                            </CostField>
                         </div>
                         <div className="rounded-md bg-background/70 p-2">
                             <BreakdownLine
                                 label="Rumus"
-                                value={`${value.photographer.count || 0} x ${formatCurrency(value.photographer.daily_salary)} x ${value.photographer.days || 0} hari`}
+                                value={`${value.photographer.count || 0} x ${formatCurrency(value.photographer.daily_salary, value.photographer.currency)} x ${value.photographer.days || 0} hari`}
                             />
                         </div>
                     </BreakdownBox>
@@ -358,9 +486,18 @@ export function PackageOperationalCostCards({
                 </div>
             </CostCard>
 
-            <CostCard icon={UserRoundCheck} title="Gaji Tour Leader">
+            <CostCard
+                icon={UserRoundCheck}
+                title="Gaji Tour Leader"
+                status={
+                    hasTourLeader
+                        ? `${value.tour_leader.count} orang · ${formatCurrency(tourLeaderTotal ?? 0)}`
+                        : 'Opsional'
+                }
+                isConfigured={hasTourLeader}
+            >
                 <div className="space-y-3">
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-3">
                         <CostField label="Jumlah Tour Leader">
                             <Input
                                 type="number"
@@ -374,7 +511,7 @@ export function PackageOperationalCostCards({
                                 }
                             />
                         </CostField>
-                        <CostField label="Gaji per trip (IDR)">
+                        <CostField label="Gaji per trip">
                             <Input
                                 type="number"
                                 min={0}
@@ -386,6 +523,18 @@ export function PackageOperationalCostCards({
                                         salary_per_trip: numberValue(
                                             event.target.value,
                                         ),
+                                    })
+                                }
+                            />
+                        </CostField>
+                        <CostField label="Mata uang">
+                            <CurrencySelect
+                                value={value.tour_leader.currency}
+                                currencies={currencies}
+                                onChange={(currency) =>
+                                    patch('tour_leader', {
+                                        ...value.tour_leader,
+                                        currency,
                                     })
                                 }
                             />
@@ -429,6 +578,7 @@ export function PackageOperationalCostCards({
                             label="Gaji per trip"
                             value={formatCurrency(
                                 value.tour_leader.salary_per_trip,
+                                value.tour_leader.currency,
                             )}
                         />
                         <BreakdownLine
@@ -457,7 +607,16 @@ export function PackageOperationalCostCards({
                 </div>
             </CostCard>
 
-            <CostCard icon={Banknote} title="Gaji Muthawwif">
+            <CostCard
+                icon={Banknote}
+                title="Gaji Muthawwif"
+                status={
+                    hasMuthawwif
+                        ? `${value.muthawwif.count} orang · ${formatCurrency(muthawwifTotal ?? 0)}`
+                        : 'Opsional'
+                }
+                isConfigured={hasMuthawwif}
+            >
                 <div className="space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <CostField label="Jumlah">
@@ -560,7 +719,16 @@ export function PackageOperationalCostCards({
                 </div>
             </CostCard>
 
-            <CostCard icon={Megaphone} title="Biaya Marketing">
+            <CostCard
+                icon={Megaphone}
+                title="Biaya Marketing"
+                status={
+                    hasMarketing
+                        ? formatCurrency(value.marketing.amount_per_pax)
+                        : 'Opsional'
+                }
+                isConfigured={hasMarketing}
+            >
                 <div className="space-y-3">
                     <CostField label="Biaya marketing total (IDR)">
                         <Input
@@ -592,315 +760,322 @@ export function PackageOperationalCostCards({
                 </div>
             </CostCard>
 
-            <div className="xl:col-span-2">
-                <CostCard icon={Camera} title="Tips Sopir & Guide Lokal">
-                    <div className="grid gap-4 lg:grid-cols-2">
-                        <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3">
-                            <div className="flex items-center justify-between gap-2">
-                                <div>
-                                    <p className="text-xs font-semibold">
-                                        Tips guide
-                                    </p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                        patch('guide_tips', [
-                                            ...value.guide_tips,
-                                            {
-                                                id: createId(),
-                                                country: '',
-                                                amount_per_day: 0,
-                                                days: 1,
-                                                currency: 'USD',
-                                                mode: 'per_pax',
-                                            },
-                                        ])
-                                    }
-                                >
-                                    <Plus className="mr-1 h-3.5 w-3.5" /> Guide
-                                </Button>
+            <CostCard
+                icon={Camera}
+                title="Tips Sopir & Guide Lokal"
+                status={
+                    tipEntryCount > 0
+                        ? `${tipEntryCount} komponen tips`
+                        : 'Opsional'
+                }
+                isConfigured={tipEntryCount > 0}
+            >
+                <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <div>
+                                <p className="text-xs font-semibold">
+                                    Tips guide
+                                </p>
                             </div>
-                            <div className="grid gap-2">
-                                {value.guide_tips.map((item, index) => (
-                                    <div
-                                        key={item.id}
-                                        className="grid gap-2 rounded-lg bg-background/70 p-2 sm:grid-cols-2 xl:grid-cols-[1fr_0.8fr_0.55fr_0.75fr_0.8fr_auto]"
-                                    >
-                                        <Input
-                                            value={item.country}
-                                            placeholder="Negara"
-                                            onChange={(event) =>
-                                                patch(
-                                                    'guide_tips',
-                                                    value.guide_tips.map(
-                                                        (row, rowIndex) =>
-                                                            rowIndex === index
-                                                                ? {
-                                                                      ...row,
-                                                                      country:
-                                                                          event
-                                                                              .target
-                                                                              .value,
-                                                                  }
-                                                                : row,
-                                                    ),
-                                                )
-                                            }
-                                        />
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            value={item.amount_per_day || ''}
-                                            placeholder="Biaya / hari"
-                                            onChange={(event) =>
-                                                patch(
-                                                    'guide_tips',
-                                                    value.guide_tips.map(
-                                                        (row, rowIndex) =>
-                                                            rowIndex === index
-                                                                ? {
-                                                                      ...row,
-                                                                      amount_per_day:
-                                                                          numberValue(
-                                                                              event
-                                                                                  .target
-                                                                                  .value,
-                                                                          ),
-                                                                  }
-                                                                : row,
-                                                    ),
-                                                )
-                                            }
-                                        />
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            value={item.days || ''}
-                                            placeholder="Hari"
-                                            onChange={(event) =>
-                                                patch(
-                                                    'guide_tips',
-                                                    value.guide_tips.map(
-                                                        (row, rowIndex) =>
-                                                            rowIndex === index
-                                                                ? {
-                                                                      ...row,
-                                                                      days: numberValue(
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                    patch('guide_tips', [
+                                        ...value.guide_tips,
+                                        {
+                                            id: createId(),
+                                            country: '',
+                                            amount_per_day: 0,
+                                            days: 1,
+                                            currency: 'USD',
+                                            mode: 'per_pax',
+                                        },
+                                    ])
+                                }
+                            >
+                                <Plus className="mr-1 h-3.5 w-3.5" /> Guide
+                            </Button>
+                        </div>
+                        <div className="grid gap-2">
+                            {value.guide_tips.map((item, index) => (
+                                <div
+                                    key={item.id}
+                                    className="grid gap-2 rounded-lg bg-background/70 p-2 sm:grid-cols-2 xl:grid-cols-[1fr_0.8fr_0.55fr_0.75fr_0.8fr_auto]"
+                                >
+                                    <Input
+                                        value={item.country}
+                                        placeholder="Negara"
+                                        onChange={(event) =>
+                                            patch(
+                                                'guide_tips',
+                                                value.guide_tips.map(
+                                                    (row, rowIndex) =>
+                                                        rowIndex === index
+                                                            ? {
+                                                                  ...row,
+                                                                  country:
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                              }
+                                                            : row,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        value={item.amount_per_day || ''}
+                                        placeholder="Biaya / hari"
+                                        onChange={(event) =>
+                                            patch(
+                                                'guide_tips',
+                                                value.guide_tips.map(
+                                                    (row, rowIndex) =>
+                                                        rowIndex === index
+                                                            ? {
+                                                                  ...row,
+                                                                  amount_per_day:
+                                                                      numberValue(
                                                                           event
                                                                               .target
                                                                               .value,
                                                                       ),
-                                                                  }
-                                                                : row,
-                                                    ),
-                                                )
-                                            }
-                                        />
-                                        <CurrencySelect
-                                            value={item.currency}
-                                            currencies={currencies}
-                                            onChange={(currency) =>
-                                                patch(
-                                                    'guide_tips',
-                                                    value.guide_tips.map(
-                                                        (row, rowIndex) =>
-                                                            rowIndex === index
-                                                                ? {
-                                                                      ...row,
-                                                                      currency,
-                                                                  }
-                                                                : row,
-                                                    ),
-                                                )
-                                            }
-                                        />
-                                        <Select
-                                            value={item.mode}
-                                            onValueChange={(
-                                                mode: 'per_pax' | 'per_group',
-                                            ) =>
-                                                patch(
-                                                    'guide_tips',
-                                                    value.guide_tips.map(
-                                                        (row, rowIndex) =>
-                                                            rowIndex === index
-                                                                ? {
-                                                                      ...row,
-                                                                      mode,
-                                                                  }
-                                                                : row,
-                                                    ),
-                                                )
-                                            }
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="per_pax">
-                                                    Per jamaah
-                                                </SelectItem>
-                                                <SelectItem value="per_group">
-                                                    Per grup
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            variant="ghost"
-                                            aria-label="Hapus tips guide"
-                                            onClick={() =>
-                                                patch(
-                                                    'guide_tips',
-                                                    value.guide_tips.filter(
-                                                        (_, rowIndex) =>
-                                                            rowIndex !== index,
-                                                    ),
-                                                )
-                                            }
-                                        >
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                            <BreakdownBox title="Rumus guide">
-                                <BreakdownLine
-                                    label="Hitung"
-                                    value="Biaya / hari x jumlah hari x mode (per jamaah / per grup)"
-                                />
-                            </BreakdownBox>
-                        </div>
-
-                        <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3">
-                            <div className="flex items-center justify-between gap-2">
-                                <div>
-                                    <p className="text-xs font-semibold">
-                                        Tips sopir
-                                    </p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() =>
-                                        patch('driver_tips', [
-                                            ...value.driver_tips,
-                                            {
-                                                id: createId(),
-                                                country: '',
-                                                amount: 0,
-                                                currency: 'IDR',
-                                            },
-                                        ])
-                                    }
-                                >
-                                    <Plus className="mr-1 h-3.5 w-3.5" /> Sopir
-                                </Button>
-                            </div>
-                            <div className="grid gap-2">
-                                {value.driver_tips.map((item, index) => (
-                                    <div
-                                        key={item.id}
-                                        className="grid gap-2 rounded-lg bg-background/70 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(130px,0.8fr)_110px_auto]"
+                                                              }
+                                                            : row,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        value={item.days || ''}
+                                        placeholder="Hari"
+                                        onChange={(event) =>
+                                            patch(
+                                                'guide_tips',
+                                                value.guide_tips.map(
+                                                    (row, rowIndex) =>
+                                                        rowIndex === index
+                                                            ? {
+                                                                  ...row,
+                                                                  days: numberValue(
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                                  ),
+                                                              }
+                                                            : row,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <CurrencySelect
+                                        value={item.currency}
+                                        currencies={currencies}
+                                        onChange={(currency) =>
+                                            patch(
+                                                'guide_tips',
+                                                value.guide_tips.map(
+                                                    (row, rowIndex) =>
+                                                        rowIndex === index
+                                                            ? {
+                                                                  ...row,
+                                                                  currency,
+                                                              }
+                                                            : row,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <Select
+                                        value={item.mode}
+                                        onValueChange={(
+                                            mode: 'per_pax' | 'per_group',
+                                        ) =>
+                                            patch(
+                                                'guide_tips',
+                                                value.guide_tips.map(
+                                                    (row, rowIndex) =>
+                                                        rowIndex === index
+                                                            ? {
+                                                                  ...row,
+                                                                  mode,
+                                                              }
+                                                            : row,
+                                                ),
+                                            )
+                                        }
                                     >
-                                        <Input
-                                            value={item.country}
-                                            placeholder="Negara"
-                                            onChange={(event) =>
-                                                patch(
-                                                    'driver_tips',
-                                                    value.driver_tips.map(
-                                                        (row, rowIndex) =>
-                                                            rowIndex === index
-                                                                ? {
-                                                                      ...row,
-                                                                      country:
-                                                                          event
-                                                                              .target
-                                                                              .value,
-                                                                  }
-                                                                : row,
-                                                    ),
-                                                )
-                                            }
-                                        />
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            value={item.amount || ''}
-                                            placeholder="Total tips"
-                                            onChange={(event) =>
-                                                patch(
-                                                    'driver_tips',
-                                                    value.driver_tips.map(
-                                                        (row, rowIndex) =>
-                                                            rowIndex === index
-                                                                ? {
-                                                                      ...row,
-                                                                      amount: numberValue(
-                                                                          event
-                                                                              .target
-                                                                              .value,
-                                                                      ),
-                                                                  }
-                                                                : row,
-                                                    ),
-                                                )
-                                            }
-                                        />
-                                        <CurrencySelect
-                                            value={item.currency}
-                                            currencies={currencies}
-                                            onChange={(currency) =>
-                                                patch(
-                                                    'driver_tips',
-                                                    value.driver_tips.map(
-                                                        (row, rowIndex) =>
-                                                            rowIndex === index
-                                                                ? {
-                                                                      ...row,
-                                                                      currency,
-                                                                  }
-                                                                : row,
-                                                    ),
-                                                )
-                                            }
-                                        />
-                                        <Button
-                                            type="button"
-                                            size="icon"
-                                            variant="ghost"
-                                            aria-label="Hapus tips sopir"
-                                            onClick={() =>
-                                                patch(
-                                                    'driver_tips',
-                                                    value.driver_tips.filter(
-                                                        (_, rowIndex) =>
-                                                            rowIndex !== index,
-                                                    ),
-                                                )
-                                            }
-                                        >
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
-                            <BreakdownBox title="Rumus sopir">
-                                <BreakdownLine
-                                    label="Hitung"
-                                    value="Total tips per negara / rute"
-                                />
-                            </BreakdownBox>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="per_pax">
+                                                Per jamaah
+                                            </SelectItem>
+                                            <SelectItem value="per_group">
+                                                Per grup
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        aria-label="Hapus tips guide"
+                                        onClick={() =>
+                                            patch(
+                                                'guide_tips',
+                                                value.guide_tips.filter(
+                                                    (_, rowIndex) =>
+                                                        rowIndex !== index,
+                                                ),
+                                            )
+                                        }
+                                    >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
                         </div>
+                        <BreakdownBox title="Rumus guide">
+                            <BreakdownLine
+                                label="Hitung"
+                                value="Biaya / hari x jumlah hari x mode (per jamaah / per grup)"
+                            />
+                        </BreakdownBox>
                     </div>
-                </CostCard>
-            </div>
+
+                    <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <div>
+                                <p className="text-xs font-semibold">
+                                    Tips sopir
+                                </p>
+                            </div>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                    patch('driver_tips', [
+                                        ...value.driver_tips,
+                                        {
+                                            id: createId(),
+                                            country: '',
+                                            amount: 0,
+                                            currency: 'IDR',
+                                        },
+                                    ])
+                                }
+                            >
+                                <Plus className="mr-1 h-3.5 w-3.5" /> Sopir
+                            </Button>
+                        </div>
+                        <div className="grid gap-2">
+                            {value.driver_tips.map((item, index) => (
+                                <div
+                                    key={item.id}
+                                    className="grid gap-2 rounded-lg bg-background/70 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(130px,0.8fr)_110px_auto]"
+                                >
+                                    <Input
+                                        value={item.country}
+                                        placeholder="Negara"
+                                        onChange={(event) =>
+                                            patch(
+                                                'driver_tips',
+                                                value.driver_tips.map(
+                                                    (row, rowIndex) =>
+                                                        rowIndex === index
+                                                            ? {
+                                                                  ...row,
+                                                                  country:
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                              }
+                                                            : row,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        value={item.amount || ''}
+                                        placeholder="Total tips"
+                                        onChange={(event) =>
+                                            patch(
+                                                'driver_tips',
+                                                value.driver_tips.map(
+                                                    (row, rowIndex) =>
+                                                        rowIndex === index
+                                                            ? {
+                                                                  ...row,
+                                                                  amount: numberValue(
+                                                                      event
+                                                                          .target
+                                                                          .value,
+                                                                  ),
+                                                              }
+                                                            : row,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <CurrencySelect
+                                        value={item.currency}
+                                        currencies={currencies}
+                                        onChange={(currency) =>
+                                            patch(
+                                                'driver_tips',
+                                                value.driver_tips.map(
+                                                    (row, rowIndex) =>
+                                                        rowIndex === index
+                                                            ? {
+                                                                  ...row,
+                                                                  currency,
+                                                              }
+                                                            : row,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                    <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        aria-label="Hapus tips sopir"
+                                        onClick={() =>
+                                            patch(
+                                                'driver_tips',
+                                                value.driver_tips.filter(
+                                                    (_, rowIndex) =>
+                                                        rowIndex !== index,
+                                                ),
+                                            )
+                                        }
+                                    >
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                        <BreakdownBox title="Rumus sopir">
+                            <BreakdownLine
+                                label="Hitung"
+                                value="Total tips per negara / rute"
+                            />
+                        </BreakdownBox>
+                    </div>
+                </div>
+            </CostCard>
         </div>
     );
 }

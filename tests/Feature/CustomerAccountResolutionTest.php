@@ -65,8 +65,7 @@ class CustomerAccountResolutionTest extends TestCase
             'origin_city' => 'Surabaya',
             'passenger_count' => 1,
             'room_configuration' => [
-                'single' => 1,
-                'double' => 0,
+                'double' => 1,
                 'triple' => 0,
                 'quad' => 0,
             ],

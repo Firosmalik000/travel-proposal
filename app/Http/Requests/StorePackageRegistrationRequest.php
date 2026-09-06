@@ -32,8 +32,8 @@ class StorePackageRegistrationRequest extends FormRequest
             'email' => ['required', 'email', 'max:150'],
             'origin_city' => ['required', 'string', 'max:100'],
             'passenger_count' => ['required', 'integer', 'min:1'],
+            'room_configuration_unit' => ['nullable', Rule::in(['rooms', 'pax'])],
             'room_configuration' => ['required', 'array'],
-            'room_configuration.single' => ['nullable', 'integer', 'min:0'],
             'room_configuration.double' => ['nullable', 'integer', 'min:0'],
             'room_configuration.triple' => ['nullable', 'integer', 'min:0'],
             'room_configuration.quad' => ['nullable', 'integer', 'min:0'],
@@ -77,16 +77,32 @@ class StorePackageRegistrationRequest extends FormRequest
             }
 
             $roomConfiguration = (array) $this->input('room_configuration', []);
-            $occupiedPax =
-                max(0, (int) data_get($roomConfiguration, 'single', 0)) +
+            if ($this->input('room_configuration_unit') === 'pax') {
+                $allocatedPax =
+                    max(0, (int) data_get($roomConfiguration, 'double', 0)) +
+                    max(0, (int) data_get($roomConfiguration, 'triple', 0)) +
+                    max(0, (int) data_get($roomConfiguration, 'quad', 0));
+
+                if ($allocatedPax !== $this->integer('passenger_count')) {
+                    $validator->errors()->add(
+                        'room_configuration',
+                        'Total pax Double, Triple, dan Quad harus sama dengan jumlah jamaah.',
+                    );
+                }
+
+                return;
+            }
+
+            $roomCapacity =
                 (max(0, (int) data_get($roomConfiguration, 'double', 0)) * 2) +
                 (max(0, (int) data_get($roomConfiguration, 'triple', 0)) * 3) +
                 (max(0, (int) data_get($roomConfiguration, 'quad', 0)) * 4);
 
-            if ($occupiedPax !== $this->integer('passenger_count')) {
+            $unusedCapacity = $roomCapacity - $this->integer('passenger_count');
+            if ($unusedCapacity < 0 || $unusedCapacity > 1) {
                 $validator->errors()->add(
                     'room_configuration',
-                    'Komposisi kamar harus sama dengan jumlah jamaah yang dipilih.',
+                    'Kapasitas kamar harus sesuai jumlah jamaah, dengan maksimal satu slot kosong untuk sisa ganjil.',
                 );
             }
         });

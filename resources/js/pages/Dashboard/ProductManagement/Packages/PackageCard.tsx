@@ -1,5 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/date-format';
+import {
+    normalizePackageImagePositions,
+    packageImageStyle,
+} from '@/lib/package-image-position';
 import { Link } from '@inertiajs/react';
 import {
     Calendar,
@@ -107,6 +111,9 @@ export function PackageCard({
     const name = resolvePackageName(pkg.name, locale, pkg.code);
     const type = typeConfig[pkg.package_type] ?? typeConfig.reguler;
     const landingPreviewPath = `/landing/${pkg.slug || pkg.id}`;
+    const imagePosition = normalizePackageImagePositions(
+        pkg.content?.gallery_positions,
+    )[pkg.image_path ?? ''];
 
     return (
         <div
@@ -135,11 +142,12 @@ export function PackageCard({
             ) : null}
 
             <div className="flex items-stretch gap-0">
-                <div className="relative hidden min-h-[180px] w-36 shrink-0 self-stretch overflow-hidden sm:block lg:w-44">
+                <div className="relative hidden aspect-video w-44 shrink-0 self-center overflow-hidden sm:block lg:w-52">
                     <img
                         src={pkg.image_path || '/images/dummy.jpg'}
                         alt={name}
                         className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        style={packageImageStyle(imagePosition)}
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
                     {!pkg.is_active ? (
@@ -208,6 +216,9 @@ export function PackageCard({
                         <div>
                             <div className="flex items-baseline gap-2">
                                 <span className="text-xl font-extrabold text-primary">
+                                    <span className="text-xs font-semibold text-muted-foreground">
+                                        Mulai dari{' '}
+                                    </span>
                                     {pkg.currency}{' '}
                                     {pkg.price.toLocaleString('id-ID')}
                                 </span>
@@ -219,6 +230,9 @@ export function PackageCard({
                                     </span>
                                 ) : null}
                             </div>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                per jamaah
+                            </p>
                             {pkg.start_date ? (
                                 <p className="mt-0.5 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                                     <Calendar className="h-3 w-3" />
