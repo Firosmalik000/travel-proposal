@@ -317,7 +317,7 @@ const mapSourceToRow = (source: Props['sourceRows'][number]): Row => ({
     calculation_mode:
         source.latest_calculation?.calculation_mode ??
         source.calculation_mode ??
-        'legacy_assignment',
+        'per_pax_multiplier',
     package_name: source.package_name,
     package_code: source.package_code,
     package_price: source.package_price,

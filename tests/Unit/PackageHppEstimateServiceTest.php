@@ -192,6 +192,92 @@ class PackageHppEstimateServiceTest extends TestCase
         $this->assertSame(0, data_get($twentyCustomers, 'hotel_allocations.40.dbl'));
     }
 
+    public function test_it_uses_double_for_one_remaining_pax_in_estimated_hotel_rooms(): void
+    {
+        $hotel = new TravelProduct([
+            'code' => 'HTL-REMAINDER-ONE',
+            'name' => 'Hotel Sisa Satu',
+            'product_type' => 'hotel',
+            'content' => [
+                'currency' => 'IDR',
+                'pricing' => [
+                    ['room_type' => 'DBL', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1000],
+                    ['room_type' => 'TRPL', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1200],
+                    ['room_type' => 'QUAD', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 1800],
+                ],
+            ],
+        ]);
+        $hotel->id = 43;
+
+        $estimate = app(PackageHppEstimateService::class)->calculate(
+            ['customers' => ['quad' => 45]],
+            10_000,
+            [],
+            products: collect([$hotel]),
+            periodDate: '2026-09-20',
+            currencySnapshots: ['IDR' => ['rate_to_idr' => 1]],
+        );
+
+        $this->assertSame(11, data_get($estimate, 'hotel_allocations.43.quad'));
+        $this->assertSame(0, data_get($estimate, 'hotel_allocations.43.trpl'));
+        $this->assertSame(1, data_get($estimate, 'hotel_allocations.43.dbl'));
+        $this->assertSame(20_800, $estimate['hotel_total']);
+        $this->assertSame(46, collect($estimate['items'])
+            ->where('cost_type', 'hotel')
+            ->sum(fn (array $item): int => (int) data_get($item, 'meta.allocated_pax')));
+    }
+
+    public function test_master_and_package_specific_hotels_use_identical_estimate_rules(): void
+    {
+        $pricing = [
+            ['broker_name' => 'Broker Utama', 'room_type' => 'Double', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 100],
+            ['broker_name' => 'Broker Utama', 'room_type' => 'TRIPLE', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 200],
+            ['broker_name' => 'Broker Utama', 'room_type' => 'quadruple', 'period_start' => '2026-09-01', 'period_end' => '2026-09-30', 'price' => 300],
+        ];
+        $masterHotel = new TravelProduct([
+            'code' => 'HTL-MASTER-PARITY',
+            'name' => 'Hotel Master',
+            'product_type' => 'hotel',
+            'visibility' => TravelProduct::VISIBILITY_MASTER,
+            'content' => ['currency' => 'SAR', 'pricing' => $pricing],
+        ]);
+        $masterHotel->id = 50;
+        $packageHotel = new TravelProduct([
+            'code' => 'HTL-PACKAGE-PARITY',
+            'name' => 'Hotel Khusus',
+            'product_type' => 'hotel',
+            'visibility' => TravelProduct::VISIBILITY_PACKAGE,
+            'package_id' => 99,
+            'content' => ['currency' => 'SAR', 'pricing' => $pricing],
+        ]);
+        $packageHotel->id = 51;
+
+        $estimate = app(PackageHppEstimateService::class)->calculate(
+            ['customers' => ['quad' => 45]],
+            10_000,
+            [],
+            products: collect([$masterHotel, $packageHotel]),
+            productMultipliers: ['50' => 3, '51' => 3],
+            periodDate: '2026-09-20',
+            hotelBrokerSelections: ['50' => ' broker utama ', '51' => 'BROKER UTAMA'],
+            currencySnapshots: ['SAR' => ['rate_to_idr' => 4000, 'source' => 'snapshot']],
+        );
+
+        foreach (['50', '51'] as $productId) {
+            $this->assertSame(11, data_get($estimate, "hotel_allocations.{$productId}.quad"));
+            $this->assertSame(0, data_get($estimate, "hotel_allocations.{$productId}.trpl"));
+            $this->assertSame(1, data_get($estimate, "hotel_allocations.{$productId}.dbl"));
+
+            $hotelItems = collect($estimate['items'])->where('reference_id', (int) $productId);
+            $this->assertSame(2, $hotelItems->count());
+            $this->assertSame(40_800_000, $hotelItems->sum('total_price'));
+            $this->assertSame([3], $hotelItems->pluck('meta.multiplier_per_pax')->unique()->values()->all());
+            $this->assertSame(['dbl', 'quad'], $hotelItems->pluck('meta.room_type')->sort()->values()->all());
+        }
+
+        $this->assertSame(81_600_000, $estimate['hotel_total']);
+    }
+
     public function test_it_adds_foc_cost_without_increasing_paid_customers_or_revenue(): void
     {
         $visa = new TravelProduct([

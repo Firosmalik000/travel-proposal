@@ -15,6 +15,7 @@ class PackageCostCalculation extends Model
 
     protected $fillable = [
         'package_id',
+        'supersedes_calculation_id',
         'departure_schedule_id',
         'calculation_mode',
         'calculation_date',
@@ -51,6 +52,16 @@ class PackageCostCalculation extends Model
     public function package(): BelongsTo
     {
         return $this->belongsTo(TravelPackage::class, 'package_id');
+    }
+
+    public function supersededCalculation(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'supersedes_calculation_id');
+    }
+
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(self::class, 'supersedes_calculation_id');
     }
 
     public function departureSchedule(): BelongsTo

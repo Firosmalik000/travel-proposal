@@ -39,7 +39,8 @@ class PackageCostCalculationController extends Controller
                 'items',
             ])
             ->when($filters['travel_package_id'], fn ($query) => $query->where('package_id', (int) $filters['travel_package_id']))
-            ->latest('calculated_at')
+            ->orderByDesc('calculated_at')
+            ->orderByDesc('id')
             ->get()
             ->map(fn (PackageCostCalculation $calculation): array => [
                 'id' => $calculation->id,
@@ -114,6 +115,7 @@ class PackageCostCalculationController extends Controller
             ->with('items')
             ->when($filters['travel_package_id'], fn ($query) => $query->where('package_id', (int) $filters['travel_package_id']))
             ->orderByDesc('calculated_at')
+            ->orderByDesc('id')
             ->get();
 
         $latestCalculationMap = $latestCalculations
@@ -158,7 +160,7 @@ class PackageCostCalculationController extends Controller
                 $calculationMode = (string) data_get(
                     $latest,
                     'calculation_mode',
-                    PackageCostCalculationService::MODE_LEGACY_ASSIGNMENT,
+                    PackageCostCalculationService::MODE_PER_PAX_MULTIPLIER,
                 );
                 $payload = $this->service->preview(
                     packageId: (int) $package->id,
@@ -308,7 +310,7 @@ class PackageCostCalculationController extends Controller
 
         $this->service->recalculate($hppPackage);
 
-        return back()->with('success', 'Cost calculation berhasil dihitung ulang.');
+        return back()->with('success', 'Versi baru cost calculation berhasil dibuat tanpa mengubah histori sebelumnya.');
     }
 
     private function resolvePackageName(mixed $name, ?string $code = null): string

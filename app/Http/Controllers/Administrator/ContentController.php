@@ -29,8 +29,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -443,6 +445,7 @@ class ContentController extends Controller
         /** @var Model $model */
         $model = $definition['model']::query()->findOrFail($id);
         $payload = $this->requestPayload($request);
+        $this->guardResourceUpdate($resource, $model, $payload);
         $payload = $this->applyResourceUploads($request, $resource, $model, $payload);
         $model->fill($this->normalizePayload($resource, $payload, $model));
         $model->save();
@@ -457,7 +460,9 @@ class ContentController extends Controller
 
         abort_if($definition === null, 404);
 
-        $definition['model']::query()->findOrFail($id)->delete();
+        $model = $definition['model']::query()->findOrFail($id);
+        $this->guardResourceDeletion($resource, collect([$model]));
+        $model->delete();
 
         return back()->with('success', $definition['label'].' berhasil dihapus.');
     }
@@ -477,13 +482,14 @@ class ContentController extends Controller
         $deletedCount = 0;
 
         DB::transaction(function () use ($definition, $ids, &$deletedCount): void {
-            $definition['model']::query()
+            $items = $definition['model']::query()
                 ->whereIn('id', $ids->all())
-                ->get()
-                ->each(function (Model $item) use (&$deletedCount): void {
-                    $item->delete();
-                    $deletedCount++;
-                });
+                ->get();
+            $this->guardResourceDeletion('products', $items);
+            $items->each(function (Model $item) use (&$deletedCount): void {
+                $item->delete();
+                $deletedCount++;
+            });
         });
 
         return back()->with('success', $deletedCount.' '.$definition['label'].' berhasil dihapus.');
@@ -1858,25 +1864,96 @@ class ContentController extends Controller
             $currencyRate = $this->liveCurrencyRateService->rateFor($currencyCode);
         }
 
+        $content = is_array($existing?->content) ? $existing->content : [];
+        $submittedUnit = data_get($payload, 'content.unit');
+        $content['price'] = is_array($payload['content'] ?? null) && ($payload['content']['price'] ?? '') !== ''
+            ? (int) $payload['content']['price']
+            : null;
+        $content['currency'] = $currencyCode;
+        $content['unit'] = is_string($submittedUnit) && trim($submittedUnit) !== ''
+            ? trim($submittedUnit)
+            : (string) ($content['unit'] ?? $this->productCategoryDefaultUnit((string) ($payload['product_type'] ?? '')));
+        $content['currency_rate_snapshot'] = [
+            'rate_to_idr' => $currencyRate['rate_to_idr'],
+            'source' => $currencyRate['source'],
+            'fetched_at' => $currencyRate['fetched_at'],
+        ];
+
         return [
             'code' => (string) ($payload['code'] ?? ''),
             'slug' => (string) ($payload['slug'] ?? ''),
             'name' => $this->localizedValue($payload['name'] ?? []),
             'product_type' => (string) ($payload['product_type'] ?? ''),
             'description' => $this->localizedValue($payload['description'] ?? []),
-            'content' => [
-                'price' => is_array($payload['content'] ?? null) && ($payload['content']['price'] ?? '') !== ''
-                    ? (int) $payload['content']['price']
-                    : null,
-                'currency' => $currencyCode,
-                'currency_rate_snapshot' => [
-                    'rate_to_idr' => $currencyRate['rate_to_idr'],
-                    'source' => $currencyRate['source'],
-                    'fetched_at' => $currencyRate['fetched_at'],
-                ],
-            ],
+            'content' => $content,
             'is_active' => (bool) ($payload['is_active'] ?? true),
         ];
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function guardResourceUpdate(string $resource, Model $model, array $payload): void
+    {
+        if ($resource === 'product_categories' && $model instanceof ProductCategory) {
+            $newKey = (string) ($payload['key'] ?? $model->key);
+            $isActive = (bool) ($payload['is_active'] ?? $model->is_active);
+            $usedProductCount = TravelProduct::query()
+                ->includingPackageSpecific()
+                ->where('product_type', $model->key)
+                ->count();
+
+            if ($usedProductCount > 0 && $newKey !== $model->key) {
+                throw ValidationException::withMessages([
+                    'payload.key' => 'Key kategori tidak dapat diubah karena sudah dipakai oleh produk.',
+                ]);
+            }
+
+            if ($usedProductCount > 0 && ! $isActive) {
+                throw ValidationException::withMessages([
+                    'payload.is_active' => 'Kategori tidak dapat dinonaktifkan selama masih dipakai oleh produk.',
+                ]);
+            }
+        }
+
+        if ($resource === 'products' && $model instanceof TravelProduct) {
+            $isActive = (bool) ($payload['is_active'] ?? $model->is_active);
+
+            if (! $isActive && $model->packages()->exists()) {
+                throw ValidationException::withMessages([
+                    'payload.is_active' => 'Produk tidak dapat dinonaktifkan selama masih dipakai oleh package.',
+                ]);
+            }
+        }
+    }
+
+    /** @param Collection<int, Model> $items */
+    private function guardResourceDeletion(string $resource, Collection $items): void
+    {
+        if ($resource === 'product_categories') {
+            $categoryKeys = $items
+                ->filter(fn (Model $item): bool => $item instanceof ProductCategory)
+                ->pluck('key');
+
+            if (TravelProduct::query()->includingPackageSpecific()->whereIn('product_type', $categoryKeys)->exists()) {
+                throw ValidationException::withMessages([
+                    'resource' => 'Kategori tidak dapat dihapus karena masih dipakai oleh produk.',
+                ]);
+            }
+        }
+
+        if ($resource === 'products') {
+            $usedProduct = $items
+                ->filter(fn (Model $item): bool => $item instanceof TravelProduct)
+                ->first(fn (TravelProduct $product): bool => $product->packages()->exists());
+
+            if ($usedProduct instanceof TravelProduct) {
+                throw ValidationException::withMessages([
+                    'resource' => sprintf(
+                        'Produk "%s" tidak dapat dihapus karena masih dipakai oleh package.',
+                        (string) ($usedProduct->name ?: $usedProduct->code),
+                    ),
+                ]);
+            }
+        }
     }
 
     /**

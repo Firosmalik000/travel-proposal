@@ -215,6 +215,72 @@ class TravelContentResourceManagementTest extends TestCase
 
         $this->assertNotNull($product);
         $this->assertSame('PRD-HOTEL', $product->code);
+        $this->assertSame('per paket', $product->content['unit']);
+    }
+
+    public function test_product_update_preserves_existing_content_metadata(): void
+    {
+        $user = User::factory()->create();
+        ProductCategory::query()->create([
+            'key' => 'layanan',
+            'name' => 'Layanan',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+        $product = TravelProduct::factory()->create([
+            'product_type' => 'layanan',
+            'content' => ['unit' => 'per hari', 'custom_key' => 'tetap', 'price' => 100_000],
+        ]);
+
+        $this->actingAs($user)
+            ->patch(route('content.resources.update', ['resource' => 'products', 'id' => $product->id]), [
+                'payload' => [
+                    'code' => $product->code,
+                    'slug' => $product->slug,
+                    'name' => $product->name,
+                    'product_type' => 'layanan',
+                    'description' => $product->description,
+                    'content' => ['price' => 250_000, 'currency' => 'IDR', 'currency_rate_to_idr' => 1],
+                    'is_active' => true,
+                ],
+            ])->assertRedirect();
+
+        $product->refresh();
+        $this->assertSame('per hari', $product->content['unit']);
+        $this->assertSame('tetap', $product->content['custom_key']);
+        $this->assertSame(250_000, $product->content['price']);
+    }
+
+    public function test_category_and_product_in_use_cannot_be_disabled_or_deleted(): void
+    {
+        $user = User::factory()->create();
+        $category = ProductCategory::query()->create([
+            'key' => 'layanan',
+            'name' => 'Layanan',
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+        $product = TravelProduct::factory()->create(['product_type' => $category->key]);
+        $package = TravelPackage::factory()->create();
+        $package->products()->attach($product->id, ['sort_order' => 1, 'multiplier_per_pax' => 1]);
+
+        $this->actingAs($user)
+            ->patch(route('content.resources.update', ['resource' => 'product_categories', 'id' => $category->id]), [
+                'payload' => [
+                    'key' => $category->key,
+                    'name' => $category->name,
+                    'description' => null,
+                    'sort_order' => 1,
+                    'is_active' => false,
+                ],
+            ])->assertSessionHasErrors('payload.is_active');
+
+        $this->actingAs($user)
+            ->delete(route('content.resources.destroy', ['resource' => 'products', 'id' => $product->id]))
+            ->assertSessionHasErrors('resource');
+
+        $this->assertDatabaseHas('products', ['id' => $product->id]);
+        $this->assertDatabaseHas('product_categories', ['id' => $category->id, 'is_active' => true]);
     }
 
     public function test_it_can_bulk_delete_products_from_content_management(): void

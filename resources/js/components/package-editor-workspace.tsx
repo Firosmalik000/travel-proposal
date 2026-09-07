@@ -690,10 +690,16 @@ function addFocToManualEstimateRoomAllocation(
     );
     const spareCapacity = Math.max(0, allocatedCapacity - customerCount);
     const uncoveredFocCount = Math.max(0, focCount - spareCapacity);
-    const focAllocation = quadFirstEstimateRoomAllocation(
-        uncoveredFocCount,
-        availableRoomTypes,
+    const focRoomType = (['quad', 'trpl', 'dbl'] as const).find((roomType) =>
+        availableRoomTypes.includes(roomType),
     );
+    const focAllocation = { dbl: 0, trpl: 0, quad: 0 };
+
+    if (focRoomType) {
+        focAllocation[focRoomType] = Math.ceil(
+            uncoveredFocCount / estimateRoomCapacities[focRoomType],
+        );
+    }
 
     return (
         Object.keys(estimateRoomCapacities) as Array<

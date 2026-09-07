@@ -11,6 +11,7 @@ use App\Models\PackageRegistration;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use App\Models\User;
+use App\Services\InventoryStockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -169,7 +170,10 @@ class BookingRegisterManagementTest extends TestCase
             'is_active' => true,
         ]);
 
-        $package = TravelPackage::factory()->create();
+        $package = TravelPackage::factory()->create([
+            'seats_total' => 20,
+            'seats_available' => 20,
+        ]);
         $package->products()->sync([$product->id => ['sort_order' => 1]]);
 
         PackageRegistration::query()->create([
@@ -215,7 +219,10 @@ class BookingRegisterManagementTest extends TestCase
             'is_active' => true,
         ]);
 
-        $package = TravelPackage::factory()->create();
+        $package = TravelPackage::factory()->create([
+            'seats_total' => 20,
+            'seats_available' => 20,
+        ]);
         $package->products()->sync([$product->id => ['sort_order' => 1]]);
 
         PackageRegistration::query()->create([
@@ -561,6 +568,85 @@ class BookingRegisterManagementTest extends TestCase
             'id' => $inventory->id,
             'quantity' => 17,
         ]);
+    }
+
+    public function test_it_deducts_inventory_using_the_package_product_multiplier(): void
+    {
+        $this->withoutMiddleware(CheckMenuPermission::class);
+        $user = User::factory()->create();
+        $product = TravelProduct::factory()->create();
+        $inventory = InventoryItem::query()->create([
+            'item_code' => $product->code,
+            'item_name' => (string) $product->name,
+            'category' => (string) $product->product_type,
+            'unit' => 'pcs',
+            'product_id' => $product->id,
+            'quantity' => 30,
+            'is_active' => true,
+        ]);
+        $package = TravelPackage::factory()->create([
+            'seats_total' => 20,
+            'seats_available' => 20,
+        ]);
+        $package->products()->sync([
+            $product->id => ['sort_order' => 1, 'multiplier_per_pax' => 3],
+        ]);
+
+        $preview = app(InventoryStockService::class)->stockPreviewForPackage($package->id, 11);
+        $this->assertSame(33, $preview['insufficient_items'][0]['required']);
+
+        $this->actingAs($user)->post(route('booking.listing.store'), [
+            'travel_package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'full_name' => 'Jamaah Multiplier',
+            'phone' => '081200000009',
+            'email' => 'multiplier@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 4,
+            'notes' => null,
+            'status' => 'registered',
+        ])->assertRedirect(route('booking.listing.index'));
+
+        $this->assertDatabaseHas('inventory_items', [
+            'id' => $inventory->id,
+            'quantity' => 18,
+        ]);
+        $this->assertDatabaseHas('inventory_stock_mutations', [
+            'inventory_item_id' => $inventory->id,
+            'quantity_change' => -12,
+        ]);
+    }
+
+    public function test_it_blocks_inventory_multiplier_changes_after_a_booking_is_registered(): void
+    {
+        $product = TravelProduct::factory()->create();
+        InventoryItem::query()->create([
+            'item_code' => $product->code,
+            'item_name' => (string) $product->name,
+            'category' => (string) $product->product_type,
+            'unit' => 'pcs',
+            'product_id' => $product->id,
+            'quantity' => 30,
+            'is_active' => true,
+        ]);
+        $package = TravelPackage::factory()->create();
+        $package->products()->sync([
+            $product->id => ['sort_order' => 1, 'multiplier_per_pax' => 2],
+        ]);
+        Booking::factory()->create([
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+            'passenger_count' => 2,
+            'status' => 'registered',
+        ]);
+
+        $this->expectException(\DomainException::class);
+
+        app(InventoryStockService::class)->ensurePackageProductConfigurationCanChange(
+            $package,
+            [$product->id],
+            [(string) $product->id => 3],
+        );
     }
 
     public function test_it_restores_inventory_stock_when_booking_is_cancelled(): void

@@ -13,6 +13,8 @@ use App\Models\TravelProduct;
 use App\Models\User;
 use App\Models\VendorPricePeriod;
 use App\Services\PackageCostCalculationService;
+use App\Services\PackageHppEstimateService;
+use App\Services\PackageProductPriceSnapshotService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -75,6 +77,11 @@ class HppPackageManagementTest extends TestCase
         $package = TravelPackage::factory()->create([
             'name' => 'Package Tetap',
             'departure_city' => 'Jakarta',
+            'start_date' => '2026-08-10',
+            'end_date' => '2026-08-18',
+            'seats_total' => 45,
+            'seats_available' => 45,
+            'booking_status' => 'open',
             'price' => 20_000_000,
             'original_price' => null,
             'discount_type' => 'percent',
@@ -948,7 +955,174 @@ class HppPackageManagementTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame(4000, data_get($package->fresh()->content, 'hpp_currency_snapshots.SAR.rate_to_idr'));
-        $this->assertSame('4000.000000', $calculation->fresh()->package_conversion_rate_to_idr);
+        $this->assertSame('1.000000', $calculation->fresh()->package_conversion_rate_to_idr);
+
+        $revision = PackageCostCalculation::query()
+            ->where('supersedes_calculation_id', $calculation->id)
+            ->firstOrFail();
+
+        $this->assertSame('4000.000000', $revision->package_conversion_rate_to_idr);
+        $this->assertDatabaseCount('package_cost_calculations', 2);
+    }
+
+    public function test_package_product_prices_stay_snapshotted_until_admin_refreshes_them(): void
+    {
+        $user = $this->createUserWithHppPermissions(['edit']);
+        $package = TravelPackage::factory()->create([
+            'seats_total' => 2,
+            'currency' => 'IDR',
+            'content' => [
+                'hpp_estimate' => [
+                    'customers' => ['dbl' => 2, 'trpl' => 0, 'quad' => 0],
+                    'tour_leader_fee_is_manual' => true,
+                    'muthawwif_fee_is_manual' => true,
+                ],
+            ],
+        ]);
+        $product = TravelProduct::factory()->create([
+            'name' => 'Visa Snapshot',
+            'product_type' => 'visa',
+            'content' => ['price' => 1_000, 'currency' => 'IDR'],
+        ]);
+        $package->products()->attach($product->id, [
+            'sort_order' => 1,
+            'multiplier_per_pax' => 1,
+        ]);
+        app(PackageProductPriceSnapshotService::class)->captureMissing($package);
+
+        $initial = app(PackageHppEstimateService::class)->calculateForPackage($package->refresh());
+        $this->assertSame(2_000, $initial['product_total']);
+
+        $product->update(['content' => ['price' => 3_000, 'currency' => 'IDR']]);
+
+        $unchanged = app(PackageHppEstimateService::class)->calculateForPackage($package->refresh());
+        $status = app(PackageProductPriceSnapshotService::class)->statuses($package->refresh())[0];
+
+        $this->assertSame(2_000, $unchanged['product_total']);
+        $this->assertTrue($status['is_stale']);
+
+        $this->actingAs($user)
+            ->post(route('hpp-package.product-prices.refresh', $package), [
+                'product_ids' => [$product->id],
+            ])
+            ->assertRedirect();
+
+        $refreshed = app(PackageHppEstimateService::class)->calculateForPackage($package->refresh());
+        $refreshedStatus = app(PackageProductPriceSnapshotService::class)->statuses($package->refresh())[0];
+
+        $this->assertSame(6_000, $refreshed['product_total']);
+        $this->assertFalse($refreshedStatus['is_stale']);
+    }
+
+    public function test_package_specific_hotel_pricing_uses_the_same_snapshot_refresh_flow(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'start_date' => '2026-09-16',
+            'end_date' => '2026-09-24',
+            'seats_total' => 4,
+            'currency' => 'IDR',
+            'content' => [
+                'hpp_estimate' => [
+                    'customers' => ['dbl' => 0, 'trpl' => 0, 'quad' => 4],
+                    'tour_leader_fee_is_manual' => true,
+                    'muthawwif_fee_is_manual' => true,
+                ],
+            ],
+        ]);
+        $hotel = TravelProduct::factory()->create([
+            'name' => 'Hotel Khusus Snapshot',
+            'product_type' => 'hotel',
+            'visibility' => TravelProduct::VISIBILITY_PACKAGE,
+            'package_id' => $package->id,
+            'content' => [
+                'currency' => 'IDR',
+                'pricing' => [[
+                    'broker_name' => 'Broker A',
+                    'room_type' => 'QUAD',
+                    'period_start' => '2026-09-01',
+                    'period_end' => '2026-09-30',
+                    'price' => 1_000,
+                ]],
+            ],
+        ]);
+        $package->products()->attach($hotel->id, [
+            'sort_order' => 1,
+            'multiplier_per_pax' => 2,
+        ]);
+        $snapshotService = app(PackageProductPriceSnapshotService::class);
+        $snapshotService->captureMissing($package);
+
+        $initial = app(PackageHppEstimateService::class)->calculateForPackage($package->refresh());
+        $this->assertSame(2_000, $initial['hotel_total']);
+
+        $hotel->update(['content' => [
+            'currency' => 'IDR',
+            'pricing' => [[
+                'broker_name' => 'Broker A',
+                'room_type' => 'QUAD',
+                'period_start' => '2026-09-01',
+                'period_end' => '2026-09-30',
+                'price' => 3_000,
+            ]],
+        ]]);
+
+        $this->assertSame(
+            2_000,
+            app(PackageHppEstimateService::class)->calculateForPackage($package->refresh())['hotel_total'],
+        );
+
+        $snapshotService->refresh($package->refresh(), [$hotel->id]);
+
+        $this->assertSame(
+            6_000,
+            app(PackageHppEstimateService::class)->calculateForPackage($package->refresh())['hotel_total'],
+        );
+    }
+
+    public function test_actual_hpp_uses_the_package_snapshot_until_it_is_explicitly_refreshed(): void
+    {
+        $package = TravelPackage::factory()->create([
+            'currency' => 'IDR',
+            'content' => [],
+        ]);
+        $product = TravelProduct::factory()->create([
+            'name' => 'Perlengkapan Snapshot Aktual',
+            'product_type' => 'perlengkapan',
+            'content' => ['price' => 1_000, 'currency' => 'IDR'],
+        ]);
+        $package->products()->attach($product->id, [
+            'sort_order' => 1,
+            'multiplier_per_pax' => 1,
+        ]);
+        $snapshotService = app(PackageProductPriceSnapshotService::class);
+        $snapshotService->captureMissing($package);
+        Booking::query()->create([
+            'booking_code' => 'BK-SNAPSHOT-ACTUAL',
+            'booking_type' => 'regular',
+            'full_name' => 'Jamaah Snapshot',
+            'phone' => '081234567899',
+            'email' => 'actual-snapshot@example.com',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 2,
+            'room_configuration' => ['double' => 1],
+            'status' => 'registered',
+            'package_id' => $package->id,
+            'departure_schedule_id' => null,
+        ]);
+        $service = app(PackageCostCalculationService::class);
+
+        $initial = $service->generate($package->id, null);
+        $this->assertSame(2_000, $initial->product_total);
+
+        $product->update(['content' => ['price' => 3_000, 'currency' => 'IDR']]);
+        $withoutRefresh = $service->generate($package->id, null);
+        $this->assertSame(2_000, $withoutRefresh->product_total);
+
+        $snapshotService->refresh($package->refresh(), [$product->id]);
+        $afterRefresh = $service->generate($package->id, null);
+
+        $this->assertSame(6_000, $afterRefresh->product_total);
+        $this->assertSame(2_000, $initial->fresh()->product_total);
     }
 
     public function test_product_hotel_hpp_ignores_unsupported_room_pricing(): void

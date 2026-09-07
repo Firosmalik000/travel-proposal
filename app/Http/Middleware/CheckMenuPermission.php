@@ -186,6 +186,11 @@ class CheckMenuPermission
             $paths[] = '/admin/product-management/products';
         }
 
+        if (str_starts_with($dashboardPath, '/dashboard/financial-management/hpp-package/')) {
+            $paths[] = '/dashboard/financial-management/hpp-package';
+            $paths[] = '/admin/financial-management/hpp-package';
+        }
+
         if ($dashboardPath === '/dashboard/product-management/categories') {
             $paths[] = '/dashboard/product-management/products';
         }

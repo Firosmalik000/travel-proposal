@@ -201,6 +201,19 @@ export type Package = {
     all_in: PackageAllInConfiguration;
 };
 
+export type ProductPriceSnapshotStatus = {
+    product_id: number;
+    name: string;
+    product_type: string;
+    is_package_specific: boolean;
+    has_snapshot: boolean;
+    is_stale: boolean;
+    snapshot_at: string | null;
+    snapshot_price: number | null;
+    current_price: number | null;
+    currency: string;
+};
+
 export type PackageDraftTemporaryImage = {
     id: string;
     path: string;

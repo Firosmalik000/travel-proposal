@@ -403,6 +403,7 @@ Route::middleware(['auth', 'verified', 'admin.portal'])->group(function () {
             $nameRoute(Route::get('hpp-package', [PackageCostCalculationController::class, 'index'])->middleware('check.menu.permission:view'), 'hpp-package.index');
             $nameRoute(Route::get('hpp-package/{package}/estimate/edit', [PackageHppEstimateController::class, 'edit'])->middleware('check.menu.permission:edit'), 'hpp-package.estimate.edit');
             $nameRoute(Route::post('hpp-package/{package}/estimate', [PackageHppEstimateController::class, 'updateEstimate'])->middleware('check.menu.permission:edit'), 'hpp-package.estimate.update');
+            $nameRoute(Route::post('hpp-package/{package}/product-prices/refresh', [PackageHppEstimateController::class, 'refreshProductPrices'])->middleware('check.menu.permission:edit'), 'hpp-package.product-prices.refresh');
             $nameRoute(Route::post('hpp-package', [PackageCostCalculationController::class, 'store'])->middleware('check.menu.permission:create'), 'hpp-package.store');
             $nameRoute(Route::put('hpp-package/{hppPackage}', [PackageCostCalculationController::class, 'update'])->middleware('check.menu.permission:edit'), 'hpp-package.update');
             $nameRoute(Route::post('hpp-package/{hppPackage}/recalculate', [PackageCostCalculationController::class, 'recalculate'])->middleware('check.menu.permission:edit'), 'hpp-package.recalculate');

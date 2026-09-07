@@ -10,6 +10,11 @@ class PackageHppEstimateService
 {
     private const ROOM_CAPACITIES = ['dbl' => 2, 'trpl' => 3, 'quad' => 4];
 
+    public function __construct(
+        private readonly HotelProductPricingResolver $hotelProductPricingResolver,
+        private readonly PackageProductPriceSnapshotService $productPriceSnapshotService,
+    ) {}
+
     /** @return array<string, mixed>|null */
     public function calculateForPackage(TravelPackage $package): ?array
     {
@@ -46,7 +51,7 @@ class PackageHppEstimateService
             $currencyCode,
             (string) data_get($currencySnapshot, 'source', $currencyCode === 'IDR' ? 'identity' : 'unavailable'),
             data_get($currencySnapshot, 'fetched_at'),
-            $package->products,
+            $this->productPriceSnapshotService->apply($package->products),
             $package->products->mapWithKeys(fn (TravelProduct $product): array => [
                 (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
             ])->all(),
@@ -784,32 +789,12 @@ class PackageHppEstimateService
     /** @return array<string, mixed>|null */
     private function matchHotelPrice(TravelProduct $product, string $roomType, ?string $selectedBroker, ?string $periodDate): ?array
     {
-        $normalizedBroker = strtolower(trim((string) $selectedBroker));
-
-        return collect(data_get($product->content, 'pricing', []))
-            ->filter(fn (mixed $row): bool => is_array($row))
-            ->filter(function (array $row) use ($roomType, $normalizedBroker, $periodDate): bool {
-                if ($this->normalizeRoomType((string) ($row['room_type'] ?? '')) !== $roomType) {
-                    return false;
-                }
-
-                if ($normalizedBroker !== '' && strtolower(trim((string) ($row['broker_name'] ?? ''))) !== $normalizedBroker) {
-                    return false;
-                }
-
-                if ($periodDate === null || $periodDate === '') {
-                    return true;
-                }
-
-                $periodStart = data_get($row, 'period_start');
-                $periodEnd = data_get($row, 'period_end');
-
-                return is_string($periodStart) && is_string($periodEnd)
-                    && $periodStart <= $periodDate
-                    && $periodEnd >= $periodDate;
-            })
-            ->sortByDesc(fn (array $row): string => (string) ($row['period_start'] ?? ''))
-            ->first();
+        return $this->hotelProductPricingResolver->resolve(
+            data_get($product->content, 'pricing', []),
+            $roomType,
+            $selectedBroker,
+            $periodDate,
+        );
     }
 
     /**
@@ -854,13 +839,37 @@ class PackageHppEstimateService
             ->reduce(fn (int $capacity, int $roomCount, string $roomType): int => $capacity + $roomCount * (self::ROOM_CAPACITIES[$roomType] ?? 0), 0);
         $spareCapacity = max(0, $allocatedCapacity - $customerCount);
         $uncoveredFocCount = max(0, $focCount - $spareCapacity);
-        $focAllocations = $this->quadFirstRoomAllocation($prices, $uncoveredFocCount);
+        $focAllocations = $this->focRoomAllocation($prices, $uncoveredFocCount);
 
         return collect(array_keys(self::ROOM_CAPACITIES))
             ->mapWithKeys(fn (string $roomType): array => [
                 $roomType => ($paidAllocations[$roomType] ?? 0) + ($focAllocations[$roomType] ?? 0),
             ])
             ->all();
+    }
+
+    /**
+     * @param  Collection<string, array<string, mixed>>  $prices
+     * @return array{dbl: int, trpl: int, quad: int}
+     */
+    private function focRoomAllocation(Collection $prices, int $focCount): array
+    {
+        $allocations = ['dbl' => 0, 'trpl' => 0, 'quad' => 0];
+        if ($focCount < 1) {
+            return $allocations;
+        }
+
+        foreach (['quad', 'trpl', 'dbl'] as $roomType) {
+            if (! is_int(data_get($prices->get($roomType), 'price'))) {
+                continue;
+            }
+
+            $allocations[$roomType] = (int) ceil($focCount / self::ROOM_CAPACITIES[$roomType]);
+
+            return $allocations;
+        }
+
+        return $allocations;
     }
 
     /**
@@ -883,6 +892,10 @@ class PackageHppEstimateService
                 $allocations['trpl'] = 1;
             } elseif ($remainingPax === 2 && $hasPrice('dbl')) {
                 $allocations['dbl'] = 1;
+            } elseif ($remainingPax === 1 && $hasPrice('dbl')) {
+                $allocations['dbl'] = 1;
+            } elseif ($remainingPax === 1 && $hasPrice('trpl')) {
+                $allocations['trpl'] = 1;
             } elseif ($remainingPax > 0) {
                 $allocations['quad']++;
             }

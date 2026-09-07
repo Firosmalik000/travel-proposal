@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\InventoryItem;
 use App\Models\InventoryStockMutation;
 use App\Models\TravelPackage;
+use App\Models\TravelProduct;
 use DomainException;
 use Illuminate\Support\Collection;
 
@@ -52,7 +53,8 @@ class InventoryStockService
                     return null;
                 }
 
-                $required = $passengerCount;
+                $multiplierPerPax = max((int) ($product->pivot->multiplier_per_pax ?? 1), 1);
+                $required = $passengerCount * $multiplierPerPax;
                 $available = (int) $inventoryItem->quantity;
 
                 if ($available >= $required) {
@@ -125,6 +127,10 @@ class InventoryStockService
                 $delta * -1,
                 'booking_allocation_sync',
                 sprintf('Sinkron stok booking %s.', (string) $booking->booking_code),
+                [
+                    'allocated_quantity' => $target,
+                    'previous_allocated_quantity' => $source,
+                ],
             );
         }
     }
@@ -140,12 +146,55 @@ class InventoryStockService
         );
     }
 
+    /**
+     * @param  array<int, mixed>  $productIds
+     * @param  array<string|int, mixed>  $productMultipliers
+     */
+    public function ensurePackageProductConfigurationCanChange(
+        TravelPackage $package,
+        array $productIds,
+        array $productMultipliers,
+    ): void {
+        if (! $package->registrations()->where('status', 'registered')->exists()) {
+            return;
+        }
+
+        $package->loadMissing(['products.inventoryItem:id,product_id']);
+        $currentConfiguration = $package->products
+            ->filter(fn (TravelProduct $product): bool => $product->inventoryItem instanceof InventoryItem)
+            ->mapWithKeys(fn (TravelProduct $product): array => [
+                (int) $product->id => max((int) ($product->pivot->multiplier_per_pax ?? 1), 1),
+            ])
+            ->sortKeys()
+            ->all();
+
+        $desiredProducts = TravelProduct::query()
+            ->includingPackageSpecific()
+            ->with('inventoryItem:id,product_id')
+            ->whereIn('id', collect($productIds)->filter(fn ($id): bool => is_numeric($id))->map(fn ($id): int => (int) $id)->all())
+            ->get();
+        $desiredConfiguration = $desiredProducts
+            ->filter(fn (TravelProduct $product): bool => $product->inventoryItem instanceof InventoryItem)
+            ->mapWithKeys(fn (TravelProduct $product): array => [
+                (int) $product->id => max((int) ($productMultipliers[(string) $product->id] ?? $productMultipliers[$product->id] ?? 1), 1),
+            ])
+            ->sortKeys()
+            ->all();
+
+        if ($currentConfiguration !== $desiredConfiguration) {
+            throw new DomainException(
+                'Produk ber-inventory atau nilai x/pax tidak dapat diubah karena package sudah memiliki booking terdaftar. Batalkan booking terkait atau lakukan rekonsiliasi stok terlebih dahulu.',
+            );
+        }
+    }
+
     private function applyDelta(
         InventoryItem $item,
         ?Booking $booking,
         int $delta,
         string $changeType,
         string $notes,
+        ?array $meta = null,
     ): void {
         if ($delta === 0) {
             return;
@@ -176,8 +225,8 @@ class InventoryStockService
             'quantity_after' => $after,
             'notes' => $notes,
             'meta' => $booking instanceof Booking
-                ? ['booking_code' => (string) $booking->booking_code]
-                : null,
+                ? ['booking_code' => (string) $booking->booking_code, ...($meta ?? [])]
+                : $meta,
         ]);
     }
 
@@ -207,9 +256,11 @@ class InventoryStockService
                     return null;
                 }
 
+                $multiplierPerPax = max((int) ($product->pivot->multiplier_per_pax ?? 1), 1);
+
                 return [
                     'inventory_item_id' => $inventoryItemId,
-                    'quantity' => $passengerCount,
+                    'quantity' => $passengerCount * $multiplierPerPax,
                 ];
             })
             ->filter()

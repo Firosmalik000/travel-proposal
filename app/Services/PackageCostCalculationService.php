@@ -17,6 +17,8 @@ class PackageCostCalculationService
     public function __construct(
         private readonly PackageCurrencySnapshotService $packageCurrencySnapshotService,
         private readonly PackageRoomConfigurationService $packageRoomConfigurationService,
+        private readonly HotelProductPricingResolver $hotelProductPricingResolver,
+        private readonly PackageProductPriceSnapshotService $productPriceSnapshotService,
     ) {}
 
     public const MODE_LEGACY_ASSIGNMENT = 'legacy_assignment';
@@ -30,7 +32,7 @@ class PackageCostCalculationService
         int $packageId,
         ?int $departureScheduleId,
         int $manualAdjustment = 0,
-        string $calculationMode = self::MODE_LEGACY_ASSIGNMENT,
+        string $calculationMode = self::MODE_PER_PAX_MULTIPLIER,
     ): array {
         return $this->calculatePayload(
             $packageId,
@@ -48,8 +50,9 @@ class PackageCostCalculationService
         ?int $tourLeaderFee = null,
         ?int $muthawwifFee = null,
         string $calculationMode = self::MODE_PER_PAX_MULTIPLIER,
+        ?int $supersedesCalculationId = null,
     ): PackageCostCalculation {
-        return DB::transaction(function () use ($packageId, $departureScheduleId, $manualAdjustment, $notes, $tourLeaderFee, $muthawwifFee, $calculationMode): PackageCostCalculation {
+        return DB::transaction(function () use ($packageId, $departureScheduleId, $manualAdjustment, $notes, $tourLeaderFee, $muthawwifFee, $calculationMode, $supersedesCalculationId): PackageCostCalculation {
             $payload = $this->calculatePayload(
                 $packageId,
                 $departureScheduleId,
@@ -59,6 +62,7 @@ class PackageCostCalculationService
 
             $calculation = PackageCostCalculation::query()->create([
                 ...$payload,
+                'supersedes_calculation_id' => $supersedesCalculationId,
                 'notes' => $notes,
             ]);
 
@@ -78,34 +82,16 @@ class PackageCostCalculationService
 
     public function recalculate(PackageCostCalculation $calculation): PackageCostCalculation
     {
-        return DB::transaction(function () use ($calculation): PackageCostCalculation {
-            $payload = $this->calculatePayload(
-                packageId: (int) $calculation->package_id,
-                departureScheduleId: null,
-                manualAdjustment: (int) $calculation->manual_adjustment,
-                calculationMode: (string) ($calculation->calculation_mode ?: self::MODE_LEGACY_ASSIGNMENT),
-            );
-
-            $extraFeeTotal = max((int) ($calculation->tour_leader_fee ?? 0), 0)
-                + max((int) ($calculation->muthawwif_fee ?? 0), 0);
-            $grandTotal = max((int) ($payload['grand_total'] ?? 0) + $extraFeeTotal, 0);
-
-            $calculation->update([
-                ...collect($payload)->except('items')->all(),
-                'notes' => $calculation->notes,
-                'tour_leader_fee' => $calculation->tour_leader_fee,
-                'muthawwif_fee' => $calculation->muthawwif_fee,
-                'grand_total' => $grandTotal,
-                'hpp_per_customer' => (int) $calculation->customer_count > 0
-                    ? (int) floor($grandTotal / (int) $calculation->customer_count)
-                    : null,
-            ]);
-
-            $calculation->items()->delete();
-            $calculation->items()->createMany($payload['items']);
-
-            return $calculation->load(['package:id,code,name', 'departureSchedule:id,departure_date,departure_city', 'items']);
-        });
+        return $this->generate(
+            packageId: (int) $calculation->package_id,
+            departureScheduleId: null,
+            manualAdjustment: (int) $calculation->manual_adjustment,
+            notes: $calculation->notes,
+            tourLeaderFee: $calculation->tour_leader_fee,
+            muthawwifFee: $calculation->muthawwif_fee,
+            calculationMode: (string) ($calculation->calculation_mode ?: self::MODE_LEGACY_ASSIGNMENT),
+            supersedesCalculationId: (int) $calculation->id,
+        );
     }
 
     public function updatePackagePrice(
@@ -183,6 +169,10 @@ class PackageCostCalculationService
         $package = TravelPackage::query()
             ->with(['products:id,code,name,product_type,content', 'allInConfig'])
             ->findOrFail($packageId);
+        $package->setRelation(
+            'products',
+            $this->productPriceSnapshotService->apply($package->products),
+        );
         $packageCurrency = strtoupper((string) ($package->currency ?: 'IDR'));
         $packageCurrencyDetails = $this->packageCurrencySnapshotService->detailsFor($package, null, $packageCurrency);
 
@@ -325,7 +315,7 @@ class PackageCostCalculationService
                     continue;
                 }
 
-                $matchedPrice = $this->matchHotelProductPrice(
+                $matchedPrice = $this->hotelProductPricingResolver->resolve(
                     $pricingRows,
                     $roomType,
                     is_string($selectedBroker) ? $selectedBroker : null,
@@ -604,69 +594,5 @@ class PackageCostCalculationService
             'quad' => 'Quad',
             default => ucfirst($roomType),
         };
-    }
-
-    /**
-     * @param  Collection<int, array<string, mixed>>  $pricingRows
-     * @return array<string, mixed>|null
-     */
-    private function matchHotelProductPrice(
-        Collection $pricingRows,
-        string $roomType,
-        ?string $selectedBroker,
-        ?string $periodDate,
-    ): ?array {
-        $normalizedRoomType = $this->normalizeHotelRoomTypeName($roomType);
-        $normalizedBroker = $selectedBroker !== null ? $this->normalizeHotelBrokerName($selectedBroker) : null;
-
-        return $pricingRows
-            ->filter(function (array $row) use ($normalizedRoomType, $normalizedBroker, $periodDate): bool {
-                $rowRoomType = $this->normalizeHotelRoomTypeName((string) ($row['room_type'] ?? ''));
-                if ($rowRoomType !== $normalizedRoomType) {
-                    return false;
-                }
-
-                if ($normalizedBroker !== null) {
-                    $rowBrokerName = $this->normalizeHotelBrokerName((string) ($row['broker_name'] ?? ''));
-                    $rowBrokerKey = $this->normalizeHotelBrokerName((string) ($row['broker_key'] ?? ''));
-
-                    if ($rowBrokerName !== $normalizedBroker && $rowBrokerKey !== $normalizedBroker) {
-                        return false;
-                    }
-                }
-
-                if ($periodDate === null) {
-                    return true;
-                }
-
-                $periodStart = data_get($row, 'period_start');
-                $periodEnd = data_get($row, 'period_end');
-
-                if (! is_string($periodStart) || ! is_string($periodEnd)) {
-                    return false;
-                }
-
-                return $periodStart <= $periodDate && $periodEnd >= $periodDate;
-            })
-            ->sortByDesc(fn (array $row): string => (string) ($row['period_start'] ?? ''))
-            ->map(fn (array $row): array => $row)
-            ->first();
-    }
-
-    private function normalizeHotelRoomTypeName(string $value): string
-    {
-        $normalized = strtolower(trim($value));
-
-        return match ($normalized) {
-            'dbl', 'double' => 'double',
-            'trpl', 'triple' => 'triple',
-            'quad', 'quadruple' => 'quad',
-            default => $normalized,
-        };
-    }
-
-    private function normalizeHotelBrokerName(string $value): string
-    {
-        return strtolower(trim($value));
     }
 }

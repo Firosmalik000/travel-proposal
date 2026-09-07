@@ -15,11 +15,14 @@ use App\Models\ProductCategory;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
 use App\Models\VendorPricePeriod;
+use App\Services\InventoryStockService;
 use App\Services\LiveCurrencyRateService;
 use App\Services\PackageCurrencySnapshotService;
 use App\Services\PackageDraftService;
 use App\Services\PackageHppEstimateService;
+use App\Services\PackageProductPriceSnapshotService;
 use App\Support\ParticipantUploadLimit;
+use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -39,6 +42,8 @@ class PackageController extends Controller
         private readonly SyncPackageAllInConfig $syncPackageAllInConfig,
         private readonly SyncPackageSpecificProducts $syncPackageSpecificProducts,
         private readonly PackageDraftService $packageDraftService,
+        private readonly InventoryStockService $inventoryStockService,
+        private readonly PackageProductPriceSnapshotService $productPriceSnapshotService,
     ) {}
 
     public function index(): Response
@@ -103,6 +108,7 @@ class PackageController extends Controller
                     $request->input('product_ids', []),
                     $request->input('product_multipliers', []),
                 );
+                $this->productPriceSnapshotService->captureMissing($package);
                 $this->syncItineraries($package, $request->validated('itineraries', []));
                 $this->syncPackageAllInConfig->handle($package, $request->input('all_in'));
                 $this->hppEstimateService->refreshForPackage($package);
@@ -132,6 +138,11 @@ class PackageController extends Controller
                 $customProducts = $this->syncSpecificProducts($request, $package);
                 $this->mergeSpecificProductsIntoRequest($request, $customProducts);
                 $this->removeAllInCoveredProducts($request);
+                $this->inventoryStockService->ensurePackageProductConfigurationCanChange(
+                    $package,
+                    $request->input('product_ids', []),
+                    $request->input('product_multipliers', []),
+                );
 
                 $package->update($this->packagePayload($request, $package));
                 $package->syncSeatAvailability();
@@ -140,10 +151,15 @@ class PackageController extends Controller
                     $request->input('product_ids', []),
                     $request->input('product_multipliers', []),
                 );
+                $this->productPriceSnapshotService->captureMissing($package);
                 $this->syncItineraries($package, $request->validated('itineraries', []));
                 $this->syncPackageAllInConfig->handle($package, $request->input('all_in'));
                 $this->hppEstimateService->refreshForPackage($package);
             });
+        } catch (DomainException $exception) {
+            $this->packageDraftService->removePromotedImages($preparedImages['promoted_paths']);
+
+            return back()->withErrors(['product_ids' => $exception->getMessage()])->withInput();
         } catch (Throwable $exception) {
             $this->packageDraftService->removePromotedImages($preparedImages['promoted_paths']);
 
@@ -667,13 +683,23 @@ class PackageController extends Controller
     }
 
     /** @return array<int, array<string, mixed>> */
-    private function productOptions(): array
+    private function productOptions(?TravelPackage $snapshotPackage = null): array
     {
-        return TravelProduct::query()
+        $products = TravelProduct::query()
             ->where('is_active', true)
             ->whereHas('category', fn ($query) => $query->where('is_active', true))
             ->orderBy('code')
-            ->get(['id', 'code', 'name', 'product_type', 'content'])
+            ->get(['id', 'code', 'name', 'product_type', 'content']);
+
+        if ($snapshotPackage !== null) {
+            $snapshotPackage->loadMissing('products');
+            $snapshots = $this->productPriceSnapshotService
+                ->apply($snapshotPackage->products)
+                ->keyBy('id');
+            $products = $products->map(fn (TravelProduct $product): TravelProduct => $snapshots->get($product->id, $product));
+        }
+
+        return $products
             ->map(function (TravelProduct $product): array {
                 $pricing = collect(data_get($product->content, 'pricing', []))
                     ->filter(fn ($item) => is_array($item))
@@ -722,8 +748,8 @@ class PackageController extends Controller
             : 'Dashboard/ProductManagement/Packages/Page';
 
         $props = [
-            'package' => $package !== null ? $this->serializePackage($package) : null,
-            'productOptions' => $this->productOptions(),
+            'package' => $package !== null ? $this->serializePackage($package, $mode === 'hpp') : null,
+            'productOptions' => $this->productOptions($mode === 'hpp' ? $package : null),
             'currencies' => $this->currencyOptions(),
             'activityOptions' => $this->activityOptions(),
             'productCategories' => $this->productCategoryOptions(),
@@ -740,6 +766,8 @@ class PackageController extends Controller
 
         if ($mode !== 'hpp') {
             $props['mode'] = $mode;
+        } elseif ($package !== null) {
+            $props['productPriceSnapshots'] = $this->productPriceSnapshotService->statuses($package);
         }
 
         return Inertia::render($component, $props);
@@ -817,13 +845,17 @@ class PackageController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function serializePackage(TravelPackage $pkg): array
+    private function serializePackage(TravelPackage $pkg, bool $useProductPriceSnapshots = false): array
     {
         $content = is_array($pkg->content) ? $pkg->content : [];
         $currentHppEstimate = $this->hppEstimateService->calculateForPackage($pkg);
         if ($currentHppEstimate !== null) {
             $content['hpp_estimate'] = $currentHppEstimate;
         }
+
+        $products = $useProductPriceSnapshots
+            ? $this->productPriceSnapshotService->apply($pkg->products)
+            : $pkg->products;
 
         return [
             'id' => $pkg->id,
@@ -877,18 +909,18 @@ class PackageController extends Controller
             ],
             'is_featured' => $pkg->is_featured,
             'is_active' => $pkg->is_active,
-            'product_ids' => $pkg->products
+            'product_ids' => $products
                 ->where('visibility', TravelProduct::VISIBILITY_MASTER)
                 ->pluck('id')
                 ->values()
                 ->all(),
-            'product_multipliers' => $pkg->products
+            'product_multipliers' => $products
                 ->where('visibility', TravelProduct::VISIBILITY_MASTER)
                 ->mapWithKeys(fn (TravelProduct $product) => [
                     (string) $product->id => (int) ($product->pivot->multiplier_per_pax ?? 1),
                 ])
                 ->all(),
-            'custom_products' => $pkg->products
+            'custom_products' => $products
                 ->where('visibility', TravelProduct::VISIBILITY_PACKAGE)
                 ->map(fn (TravelProduct $product): array => $this->serializeSpecificProduct($product))
                 ->values()

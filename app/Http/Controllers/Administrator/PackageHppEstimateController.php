@@ -2,10 +2,16 @@
 
 namespace App\Http\Controllers\Administrator;
 
+use App\Http\Requests\Administrator\RefreshPackageProductPricesRequest;
 use App\Http\Requests\Administrator\UpdatePackageHppEstimateRequest;
 use App\Models\TravelPackage;
 use App\Models\TravelProduct;
+use App\Services\PackageCurrencySnapshotService;
+use App\Services\PackageHppEstimateService;
+use App\Services\PackageProductPriceSnapshotService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Response;
 
 class PackageHppEstimateController extends PackageController
@@ -15,8 +21,11 @@ class PackageHppEstimateController extends PackageController
         return $this->renderPackagePage('hpp', $package);
     }
 
-    public function updateEstimate(UpdatePackageHppEstimateRequest $request, TravelPackage $package): RedirectResponse
-    {
+    public function updateEstimate(
+        UpdatePackageHppEstimateRequest $request,
+        TravelPackage $package,
+        PackageHppEstimateService $hppEstimateService,
+    ): RedirectResponse {
         $package->load('products');
         $request->merge([
             'product_ids' => $package->products->pluck('id')->values()->all(),
@@ -51,9 +60,49 @@ class PackageHppEstimateController extends PackageController
             'currency' => $payload['currency'],
             'content' => $existingContent,
         ]);
+        $hppEstimateService->refreshForPackage($package->refresh());
 
         return redirect()
             ->route('hpp-package.index')
             ->with('success', 'Estimasi HPP berhasil diperbarui.');
+    }
+
+    public function refreshProductPrices(
+        RefreshPackageProductPricesRequest $request,
+        TravelPackage $package,
+        PackageProductPriceSnapshotService $snapshotService,
+        PackageCurrencySnapshotService $currencySnapshotService,
+        PackageHppEstimateService $hppEstimateService,
+    ): RedirectResponse {
+        $requestedIds = collect($request->validated('product_ids', []))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values();
+        $attachedIds = $package->products()->pluck('products.id')->map(fn (mixed $id): int => (int) $id);
+
+        if ($requestedIds->diff($attachedIds)->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'product_ids' => 'Ada produk yang bukan bagian dari package ini.',
+            ]);
+        }
+
+        $updatedCount = DB::transaction(function () use (
+            $package,
+            $requestedIds,
+            $snapshotService,
+            $currencySnapshotService,
+            $hppEstimateService,
+        ): int {
+            $count = $snapshotService->refresh(
+                $package,
+                $requestedIds->isEmpty() ? null : $requestedIds->all(),
+            );
+            $currencySnapshotService->refreshPackage($package->refresh());
+            $hppEstimateService->refreshForPackage($package->refresh());
+
+            return $count;
+        });
+
+        return back()->with('success', $updatedCount.' harga acuan produk berhasil diperbarui.');
     }
 }

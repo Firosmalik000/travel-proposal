@@ -55,6 +55,26 @@ class ManageTravelResourceRequest extends FormRequest
                     Rule::in(array_keys((array) config('services.currency.supported', []))),
                 ],
                 'payload.content.currency_rate_to_idr' => ['required', 'numeric', 'gt:0'],
+                'payload.content.unit' => ['nullable', 'string', 'max:50'],
+                'payload.is_active' => ['required', 'boolean'],
+            ];
+        }
+
+        if ($this->route('resource') === 'product_categories') {
+            $categoryId = $this->route('id');
+            $rules = [
+                ...$rules,
+                'payload' => ['required', 'array'],
+                'payload.key' => [
+                    'required',
+                    'string',
+                    'max:100',
+                    'regex:/^[a-z0-9]+(?:[a-z0-9_-]*[a-z0-9])?$/',
+                    Rule::unique('product_categories', 'key')->ignore($categoryId),
+                ],
+                'payload.name' => ['required'],
+                'payload.description' => ['nullable'],
+                'payload.sort_order' => ['required', 'integer', 'min:0'],
                 'payload.is_active' => ['required', 'boolean'],
             ];
         }
@@ -79,6 +99,8 @@ class ManageTravelResourceRequest extends FormRequest
             'payload.content.currency.in' => 'Mata uang tidak tersedia pada daftar currency.',
             'payload.content.currency_rate_to_idr.required' => 'Kurs ke IDR wajib diisi.',
             'payload.content.currency_rate_to_idr.gt' => 'Kurs ke IDR harus lebih besar dari nol.',
+            'payload.key.regex' => 'Key kategori hanya boleh berisi huruf kecil, angka, tanda hubung, atau garis bawah.',
+            'payload.key.unique' => 'Key kategori sudah digunakan.',
         ];
     }
 
@@ -102,11 +124,12 @@ class ManageTravelResourceRequest extends FormRequest
                 $validator->errors()->add('payload', 'Payload wajib diisi.');
             }
 
-            if ($this->route('resource') !== 'products') {
+            if (! in_array($this->route('resource'), ['products', 'product_categories'], true)) {
                 return;
             }
 
-            foreach (['name' => 'Nama produk', 'description' => 'Deskripsi produk'] as $field => $label) {
+            $resourceLabel = $this->route('resource') === 'products' ? 'produk' : 'kategori';
+            foreach (['name' => "Nama $resourceLabel", 'description' => "Deskripsi $resourceLabel"] as $field => $label) {
                 $value = data_get($this->input('payload'), $field);
 
                 if ($value !== null && ! is_string($value) && ! is_array($value)) {
