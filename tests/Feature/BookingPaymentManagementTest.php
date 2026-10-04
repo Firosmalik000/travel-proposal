@@ -9,6 +9,7 @@ use App\Models\FinancialAccount;
 use App\Models\FinancialTransaction;
 use App\Models\TravelPackage;
 use App\Models\User;
+use App\Services\BookingPaymentCashflowAuditService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -308,6 +309,29 @@ class BookingPaymentManagementTest extends TestCase
 
         $this->assertDatabaseCount('booking_payments', 1);
         $this->assertDatabaseCount('cashflows', 0);
+    }
+
+    public function test_finance_audit_groups_confirmed_payments_by_effective_currency(): void
+    {
+        $idrBooking = $this->booking('BK-PAY-CURRENCY-IDR');
+        $usdBooking = $this->booking('BK-PAY-CURRENCY-USD');
+        $usdBooking->update(['agreed_currency' => 'USD']);
+
+        BookingPayment::factory()->for($idrBooking)->create([
+            'amount' => 1_500_000,
+            'currency' => null,
+            'status' => 'confirmed',
+        ]);
+        BookingPayment::factory()->for($usdBooking)->create([
+            'amount' => 750,
+            'currency' => 'usd',
+            'status' => 'confirmed',
+        ]);
+
+        $this->assertSame([
+            'IDR' => ['count' => 1, 'amount' => 1_500_000],
+            'USD' => ['count' => 1, 'amount' => 750],
+        ], app(BookingPaymentCashflowAuditService::class)->confirmedByCurrency());
     }
 
     public function test_finance_audit_accepts_a_reversed_historical_link_and_ignores_deleted_payments(): void

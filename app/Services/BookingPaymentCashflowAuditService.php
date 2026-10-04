@@ -145,14 +145,20 @@ class BookingPaymentCashflowAuditService
      */
     public function confirmedByCurrency(): array
     {
-        return DB::table((new BookingPayment)->getTable().' as booking_payments')
+        $currencyExpression = "COALESCE(NULLIF(UPPER(booking_payments.currency), ''), NULLIF(UPPER(bookings.agreed_currency), ''), NULLIF(UPPER(bookings.custom_currency), ''), 'UNCLASSIFIED')";
+        $confirmedPayments = DB::table((new BookingPayment)->getTable().' as booking_payments')
             ->join('bookings', 'bookings.id', '=', 'booking_payments.booking_id')
             ->whereNull('booking_payments.deleted_at')
             ->where('booking_payments.status', 'confirmed')
-            ->selectRaw("COALESCE(NULLIF(UPPER(booking_payments.currency), ''), NULLIF(UPPER(bookings.agreed_currency), ''), NULLIF(UPPER(bookings.custom_currency), ''), 'UNCLASSIFIED') as currency")
+            ->selectRaw($currencyExpression.' as currency')
+            ->addSelect('booking_payments.amount');
+
+        return DB::query()
+            ->fromSub($confirmedPayments, 'confirmed_payments')
+            ->select('currency')
             ->selectRaw('COUNT(*) as payment_count')
-            ->selectRaw('SUM(booking_payments.amount) as total_amount')
-            ->groupByRaw("COALESCE(NULLIF(UPPER(booking_payments.currency), ''), NULLIF(UPPER(bookings.agreed_currency), ''), NULLIF(UPPER(bookings.custom_currency), ''), 'UNCLASSIFIED')")
+            ->selectRaw('SUM(amount) as total_amount')
+            ->groupBy('currency')
             ->orderBy('currency')
             ->get()
             ->mapWithKeys(fn (object $row): array => [
