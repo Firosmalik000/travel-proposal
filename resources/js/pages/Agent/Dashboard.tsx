@@ -65,74 +65,98 @@ export default function Dashboard({
     recentLeads: AgentLead[];
     recentBookings: AgentBooking[];
 }) {
-    const cards = [
+    const commissionCards = [
         {
-            label: 'Klik referral',
+            label: 'Menunggu Verifikasi',
+            value: totals(summary.commissions_by_currency, 'pending'),
+            icon: Hourglass,
+            color: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
+            border: 'border-amber-200/80 dark:border-amber-900/50',
+        },
+        {
+            label: 'Siap Dicairkan',
+            value: totals(summary.commissions_by_currency, 'approved'),
+            icon: HandCoins,
+            color: 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300',
+            border: 'border-sky-200/80 dark:border-sky-900/50',
+        },
+        {
+            label: 'Sudah Dibayar',
+            value: totals(summary.commissions_by_currency, 'paid'),
+            icon: BadgeCheck,
+            color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
+            border: 'border-emerald-200/80 dark:border-emerald-900/50',
+        },
+    ];
+
+    const referralMetrics = [
+        {
+            label: 'Total Booking',
+            value: summary.total_bookings,
+            icon: BadgeCheck,
+        },
+        {
+            label: 'Total Jamaah',
+            value: `${summary.total_pax} pax`,
+            icon: WalletCards,
+        },
+        { label: 'Lead Aktif', value: summary.pending_leads, icon: UsersRound },
+        {
+            label: 'Pengunjung Unik',
+            value: summary.unique_visitors,
+            icon: UsersRound,
+        },
+        {
+            label: 'Klik Link',
             value: summary.referral_clicks,
             icon: MousePointerClick,
         },
         {
-            label: 'Visitor unik',
-            value: summary.unique_visitors,
-            icon: UsersRound,
-        },
-        { label: 'Lead aktif', value: summary.pending_leads, icon: UsersRound },
-        { label: 'Booking', value: summary.total_bookings, icon: BadgeCheck },
-        {
-            label: 'Total jamaah',
-            value: `${summary.total_pax} pax`,
-            icon: WalletCards,
-        },
-        {
-            label: 'Konversi pipeline',
+            label: 'Tingkat Konversi',
             value: `${summary.conversion_rate}%`,
             icon: ChartNoAxesCombined,
-        },
-        {
-            label: 'Komisi pending',
-            value: totals(summary.commissions_by_currency, 'pending'),
-            icon: Hourglass,
-        },
-        {
-            label: 'Siap dicairkan',
-            value: totals(summary.commissions_by_currency, 'approved'),
-            icon: HandCoins,
-        },
-        {
-            label: 'Sudah dibayar',
-            value: totals(summary.commissions_by_currency, 'paid'),
-            icon: BadgeCheck,
         },
     ];
 
     return (
-        <AgentLayout title="Dashboard Agent">
-            <Head title="Portal Agent" />
+        <AgentLayout title="Dashboard Agen">
+            <Head title="Portal Agen" />
             <PageIntro
-                eyebrow="Agent Performance Center"
-                title={`Selamat datang, ${agent.name}`}
-                description="Pantau alur referral dari lead hingga komisi dibayar dalam satu ruang kerja."
+                title={`Halo, ${agent.name}`}
                 action={
                     <Button asChild>
                         <Link href="/agent/packages">
-                            Promosikan Package <ArrowRight />
+                            Katalog Paket <ArrowRight className="size-4" />
                         </Link>
                     </Button>
                 }
             />
 
-            <section className="mt-5 overflow-hidden rounded-[1.75rem] bg-[#0d5c52] p-5 text-white shadow-xl shadow-emerald-950/15 sm:p-7">
-                <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <section className="mt-5 overflow-hidden rounded-2xl bg-[#0d5c52] p-5 text-white shadow-lg sm:p-6">
+                <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
                     <div className="min-w-0">
-                        <p className="text-xs font-semibold tracking-[0.18em] text-emerald-100 uppercase">
-                            Link referral utama
-                        </p>
-                        <p className="mt-2 font-mono text-sm break-all text-white/80">
+                        <span className="text-[11px] font-bold tracking-[0.16em] text-emerald-200 uppercase">
+                            Link Referral Anda
+                        </span>
+                        <p className="mt-1 font-mono text-sm break-all text-white/90">
                             {agent.referral_url}
                         </p>
-                        <p className="mt-3 text-2xl font-black tracking-[0.12em]">
-                            {agent.referral_code}
-                        </p>
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                            <span className="rounded-lg bg-white/15 px-3 py-1 font-mono text-lg font-black tracking-wider text-white">
+                                {agent.referral_code}
+                            </span>
+                            {summary.revenue_by_currency.length > 0 && (
+                                <span className="text-xs text-emerald-100/90">
+                                    Omzet booking aktif:{' '}
+                                    <strong className="font-semibold text-white">
+                                        {totals(
+                                            summary.revenue_by_currency,
+                                            'amount',
+                                        )}
+                                    </strong>
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <ReferralShare
                         url={agent.referral_url}
@@ -142,44 +166,77 @@ export default function Dashboard({
             </section>
 
             {!summary.payout_profile_complete && (
-                <section className="mt-4 flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800 dark:bg-amber-950/35 dark:text-amber-100">
+                <section className="mt-4 flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50/80 p-4 text-amber-950 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100">
                     <div>
-                        <p className="font-semibold">
-                            Lengkapi rekening payout
+                        <p className="text-sm font-semibold">
+                            Rekening Bank Belum Lengkap
                         </p>
-                        <p className="mt-1 text-sm text-amber-800 dark:text-amber-200/80">
-                            Data bank diperlukan agar komisi yang disetujui
-                            dapat diproses tanpa penundaan.
+                        <p className="text-xs text-amber-800/90 dark:text-amber-200/80">
+                            Lengkapi nomor rekening bank untuk mempercepat
+                            pencairan komisi Anda.
                         </p>
                     </div>
-                    <Button variant="outline" asChild>
-                        <Link href="/agent/account">Lengkapi sekarang</Link>
+                    <Button variant="outline" size="sm" asChild>
+                        <Link href="/agent/account">Lengkapi Rekening</Link>
                     </Button>
                 </section>
             )}
 
-            <section className="mt-5 grid gap-3 min-[480px]:grid-cols-2 xl:grid-cols-4">
-                {cards.map(({ label, value, icon: Icon }) => (
-                    <Card
-                        key={label}
-                        className="border-[#dfd3bf] bg-[#fffaf1]/90 shadow-sm dark:border-[#334155] dark:bg-[#202836]"
-                    >
-                        <CardContent className="flex items-center gap-3 p-4">
-                            <span className="rounded-xl bg-[#ead8b8] p-2.5 text-[#74501d] dark:bg-amber-950/40 dark:text-amber-300">
-                                <Icon className="size-5" />
-                            </span>
-                            <span className="min-w-0">
-                                <span className="block text-[11px] font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">
-                                    {label}
-                                </span>
-                                <span className="mt-0.5 block text-lg font-semibold break-words text-slate-900 dark:text-white">
+            <div className="mt-6">
+                <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase dark:text-slate-400">
+                    Ringkasan Komisi
+                </h2>
+                <div className="mt-2.5 grid gap-3 sm:grid-cols-3">
+                    {commissionCards.map(
+                        ({ label, value, icon: Icon, color, border }) => (
+                            <Card
+                                key={label}
+                                className={`border ${border} bg-card shadow-xs transition-shadow hover:shadow-sm`}
+                            >
+                                <CardContent className="flex items-center gap-3.5 p-4">
+                                    <span
+                                        className={`rounded-xl p-2.5 ${color}`}
+                                    >
+                                        <Icon className="size-5" />
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block text-xs font-medium text-muted-foreground">
+                                            {label}
+                                        </span>
+                                        <span className="mt-0.5 block text-lg font-bold break-words text-foreground">
+                                            {value}
+                                        </span>
+                                    </span>
+                                </CardContent>
+                            </Card>
+                        ),
+                    )}
+                </div>
+            </div>
+
+            <div className="mt-6">
+                <h2 className="text-sm font-bold tracking-wide text-slate-600 uppercase dark:text-slate-400">
+                    Statistik Referral
+                </h2>
+                <div className="mt-2.5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    {referralMetrics.map(({ label, value, icon: Icon }) => (
+                        <Card
+                            key={label}
+                            className="border-slate-200/80 bg-card shadow-xs dark:border-slate-800"
+                        >
+                            <CardContent className="p-3.5">
+                                <div className="flex items-center justify-between text-muted-foreground">
+                                    <span className="text-xs">{label}</span>
+                                    <Icon className="size-3.5" />
+                                </div>
+                                <p className="mt-1.5 text-base font-bold text-foreground">
                                     {value}
-                                </span>
-                            </span>
-                        </CardContent>
-                    </Card>
-                ))}
-            </section>
+                                </p>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
 
             <section className="mt-5 grid gap-4 xl:grid-cols-2">
                 <ActivityCard
@@ -230,11 +287,6 @@ export default function Dashboard({
                     ))}
                 </ActivityCard>
             </section>
-
-            <p className="mt-5 text-xs text-slate-500 dark:text-slate-400">
-                Omzet booking aktif:{' '}
-                {totals(summary.revenue_by_currency, 'amount')}
-            </p>
         </AgentLayout>
     );
 }

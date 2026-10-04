@@ -134,6 +134,15 @@ class MenuSeeder extends Seeder
                         'is_active' => true,
                         'children' => null,
                     ],
+                    [
+                        'name' => 'Kalkulasi Harga & HPP Estimasi',
+                        'menu_key' => 'hpp_package',
+                        'path' => '/dashboard/product-management/hpp-estimate',
+                        'icon' => 'BadgeDollarSign',
+                        'order' => 5,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
                 ],
                 'order' => 3,
                 'is_active' => true,
@@ -243,35 +252,80 @@ class MenuSeeder extends Seeder
             ],
 
             [
-                'name' => 'Financial Management',
+                'name' => 'Keuangan',
                 'menu_key' => 'financial_management',
-                'path' => '/dashboard/financial-management',
+                'path' => '/dashboard/financial-management/overview',
                 'icon' => 'Wallet',
                 'children' => [
                     [
-                        'name' => 'Financial Report',
-                        'menu_key' => 'financial_report',
-                        'path' => '/dashboard/financial-management/financial-report',
-                        'icon' => 'FileText',
+                        'name' => 'Ringkasan',
+                        'menu_key' => 'finance_overview',
+                        'path' => '/dashboard/financial-management/overview',
+                        'icon' => 'LayoutGrid',
                         'order' => 1,
                         'is_active' => true,
                         'children' => null,
                     ],
                     [
-                        'name' => 'Cashflow',
-                        'menu_key' => 'cashflow',
-                        'path' => '/dashboard/financial-management/cashflow',
+                        'name' => 'Transaksi',
+                        'menu_key' => 'finance_transactions',
+                        'path' => '/dashboard/financial-management/transactions',
                         'icon' => 'Wallet',
                         'order' => 2,
                         'is_active' => true,
                         'children' => null,
                     ],
                     [
-                        'name' => 'HPP Package',
-                        'menu_key' => 'hpp_package',
-                        'path' => '/dashboard/financial-management/hpp-package',
-                        'icon' => 'Calculator',
+                        'name' => 'Piutang Jemaah',
+                        'menu_key' => 'finance_receivables',
+                        'path' => '/dashboard/financial-management/receivables',
+                        'icon' => 'Users',
                         'order' => 3,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'HPP & Hutang Vendor',
+                        'menu_key' => 'finance_vendor_hpp',
+                        'path' => '/dashboard/financial-management/vendor-hpp',
+                        'icon' => 'HandCoins',
+                        'order' => 4,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Pembukuan',
+                        'menu_key' => 'finance_accounting',
+                        'path' => '/dashboard/financial-management/accounting',
+                        'icon' => 'BookOpen',
+                        'order' => 5,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Rekonsiliasi & Periode',
+                        'menu_key' => 'finance_controls',
+                        'path' => '/dashboard/financial-management/controls',
+                        'icon' => 'CalendarCheck',
+                        'order' => 6,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Laporan',
+                        'menu_key' => 'finance_reports',
+                        'path' => '/dashboard/financial-management/reports',
+                        'icon' => 'FileText',
+                        'order' => 7,
+                        'is_active' => true,
+                        'children' => null,
+                    ],
+                    [
+                        'name' => 'Master Keuangan',
+                        'menu_key' => 'finance_master',
+                        'path' => '/dashboard/financial-management/master',
+                        'icon' => 'Database',
+                        'order' => 8,
                         'is_active' => true,
                         'children' => null,
                     ],
@@ -361,10 +415,10 @@ class MenuSeeder extends Seeder
         $this->command->info('Menus seeded successfully with simplified structure.');
         $this->command->info('  - Dashboard: Direct navigation');
         $this->command->info('  - Website Management: landing, schedules, SEO, branding');
-        $this->command->info('  - Product Management: 4 submenus (product category, product, package, activity)');
+        $this->command->info('  - Product Management: 5 submenus (product category, product, package, kalkulasi harga & HPP estimasi, activity)');
         $this->command->info('  - Booking: 5 submenus (register, listing, data customer, custom requests, hotel assignment)');
         $this->command->info('  - Master Data: inventory');
-        $this->command->info('  - Financial Management: financial report, cashflow, hpp package');
+        $this->command->info('  - Keuangan: ringkasan, transaksi, vendor & HPP aktual, pembukuan, kontrol, laporan, master');
         $this->command->info('  - Activity: activity log');
         $this->command->info('  - Administrator: 3 submenus (menu management, user management, role management)');
     }

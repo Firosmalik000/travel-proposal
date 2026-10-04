@@ -47,6 +47,51 @@ class HppPackageManagementTest extends TestCase
                 ->has('calculationModes', 2));
     }
 
+    public function test_hpp_estimate_is_available_from_product_management(): void
+    {
+        $user = $this->createUserWithHppPermissions(['view']);
+
+        $this->actingAs($user)
+            ->get(route('hpp-estimate.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/FinancialManagement/HppPackage/Index')
+                ->has('rows')
+                ->has('packages'));
+    }
+
+    public function test_user_with_view_permission_can_open_hpp_package_show_page(): void
+    {
+        $user = $this->createUserWithHppPermissions(['view']);
+        $package = TravelPackage::factory()->create([
+            'name' => 'Paket Umroh Reguler',
+            'code' => 'UMR-REG-01',
+            'price' => 30_000_000,
+            'currency' => 'IDR',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.show', $package))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Dashboard/FinancialManagement/HppPackage/Show')
+                ->where('package.id', $package->id)
+                ->where('package.name', 'Paket Umroh Reguler')
+                ->where('package.code', 'UMR-REG-01')
+                ->has('actual')
+                ->has('history'));
+    }
+
+    public function test_user_without_view_permission_cannot_open_hpp_package_show_page(): void
+    {
+        $user = User::factory()->create();
+        $package = TravelPackage::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('hpp-package.show', $package))
+            ->assertForbidden();
+    }
+
     public function test_user_with_edit_permission_can_open_package_hpp_estimate_editor(): void
     {
         $user = $this->createUserWithHppPermissions(['edit']);

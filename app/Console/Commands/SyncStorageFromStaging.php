@@ -34,8 +34,8 @@ class SyncStorageFromStaging extends Command
         $productionPath = storage_path('app/public');
 
         $this->info('=== Storage Sync from Staging to Production ===');
-        $this->info('Source: ' . $stagingPath);
-        $this->info('Destination: ' . $productionPath);
+        $this->info('Source: '.$stagingPath);
+        $this->info('Destination: '.$productionPath);
 
         if ($isDryRun) {
             $this->warn('DRY RUN MODE - No files will be copied');
@@ -44,15 +44,16 @@ class SyncStorageFromStaging extends Command
         $this->newLine();
 
         // Check if source exists
-        if (!File::exists($stagingPath)) {
-            $this->error('Source path does not exist: ' . $stagingPath);
+        if (! File::exists($stagingPath)) {
+            $this->error('Source path does not exist: '.$stagingPath);
+
             return 1;
         }
 
         // Create destination if not exists
-        if (!File::exists($productionPath)) {
+        if (! File::exists($productionPath)) {
             $this->info('Creating destination directory...');
-            if (!$isDryRun) {
+            if (! $isDryRun) {
                 File::makeDirectory($productionPath, 0755, true);
             }
         }
@@ -69,14 +70,14 @@ class SyncStorageFromStaging extends Command
 
         foreach ($directories as $directory) {
             $dirName = basename($directory);
-            $destDir = $productionPath . '/' . $dirName;
+            $destDir = $productionPath.'/'.$dirName;
 
-            $this->line('Processing directory: ' . $dirName);
+            $this->line('Processing directory: '.$dirName);
 
             // Create destination directory if not exists
-            if (!File::exists($destDir)) {
-                $this->info('  Creating directory: ' . $dirName);
-                if (!$isDryRun) {
+            if (! File::exists($destDir)) {
+                $this->info('  Creating directory: '.$dirName);
+                if (! $isDryRun) {
                     File::makeDirectory($destDir, 0755, true);
                 }
             }
@@ -87,7 +88,7 @@ class SyncStorageFromStaging extends Command
             foreach ($files as $file) {
                 $totalFiles++;
                 $relativePath = $file->getRelativePathname();
-                $destFile = $destDir . '/' . $relativePath;
+                $destFile = $destDir.'/'.$relativePath;
 
                 // Check if file already exists in destination
                 if (File::exists($destFile)) {
@@ -97,18 +98,19 @@ class SyncStorageFromStaging extends Command
 
                     if ($sourceSize === $destSize) {
                         $skippedFiles++;
-                        $this->line('  <fg=yellow>SKIP</> ' . $relativePath . ' (already exists with same size)');
+                        $this->line('  <fg=yellow>SKIP</> '.$relativePath.' (already exists with same size)');
+
                         continue;
                     }
                 }
 
                 // Copy file
-                $this->line('  <fg=green>COPY</> ' . $relativePath);
+                $this->line('  <fg=green>COPY</> '.$relativePath);
 
-                if (!$isDryRun) {
+                if (! $isDryRun) {
                     // Create subdirectories if needed
                     $destFileDir = dirname($destFile);
-                    if (!File::exists($destFileDir)) {
+                    if (! File::exists($destFileDir)) {
                         File::makeDirectory($destFileDir, 0755, true);
                     }
 

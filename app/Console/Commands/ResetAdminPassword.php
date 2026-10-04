@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Menu;
 use App\Models\User;
 use App\Support\MenuPermissionService;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
@@ -23,7 +24,7 @@ class ResetAdminPassword extends Command
     {
         // Auto-seed jika DB kosong
         if (Menu::query()->count() === 0) {
-            $this->call(\Database\Seeders\DatabaseSeeder::class);
+            $this->call(DatabaseSeeder::class);
             $this->info('Database di-seed ulang.');
 
             return self::SUCCESS;

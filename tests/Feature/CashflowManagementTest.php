@@ -3,7 +3,10 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\LogAdminActivityMiddleware;
+use App\Models\Booking;
+use App\Models\BookingPayment;
 use App\Models\Cashflow;
+use App\Models\TravelPackage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -38,7 +41,7 @@ class CashflowManagementTest extends TestCase
             );
     }
 
-    public function test_it_can_create_cashflow_with_multiple_attachments(): void
+    public function test_manual_cashflow_creation_is_retired_in_favour_of_the_ledger(): void
     {
         Storage::fake('public');
         $user = $this->createUserWithCashflowPermissions(['create']);
@@ -56,13 +59,9 @@ class CashflowManagementTest extends TestCase
                 ],
             ]);
 
-        $response->assertRedirect();
-        $this->assertDatabaseHas('cashflows', [
-            'type' => 'income',
-            'amount' => 1500000,
-            'category' => 'Operasional',
-        ]);
-        $this->assertDatabaseCount('cashflow_attachments', 2);
+        $response->assertRedirect()->assertSessionHasErrors('cashflow');
+        $this->assertDatabaseCount('cashflows', 0);
+        $this->assertDatabaseCount('cashflow_attachments', 0);
     }
 
     public function test_it_can_filter_and_return_summary_data(): void
@@ -97,7 +96,7 @@ class CashflowManagementTest extends TestCase
             );
     }
 
-    public function test_it_can_update_and_delete_cashflow(): void
+    public function test_legacy_cashflow_cannot_be_updated_or_deleted(): void
     {
         Storage::fake('public');
         $user = $this->createUserWithCashflowPermissions(['edit', 'delete']);
@@ -120,20 +119,21 @@ class CashflowManagementTest extends TestCase
                 'description' => 'Update transaksi',
                 'attachments' => [UploadedFile::fake()->image('nota-baru.jpg')],
             ])
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHasErrors('cashflow');
 
         $this->assertDatabaseHas('cashflows', [
             'id' => $cashflow->id,
-            'type' => 'expense',
-            'amount' => 900000,
-            'category' => 'Transport',
+            'type' => 'income',
+            'amount' => 700000,
         ]);
 
         $this->actingAs($user)
             ->delete(route('cashflow.destroy', $cashflow))
-            ->assertRedirect();
+            ->assertRedirect()
+            ->assertSessionHasErrors('cashflow');
 
-        $this->assertSoftDeleted('cashflows', ['id' => $cashflow->id]);
+        $this->assertDatabaseHas('cashflows', ['id' => $cashflow->id, 'deleted_at' => null]);
     }
 
     public function test_it_can_export_cashflow_pdf_with_filters(): void
@@ -156,6 +156,85 @@ class CashflowManagementTest extends TestCase
             ]))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_system_generated_cashflow_cannot_be_updated_or_deleted_directly(): void
+    {
+        Storage::fake('public');
+        $user = $this->createUserWithCashflowPermissions(['edit', 'delete']);
+        $package = TravelPackage::factory()->create();
+        $booking = Booking::query()->create([
+            'booking_code' => 'BK-CASHFLOW-LOCK-001',
+            'package_id' => $package->id,
+            'booking_type' => 'regular',
+            'full_name' => 'Customer Cashflow Lock',
+            'phone' => '628123456789',
+            'origin_city' => 'Jakarta',
+            'passenger_count' => 1,
+            'status' => 'registered',
+            'agreed_total_amount' => 25_000_000,
+            'agreed_currency' => 'IDR',
+        ]);
+        $cashflow = Cashflow::factory()->create([
+            'transaction_date' => '2026-09-07',
+            'type' => 'income',
+            'amount' => 5_000_000,
+            'category' => 'booking_payment',
+        ]);
+        BookingPayment::factory()->for($booking)->create([
+            'cashflow_id' => $cashflow->id,
+            'payment_date' => '2026-09-07',
+            'amount' => 5_000_000,
+            'status' => 'confirmed',
+        ]);
+
+        $this->actingAs($user)->put(route('cashflow.update', $cashflow), [
+            'transaction_date' => '2026-09-08',
+            'type' => 'expense',
+            'amount' => 1,
+            'category' => 'Manipulasi',
+            'attachments' => [UploadedFile::fake()->image('bukti.jpg')],
+        ])->assertRedirect()->assertSessionHasErrors('cashflow');
+
+        $this->actingAs($user)
+            ->delete(route('cashflow.destroy', $cashflow))
+            ->assertRedirect()
+            ->assertSessionHasErrors('cashflow');
+
+        $this->assertDatabaseHas('cashflows', [
+            'id' => $cashflow->id,
+            'transaction_date' => '2026-09-07',
+            'type' => 'income',
+            'amount' => 5_000_000,
+            'category' => 'booking_payment',
+            'deleted_at' => null,
+        ]);
+    }
+
+    public function test_reserved_booking_payment_category_cannot_be_created_manually(): void
+    {
+        Storage::fake('public');
+        $user = $this->createUserWithCashflowPermissions(['create']);
+
+        $this->actingAs($user)->post(route('cashflow.store'), [
+            'transaction_date' => '2026-09-07',
+            'type' => 'income',
+            'amount' => 5_000_000,
+            'category' => 'booking_payment',
+            'attachments' => [UploadedFile::fake()->image('bukti.jpg')],
+        ])->assertSessionHasErrors('category');
+
+        $this->assertDatabaseCount('cashflows', 0);
+
+        $this->actingAs($user)->post(route('cashflow.store'), [
+            'transaction_date' => '2026-09-07',
+            'type' => 'income',
+            'amount' => 5_000_000,
+            'category' => ' Booking_Payment ',
+            'attachments' => [UploadedFile::fake()->image('bukti-lain.jpg')],
+        ])->assertSessionHasErrors('category');
+
+        $this->assertDatabaseCount('cashflows', 0);
     }
 
     /**

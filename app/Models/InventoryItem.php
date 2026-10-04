@@ -20,6 +20,8 @@ class InventoryItem extends Model
         'unit',
         'product_id',
         'quantity',
+        'reserved_quantity',
+        'average_unit_cost_idr',
         'notes',
         'is_active',
         'created_by',
@@ -30,6 +32,8 @@ class InventoryItem extends Model
     {
         return [
             'quantity' => 'integer',
+            'reserved_quantity' => 'integer',
+            'average_unit_cost_idr' => 'integer',
             'is_active' => 'boolean',
         ];
     }
@@ -42,5 +46,10 @@ class InventoryItem extends Model
     public function stockMutations(): HasMany
     {
         return $this->hasMany(InventoryStockMutation::class);
+    }
+
+    public function availableQuantity(): int
+    {
+        return max(0, $this->quantity - $this->reserved_quantity);
     }
 }

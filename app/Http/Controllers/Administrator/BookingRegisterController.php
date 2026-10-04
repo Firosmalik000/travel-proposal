@@ -675,7 +675,13 @@ class BookingRegisterController extends Controller
     public function update(ManagePackageRegistrationRequest $request, Booking $registration): RedirectResponse
     {
         $previousPackage = $registration->package;
+        if ($previousPackage?->operational_status === 'financially_closed') {
+            return back()->withErrors(['booking' => 'Booking trip yang sudah ditutup finansial tidak dapat diubah.']);
+        }
         $travelPackage = TravelPackage::query()->findOrFail($request->integer('travel_package_id'));
+        if ($travelPackage->operational_status === 'financially_closed') {
+            return back()->withErrors(['booking' => 'Booking tidak dapat dipindahkan ke trip yang sudah ditutup finansial.']);
+        }
         $previousStockState = [
             'package_id' => (int) $registration->package_id,
             'passenger_count' => (int) $registration->passenger_count,
@@ -771,6 +777,9 @@ class BookingRegisterController extends Controller
 
     public function destroy(Booking $registration): RedirectResponse
     {
+        if ($registration->package?->operational_status === 'financially_closed') {
+            return back()->withErrors(['booking' => 'Booking trip yang sudah ditutup finansial tidak dapat dibatalkan.']);
+        }
         if ($registration->agentCommission?->status === 'paid') {
             return back()->withErrors([
                 'booking' => 'Booking dengan komisi yang sudah dibayar tidak dapat dibatalkan. Selesaikan koreksi payout terlebih dahulu.',

@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,8 +34,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
-import { Head, router, useForm } from '@inertiajs/react';
+import { formatDate } from '@/lib/date-format';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
+    BookOpenCheck,
     Download,
     MoreHorizontal,
     Plus,
@@ -61,6 +64,11 @@ type Cashflow = {
     amount: number;
     category: string;
     description: string | null;
+    source: {
+        type: 'booking_payment';
+        label: string;
+        booking_id: number;
+    } | null;
     attachments: Attachment[];
 };
 
@@ -129,9 +137,10 @@ export default function CashflowIndex({
     categories,
 }: Props) {
     const { can } = usePermission('cashflow');
-    const canCreate = can('create');
-    const canEdit = can('edit');
-    const canDelete = can('delete');
+    const { can: canUseLedger } = usePermission('financial_ledger');
+    const canCreate = false;
+    const canEdit = false;
+    const canDelete = false;
     const canExport = can('export');
 
     const [editingItem, setEditingItem] = useState<Cashflow | 'new' | null>(
@@ -304,16 +313,37 @@ export default function CashflowIndex({
                 <div className="flex flex-col gap-4 rounded-2xl border border-border/60 bg-card p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-                            Cashflow
+                            Riwayat Cashflow
                         </h1>
+                        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                            Arsip kompatibilitas transaksi lama dan pembayaran
+                            booking. Pencatatan keuangan baru menggunakan
+                            ledger.
+                        </p>
                     </div>
-                    {canCreate ? (
+                    {canUseLedger('create') ? (
+                        <Button asChild>
+                            <Link href="/admin/financial-management/ledger">
+                                <BookOpenCheck className="mr-2 h-4 w-4" />
+                                Buka Akun &amp; Ledger
+                            </Link>
+                        </Button>
+                    ) : canCreate ? (
                         <Button onClick={openCreateSheet}>
                             <Plus className="mr-2 h-4 w-4" />
                             Tambah Cashflow
                         </Button>
                     ) : null}
                 </div>
+
+                <Alert>
+                    <BookOpenCheck className="h-4 w-4" />
+                    <AlertDescription>
+                        Histori pada halaman ini bersifat tetap. Koreksi
+                        dilakukan melalui reversal di modul sumber atau Akun
+                        &amp; Ledger agar jejak audit tidak terputus.
+                    </AlertDescription>
+                </Alert>
 
                 <div className="grid gap-3 md:grid-cols-3">
                     <Card className="border-border/60 shadow-sm">
@@ -457,7 +487,8 @@ export default function CashflowIndex({
                                                 {index + 1}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {canEdit || canDelete ? (
+                                                {(canEdit || canDelete) &&
+                                                item.source === null ? (
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger
                                                             asChild
@@ -513,11 +544,17 @@ export default function CashflowIndex({
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
                                                 ) : (
-                                                    '-'
+                                                    <Badge variant="outline">
+                                                        {item.source
+                                                            ? 'Otomatis'
+                                                            : 'Legacy terkunci'}
+                                                    </Badge>
                                                 )}
                                             </TableCell>
                                             <TableCell>
-                                                {item.transaction_date}
+                                                {formatDate(
+                                                    item.transaction_date,
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <Badge
@@ -536,7 +573,14 @@ export default function CashflowIndex({
                                                 {toCurrency(item.amount)}
                                             </TableCell>
                                             <TableCell>
-                                                {item.category}
+                                                <div className="flex flex-col gap-1">
+                                                    <span>{item.category}</span>
+                                                    {item.source ? (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {item.source.label}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
                                             </TableCell>
                                             <TableCell className="max-w-xs text-muted-foreground">
                                                 {item.description || '-'}

@@ -53,23 +53,27 @@ export function PageIntro({
     description,
     action,
 }: {
-    eyebrow: string;
+    eyebrow?: string;
     title: string;
-    description: string;
+    description?: string;
     action?: ReactNode;
 }) {
     return (
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <p className="text-xs font-bold tracking-[0.18em] text-[#0d5c52] uppercase dark:text-emerald-300">
-                    {eyebrow}
-                </p>
-                <h1 className="mt-2 font-serif text-2xl font-bold text-slate-950 min-[375px]:text-3xl dark:text-white">
+                {eyebrow && (
+                    <p className="text-xs font-bold tracking-[0.16em] text-[#0d5c52] uppercase dark:text-emerald-400">
+                        {eyebrow}
+                    </p>
+                )}
+                <h1 className="mt-1 font-serif text-2xl font-bold text-slate-950 min-[375px]:text-3xl dark:text-white">
                     {title}
                 </h1>
-                <p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-                    {description}
-                </p>
+                {description && (
+                    <p className="mt-1.5 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
+                        {description}
+                    </p>
+                )}
             </div>
             {action}
         </div>
@@ -129,10 +133,10 @@ export function ReferralShare({
                     </DialogTrigger>
                     <DialogContent className="max-w-sm">
                         <DialogHeader>
-                            <DialogTitle>QR referral</DialogTitle>
+                            <DialogTitle>QR Referral</DialogTitle>
                             <DialogDescription>
-                                Scan untuk membuka link referral yang sama. QR
-                                ini aman dibagikan ke materi promosi.
+                                Scan atau unduh QR code untuk dibagikan ke calon
+                                jamaah.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="mx-auto rounded-2xl border border-slate-200 bg-white p-3">

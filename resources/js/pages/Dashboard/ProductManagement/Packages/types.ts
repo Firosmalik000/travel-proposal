@@ -306,6 +306,8 @@ export type ProductOption = {
     code: string;
     name: { id: string; en: string } | string;
     product_type: string;
+    pricing_mode?: 'per_jamaah' | 'flat' | null;
+    unit?: string | null;
     price?: number | null;
     currency?: string | null;
     hotel_info?: {

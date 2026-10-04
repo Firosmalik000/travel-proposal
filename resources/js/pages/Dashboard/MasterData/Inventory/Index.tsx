@@ -32,8 +32,17 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/use-permission';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
+import { formatIdr } from '@/lib/number-format';
 import { Head, router, useForm } from '@inertiajs/react';
-import { MoreHorizontal, Plus, Search, SquarePen, Trash2 } from 'lucide-react';
+import {
+    HandCoins,
+    MoreHorizontal,
+    PackageCheck,
+    Plus,
+    Search,
+    SquarePen,
+    Trash2,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -45,6 +54,15 @@ type InventoryItem = {
     product_type: string;
     unit: string;
     quantity: number;
+    reserved_quantity: number;
+    available_quantity: number;
+    average_unit_cost_idr: number;
+    reservations: Array<{
+        booking_id: number;
+        booking_code: string;
+        package_name: string;
+        quantity: number;
+    }>;
     notes: string | null;
     is_active: boolean;
 };
@@ -62,6 +80,7 @@ type Props = {
     stats: { total: number; active: number; inactive: number };
     productOptions: ProductOption[];
     productTypeOptions: Array<{ value: string; label: string }>;
+    cashAccountOptions: Array<{ id: number; label: string }>;
 };
 
 type InventoryFormData = {
@@ -82,12 +101,30 @@ function buildFormData(item: InventoryItem | null): InventoryFormData {
     };
 }
 
+function today(): string {
+    const date = new Date();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function idempotencyKey(prefix: string): string {
+    const uniquePart =
+        typeof globalThis.crypto?.randomUUID === 'function'
+            ? globalThis.crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    return `${prefix}:${uniquePart}`;
+}
+
 export default function InventoryIndex({
     inventoryItems,
     filters,
-    stats,
+    stats: _stats,
     productOptions,
     productTypeOptions,
+    cashAccountOptions,
 }: Props) {
     const { can } = usePermission('inventory');
     const canCreate = can('create');
@@ -103,7 +140,28 @@ export default function InventoryIndex({
         InventoryItem | 'new' | null
     >(null);
     const [productSearch, setProductSearch] = useState('');
+    const [purchaseItem, setPurchaseItem] = useState<InventoryItem | null>(
+        null,
+    );
+    const [issueItem, setIssueItem] = useState<InventoryItem | null>(null);
     const form = useForm<InventoryFormData>(buildFormData(null));
+    const purchaseForm = useForm({
+        quantity: 1,
+        unit_cost_idr: 0,
+        financial_account_id: cashAccountOptions[0]?.id
+            ? String(cashAccountOptions[0].id)
+            : '',
+        transaction_date: today(),
+        notes: '',
+        idempotency_key: idempotencyKey('inventory-purchase'),
+    });
+    const issueForm = useForm({
+        booking_id: '',
+        quantity: 1,
+        transaction_date: today(),
+        notes: '',
+        idempotency_key: idempotencyKey('inventory-issue'),
+    });
     const filteredProductOptions = useMemo(() => {
         const query = productSearch.trim().toLowerCase();
         if (query === '') {
@@ -142,6 +200,45 @@ export default function InventoryIndex({
                 },
             );
         }
+    }
+
+    function submitPurchase(event: React.FormEvent): void {
+        event.preventDefault();
+        if (!purchaseItem) return;
+
+        purchaseForm.post(
+            `/admin/master-data/inventory/${purchaseItem.id}/purchases`,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    toast.success('Penerimaan pembelian berhasil dicatat.');
+                    setPurchaseItem(null);
+                    purchaseForm.reset();
+                    purchaseForm.setData(
+                        'idempotency_key',
+                        idempotencyKey('inventory-purchase'),
+                    );
+                },
+            },
+        );
+    }
+
+    function submitIssue(event: React.FormEvent): void {
+        event.preventDefault();
+        if (!issueItem) return;
+
+        issueForm.post(`/admin/master-data/inventory/${issueItem.id}/issues`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success('Serah-terima dan HPP aktual berhasil dicatat.');
+                setIssueItem(null);
+                issueForm.reset();
+                issueForm.setData(
+                    'idempotency_key',
+                    idempotencyKey('inventory-issue'),
+                );
+            },
+        });
     }
 
     return (
@@ -274,7 +371,7 @@ export default function InventoryIndex({
 
                 <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
                     <div className="overflow-x-auto">
-                        <Table className="min-w-[980px]">
+                        <Table className="min-w-[1180px]">
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="w-14 text-center">
@@ -285,7 +382,18 @@ export default function InventoryIndex({
                                     </TableHead>
                                     <TableHead>Product</TableHead>
                                     <TableHead>Tipe</TableHead>
-                                    <TableHead>Qty</TableHead>
+                                    <TableHead className="text-right">
+                                        Fisik
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        Direservasi
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        Tersedia
+                                    </TableHead>
+                                    <TableHead className="text-right">
+                                        Biaya rata-rata
+                                    </TableHead>
                                     <TableHead>Status</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -295,7 +403,7 @@ export default function InventoryIndex({
                                         <TableRow
                                             key={item.id}
                                             className={
-                                                item.quantity === 0
+                                                item.available_quantity === 0
                                                     ? 'bg-red-50/80 hover:bg-red-50'
                                                     : undefined
                                             }
@@ -304,7 +412,9 @@ export default function InventoryIndex({
                                                 {index + 1}
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                {canEdit || canDelete ? (
+                                                {canCreate ||
+                                                canEdit ||
+                                                canDelete ? (
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger
                                                             asChild
@@ -318,6 +428,77 @@ export default function InventoryIndex({
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
+                                                            {canCreate ? (
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        purchaseForm.clearErrors();
+                                                                        purchaseForm.setData(
+                                                                            {
+                                                                                quantity: 1,
+                                                                                unit_cost_idr: 0,
+                                                                                financial_account_id:
+                                                                                    cashAccountOptions[0]
+                                                                                        ?.id
+                                                                                        ? String(
+                                                                                              cashAccountOptions[0]
+                                                                                                  .id,
+                                                                                          )
+                                                                                        : '',
+                                                                                transaction_date:
+                                                                                    today(),
+                                                                                notes: `Pembelian ${item.product_name}`,
+                                                                                idempotency_key:
+                                                                                    idempotencyKey(
+                                                                                        'inventory-purchase',
+                                                                                    ),
+                                                                            },
+                                                                        );
+                                                                        setPurchaseItem(
+                                                                            item,
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <HandCoins className="h-4 w-4" />
+                                                                    Terima
+                                                                    pembelian
+                                                                </DropdownMenuItem>
+                                                            ) : null}
+                                                            {canEdit &&
+                                                            item.reservations
+                                                                .length > 0 ? (
+                                                                <DropdownMenuItem
+                                                                    onClick={() => {
+                                                                        const reservation =
+                                                                            item
+                                                                                .reservations[0];
+                                                                        issueForm.clearErrors();
+                                                                        issueForm.setData(
+                                                                            {
+                                                                                booking_id:
+                                                                                    String(
+                                                                                        reservation.booking_id,
+                                                                                    ),
+                                                                                quantity:
+                                                                                    reservation.quantity,
+                                                                                transaction_date:
+                                                                                    today(),
+                                                                                notes: `Serah-terima ${item.product_name} untuk ${reservation.booking_code}`,
+                                                                                idempotency_key:
+                                                                                    idempotencyKey(
+                                                                                        'inventory-issue',
+                                                                                    ),
+                                                                            },
+                                                                        );
+                                                                        setIssueItem(
+                                                                            item,
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    <PackageCheck className="h-4 w-4" />
+                                                                    Catat
+                                                                    serah-terima
+                                                                </DropdownMenuItem>
+                                                            ) : null}
                                                             {canEdit ? (
                                                                 <DropdownMenuItem
                                                                     onClick={() => {
@@ -385,10 +566,21 @@ export default function InventoryIndex({
                                             <TableCell className="text-sm text-muted-foreground">
                                                 {item.product_type || '-'}
                                             </TableCell>
-                                            <TableCell
-                                                className={`text-sm ${item.quantity === 0 ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}
-                                            >
+                                            <TableCell className="text-right text-sm text-muted-foreground">
                                                 {item.quantity}
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm text-amber-700">
+                                                {item.reserved_quantity}
+                                            </TableCell>
+                                            <TableCell
+                                                className={`text-right text-sm ${item.available_quantity === 0 ? 'font-semibold text-destructive' : 'font-medium'}`}
+                                            >
+                                                {item.available_quantity}
+                                            </TableCell>
+                                            <TableCell className="text-right text-sm text-muted-foreground">
+                                                {formatIdr(
+                                                    item.average_unit_cost_idr,
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <span
@@ -404,7 +596,7 @@ export default function InventoryIndex({
                                 ) : (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={6}
+                                            colSpan={9}
                                             className="py-12 text-center text-muted-foreground"
                                         >
                                             {filters.search
@@ -592,6 +784,296 @@ export default function InventoryIndex({
                             </Button>
                             <Button type="submit" disabled={form.processing}>
                                 {form.processing ? 'Menyimpan...' : 'Simpan'}
+                            </Button>
+                        </div>
+                    </form>
+                </SheetContent>
+            </Sheet>
+
+            <Sheet
+                open={purchaseItem !== null}
+                onOpenChange={(open) => !open && setPurchaseItem(null)}
+            >
+                <SheetContent
+                    side="right"
+                    className="w-full overflow-y-auto sm:max-w-xl"
+                >
+                    <SheetHeader>
+                        <SheetTitle>
+                            Terima pembelian · {purchaseItem?.product_name}
+                        </SheetTitle>
+                    </SheetHeader>
+                    <form onSubmit={submitPurchase} className="mt-6 space-y-5">
+                        <div className="grid gap-4 rounded-2xl border border-border p-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label className="mb-1.5 block">
+                                        Jumlah
+                                    </Label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={purchaseForm.data.quantity}
+                                        onChange={(event) =>
+                                            purchaseForm.setData(
+                                                'quantity',
+                                                Number(event.target.value),
+                                            )
+                                        }
+                                    />
+                                    {purchaseForm.errors.quantity ? (
+                                        <p className="mt-1 text-xs text-destructive">
+                                            {purchaseForm.errors.quantity}
+                                        </p>
+                                    ) : null}
+                                </div>
+                                <div>
+                                    <Label className="mb-1.5 block">
+                                        Biaya per unit
+                                    </Label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={purchaseForm.data.unit_cost_idr}
+                                        onChange={(event) =>
+                                            purchaseForm.setData(
+                                                'unit_cost_idr',
+                                                Number(event.target.value),
+                                            )
+                                        }
+                                    />
+                                    {purchaseForm.errors.unit_cost_idr ? (
+                                        <p className="mt-1 text-xs text-destructive">
+                                            {purchaseForm.errors.unit_cost_idr}
+                                        </p>
+                                    ) : null}
+                                </div>
+                            </div>
+                            <div>
+                                <Label className="mb-1.5 block">
+                                    Bayar dari rekening
+                                </Label>
+                                <Select
+                                    value={
+                                        purchaseForm.data.financial_account_id
+                                    }
+                                    onValueChange={(value) =>
+                                        purchaseForm.setData(
+                                            'financial_account_id',
+                                            value,
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Pilih rekening" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {cashAccountOptions.map((account) => (
+                                            <SelectItem
+                                                key={account.id}
+                                                value={String(account.id)}
+                                            >
+                                                {account.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {purchaseForm.errors.financial_account_id ? (
+                                    <p className="mt-1 text-xs text-destructive">
+                                        {
+                                            purchaseForm.errors
+                                                .financial_account_id
+                                        }
+                                    </p>
+                                ) : null}
+                            </div>
+                            <div>
+                                <Label className="mb-1.5 block">Tanggal</Label>
+                                <Input
+                                    type="date"
+                                    value={purchaseForm.data.transaction_date}
+                                    onChange={(event) =>
+                                        purchaseForm.setData(
+                                            'transaction_date',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <Label className="mb-1.5 block">
+                                    Keterangan
+                                </Label>
+                                <Textarea
+                                    rows={3}
+                                    value={purchaseForm.data.notes}
+                                    onChange={(event) =>
+                                        purchaseForm.setData(
+                                            'notes',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                                {purchaseForm.errors.notes ? (
+                                    <p className="mt-1 text-xs text-destructive">
+                                        {purchaseForm.errors.notes}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setPurchaseItem(null)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={purchaseForm.processing}
+                            >
+                                {purchaseForm.processing
+                                    ? 'Memproses...'
+                                    : 'Posting penerimaan'}
+                            </Button>
+                        </div>
+                    </form>
+                </SheetContent>
+            </Sheet>
+
+            <Sheet
+                open={issueItem !== null}
+                onOpenChange={(open) => !open && setIssueItem(null)}
+            >
+                <SheetContent
+                    side="right"
+                    className="w-full overflow-y-auto sm:max-w-xl"
+                >
+                    <SheetHeader>
+                        <SheetTitle>
+                            Serah-terima · {issueItem?.product_name}
+                        </SheetTitle>
+                    </SheetHeader>
+                    <form onSubmit={submitIssue} className="mt-6 space-y-5">
+                        <div className="grid gap-4 rounded-2xl border border-border p-5">
+                            <div>
+                                <Label className="mb-1.5 block">Booking</Label>
+                                <Select
+                                    value={issueForm.data.booking_id}
+                                    onValueChange={(value) => {
+                                        const reservation =
+                                            issueItem?.reservations.find(
+                                                (item) =>
+                                                    String(item.booking_id) ===
+                                                    value,
+                                            );
+                                        issueForm.setData((data) => ({
+                                            ...data,
+                                            booking_id: value,
+                                            quantity:
+                                                reservation?.quantity ?? 1,
+                                        }));
+                                    }}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Pilih booking" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {issueItem?.reservations.map(
+                                            (reservation) => (
+                                                <SelectItem
+                                                    key={reservation.booking_id}
+                                                    value={String(
+                                                        reservation.booking_id,
+                                                    )}
+                                                >
+                                                    {reservation.booking_code} ·{' '}
+                                                    {reservation.package_name} ·{' '}
+                                                    {reservation.quantity} unit
+                                                </SelectItem>
+                                            ),
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div>
+                                <Label className="mb-1.5 block">
+                                    Jumlah diserahkan
+                                </Label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={
+                                        issueItem?.reservations.find(
+                                            (item) =>
+                                                String(item.booking_id) ===
+                                                issueForm.data.booking_id,
+                                        )?.quantity
+                                    }
+                                    value={issueForm.data.quantity}
+                                    onChange={(event) =>
+                                        issueForm.setData(
+                                            'quantity',
+                                            Number(event.target.value),
+                                        )
+                                    }
+                                />
+                                {issueForm.errors.quantity ? (
+                                    <p className="mt-1 text-xs text-destructive">
+                                        {issueForm.errors.quantity}
+                                    </p>
+                                ) : null}
+                            </div>
+                            <div>
+                                <Label className="mb-1.5 block">Tanggal</Label>
+                                <Input
+                                    type="date"
+                                    value={issueForm.data.transaction_date}
+                                    onChange={(event) =>
+                                        issueForm.setData(
+                                            'transaction_date',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                            </div>
+                            <div>
+                                <Label className="mb-1.5 block">
+                                    Keterangan
+                                </Label>
+                                <Textarea
+                                    rows={3}
+                                    value={issueForm.data.notes}
+                                    onChange={(event) =>
+                                        issueForm.setData(
+                                            'notes',
+                                            event.target.value,
+                                        )
+                                    }
+                                />
+                                {issueForm.errors.notes ? (
+                                    <p className="mt-1 text-xs text-destructive">
+                                        {issueForm.errors.notes}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIssueItem(null)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                type="submit"
+                                disabled={issueForm.processing}
+                            >
+                                {issueForm.processing
+                                    ? 'Memproses...'
+                                    : 'Posting serah-terima'}
                             </Button>
                         </div>
                     </form>

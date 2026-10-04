@@ -35,9 +35,8 @@ export default function Packages({
         <AgentLayout title="Fee Package">
             <Head title="Fee Package" />
             <PageIntro
-                eyebrow="Campaign Catalog"
-                title="Package untuk Dipromosikan"
-                description={`Pilih package aktif, lihat potensi fee, lalu bagikan link yang sudah terhubung ke kode ${agent.referral_code}.`}
+                title="Katalog Paket"
+                description={`Bagikan link atau QR code paket yang terhubung ke kode referral ${agent.referral_code}.`}
             />
             <section className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
                 {fees.length === 0 ? (

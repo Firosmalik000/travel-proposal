@@ -71,7 +71,6 @@ trait SoftDeletesWithActive
      * This is useful when you want to explicitly query active records
      * even when the global scope is removed.
      *
-     * @param Builder $query
      * @return Builder
      */
     public function scopeActive(Builder $query)
@@ -82,7 +81,6 @@ trait SoftDeletesWithActive
     /**
      * Scope to include inactive records.
      *
-     * @param Builder $query
      * @return Builder
      */
     public function scopeWithInactive(Builder $query)
@@ -93,7 +91,6 @@ trait SoftDeletesWithActive
     /**
      * Scope to only get inactive records.
      *
-     * @param Builder $query
      * @return Builder
      */
     public function scopeOnlyInactive(Builder $query)
@@ -103,8 +100,6 @@ trait SoftDeletesWithActive
 
     /**
      * Determine if the model instance is active.
-     *
-     * @return bool
      */
     public function isActive(): bool
     {
@@ -113,8 +108,6 @@ trait SoftDeletesWithActive
 
     /**
      * Determine if the model instance is inactive (soft deleted).
-     *
-     * @return bool
      */
     public function isInactive(): bool
     {

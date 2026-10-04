@@ -37,7 +37,6 @@ export default function BookingShow({ booking }: { booking: BookingDetail }) {
         <AgentLayout title={`Detail ${booking.booking_code}`}>
             <Head title={`Booking ${booking.booking_code}`} />
             <PageIntro
-                eyebrow="Booking Detail"
                 title={booking.customer_name}
                 description={`${booking.package_name} · ${booking.passenger_count} jamaah`}
                 action={

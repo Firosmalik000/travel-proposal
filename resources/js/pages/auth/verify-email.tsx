@@ -10,10 +10,10 @@ import { Form, Head } from '@inertiajs/react';
 export default function VerifyEmail({ status }: { status?: string }) {
     return (
         <AuthLayout
-            title="Verify email"
-            description="Please verify your email address by clicking on the link we just emailed to you."
+            title="Verifikasi email"
+            description="Klik tautan yang dikirim ke emailmu untuk melanjutkan."
         >
-            <Head title="Email verification" />
+            <Head title="Verifikasi email" />
 
             {status === 'verification-link-sent' && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">

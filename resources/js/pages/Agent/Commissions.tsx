@@ -45,12 +45,26 @@ export default function Commissions({
             : money(0);
     const cards = [
         {
-            label: 'Menunggu verifikasi',
+            label: 'Menunggu Verifikasi',
             value: total('pending'),
             icon: Hourglass,
+            color: 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300',
+            border: 'border-amber-200/80 dark:border-amber-900/50',
         },
-        { label: 'Siap dicairkan', value: total('approved'), icon: BadgeCheck },
-        { label: 'Sudah dibayar', value: total('paid'), icon: HandCoins },
+        {
+            label: 'Siap Dicairkan',
+            value: total('approved'),
+            icon: BadgeCheck,
+            color: 'bg-sky-100 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300',
+            border: 'border-sky-200/80 dark:border-sky-900/50',
+        },
+        {
+            label: 'Sudah Dibayar',
+            value: total('paid'),
+            icon: HandCoins,
+            color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300',
+            border: 'border-emerald-200/80 dark:border-emerald-900/50',
+        },
     ];
     const exportQuery = new URLSearchParams(
         Object.entries(filters).filter((entry): entry is [string, string] =>
@@ -61,34 +75,34 @@ export default function Commissions({
         <AgentLayout title="Komisi Saya">
             <Head title="Komisi Saya" />
             <PageIntro
-                eyebrow="Income Statement"
                 title="Komisi Saya"
-                description="Rekonsiliasi dasar perhitungan, status persetujuan, dan histori pembayaran komisi."
                 action={
                     <Button variant="outline" asChild>
                         <a
                             href={`/agent/commissions/export${exportQuery ? `?${exportQuery}` : ''}`}
                         >
-                            <Download /> Ekspor CSV
+                            <Download className="size-4" /> Ekspor CSV
                         </a>
                     </Button>
                 }
             />
             <section className="mt-5 grid gap-3 sm:grid-cols-3">
-                {cards.map(({ label, value, icon: Icon }) => (
+                {cards.map(({ label, value, icon: Icon, color, border }) => (
                     <Card
                         key={label}
-                        className="border-[#dfd3bf] bg-[#fffaf1] dark:border-slate-700 dark:bg-slate-800"
+                        className={`border ${border} bg-card shadow-xs`}
                     >
-                        <CardContent className="flex items-center gap-3 p-4">
-                            <span className="rounded-xl bg-amber-100 p-2 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                        <CardContent className="flex items-center gap-3.5 p-4">
+                            <span className={`rounded-xl p-2.5 ${color}`}>
                                 <Icon className="size-5" />
                             </span>
                             <span>
-                                <span className="block text-xs text-slate-500">
+                                <span className="block text-xs font-medium text-muted-foreground">
                                     {label}
                                 </span>
-                                <span className="font-bold">{value}</span>
+                                <span className="mt-0.5 block text-lg font-bold text-foreground">
+                                    {value}
+                                </span>
                             </span>
                         </CardContent>
                     </Card>

@@ -1,9 +1,6 @@
 @php
     $companyName = (string) ($branding['company_name'] ?? config('app.name'));
     $companySubtitle = (string) ($branding['company_subtitle'] ?? '');
-    $logoInlineSvg = $branding['logo_inline_svg'] ?? null;
-    $logoSourceUrl = $branding['logo_source_url'] ?? null;
-    $logo = $branding['logo_data_uri'] ?? null;
     $phone = (string) data_get($seo, 'contact.phone', '');
     $whatsapp = (string) data_get($seo, 'contact.whatsapp', '');
     $email = (string) data_get($seo, 'contact.email', '');
@@ -14,20 +11,19 @@
         $whatsapp ? 'WA: '.$whatsapp : null,
         $email ? $email : null,
     ]));
+    $companyInitials = collect(preg_split('/\s+/', trim($companyName)) ?: [])
+        ->filter()
+        ->take(2)
+        ->map(fn (string $word): string => mb_strtoupper(mb_substr($word, 0, 1)))
+        ->implode('');
 @endphp
 
 <table width="100%" style="border-collapse: collapse;">
     <tr>
         <td style="width: 76px; vertical-align: top;">
-            @if ($logoInlineSvg)
-                <div style="width: 64px; height: 64px;">{!! $logoInlineSvg !!}</div>
-            @elseif ($logo)
-                <img src="{{ $logo }}" style="width: 64px; height: 64px;" alt="Logo" />
-            @elseif ($logoSourceUrl)
-                <img src="{{ $logoSourceUrl }}" style="width: 64px; height: 64px;" alt="Logo" />
-            @else
-                <div style="width: 64px; height: 64px; border-radius: 14px; background: #111827;"></div>
-            @endif
+            <div style="width: 64px; height: 64px; border-radius: 14px; background: #8e101b; color: #ffffff; font-size: 22px; font-weight: 800; line-height: 64px; text-align: center;">
+                {{ $companyInitials ?: 'PR' }}
+            </div>
         </td>
         <td style="vertical-align: top;">
             <div style="font-size: 16px; font-weight: 800; color: #0f172a; line-height: 1.15;">
@@ -54,7 +50,7 @@
                 {{ $locale === 'id' ? 'Tanggal' : 'Date' }}
             </div>
             <div style="margin-top: 3px; font-size: 11px; font-weight: 700; color: #0f172a; line-height: 1.25;">
-                {{ $generatedAt->format('d M Y') }}
+                {{ $generatedAt->locale('id')->translatedFormat('d F Y') }}
             </div>
         </td>
     </tr>

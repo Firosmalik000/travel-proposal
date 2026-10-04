@@ -4,6 +4,8 @@ use App\Models\AgentCommission;
 use App\Models\AgentPackageFee;
 use App\Models\AgentProfile;
 use App\Models\Booking;
+use App\Models\FinancialAccount;
+use App\Models\FinancialTransaction;
 use App\Models\Menu;
 use App\Models\TravelPackage;
 use App\Models\User;
@@ -154,11 +156,27 @@ class AgentManagementTest extends TestCase
         $this->actingAs($admin)->put(route('agent-commissions.update', $commission), ['status' => 'approved'])
             ->assertSessionHasNoErrors();
         $this->actingAs($admin)->put(route('agent-commissions.update', $commission->fresh()), ['status' => 'paid'])
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('financial_account_id');
+        $this->actingAs($admin)->put(route('agent-commissions.update', $commission->fresh()), [
+            'status' => 'paid',
+            'financial_account_id' => FinancialAccount::query()->where('system_key', 'operating_bank')->value('id'),
+            'payment_date' => '2026-09-19',
+            'exchange_rate' => '1',
+            'amount_idr' => 500000,
+        ])->assertSessionHasNoErrors();
         $this->actingAs($admin)->put(route('agent-commissions.update', $commission->fresh()), ['status' => 'pending'])
             ->assertSessionHasErrors('commission');
 
         $this->assertSame('paid', $commission->fresh()->status);
+        $this->assertSame(1, FinancialTransaction::query()->where('transaction_type', 'agent_commission')->count());
+
+        $paidTransaction = FinancialTransaction::query()->where('transaction_type', 'agent_commission')->sole();
+        $this->actingAs($admin)->post(route('agent-commissions.reverse-payment', $commission), [
+            'reason' => 'Salah rekening pembayaran',
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('approved', $commission->fresh()->status);
+        $this->assertSame('reversed', $paidTransaction->fresh()->status);
+        $this->assertDatabaseHas('financial_transactions', ['reversal_of_id' => $paidTransaction->id]);
     }
 
     public function test_agent_commission_factory_creates_consistent_relations(): void

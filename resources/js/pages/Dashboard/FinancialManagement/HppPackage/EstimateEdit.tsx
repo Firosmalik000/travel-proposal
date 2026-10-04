@@ -59,7 +59,7 @@ export default function EstimateEdit({
     vendors,
     productPriceSnapshots,
 }: Props) {
-    const indexHref = '/admin/financial-management/hpp-package';
+    const indexHref = '/admin/product-management/hpp-estimate';
     const currentHref = `${indexHref}/${packageData.id}/estimate/edit`;
     const title = `Edit Estimasi HPP ${resolvePackageName(packageData)}`;
     const [refreshingProductId, setRefreshingProductId] = useState<
@@ -87,7 +87,7 @@ export default function EstimateEdit({
     return (
         <AppSidebarLayout
             breadcrumbs={[
-                { label: 'HPP Package', href: indexHref },
+                { label: 'Kalkulasi Harga & HPP Estimasi', href: indexHref },
                 { label: title, href: currentHref },
             ]}
         >
@@ -103,7 +103,7 @@ export default function EstimateEdit({
                     >
                         <Link
                             href={indexHref}
-                            aria-label="Kembali ke HPP Package"
+                            aria-label="Kembali ke kalkulasi harga"
                         >
                             <ArrowLeft className="h-4 w-4" />
                         </Link>
@@ -111,7 +111,7 @@ export default function EstimateEdit({
                     <div className="min-w-0">
                         <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                             <Calculator className="h-3.5 w-3.5" />
-                            Financial Management / HPP Package
+                            Produk & Paket / HPP Estimasi
                         </p>
                         <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl">
                             {title}

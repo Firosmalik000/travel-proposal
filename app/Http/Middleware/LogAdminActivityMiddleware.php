@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Menu;
 use App\Services\ActivityLogService;
 use Closure;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpFoundation\Response;
@@ -35,6 +36,8 @@ class LogAdminActivityMiddleware
         $menuKey = $menuContext['submenu_key'];
         $eventType = $this->resolveEventType($request);
         $description = $this->buildDescription($request, $eventType, $module);
+        $subject = collect($request->route()?->parameters() ?? [])
+            ->first(fn (mixed $parameter): bool => $parameter instanceof Model);
 
         $this->activityLogService->logFromRequest(
             request: $request,
@@ -43,6 +46,7 @@ class LogAdminActivityMiddleware
             module: $module,
             menuKey: $menuKey,
             properties: $this->buildProperties($request, $response->getStatusCode(), $menuContext),
+            subject: $subject instanceof Model ? $subject : null,
         );
 
         return $response;
@@ -51,6 +55,10 @@ class LogAdminActivityMiddleware
     private function shouldLogRequest(Request $request, int $statusCode): bool
     {
         if ($statusCode >= 400) {
+            return false;
+        }
+
+        if ($request->hasSession() && $request->session()->has('errors')) {
             return false;
         }
 

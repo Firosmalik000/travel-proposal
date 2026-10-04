@@ -96,16 +96,9 @@ export default function AgentsIndex({ agents }: { agents: Agent[] }) {
             <div className="space-y-5 p-2 md:p-4">
                 <div className="flex flex-col justify-between gap-4 rounded-2xl border bg-card p-5 md:flex-row md:items-center">
                     <div>
-                        <p className="text-xs font-bold tracking-[.18em] text-amber-700 uppercase">
-                            Referral Network
-                        </p>
-                        <h1 className="mt-1 text-2xl font-black">
-                            Agent Management
+                        <h1 className="text-2xl font-bold tracking-tight">
+                            Manajemen Agen
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Kelola akun, kode referral, dan rekening pencairan
-                            agent.
-                        </p>
                     </div>
                     <AgentManagementNav active="agents" />
                 </div>
@@ -115,7 +108,7 @@ export default function AgentsIndex({ agents }: { agents: Agent[] }) {
                 >
                     <div className="mb-4 flex items-center justify-between">
                         <h2 className="font-bold">
-                            {editingId ? 'Edit Agent' : 'Tambah Agent'}
+                            {editingId ? 'Edit Data Agen' : 'Tambah Agen Baru'}
                         </h2>
                         {editingId && (
                             <Button

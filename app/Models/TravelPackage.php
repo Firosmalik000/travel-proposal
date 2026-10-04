@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Traits\HasAuditTrail;
 use App\Traits\NormalizesLocalizedStrings;
+use DomainException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -28,6 +29,7 @@ class TravelPackage extends Model
         'seats_total',
         'seats_available',
         'booking_status',
+        'operational_status',
         'departure_notes',
         'duration_days',
         'price',
@@ -168,6 +170,18 @@ class TravelPackage extends Model
     public function registrations(): HasMany
     {
         return $this->hasMany(Booking::class, 'package_id');
+    }
+
+    public function operationalTransitions(): HasMany
+    {
+        return $this->hasMany(TripOperationalTransition::class, 'package_id');
+    }
+
+    public function ensureFinanciallyOpen(): void
+    {
+        if ($this->operational_status === 'financially_closed') {
+            throw new DomainException('Trip sudah ditutup secara finansial. Lakukan reversal penutupan terlebih dahulu.');
+        }
     }
 
     public function itineraries(): HasMany

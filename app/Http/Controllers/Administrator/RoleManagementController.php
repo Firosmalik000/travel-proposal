@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Administrator;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\StoreRoleRequest;
 use App\Http\Requests\Administrator\UpdateRolePermissionsRequest;
+use App\Models\Menu;
 use App\Support\MenuPermissionService;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -18,7 +19,7 @@ class RoleManagementController extends Controller
         MenuPermissionService::ensurePermissionsExist();
         Role::query()->firstOrCreate(['name' => 'NoAccess', 'guard_name' => 'web']);
 
-        $menus = collect(\App\Models\Menu::getNavigablePaths())
+        $menus = collect(Menu::getNavigablePaths())
             ->values()
             ->all();
 

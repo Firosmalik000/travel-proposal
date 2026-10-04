@@ -15,12 +15,25 @@ class CheckMenuPermission
      * @param  Closure(Request): (Response)  $next
      * @param  string  $permission  The permission to check (view, create, edit, delete, import, export, approve, reject)
      */
-    public function handle(Request $request, Closure $next, string $permission = 'view'): Response
+    public function handle(Request $request, Closure $next, string $permission = 'view', ?string $explicitMenuKey = null): Response
     {
         $user = $request->user();
 
         if (! $user) {
             return redirect()->route('login');
+        }
+
+        if ($explicitMenuKey !== null && $explicitMenuKey !== '') {
+            $hasPermission = collect(explode('|', $explicitMenuKey))
+                ->flatMap(fn (string $menuKey): array => $this->compatibleMenuKeys($menuKey))
+                ->unique()
+                ->contains(fn (string $menuKey): bool => $user->can($this->permissionName($menuKey, $permission)));
+
+            if (! $hasPermission) {
+                abort(403, 'Anda tidak memiliki akses untuk '.$this->getPermissionLabel($permission).' pada halaman ini.');
+            }
+
+            return $next($request);
         }
 
         // Get current path
@@ -191,6 +204,11 @@ class CheckMenuPermission
             $paths[] = '/admin/financial-management/hpp-package';
         }
 
+        if (str_starts_with($dashboardPath, '/dashboard/financial-management/ledger/')) {
+            $paths[] = '/dashboard/financial-management/ledger';
+            $paths[] = '/admin/financial-management/ledger';
+        }
+
         if ($dashboardPath === '/dashboard/product-management/categories') {
             $paths[] = '/dashboard/product-management/products';
         }
@@ -205,5 +223,18 @@ class CheckMenuPermission
     private function permissionName(string $menuKey, string $permission): string
     {
         return 'menu.'.$menuKey.'.'.$permission;
+    }
+
+    /** @return array<int, string> */
+    private function compatibleMenuKeys(string $menuKey): array
+    {
+        return match ($menuKey) {
+            'finance_overview' => [$menuKey, 'financial_report', 'financial_ledger', 'cashflow'],
+            'finance_transactions' => [$menuKey, 'financial_ledger', 'cashflow'],
+            'finance_receivables' => [$menuKey, 'financial_ledger'],
+            'finance_vendor_hpp', 'finance_accounting', 'finance_master' => [$menuKey, 'financial_ledger'],
+            'finance_controls', 'finance_reports' => [$menuKey, 'financial_report'],
+            default => [$menuKey],
+        };
     }
 }

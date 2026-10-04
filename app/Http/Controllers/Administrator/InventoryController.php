@@ -3,9 +3,14 @@
 namespace App\Http\Controllers\Administrator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Administrator\StoreInventoryIssueRequest;
 use App\Http\Requests\Administrator\StoreInventoryItemRequest;
+use App\Http\Requests\Administrator\StoreInventoryPurchaseRequest;
 use App\Http\Requests\Administrator\UpdateInventoryItemRequest;
+use App\Models\Booking;
+use App\Models\FinancialAccount;
 use App\Models\InventoryItem;
+use App\Models\InventoryStockMutation;
 use App\Models\TravelProduct;
 use App\Services\InventoryStockService;
 use DomainException;
@@ -53,24 +58,48 @@ class InventoryController extends Controller
             })
             ->orderBy('product_id')
             ->paginate(10)
-            ->withQueryString()
-            ->through(fn (InventoryItem $item): array => [
-                'id' => $item->id,
-                'product_id' => $item->product_id,
-                'product_code' => (string) ($item->product?->code ?? ''),
-                'product_name' => (string) ($item->product?->name ?? ''),
-                'product_type' => (string) ($item->product?->product_type ?? ''),
-                'unit' => is_array($item->product?->content)
-                    ? (string) ($item->product->content['unit'] ?? '')
-                    : '',
-                'quantity' => $item->quantity,
-                'notes' => $item->notes,
-                'is_active' => $item->is_active,
-                'created_at' => $item->created_at?->toDateTimeString(),
-                'updated_at' => $item->updated_at?->toDateTimeString(),
-                'created_by_name' => $item->creator?->name,
-                'updated_by_name' => $item->updater?->name,
-            ]);
+            ->withQueryString();
+
+        $reservations = InventoryStockMutation::query()
+            ->select(['inventory_item_id', 'booking_id'])
+            ->selectRaw('SUM(reserved_quantity_change) as reserved_quantity')
+            ->whereIn('inventory_item_id', $inventoryItems->getCollection()->pluck('id'))
+            ->whereNotNull('booking_id')
+            ->with(['booking:id,booking_code,package_id', 'booking.package:id,code,name'])
+            ->groupBy('inventory_item_id', 'booking_id')
+            ->havingRaw('SUM(reserved_quantity_change) > 0')
+            ->get()
+            ->groupBy('inventory_item_id');
+
+        $inventoryItems->through(fn (InventoryItem $item): array => [
+            'id' => $item->id,
+            'product_id' => $item->product_id,
+            'product_code' => (string) ($item->product?->code ?? ''),
+            'product_name' => (string) ($item->product?->name ?? ''),
+            'product_type' => (string) ($item->product?->product_type ?? ''),
+            'unit' => is_array($item->product?->content)
+                ? (string) ($item->product->content['unit'] ?? '')
+                : '',
+            'quantity' => $item->quantity,
+            'reserved_quantity' => $item->reserved_quantity,
+            'available_quantity' => $item->availableQuantity(),
+            'average_unit_cost_idr' => $item->average_unit_cost_idr,
+            'reservations' => $reservations->get($item->id, collect())
+                ->map(fn (InventoryStockMutation $mutation): array => [
+                    'booking_id' => $mutation->booking_id,
+                    'booking_code' => (string) ($mutation->booking?->booking_code ?? '-'),
+                    'package_name' => (string) data_get($mutation->booking?->package?->name, 'id', $mutation->booking?->package?->code ?? '-'),
+                    'quantity' => (int) $mutation->getAttribute('reserved_quantity'),
+                ])
+                ->values()
+                ->all(),
+            'notes' => $item->notes,
+            'is_active' => $item->is_active,
+            'created_at' => $item->created_at?->toDateTimeString(),
+            'updated_at' => $item->updated_at?->toDateTimeString(),
+            'created_by_name' => $item->creator?->name,
+            'updated_by_name' => $item->updater?->name,
+        ]);
 
         return Inertia::render('Dashboard/MasterData/Inventory/Index', [
             'inventoryItems' => $inventoryItems,
@@ -112,6 +141,17 @@ class InventoryController extends Controller
                     'label' => ucfirst($type),
                 ])
                 ->values()
+                ->all(),
+            'cashAccountOptions' => FinancialAccount::query()
+                ->where('is_active', true)
+                ->where('is_cash_account', true)
+                ->whereIn('cash_account_type', ['operational', 'petty_cash'])
+                ->orderBy('code')
+                ->get(['id', 'code', 'name'])
+                ->map(fn (FinancialAccount $account): array => [
+                    'id' => $account->id,
+                    'label' => $account->code.' · '.$account->name,
+                ])
                 ->all(),
         ]);
     }
@@ -175,8 +215,37 @@ class InventoryController extends Controller
 
     public function destroy(InventoryItem $inventoryItem): RedirectResponse
     {
+        if ($inventoryItem->stockMutations()->exists()) {
+            return back()->withErrors([
+                'inventory' => 'Inventory yang sudah memiliki histori mutasi tidak dapat dihapus. Nonaktifkan jika tidak lagi digunakan.',
+            ]);
+        }
+
         $inventoryItem->delete();
 
         return back()->with('success', 'Data inventory berhasil dihapus.');
+    }
+
+    public function receivePurchase(StoreInventoryPurchaseRequest $request, InventoryItem $inventoryItem): RedirectResponse
+    {
+        try {
+            $this->inventoryStockService->receivePurchase($inventoryItem, $request->validated());
+        } catch (DomainException $exception) {
+            return back()->withErrors(['notes' => $exception->getMessage()]);
+        }
+
+        return back()->with('success', 'Penerimaan pembelian berhasil dicatat dan dijurnal.');
+    }
+
+    public function issue(StoreInventoryIssueRequest $request, InventoryItem $inventoryItem): RedirectResponse
+    {
+        try {
+            $booking = Booking::query()->findOrFail($request->integer('booking_id'));
+            $this->inventoryStockService->issueToBooking($inventoryItem, $booking, $request->validated());
+        } catch (DomainException $exception) {
+            return back()->withErrors(['notes' => $exception->getMessage()]);
+        }
+
+        return back()->with('success', 'Serah-terima inventory berhasil dicatat dan HPP aktual telah dijurnal.');
     }
 }

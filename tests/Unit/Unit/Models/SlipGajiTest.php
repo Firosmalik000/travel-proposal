@@ -5,6 +5,7 @@ namespace Tests\Unit\Models;
 use App\Models\DepartureSchedule;
 use App\Models\TravelPackage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class SlipGajiTest extends TestCase
@@ -50,7 +51,7 @@ class SlipGajiTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $schedule->departure_date);
-        $this->assertInstanceOf(\Illuminate\Support\Carbon::class, $schedule->return_date);
+        $this->assertInstanceOf(Carbon::class, $schedule->departure_date);
+        $this->assertInstanceOf(Carbon::class, $schedule->return_date);
     }
 }

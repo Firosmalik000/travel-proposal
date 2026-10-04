@@ -23,11 +23,7 @@ export default function Bookings({
     return (
         <AgentLayout title="Booking Referral">
             <Head title="Booking Referral" />
-            <PageIntro
-                eyebrow="Customer Conversion"
-                title="Booking Referral"
-                description="Pantau status booking, nilai transaksi, dan komisi untuk setiap customer referral."
-            />
+            <PageIntro title="Daftar Booking" />
             <div className="mt-5">
                 <RecordFilters
                     route="/agent/bookings"

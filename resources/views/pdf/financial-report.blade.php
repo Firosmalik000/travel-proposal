@@ -1,6 +1,6 @@
 @extends('pdf.layout')
 
-@section('title', 'Financial Report')
+@section('title', 'Laporan Keuangan')
 
 @push('styles')
     <style>
@@ -27,21 +27,6 @@
             color: #334155;
             line-height: 1.35;
             letter-spacing: 0.3px;
-        }
-        .document-meta {
-            display: inline-block;
-            min-width: 150px;
-            padding: 7px 10px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-        }
-        .document-meta-value {
-            font-size: 9px;
-            font-weight: 700;
-            color: #111827;
-            line-height: 1.3;
-            white-space: nowrap;
         }
         .meta td {
             border: 0;
@@ -100,6 +85,16 @@
             background: #ede9fe;
             color: #5b21b6;
         }
+        .section-title { margin: 0 0 8px; font-size: 12px; color: #0f172a; }
+        .section-subtitle { margin: -4px 0 8px; font-size: 8px; color: #64748b; }
+        .page-break-before { page-break-before: always; }
+        .avoid-break { page-break-inside: avoid; }
+        thead { display: table-header-group; }
+        tr { page-break-inside: avoid; }
+        .summary-grid td { border: 0; padding: 4px 7px; }
+        .summary-label { color: #64748b; font-size: 8px; }
+        .summary-value { margin-top: 2px; color: #0f172a; font-size: 11px; font-weight: 700; }
+        .status-note { margin-top: 8px; padding: 6px 8px; border-left: 3px solid #8e101b; background: #fff7ed; color: #7c2d12; font-size: 8px; }
     </style>
 @endpush
 

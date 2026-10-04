@@ -1,10 +1,5 @@
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -22,7 +17,6 @@ import LandingPromoEditor, {
 } from '@/pages/Dashboard/WebsiteManagement/Landing/LandingPromoEditor';
 import { Head, useForm } from '@inertiajs/react';
 import {
-    ChevronDown,
     Eye,
     FileText,
     Globe,
@@ -33,6 +27,12 @@ import {
     Trash2,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { LandingEditorField as Field } from './LandingEditorField';
+import { LandingEditorGroup as GroupCard } from './LandingEditorGroup';
+import { LandingEditorRow as Row } from './LandingEditorRow';
+import { LandingEditorSection as Section } from './LandingEditorSection';
+import { LandingIconSelect as IconSelect } from './LandingIconSelect';
+import { LandingImageField as ImageField } from './LandingImageField';
 
 interface LandingPageItem {
     id: number;
@@ -147,177 +147,6 @@ const sectionLabels: Record<string, string> = {
     cta_block: 'Blok Tombol Aksi',
     interest: 'Minat Pelanggan',
 };
-
-const iconOptions = [
-    { value: '', label: 'Tanpa ikon', preview: '○' },
-    { value: 'hotel', label: 'Hotel', preview: '🏨' },
-    { value: 'plane', label: 'Pesawat', preview: '✈️' },
-    { value: 'images', label: 'Dokumentasi', preview: '🖼️' },
-    { value: 'shield-check', label: 'Legal & Amanah', preview: '🛡️' },
-    { value: 'users', label: 'Jamaah / Tim', preview: '👥' },
-    { value: 'heart-handshake', label: 'Pendampingan', preview: '🤝' },
-    { value: 'check-circle-2', label: 'Checklist', preview: '✅' },
-    { value: 'credit-card', label: 'Pembayaran', preview: '💳' },
-    { value: 'landmark', label: 'Kemenag / Legalitas', preview: '🏛️' },
-    { value: 'calendar-days', label: 'Jadwal', preview: '📅' },
-    { value: 'map-pin', label: 'Lokasi', preview: '📍' },
-    { value: 'briefcase', label: 'Layanan', preview: '💼' },
-    { value: 'building-2', label: 'Fasilitas', preview: '🏢' },
-    { value: 'circle-dollar-sign', label: 'Biaya', preview: '💰' },
-    { value: 'clipboard-list', label: 'List Dokumen', preview: '📝' },
-    { value: 'file-check-2', label: 'Verifikasi', preview: '🧾' },
-    { value: 'globe', label: 'Perjalanan', preview: '🌍' },
-    { value: 'headset', label: 'Support', preview: '🎧' },
-    { value: 'id-card', label: 'Identitas', preview: '🪪' },
-    { value: 'luggage', label: 'Perlengkapan', preview: '🧳' },
-    { value: 'message-circle', label: 'Konsultasi', preview: '💬' },
-    { value: 'notebook-pen', label: 'Catatan Ibadah', preview: '📝' },
-    { value: 'star', label: 'Unggulan', preview: '⭐' },
-    { value: 'ticket', label: 'Tiket', preview: '🎫' },
-] as const;
-
-function IconSelect({
-    value,
-    onChange,
-}: {
-    value: string;
-    onChange: (value: string) => void;
-}) {
-    return (
-        <select
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-        >
-            {iconOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                    {option.preview} {option.label}
-                </option>
-            ))}
-        </select>
-    );
-}
-
-function Section({
-    icon: Icon,
-    title,
-    desc,
-    children,
-    collapsible = false,
-    open,
-    onOpenChange,
-    sectionId,
-    actions,
-}: {
-    icon: React.ElementType;
-    title: string;
-    desc: string;
-    children: React.ReactNode;
-    collapsible?: boolean;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-    sectionId?: string;
-    actions?: React.ReactNode;
-}) {
-    const header = (
-        <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
-            <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2">
-                    <Icon className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                    <p className="font-semibold text-foreground">{title}</p>
-                    <p className="text-xs text-muted-foreground">{desc}</p>
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                {actions}
-                {collapsible ? (
-                    <ChevronDown
-                        className={`mt-1 h-4 w-4 text-muted-foreground transition ${open ? 'rotate-180' : ''}`}
-                    />
-                ) : null}
-            </div>
-        </div>
-    );
-
-    if (!collapsible) {
-        return (
-            <div
-                id={sectionId}
-                className="rounded-2xl border border-border bg-card p-5 shadow-sm"
-            >
-                <div className="mb-4">{header}</div>
-                <div className="space-y-4">{children}</div>
-            </div>
-        );
-    }
-
-    return (
-        <Collapsible
-            open={Boolean(open)}
-            onOpenChange={(nextOpen) => onOpenChange?.(nextOpen)}
-        >
-            <div
-                id={sectionId}
-                className="rounded-2xl border border-border bg-card p-5 shadow-sm"
-            >
-                <CollapsibleTrigger asChild>
-                    <button type="button" className="mb-4 w-full text-left">
-                        {header}
-                    </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                    <div className="space-y-4">{children}</div>
-                </CollapsibleContent>
-            </div>
-        </Collapsible>
-    );
-}
-
-function Field({
-    label,
-    hint,
-    children,
-}: {
-    label: string;
-    hint?: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <div>
-            <Label className="mb-1.5 block text-xs font-medium">{label}</Label>
-            {children}
-            {hint && (
-                <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
-            )}
-        </div>
-    );
-}
-
-function Row({ children }: { children: React.ReactNode }) {
-    return <div className="grid gap-4 md:grid-cols-2">{children}</div>;
-}
-
-function GroupCard({
-    title,
-    desc,
-    children,
-}: {
-    title: string;
-    desc?: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <div className="rounded-xl border border-border bg-muted/10 p-4">
-            <p className="text-sm font-semibold text-foreground">{title}</p>
-            {desc ? (
-                <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
-            ) : null}
-            <div className="mt-3 space-y-4">{children}</div>
-        </div>
-    );
-}
 
 function buildDefaultLandingServiceItems(): Array<{
     image_path: string;
@@ -2877,72 +2706,6 @@ function normalizeLandingContentForEditor(
     });
 
     return next;
-}
-
-function ImageField({
-    label,
-    value,
-    file,
-    onChange,
-}: {
-    label: string;
-    value: string;
-    file: File | null;
-    onChange: (file: File | null) => void;
-}) {
-    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!file) {
-            setPreviewUrl(null);
-            return;
-        }
-
-        const objectUrl = URL.createObjectURL(file);
-        setPreviewUrl(objectUrl);
-
-        return () => URL.revokeObjectURL(objectUrl);
-    }, [file]);
-
-    return (
-        <div className="space-y-3">
-            <div className="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
-                <div className="overflow-hidden rounded-xl border border-border bg-muted/30 shadow-inner">
-                    <img
-                        src={previewUrl ?? value ?? '/images/dummy.jpg'}
-                        alt={label}
-                        className="h-28 w-full object-cover"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) =>
-                            onChange(event.target.files?.[0] ?? null)
-                        }
-                    />
-                    <div className="rounded-lg border border-dashed border-border bg-background px-3 py-1.5 text-[0.65rem] text-muted-foreground">
-                        {file ? (
-                            <>
-                                File:{' '}
-                                <span className="font-mono text-primary">
-                                    {file.name}
-                                </span>
-                            </>
-                        ) : (
-                            <>
-                                Path:{' '}
-                                <span className="font-mono">
-                                    {value || '-'}
-                                </span>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 }
 
 function GallerySectionEditor({

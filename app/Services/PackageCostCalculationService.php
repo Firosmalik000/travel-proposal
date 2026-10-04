@@ -447,9 +447,20 @@ class PackageCostCalculationService
             }
 
             $multiplierPerPax = max((int) ($product->pivot->multiplier_per_pax ?? 1), 1);
-            $quantity = $calculationMode === self::MODE_PER_PAX_MULTIPLIER
-                ? max($customerCount, 0) * $multiplierPerPax
-                : max($customerCount, 0);
+            $manualQuantity = data_get($package->content, 'hpp_estimate.product_quantities.'.(string) $product->id);
+            $hasManualQuantity = (bool) data_get(
+                $package->content,
+                'hpp_estimate.product_quantities_is_manual.'.(string) $product->id,
+                false,
+            );
+            $usesFixedQuantity = $hasManualQuantity || $this->usesFlatProductPricing($product);
+            $quantity = $usesFixedQuantity
+                ? ($hasManualQuantity && is_numeric($manualQuantity)
+                    ? max(0, (int) $manualQuantity)
+                    : $multiplierPerPax)
+                : ($calculationMode === self::MODE_PER_PAX_MULTIPLIER
+                    ? max($customerCount, 0) * $multiplierPerPax
+                    : max($customerCount, 0));
             $lineTotal = max($price, 0) * $quantity;
             $productTotal += $lineTotal;
 
@@ -474,6 +485,7 @@ class PackageCostCalculationService
                     'customer_count' => $customerCount,
                     'multiplier_per_pax' => $multiplierPerPax,
                     'calculation_mode' => $calculationMode,
+                    'calculation_basis' => $usesFixedQuantity ? 'fixed' : 'per_pax',
                 ],
             ];
         }
@@ -545,6 +557,12 @@ class PackageCostCalculationService
     {
         return $package->allInConfig !== null
             && in_array($product->product_type, $package->allInConfig->included_category_keys ?? [], true);
+    }
+
+    private function usesFlatProductPricing(TravelProduct $product): bool
+    {
+        return data_get($product->content, 'pricing_mode') === 'flat'
+            || strcasecmp((string) data_get($product->content, 'unit'), 'per paket') === 0;
     }
 
     private function packageFocCount(TravelPackage $package): int

@@ -14,10 +14,10 @@ import AuthLayout from '@/layouts/auth-layout';
 export default function ForgotPassword({ status }: { status?: string }) {
     return (
         <AuthLayout
-            title="Forgot password"
-            description="Enter your email to receive a password reset link"
+            title="Lupa kata sandi"
+            description="Masukkan email untuk menerima tautan pemulihan."
         >
-            <Head title="Forgot password" />
+            <Head title="Lupa kata sandi" />
 
             {status && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
@@ -60,8 +60,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
                 </Form>
 
                 <div className="space-x-1 text-center text-sm text-muted-foreground">
-                    <span>Or, return to</span>
-                    <TextLink href={login()}>log in</TextLink>
+                    <span>Ingin kembali?</span>
+                    <TextLink href={login()}>Masuk</TextLink>
                 </div>
             </div>
         </AuthLayout>

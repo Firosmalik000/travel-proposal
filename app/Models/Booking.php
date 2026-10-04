@@ -53,6 +53,20 @@ class Booking extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        $ensurePackageOpen = function (Booking $booking): void {
+            $packageId = (int) ($booking->package_id ?: $booking->getOriginal('package_id'));
+            if ($packageId > 0) {
+                TravelPackage::query()->find($packageId)?->ensureFinanciallyOpen();
+            }
+        };
+
+        static::creating($ensurePackageOpen);
+        static::updating($ensurePackageOpen);
+        static::deleting($ensurePackageOpen);
+    }
+
     public function package(): BelongsTo
     {
         return $this->belongsTo(TravelPackage::class, 'package_id');

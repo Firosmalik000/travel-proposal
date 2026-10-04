@@ -14,6 +14,8 @@ class PackageProductPriceSnapshotService
         'currency',
         'currency_rate_snapshot',
         'pricing',
+        'pricing_mode',
+        'unit',
     ];
 
     public function captureMissing(TravelPackage $package): void
@@ -66,7 +68,14 @@ class PackageProductPriceSnapshotService
             $copy = clone $product;
             $content = is_array($copy->content) ? $copy->content : [];
             $nonFinancialContent = array_diff_key($content, array_flip(self::FINANCIAL_CONTENT_KEYS));
-            $copy->content = array_replace($nonFinancialContent, (array) ($snapshot['content'] ?? []));
+            $snapshotContent = (array) ($snapshot['content'] ?? []);
+            foreach (['pricing_mode', 'unit'] as $backwardCompatibleKey) {
+                if (! array_key_exists($backwardCompatibleKey, $snapshotContent)
+                    && array_key_exists($backwardCompatibleKey, $content)) {
+                    $snapshotContent[$backwardCompatibleKey] = $content[$backwardCompatibleKey];
+                }
+            }
+            $copy->content = array_replace($nonFinancialContent, $snapshotContent);
 
             return $copy;
         });

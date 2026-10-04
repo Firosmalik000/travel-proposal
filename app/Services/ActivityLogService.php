@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -40,12 +41,15 @@ class ActivityLogService
         ?string $menuKey = null,
         ?User $user = null,
         ?array $properties = null,
+        ?Model $subject = null,
     ): ActivityLog {
         return $this->log([
             'user_id' => $user?->id ?? $request->user()?->id,
             'event_type' => $eventType,
             'module' => $module,
             'menu_key' => $menuKey,
+            'subject_type' => $subject?->getMorphClass(),
+            'subject_id' => $subject?->getKey(),
             'method' => $request->method(),
             'route_name' => $request->route()?->getName(),
             'url' => $request->path(),

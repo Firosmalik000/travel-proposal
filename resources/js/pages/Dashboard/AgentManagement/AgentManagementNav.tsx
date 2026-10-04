@@ -8,16 +8,16 @@ export default function AgentManagementNav({
     active: 'agents' | 'fees' | 'commissions';
 }) {
     const items = [
-        ['agents', 'Agents', '/admin/agent-management/agents', Users],
+        ['agents', 'Data Agen', '/admin/agent-management/agents', Users],
         [
             'fees',
-            'Fee per Package',
+            'Aturan Fee Paket',
             '/admin/agent-management/fees',
             BadgeDollarSign,
         ],
         [
             'commissions',
-            'Commissions',
+            'Komisi Agen',
             '/admin/agent-management/commissions',
             HandCoins,
         ],

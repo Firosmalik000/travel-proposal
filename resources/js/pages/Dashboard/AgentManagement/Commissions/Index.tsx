@@ -1,5 +1,15 @@
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -16,8 +26,9 @@ import {
 } from '@/components/ui/table';
 import AppSidebarLayout from '@/layouts/app/app-sidebar-layout';
 import AgentManagementNav from '@/pages/Dashboard/AgentManagement/AgentManagementNav';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { Banknote, CircleCheckBig, Clock3 } from 'lucide-react';
+import { useState, type FormEvent } from 'react';
 
 type Commission = {
     id: number;
@@ -36,7 +47,10 @@ type Commission = {
     currency: string;
     status: string;
     notes: string | null;
+    transaction_number: string | null;
+    financial_account_id: number | null;
 };
+type CashAccount = { id: number; code: string; name: string; currency: string };
 type Paginated = {
     data: Commission[];
     links: Array<{ url: string | null; label: string; active: boolean }>;
@@ -51,6 +65,8 @@ const money = (value: number, currency = 'IDR') =>
 export default function CommissionsIndex({
     commissions,
     summary,
+    cashAccounts,
+    today,
 }: {
     commissions: Paginated;
     summary: Array<{
@@ -59,32 +75,81 @@ export default function CommissionsIndex({
         approved: number;
         paid: number;
     }>;
+    cashAccounts: CashAccount[];
+    today: string;
 }) {
-    const updateStatus = (commission: Commission, status: string) =>
+    const [paying, setPaying] = useState<Commission | null>(null);
+    const paymentForm = useForm({
+        status: 'paid',
+        financial_account_id: '',
+        payment_date: today,
+        exchange_rate: '1',
+        amount_idr: '',
+        notes: '',
+    });
+    const commissionError = (paymentForm.errors as Record<string, string>)
+        .commission;
+    const updateStatus = (commission: Commission, status: string) => {
+        if (status === 'paid') {
+            paymentForm.setData({
+                status: 'paid',
+                financial_account_id: '',
+                payment_date: today,
+                exchange_rate: '1',
+                amount_idr:
+                    commission.currency === 'IDR'
+                        ? String(commission.commission_amount)
+                        : '',
+                notes: commission.notes ?? '',
+            });
+            paymentForm.clearErrors();
+            setPaying(commission);
+            return;
+        }
         router.put(
             `/admin/agent-management/commissions/${commission.id}`,
             { status, notes: commission.notes },
             { preserveScroll: true },
         );
+    };
+    const submitPayment = (event: FormEvent) => {
+        event.preventDefault();
+        if (!paying) return;
+        paymentForm.put(`/admin/agent-management/commissions/${paying.id}`, {
+            preserveScroll: true,
+            onSuccess: () => setPaying(null),
+        });
+    };
+    const reversePayment = (commission: Commission) => {
+        const reason = window.prompt(
+            'Alasan koreksi pembayaran komisi (minimal 5 karakter):',
+        );
+        if (!reason) return;
+        router.post(
+            `/admin/agent-management/commissions/${commission.id}/reverse-payment`,
+            { reason },
+            { preserveScroll: true },
+        );
+    };
     const summaryValue = (field: 'pending' | 'approved' | 'paid') =>
         summary.length > 0
             ? summary.map((row) => money(row[field], row.currency)).join(' / ')
             : money(0);
     const cards = [
         [
-            'Pending',
+            'Menunggu Persetujuan',
             summaryValue('pending'),
             Clock3,
             'text-amber-700 bg-amber-100',
         ],
         [
-            'Approved',
+            'Siap Dibayarkan',
             summaryValue('approved'),
             CircleCheckBig,
             'text-sky-700 bg-sky-100',
         ],
         [
-            'Paid',
+            'Selesai Dibayar',
             summaryValue('paid'),
             Banknote,
             'text-emerald-700 bg-emerald-100',
@@ -98,25 +163,18 @@ export default function CommissionsIndex({
                     href: '/admin/agent-management/agents',
                 },
                 {
-                    title: 'Commissions',
+                    title: 'Komisi Agen',
                     href: '/admin/agent-management/commissions',
                 },
             ]}
         >
-            <Head title="Komisi Agent" />
+            <Head title="Komisi Agen" />
             <div className="space-y-5 p-2 md:p-4">
                 <div className="flex flex-col justify-between gap-4 rounded-2xl border bg-card p-5 md:flex-row md:items-center">
                     <div>
-                        <p className="text-xs font-bold tracking-[.18em] text-amber-700 uppercase">
-                            Revenue Sharing
-                        </p>
-                        <h1 className="mt-1 text-2xl font-black">
-                            Commissions
+                        <h1 className="text-2xl font-bold tracking-tight">
+                            Komisi Agen
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Review, approve, dan tandai komisi yang sudah
-                            dibayarkan.
-                        </p>
                     </div>
                     <AgentManagementNav active="commissions" />
                 </div>
@@ -211,6 +269,11 @@ export default function CommissionsIndex({
                                                 item.commission_amount,
                                                 item.currency,
                                             )}
+                                            {item.transaction_number && (
+                                                <div className="text-xs font-normal text-muted-foreground">
+                                                    {item.transaction_number}
+                                                </div>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <Select
@@ -219,7 +282,12 @@ export default function CommissionsIndex({
                                                     updateStatus(item, value)
                                                 }
                                             >
-                                                <SelectTrigger className="w-36">
+                                                <SelectTrigger
+                                                    className="w-36"
+                                                    disabled={
+                                                        item.status === 'paid'
+                                                    }
+                                                >
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -237,6 +305,18 @@ export default function CommissionsIndex({
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
+                                            {item.status === 'paid' && (
+                                                <Button
+                                                    className="mt-2 w-36"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        reversePayment(item)
+                                                    }
+                                                >
+                                                    Koreksi bayar
+                                                </Button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -264,6 +344,162 @@ export default function CommissionsIndex({
                         </div>
                     )}
                 </div>
+                <Dialog
+                    open={paying !== null}
+                    onOpenChange={(open) => {
+                        if (!open && !paymentForm.processing) setPaying(null);
+                    }}
+                >
+                    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                        <DialogHeader>
+                            <DialogTitle>Bayar komisi agen</DialogTitle>
+                            <DialogDescription>
+                                {paying?.booking_code} · {paying?.agent_name} ·{' '}
+                                {paying
+                                    ? money(
+                                          paying.commission_amount,
+                                          paying.currency,
+                                      )
+                                    : ''}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form className="grid gap-4" onSubmit={submitPayment}>
+                            {commissionError && (
+                                <p className="text-sm text-destructive">
+                                    {commissionError}
+                                </p>
+                            )}
+                            <div className="grid gap-2">
+                                <Label>Rekening pembayar</Label>
+                                <Select
+                                    value={
+                                        paymentForm.data.financial_account_id
+                                    }
+                                    onValueChange={(value) =>
+                                        paymentForm.setData(
+                                            'financial_account_id',
+                                            value,
+                                        )
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Pilih rekening operasional" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {cashAccounts
+                                            .filter(
+                                                (account) =>
+                                                    account.currency ===
+                                                    paying?.currency,
+                                            )
+                                            .map((account) => (
+                                                <SelectItem
+                                                    key={account.id}
+                                                    value={String(account.id)}
+                                                >
+                                                    {account.code} ·{' '}
+                                                    {account.name}
+                                                </SelectItem>
+                                            ))}
+                                    </SelectContent>
+                                </Select>
+                                {paymentForm.errors.financial_account_id && (
+                                    <p className="text-xs text-destructive">
+                                        {
+                                            paymentForm.errors
+                                                .financial_account_id
+                                        }
+                                    </p>
+                                )}
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <Label>Tanggal pembayaran</Label>
+                                    <Input
+                                        type="date"
+                                        value={paymentForm.data.payment_date}
+                                        onChange={(event) =>
+                                            paymentForm.setData(
+                                                'payment_date',
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                    {paymentForm.errors.payment_date && (
+                                        <p className="text-xs text-destructive">
+                                            {paymentForm.errors.payment_date}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label>Kurs ke IDR</Label>
+                                    <Input
+                                        type="number"
+                                        min="0.00000001"
+                                        step="0.00000001"
+                                        value={paymentForm.data.exchange_rate}
+                                        onChange={(event) => {
+                                            const rate = event.target.value;
+                                            paymentForm.setData(
+                                                'exchange_rate',
+                                                rate,
+                                            );
+                                            if (paying)
+                                                paymentForm.setData(
+                                                    'amount_idr',
+                                                    String(
+                                                        Math.round(
+                                                            paying.commission_amount *
+                                                                Number(rate),
+                                                        ),
+                                                    ),
+                                                );
+                                        }}
+                                        readOnly={paying?.currency === 'IDR'}
+                                    />
+                                    {paymentForm.errors.exchange_rate && (
+                                        <p className="text-xs text-destructive">
+                                            {paymentForm.errors.exchange_rate}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label>Nilai pembayaran (IDR)</Label>
+                                <Input
+                                    value={paymentForm.data.amount_idr}
+                                    readOnly
+                                />
+                                {paymentForm.errors.amount_idr && (
+                                    <p className="text-xs text-destructive">
+                                        {paymentForm.errors.amount_idr}
+                                    </p>
+                                )}
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setPaying(null)}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    disabled={
+                                        paymentForm.processing ||
+                                        cashAccounts.filter(
+                                            (account) =>
+                                                account.currency ===
+                                                paying?.currency,
+                                        ).length === 0
+                                    }
+                                >
+                                    Posting pembayaran
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppSidebarLayout>
     );

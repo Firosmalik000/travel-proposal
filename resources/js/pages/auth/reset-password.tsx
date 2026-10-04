@@ -16,10 +16,10 @@ interface ResetPasswordProps {
 export default function ResetPassword({ token, email }: ResetPasswordProps) {
     return (
         <AuthLayout
-            title="Reset password"
-            description="Please enter your new password below"
+            title="Atur kata sandi baru"
+            description="Gunakan kata sandi baru untuk akunmu."
         >
-            <Head title="Reset password" />
+            <Head title="Atur kata sandi" />
 
             <Form
                 action={update.url()}

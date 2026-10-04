@@ -718,6 +718,8 @@ class PackageController extends Controller
                     'code' => $product->code,
                     'name' => $product->name,
                     'product_type' => $product->product_type,
+                    'pricing_mode' => data_get($product->content, 'pricing_mode'),
+                    'unit' => data_get($product->content, 'unit'),
                     'currency' => data_get($product->content, 'currency', 'IDR'),
                     'price' => data_get($product->content, 'price') !== null && is_numeric(data_get($product->content, 'price'))
                         ? (float) data_get($product->content, 'price')

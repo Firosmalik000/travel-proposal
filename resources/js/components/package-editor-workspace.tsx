@@ -10,7 +10,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { fetchWithCsrf } from '@/lib/csrf-fetch';
@@ -71,6 +70,11 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { PackageEditorField as Field } from './package-editor-field';
+import { PackageEditorFieldGroup as FieldGroup } from './package-editor-field-group';
+import { PackageEditorInfoHeading as InfoSectionHeading } from './package-editor-info-heading';
+import { PackageEditorItinerarySkeleton as ItinerarySkeleton } from './package-editor-itinerary-skeleton';
+import { PackageEditorSectionHeader as SectionHeader } from './package-editor-section-heading';
 
 export type PackageEditorWorkspaceProps = {
     pkg: Package | null;
@@ -763,86 +767,6 @@ function normalizeEstimateRoomType(
     }
 
     return null;
-}
-
-function SectionHeader({
-    icon: Icon,
-    title,
-}: {
-    icon: React.ElementType;
-    title: string;
-}) {
-    return (
-        <div className="mb-4 flex items-start gap-3 rounded-xl bg-muted/40 px-4 py-3">
-            <div className="mt-0.5 rounded-lg bg-primary/10 p-1.5">
-                <Icon className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-                <p className="text-sm font-semibold">{title}</p>
-            </div>
-        </div>
-    );
-}
-
-function InfoSectionHeading({
-    icon: Icon,
-    title,
-}: {
-    icon: React.ElementType;
-    title: string;
-}) {
-    return (
-        <div className="flex items-start gap-3 border-t border-border/70 pt-5">
-            <div className="mt-0.5 rounded-lg bg-primary/10 p-2 text-primary">
-                <Icon className="h-4 w-4" />
-            </div>
-            <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">{title}</p>
-            </div>
-        </div>
-    );
-}
-
-function FieldGroup({ children }: { children: React.ReactNode }) {
-    return <div className="space-y-3">{children}</div>;
-}
-
-function Field({
-    label,
-    error,
-    children,
-}: {
-    label: string;
-    error?: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <div>
-            <Label className="mb-1.5 block text-xs font-medium text-foreground">
-                {label}
-            </Label>
-            {children}
-            {error ? (
-                <p className="mt-1 text-xs font-medium text-destructive">
-                    {error}
-                </p>
-            ) : null}
-        </div>
-    );
-}
-
-function ItinerarySkeleton() {
-    return (
-        <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
-            <Skeleton className="h-16" />
-            <div className="flex flex-wrap gap-2">
-                <Skeleton className="h-9 w-28 rounded-full" />
-                <Skeleton className="h-9 w-32 rounded-full" />
-                <Skeleton className="h-9 w-24 rounded-full" />
-            </div>
-            <Skeleton className="h-28 rounded-2xl" />
-        </div>
-    );
 }
 
 function createEmptyHighlight(): PackageHighlightItem {
@@ -2149,6 +2073,9 @@ export function PackageEditorWorkspace({
             const quantityIsManual = Boolean(
                 hppEstimate.product_quantities_is_manual?.[String(product.id)],
             );
+            const usesFlatPricing =
+                product.pricing_mode === 'flat' ||
+                product.unit?.trim().toLocaleLowerCase('id-ID') === 'per paket';
             const quantity = Math.max(
                 0,
                 Number(
@@ -2156,7 +2083,9 @@ export function PackageEditorWorkspace({
                         ? (hppEstimate.product_quantities?.[
                               String(product.id)
                           ] ?? 0)
-                        : estimatedCustomerCount * multiplier,
+                        : usesFlatPricing
+                          ? multiplier
+                          : estimatedCustomerCount * multiplier,
                 ),
             );
             const unitPrice = convertEstimatePriceToIdr(
@@ -2168,6 +2097,7 @@ export function PackageEditorWorkspace({
                 product,
                 multiplier,
                 quantityIsManual,
+                usesFlatPricing,
                 quantity,
                 focQuantity: estimatedFocCount * multiplier,
                 unitPrice,
@@ -3765,7 +3695,11 @@ export function PackageEditorWorkspace({
                                                                     {formatEstimateCurrency(
                                                                         item.unitPrice,
                                                                     )}{' '}
-                                                                    / unit
+                                                                    / unit ·{' '}
+                                                                    {item.usesFlatPricing ||
+                                                                    item.quantityIsManual
+                                                                        ? 'Kolektif per trip'
+                                                                        : 'Mengikuti jumlah jemaah'}
                                                                 </p>
                                                                 {estimatedFocCount >
                                                                 0 ? (

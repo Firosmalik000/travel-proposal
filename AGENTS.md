@@ -1,572 +1,730 @@
-<laravel-boost-guidelines>
-=== foundation rules ===
+# AGENTS.md
 
-# Laravel Boost Guidelines
+## Tujuan
 
-The Laravel Boost guidelines are specifically curated by Laravel maintainers for this application. These guidelines should be followed closely to enhance the user's satisfaction building Laravel applications.
+Bekerjalah sebagai senior engineer pada codebase ini.
 
-## Foundational Context
+Implementasikan permintaan pengguna secara akurat, aman, efisien, dan production-ready dengan tetap mengikuti arsitektur, pola, konvensi, serta bahasa desain aplikasi yang sudah ada.
 
-This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
+**Utamakan eksekusi daripada penjelasan.**
 
-- php - 8.4.17
-- inertiajs/inertia-laravel (INERTIA) - v2
-- laravel/framework (LARAVEL) - v12
-- laravel/prompts (PROMPTS) - v0
-- tightenco/ziggy (ZIGGY) - v2
-- laravel/mcp (MCP) - v0
-- laravel/pint (PINT) - v1
-- laravel/sail (SAIL) - v1
-- pestphp/pest (PEST) - v3
-- phpunit/phpunit (PHPUNIT) - v11
-- @inertiajs/react (INERTIA) - v2
-- react (REACT) - v19
-- tailwindcss (TAILWINDCSS) - v4
-- eslint (ESLINT) - v9
-- prettier (PRETTIER) - v3
+Gunakan Bahasa Indonesia untuk komunikasi dengan pengguna dan untuk teks antarmuka aplikasi, kecuali istilah teknis, nama produk, API, atau istilah yang secara wajar tetap menggunakan bahasa aslinya.
 
-## Conventions
+---
 
-- You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
-- Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
-- Check for existing components to reuse before writing a new one.
+# 1. Stack Proyek
 
-## Date Preview Convention
+Stack utama proyek ini:
 
-- All user-facing date previews in React must use the shared helpers from `@/lib/date-format` or the `@/components/formatted-date` component. Do not create page-local date formatters or call `Intl.DateTimeFormat`, `toLocaleDateString`, or `date-fns/format` directly for previews.
-- A date without a weekday must use the Indonesian long form: `21 Agustus 2026`.
-- When the weekday is useful, use `formatDateWithDay()` or `withDay: true`: `Jumat, 21 Agustus 2026`.
-- Date-time previews must use `formatDateTime()`, which follows the same date form and the `Asia/Jakarta` timezone.
-- Native date inputs may keep the machine value `YYYY-MM-DD`; this convention applies to labels, cards, tables, drawers, detail views, and all other user-facing previews.
+- PHP 8.4.17
+- Laravel 12
+- Inertia Laravel v2
+- @inertiajs/react v2
+- React 19
+- Tailwind CSS 4
+- Ziggy 2
+- Laravel MCP 0
+- Laravel Pint 1
+- Laravel Sail 1
+- Pest 3
+- PHPUnit 11
+- ESLint 9
+- Prettier 3
 
-## Verification Scripts
+Gunakan API dan pola yang sesuai dengan versi tersebut.
 
-- Do not create verification scripts or tinker when tests cover that functionality and prove it works. Unit and feature tests are more important.
-- Never use `php artisan migrate:fresh` as part of routine testing or verification.
-- If a database schema change needs validation, prefer the smallest relevant migration, seed, or feature test against the local testing database instead of resetting everything.
+Jangan melakukan pengecekan versi berulang apabila versi yang dibutuhkan sudah jelas dari konteks ini.
 
-## Application Structure & Architecture
+Periksa versi package hanya jika:
 
-- Stick to existing directory structure; don't create new base folders without approval.
-- Do not change the application's dependencies without approval.
+- package lain di luar daftar ini terlibat;
+- terdapat ketidakpastian;
+- implementasi benar-benar bergantung pada versi package tertentu.
 
-## Frontend Bundling
+---
 
-- If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.
-- After frontend/backend changes are completed, run this verification checklist (except `dev`) before finalizing:
-    - `npm run lint`
-    - `npm run types`
-    - `npm run format:check`
-- Do not run `npm run build`, `npm run build:ssr`, or `npm run format` unless the user explicitly asks for it.
-- Include the checklist status in the final handoff.
-- For every frontend change, verify the layout at `sx`, `xs`, `sm`, `md`, `lg`, `xl`, and `xxl` breakpoints so the UI stays fully responsive.
+# 2. Prinsip Kerja Utama
 
-## Replies
+Sebelum mengubah kode:
 
-- Be concise in your explanations - focus on what's important rather than explaining obvious details.
+- baca implementasi yang relevan;
+- pahami pola existing;
+- periksa sibling file bila struktur atau konvensi belum jelas;
+- cari komponen, helper, hook, service, action, route, atau utilitas yang dapat digunakan kembali.
 
-## Documentation Files
+Saat mengimplementasikan:
 
-- You must only create documentation files if explicitly requested by the user.
+- buat perubahan terkecil yang menyelesaikan masalah secara lengkap;
+- jangan refactor kode yang tidak berkaitan;
+- jangan mengubah kode yang sudah bekerja hanya karena ada pendekatan lain yang terlihat lebih menarik;
+- jangan membuat abstraksi yang belum diperlukan;
+- jangan menduplikasi fungsi yang sudah tersedia;
+- pertahankan backward compatibility kecuali task memang meminta perubahan;
+- ikuti struktur direktori dan arsitektur existing;
+- jangan membuat base directory baru tanpa kebutuhan yang jelas;
+- jangan menambah, menghapus, atau meng-upgrade dependency tanpa persetujuan;
+- jangan membuat file dokumentasi kecuali diminta.
 
-=== boost rules ===
+Jika requirement sudah jelas, langsung kerjakan.
 
-## Laravel Boost
+Jangan bertanya untuk keputusan rutin yang dapat disimpulkan dengan aman dari codebase.
 
-- Laravel Boost is an MCP server that comes with powerful tools designed specifically for this application. Use them.
+---
 
-## Artisan
+# 3. Urutan Sumber Kebenaran
 
-- Use the `list-artisan-commands` tool when you need to call an Artisan command to double-check the available parameters.
+Gunakan prioritas berikut:
 
-## URLs
+1. kode existing yang sudah bekerja;
+2. aturan proyek yang relevan;
+3. Laravel Boost/project-aware tools;
+4. dokumentasi resmi versi yang terpasang.
 
-- Whenever you share a project URL with the user, you should use the `get-absolute-url` tool to ensure you're using the correct scheme, domain/IP, and port.
+Jika kode existing sudah menunjukkan pola yang benar, ikuti pola tersebut.
 
-## Tinker / Debugging
+Jangan mencari dokumentasi hanya untuk mengonfirmasi hal yang sudah jelas dari implementasi existing.
 
-- You should use the `tinker` tool when you need to execute PHP to debug code or query Eloquent models directly.
-- Use the `database-query` tool when you only need to read from the database.
+---
 
-## Reading Browser Logs With the `browser-logs` Tool
+# 4. Aturan Proyek Tambahan
 
-- You can read browser logs, errors, and exceptions using the `browser-logs` tool from Boost.
-- Only recent browser logs will be useful - ignore old logs.
+Jika `.ai/rules/index.md` tersedia:
 
-## Searching Documentation (Critically Important)
+- baca index sebelum perubahan yang relevan;
+- identifikasi rule yang sesuai dengan file atau perilaku yang sedang dikerjakan;
+- load hanya rule yang diperlukan;
+- jangan membaca seluruh `.ai/rules` tanpa alasan.
 
-- Boost comes with a powerful `search-docs` tool you should use before any other approaches when dealing with Laravel or Laravel ecosystem packages. This tool automatically passes a list of installed packages and their versions to the remote Boost API, so it returns only version-specific documentation for the user's circumstance. You should pass an array of packages to filter on if you know you need docs for particular packages.
-- The `search-docs` tool is perfect for all Laravel-related packages, including Laravel, Inertia, Livewire, Filament, Tailwind, Pest, Nova, Nightwatch, etc.
-- You must use this tool to search for Laravel ecosystem documentation before falling back to other approaches.
-- Search the documentation before making code changes to ensure we are taking the correct approach.
-- Use multiple, broad, simple, topic-based queries to start. For example: `['rate limiting', 'routing rate limiting', 'routing']`.
-- Do not add package names to queries; package information is already shared. For example, use `test resource table`, not `filament 4 test resource table`.
+Cari rule tambahan apabila:
 
-### Available Search Syntax
+- behavior proyek tidak jelas;
+- ada constraint bisnis yang mungkin berlaku;
+- perubahan menyentuh area sensitif;
+- pola existing belum cukup memberikan jawaban.
 
-- You can and should pass multiple queries at once. The most relevant results will be returned first.
+Gunakan `record-rule` hanya untuk constraint proyek yang:
 
-1. Simple Word Searches with auto-stemming - query=authentication - finds 'authenticate' and 'auth'.
-2. Multiple Words (AND Logic) - query=rate limit - finds knowledge containing both "rate" AND "limit".
-3. Quoted Phrases (Exact Position) - query="infinite scroll" - words must be adjacent and in that order.
-4. Mixed Queries - query=middleware "rate limit" - "middleware" AND exact phrase "rate limit".
-5. Multiple Queries - queries=["authentication", "middleware"] - ANY of these terms.
+- tahan lama;
+- tidak obvious;
+- penting untuk pekerjaan berikutnya;
+- belum jelas dari codebase.
 
-=== php rules ===
+Jangan merekam detail task sementara atau konvensi framework yang sudah umum.
 
-## PHP
+---
 
-- Always use curly braces for control structures, even if it has one line.
+# 5. Laravel Boost
 
-### Constructors
+Gunakan Laravel Boost secara selektif ketika memberi informasi yang lebih aman atau lebih akurat daripada inspeksi manual.
 
-- Use PHP 8 constructor property promotion in `__construct()`.
-    - <code-snippet>public function \_\_construct(public GitHub $github) { }</code-snippet>
-- Do not allow empty `__construct()` methods with zero parameters unless the constructor is private.
+Gunakan:
 
-### Type Declarations
+- `database-schema` untuk perubahan yang bergantung pada struktur database;
+- `database-query` untuk inspeksi database read-only;
+- `browser-logs` untuk error frontend/browser terbaru;
+- `get-absolute-url` sebelum memberikan URL project;
+- tool Artisan apabila parameter command tidak diketahui;
+- `search-docs` bila perilaku framework/package tidak jelas atau version-sensitive.
 
-- Always use explicit return type declarations for methods and functions.
-- Use appropriate PHP type hints for method parameters.
+Jangan menggunakan Boost secara mekanis pada task yang tidak membutuhkannya.
 
-<code-snippet name="Explicit Return Types and Method Params" lang="php">
-protected function isAccessible(User $user, ?string $path = null): bool
-{
-    ...
-}
-</code-snippet>
+---
 
-## Comments
+# 6. Dokumentasi
 
-- Prefer PHPDoc blocks over inline comments. Never use comments within the code itself unless there is something very complex going on.
+Gunakan `search-docs` apabila:
 
-## PHPDoc Blocks
+- API framework/package belum familiar;
+- behavior berbeda antarversi;
+- memperkenalkan fitur framework/package baru;
+- existing code belum memberikan contoh yang cukup;
+- terdapat ketidakpastian implementasi.
 
-- Add useful array shape type definitions for arrays when appropriate.
+Jangan menggunakan `search-docs` hanya karena task menyentuh Laravel, React, Inertia, atau Tailwind.
 
-## Enums
+Jika hasil dokumentasi yang cukup sudah ada dalam konteks, jangan mencarinya lagi.
 
-- Typically, keys in an Enum should be TitleCase. For example: `FavoritePerson`, `BestLake`, `Monthly`.
+---
 
-=== tests rules ===
+# 7. Laravel
 
-## Test Enforcement
+Ikuti cara Laravel dan pola existing aplikasi.
 
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
+Untuk file Laravel-managed gunakan generator Artisan yang tepat bila relevan:
 
-=== inertia-laravel/core rules ===
+`php artisan make:* --no-interaction`
 
-## Inertia
+Gunakan:
 
-- Inertia.js components should be placed in the `resources/js/Pages` directory unless specified differently in the JS bundler (`vite.config.js`).
-- Use `Inertia::render()` for server-side routing instead of traditional Blade views.
-- Use the `search-docs` tool for accurate guidance on all things Inertia.
+- Eloquent sebelum raw SQL;
+- relationship model sebelum manual join;
+- eager loading untuk mencegah N+1;
+- query builder hanya untuk query yang memang kompleks;
+- named routes daripada URL hardcoded;
+- `config()` daripada `env()` di luar config;
+- authentication dan authorization bawaan Laravel;
+- Policy atau Gate untuk authorization bila sesuai pola proyek.
 
-<code-snippet name="Inertia Render Example" lang="php">
-// routes/web.php example
-Route::get('/users', function () {
-    return Inertia::render('Users/Index', [
-        'users' => User::all()
-    ]);
-});
-</code-snippet>
+Jangan menggunakan `DB::` bila Eloquent atau query model sudah cukup.
 
-=== inertia-laravel/v2 rules ===
+---
 
-## Inertia v2
+# 8. Controller dan Business Logic
 
-- Make use of all Inertia features from v1 and v2. Check the documentation before making any changes to ensure we are taking the correct approach.
+Controller harus tetap tipis.
 
-### Inertia v2 New Features
+Controller bertugas terutama untuk:
 
-- Deferred props.
-- Infinite scrolling using merging props and `WhenVisible`.
-- Lazy loading data on scroll.
-- Polling.
-- Prefetching.
+- menerima request;
+- menjalankan authorization bila diperlukan;
+- mendelegasikan pekerjaan;
+- mengembalikan response.
 
-### Deferred Props & Empty States
+Jangan menempatkan business logic kompleks dalam:
 
-- When using deferred props on the frontend, you should add a nice empty state with pulsing/animated skeleton.
+- controller;
+- middleware;
+- route;
+- React page component.
 
-### Inertia Form General Guidance
+Gunakan Action atau Service untuk domain logic yang kompleks atau reusable.
 
-- Build forms using the `useForm` helper. Use the code examples and the `search-docs` tool with a query of `useForm helper` for guidance.
+Jangan membuat Service/Action hanya untuk CRUD sederhana.
 
-=== laravel/core rules ===
+---
 
-## Do Things the Laravel Way
+# 9. Validation
 
-- Use `php artisan make:` commands to create new files (i.e. migrations, controllers, models, etc.). You can list available Artisan commands using the `list-artisan-commands` tool.
-- If you're creating a generic PHP class, use `php artisan make:class`.
-- Pass `--no-interaction` to all Artisan commands to ensure they work without user input. You should also pass the correct `--options` to ensure correct behavior.
+Untuk validation backend yang non-trivial, gunakan Form Request sesuai pola existing.
 
-### Database
+Form Request harus memiliki:
 
-- Always use proper Eloquent relationship methods with return type hints. Prefer relationship methods over raw queries or manual joins.
-- Use Eloquent models and relationships before suggesting raw database queries.
-- Avoid `DB::`; prefer `Model::query()`. Generate code that leverages Laravel's ORM capabilities rather than bypassing them.
-- Generate code that prevents N+1 query problems by using eager loading.
-- Use Laravel's query builder for very complex database operations.
+- validation rules;
+- authorization bila relevan;
+- pesan validation khusus bila aplikasi memang membutuhkannya.
 
-### Model Creation
+Periksa Form Request existing sebelum menentukan style rules.
 
-- When creating new models, create useful factories and seeders for them too. Ask the user if they need any other things, using `list-artisan-commands` to check the available options to `php artisan make:model`.
+Jangan memindahkan validation sederhana ke layer tambahan jika pola existing proyek tidak melakukannya.
 
-### APIs & Eloquent Resources
+---
 
-- For APIs, default to using Eloquent API Resources and API versioning unless existing API routes do not, then you should follow existing application convention.
+# 10. Database
 
-### Controllers & Validation
+Sebelum perubahan schema:
 
-- Always create Form Request classes for validation rather than inline validation in controllers. Include both validation rules and custom error messages.
-- Check sibling Form Requests to see if the application uses array or string based validation rules.
+- periksa schema existing;
+- model terkait;
+- casts;
+- relationships;
+- indexes;
+- constraints;
+- migration sebelumnya yang relevan.
 
-### Queues
+Jangan pernah menggunakan:
 
-- Use queued jobs for time-consuming operations with the `ShouldQueue` interface.
+`php artisan migrate:fresh`
 
-### Authentication & Authorization
+untuk routine verification.
 
-- Use Laravel's built-in authentication and authorization features (gates, policies, Sanctum, etc.).
+Untuk verifikasi schema gunakan metode terkecil dan teraman.
 
-### URL Generation
+Jangan membuat atau mengubah data saat investigasi kecuali memang dibutuhkan.
 
-- When generating links to other pages, prefer named routes and the `route()` function.
+Untuk inspeksi read-only gunakan tooling read-only.
 
-### Configuration
+Saat mengubah column melalui migration, pertahankan atribut existing yang masih diperlukan.
 
-- Use environment variables only in configuration files - never use the `env()` function directly outside of config files. Always use `config('app.name')`, not `env('APP_NAME')`.
+---
 
-### Testing
+# 11. Model
 
-- When creating models for tests, use the factories for the models. Check if the factory has custom states that can be used before manually setting up the model.
-- Faker: Use methods such as `$this->faker->word()` or `fake()->randomDigit()`. Follow existing conventions whether to use `$this->faker` or `fake()`.
-- When creating tests, make use of `php artisan make:test [options] {name}` to create a feature test, and pass `--unit` to create a unit test. Most tests should be feature tests.
+Ikuti pola model existing.
 
-### Vite Error
+Gunakan:
 
-- If you receive an "Illuminate\Foundation\ViteException: Unable to locate file in Vite manifest" error, you can run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+- relationship dengan return type;
+- casts sesuai konvensi project;
+- scopes bila memang reusable;
+- factory untuk data testing.
 
-=== laravel/v12 rules ===
+Jangan membuat factory atau seeder yang tidak diperlukan hanya karena model baru dibuat.
 
-## Laravel 12
+Buat hanya artefak yang benar-benar dibutuhkan oleh feature.
 
-- Use the `search-docs` tool to get version-specific documentation.
-- Since Laravel 11, Laravel has a new streamlined file structure which this project uses.
+---
 
-### Laravel 12 Structure
+# 12. PHP
 
-- In Laravel 12, middleware are no longer registered in `app/Http/Kernel.php`.
-- Middleware are configured declaratively in `bootstrap/app.php` using `Application::configure()->withMiddleware()`.
-- `bootstrap/app.php` is the file to register middleware, exceptions, and routing files.
-- `bootstrap/providers.php` contains application specific service providers.
-- The `app\Console\Kernel.php` file no longer exists; use `bootstrap/app.php` or `routes/console.php` for console configuration.
-- Console commands in `app/Console/Commands/` are automatically available and do not require manual registration.
+Gunakan:
 
-### Database
+- curly braces untuk semua control structure;
+- explicit parameter types;
+- explicit return types;
+- constructor property promotion bila sesuai;
+- nama variable dan method yang deskriptif;
+- TitleCase untuk Enum cases.
 
-- When modifying a column, the migration must include all of the attributes that were previously defined on the column. Otherwise, they will be dropped and lost.
-- Laravel 12 allows limiting eagerly loaded records natively, without external packages: `$query->latest()->limit(10);`.
+Jangan membuat constructor kosong kecuali memang diperlukan dan private.
 
-### Models
+Gunakan PHPDoc jika memberikan informasi tipe atau struktur yang berguna.
 
-- Casts can and likely should be set in a `casts()` method on a model rather than the `$casts` property. Follow existing conventions from other models.
+Gunakan array-shape PHPDoc bila membantu static analysis.
 
-=== pint/core rules ===
+Hindari komentar yang menjelaskan kode obvious.
 
-## Laravel Pint Code Formatter
+Tambahkan komentar hanya untuk logic yang sulit dipahami tanpa konteks tambahan.
 
-- You must run `vendor/bin/pint --dirty` before finalizing changes to ensure your code matches the project's expected style.
-- Do not run `vendor/bin/pint --test`, simply run `vendor/bin/pint` to fix any formatting issues.
+---
 
-=== pest/core rules ===
+# 13. Inertia + React
 
-## Pest
+Ikuti struktur Inertia + React existing.
 
-### Testing
+Sebelum membuat sesuatu yang baru:
 
-- If you need to verify a feature is working, write or update a Unit / Feature test.
+- cari page/component serupa;
+- reuse layout;
+- reuse component;
+- reuse hook;
+- reuse utility;
+- reuse form pattern;
+- reuse route/navigation pattern.
 
-### Pest Tests
+Gunakan `Link` atau router Inertia untuk navigation internal sesuai pola proyek.
 
-- Follow the existing test style in this repository. If the codebase uses PHPUnit-style test classes, keep that convention even though Pest is installed.
-- All tests must be written using Pest. Use `php artisan make:test --pest {name}`.
-- You must not remove any tests or test files from the tests directory without approval. These are not temporary or helper files - these are core to the application.
-- Tests should test all of the happy paths, failure paths, and weird paths.
-- Tests live in the `tests/Feature` and `tests/Unit` directories.
-- Pest tests look and behave like this:
-  <code-snippet name="Basic Pest Test Example" lang="php">
-  it('is true', function () {
-  expect(true)->toBeTrue();
-  });
-  </code-snippet>
+Gunakan `useForm` untuk form jika sesuai dengan pola existing.
 
-### Running Tests
+Untuk behavior Inertia yang version-sensitive atau belum digunakan di project, gunakan dokumentasi Inertia v2.
 
-- Run the minimal number of tests using an appropriate filter before finalizing code edits.
-- To run all tests: `php artisan test --compact`.
-- To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
-- To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
-- When the tests relating to your changes are passing, ask the user if they would like to run the entire test suite to ensure everything is still passing.
+Jangan menggunakan API Inertia dari versi lain hanya berdasarkan ingatan.
 
-### Pest Assertions
+---
 
-- When asserting status codes on a response, use the specific method like `assertForbidden` and `assertNotFound` instead of using `assertStatus(403)` or similar, e.g.:
-  <code-snippet name="Pest Example Asserting postJson Response" lang="php">
-  it('returns all', function () {
-  $response = $this->postJson('/api/docs', []);
+# 14. React
 
-          $response->assertSuccessful();
+React page component harus fokus pada:
 
-    });
-    </code-snippet>
+- composition;
+- presentation;
+- state/data flow yang relevan dengan halaman.
 
-### Mocking
+Pindahkan logic kompleks/reusable ke hook, helper, atau layer yang sesuai bila memang memberikan manfaat.
 
-- Mocking can be very helpful when appropriate.
-- When mocking, you can use the `Pest\Laravel\mock` Pest function, but always import it via `use function Pest\Laravel\mock;` before using it. Alternatively, you can use `$this->mock()` if existing tests do.
-- You can also create partial mocks using the same import or self method.
+Jangan memecah component hanya demi membuat file lebih banyak.
 
-### Datasets
+Ekstrak component bila:
 
-- Use datasets in Pest to simplify tests that have a lot of duplicated data. This is often the case when testing validation rules, so consider this solution when writing tests for validation rules.
+- digunakan kembali;
+- terlalu kompleks;
+- meningkatkan konsistensi;
+- secara jelas memisahkan tanggung jawab.
 
-<code-snippet name="Pest Dataset Example" lang="php">
-it('has emails', function (string $email) {
-    expect($email)->not->toBeEmpty();
-})->with([
-    'james' => 'james@laravel.com',
-    'taylor' => 'taylor@laravel.com',
-]);
-</code-snippet>
+---
 
-=== inertia-react/core rules ===
+# 15. Tailwind CSS
 
-## Inertia + React
+Gunakan Tailwind CSS v4.
 
-- Use `router.visit()` or `<Link>` for navigation instead of traditional links.
+Ikuti utility dan style existing sebelum membuat pola baru.
 
-<code-snippet name="Inertia Client Navigation" lang="react">
+Jangan menggunakan utility deprecated dari Tailwind versi lama.
 
-import { Link } from '@inertiajs/react'
+Gunakan `gap-*` untuk spacing antar-item dalam flex/grid daripada margin antar-child bila sesuai.
 
-<Link href="/">Home</Link>
+Jika aplikasi sudah mendukung dark mode, perubahan baru harus mempertahankan dukungan dark mode.
 
-</code-snippet>
+Jangan membuat konfigurasi Tailwind v3 pada project Tailwind v4.
 
-=== inertia-react/v2/forms rules ===
+Gunakan dokumentasi hanya bila syntax atau behavior Tailwind v4 tidak jelas.
 
-## Inertia v2 + React Forms
+---
 
-<code-snippet name="Inertia React useForm Example" lang="react">
+# 16. UI dan Responsiveness
 
-import { useForm } from '@inertiajs/react'
+Pertahankan bahasa desain aplikasi existing.
 
-const { data, setData, post, processing, errors } = useForm({
-email: '',
-password: '',
-remember: false,
-})
+Untuk perubahan UI:
 
-function submit(e) {
-e.preventDefault()
-post('/login')
-}
+- reuse component existing;
+- pertahankan hierarchy visual;
+- pertahankan accessibility;
+- pertahankan responsive behavior;
+- pertimbangkan loading, empty, success, disabled, dan error state bila relevan.
 
-return (
+Jangan mengubah business logic dalam task UI-only kecuali benar-benar diperlukan.
 
-<form onSubmit={submit}>
-    <input type="text" value={data.email} onChange={e => setData('email', e.target.value)} />
-    {errors.email && <div>{errors.email}</div>}
-    <input type="password" value={data.password} onChange={e => setData('password', e.target.value)} />
-    {errors.password && <div>{errors.password}</div>}
-    <input type="checkbox" checked={data.remember} onChange={e => setData('remember', e.target.checked)} /> Remember Me
-    <button type="submit" disabled={processing}>Login</button>
-</form>
-)
+Untuk perubahan yang memengaruhi layout/responsiveness, verifikasi breakpoint yang digunakan aplikasi, termasuk custom breakpoint bila tersedia.
 
-</code-snippet>
+Tidak perlu melakukan inspeksi seluruh breakpoint untuk perubahan yang tidak memengaruhi layout.
 
-=== tailwindcss/core rules ===
+---
 
-## Tailwind CSS
+# 17. Bahasa Antarmuka
 
-- Use Tailwind CSS classes to style HTML; check and use existing Tailwind conventions within the project before writing your own.
-- Offer to extract repeated patterns into components that match the project's conventions (i.e. Blade, JSX, Vue, etc.).
-- Think through class placement, order, priority, and defaults. Remove redundant classes, add classes to parent or child carefully to limit repetition, and group elements logically.
-- You can use the `search-docs` tool to get exact examples from the official documentation when needed.
+Bahasa utama antarmuka adalah **Bahasa Indonesia**.
 
-### Spacing
+Untuk setiap user-facing text baru atau yang diubah:
 
-- When listing items, use gap utilities for spacing; don't use margins.
+- gunakan Bahasa Indonesia yang natural;
+- hindari campuran Bahasa Inggris yang tidak perlu;
+- pertahankan istilah teknis yang memang lebih umum dalam bahasa aslinya;
+- ikuti tone dan terminologi existing aplikasi;
+- jangan mengubah istilah existing secara sepihak apabila dapat memengaruhi konsistensi UI.
 
-<code-snippet name="Valid Flex Gap Spacing Example" lang="html">
-    <div class="flex gap-8">
-        <div>Superior</div>
-        <div>Michigan</div>
-        <div>Erie</div>
-    </div>
-</code-snippet>
+Pastikan tidak ada placeholder, label, error message, atau empty state yang tertinggal dalam bahasa yang tidak konsisten.
 
-### Dark Mode
+---
 
-- If existing pages and components support dark mode, new pages and components must support dark mode in a similar way, typically using `dark:`.
+# 18. Format Tanggal
 
-=== tailwindcss/v4 rules ===
+Semua preview tanggal yang terlihat pengguna di React harus menggunakan helper bersama dari:
 
-## Tailwind CSS 4
+`@/lib/date-format`
 
-- Always use Tailwind CSS v4; do not use the deprecated utilities.
-- `corePlugins` is not supported in Tailwind v4.
-- In Tailwind v4, configuration is CSS-first using the `@theme` directive — no separate `tailwind.config.js` file is needed.
+atau component:
 
-<code-snippet name="Extending Theme in CSS" lang="css">
-@theme {
-  --color-brand: oklch(0.72 0.11 178);
-}
-</code-snippet>
+`@/components/formatted-date`
 
-- In Tailwind v4, you import Tailwind using a regular CSS `@import` statement, not using the `@tailwind` directives used in v3:
+Jangan membuat formatter tanggal lokal di page/component.
 
-<code-snippet name="Tailwind v4 Import Tailwind Diff" lang="diff">
-   - @tailwind base;
-   - @tailwind components;
-   - @tailwind utilities;
-   + @import "tailwindcss";
-</code-snippet>
+Jangan memanggil langsung untuk preview:
 
-### Replaced Utilities
+- `Intl.DateTimeFormat`;
+- `toLocaleDateString`;
+- `date-fns/format`;
 
-- Tailwind v4 removed deprecated utilities. Do not use the deprecated option; use the replacement.
-- Opacity values are still numeric.
+bila shared helper sudah tersedia.
 
-| Deprecated | Replacement |
-|------------+--------------|
-| bg-opacity-_ | bg-black/_ |
-| text-opacity-_ | text-black/_ |
-| border-opacity-_ | border-black/_ |
-| divide-opacity-_ | divide-black/_ |
-| ring-opacity-_ | ring-black/_ |
-| placeholder-opacity-_ | placeholder-black/_ |
-| flex-shrink-_ | shrink-_ |
-| flex-grow-_ | grow-_ |
-| overflow-ellipsis | text-ellipsis |
-| decoration-slice | box-decoration-slice |
-| decoration-clone | box-decoration-clone |
+Tanggal tanpa hari:
 
-=== architecture rules ===
+`21 Agustus 2026`
 
-## Architecture Boundaries
+Tanggal dengan hari:
 
-- Controllers must stay thin: receive the request, delegate business logic, and return responses.
-- Avoid placing heavy business logic in controllers, middleware, routes, or React page components.
-- Validation must live in Form Request classes.
-- Reusable or complex domain logic should be extracted into Action or Service classes.
-- React page components should focus on page composition and data flow.
-- Shared UI should live in reusable components when reuse improves consistency.
+`Jumat, 21 Agustus 2026`
 
-## Naming Conventions
+Gunakan `formatDateWithDay()` atau `withDay: true` bila nama hari diperlukan.
 
-- Models should use singular names.
-- Collections and grouped data should use plural names.
-- Form Requests should clearly describe intent such as `StoreProductRequest` or `UpdateProfileRequest`.
-- Jobs should use action-oriented names such as `SendInvoiceEmail`.
-- React components should use PascalCase file names matching the exported component.
+Tanggal dan waktu harus menggunakan `formatDateTime()` serta mengikuti timezone:
 
-## Service / Action Classes
+`Asia/Jakarta`
 
-- Extract complex or reusable business logic into Action or Service classes.
-- Prefer single-responsibility classes with methods such as `handle()` or `execute()`.
-- Avoid introducing unnecessary service layers for simple CRUD logic.
+Machine value pada native date input boleh tetap:
 
-=== security rules ===
+`YYYY-MM-DD`
 
-## Security Baseline
+Aturan ini berlaku untuk semua user-facing preview seperti:
 
-- Never trust client input; always validate and authorize write operations.
-- Do not rely on frontend visibility for access control.
-- Never hardcode secrets, tokens, API keys, or credentials.
-- Do not expose stack traces or sensitive data to end users.
-- Validate file uploads including type, size, and destination.
-- Avoid logging sensitive data such as passwords, tokens, or cookies.
+- table;
+- card;
+- detail;
+- drawer;
+- label;
+- modal;
+- page.
 
-## Authorization
+---
 
-- Protected routes should include tests for guest, forbidden, and allowed scenarios.
-- Prefer Laravel policies or gates over inline authorization logic.
+# 19. Security
 
-=== performance rules ===
+Jangan pernah mempercayai input client.
 
-## Database Performance
+Untuk write operation:
 
-- Avoid N+1 queries.
-- Use eager loading for relationships in lists or APIs.
-- Do not execute database queries inside loops.
-- Paginate large datasets.
+- validate input;
+- authorize action;
+- jangan mengandalkan visibility frontend sebagai access control.
 
-## Caching
+Jangan:
 
-- Use caching for expensive or frequently accessed operations.
-- Ensure there is a clear cache invalidation strategy.
+- hardcode secret;
+- expose API key/token/credential;
+- expose stack trace ke user;
+- log password/token/cookie;
+- melemahkan security hanya agar feature atau test berhasil.
 
-## Queue Usage
+Validasi upload file untuk:
 
-- Use queued jobs for slow tasks such as emails, exports, imports, image processing, and external syncs.
-- Avoid blocking HTTP requests with long-running work.
+- type;
+- size;
+- destination;
+- authorization.
 
-=== testing expansion rules ===
+Protected behavior harus mempertahankan authorization yang sesuai.
 
-## Test Coverage Expectations
+---
 
-Every feature change should test:
+# 20. Performance
 
-- happy path
-- validation failures
-- authorization behavior
-- edge cases
-- regression tests when fixing bugs
+Hindari:
+
+- N+1;
+- query database di dalam loop;
+- mengambil dataset besar tanpa pagination;
+- blocking HTTP request dengan pekerjaan berat.
+
+Gunakan eager loading bila dibutuhkan.
+
+Gunakan queue untuk pekerjaan lambat seperti:
+
+- email;
+- export/import besar;
+- image processing;
+- external synchronization;
+
+bila sesuai dengan architecture aplikasi.
+
+Gunakan caching hanya jika memberikan manfaat nyata dan memiliki strategi invalidation yang jelas.
+
+Jangan menambahkan cache atau queue tanpa kebutuhan konkret.
+
+---
+
+# 21. Testing
+
+Perubahan behavioral harus memiliki test yang sesuai apabila praktis.
+
+Prioritaskan:
+
+- happy path;
+- validation penting;
+- authorization penting;
+- failure mode penting;
+- regression test untuk bug fix.
+
+Jangan membuat test baru hanya untuk:
+
+- copy-only change;
+- styling-only change;
+- formatting-only change;
+- dokumentasi;
+- perubahan non-behavioral lain;
+
+kecuali repository memang memiliki konvensi khusus untuk itu.
+
+Gunakan test style existing.
+
+Jika area terkait sudah menggunakan Pest, lanjutkan dengan Pest.
+
+Jangan mengubah test existing dari PHPUnit style ke Pest hanya karena Pest tersedia.
+
+Untuk test baru, gunakan pola testing yang dominan pada area tersebut.
+
+Gunakan factory dan factory state existing bila tersedia.
+
+---
+
+# 22. Inertia Testing
+
+Untuk response Inertia yang berubah, verifikasi bila relevan:
+
+- component yang benar;
+- props penting;
+- authorization;
+- validation;
+- behavior yang diminta.
+
+Jangan hanya mengandalkan HTTP status jika behavior Inertia juga perlu diverifikasi.
+
+---
+
+# 23. Verifikasi
+
+Gunakan verifikasi terkecil yang cukup membuktikan perubahan.
+
+## Jika PHP/backend berubah
+
+Jalankan test yang relevan terlebih dahulu:
+
+`php artisan test --compact <test-terkait>`
+
+atau gunakan `--filter`.
+
+Jika PHP berubah, jalankan:
+
+`vendor/bin/pint --dirty`
+
+Jangan menjalankan seluruh test suite secara otomatis untuk perubahan kecil.
+
+Jalankan test lebih luas jika:
+
+- perubahan bersifat lintas-module;
+- foundational;
+- berisiko tinggi;
+- atau diminta pengguna.
+
+## Jika frontend berubah
+
+Jalankan yang relevan:
+
+`npm run lint`
+
+`npm run types`
+
+`npm run format:check`
+
+Jangan menjalankan:
+
+- `npm run build`;
+- `npm run build:ssr`;
+- `npm run format`;
+
+kecuali diperlukan atau diminta.
+
+## Jika perubahan hanya backend
+
+Jangan menjalankan frontend checks tanpa alasan.
+
+## Jika perubahan hanya frontend
+
+Jangan menjalankan backend test suite tanpa alasan.
+
+---
+
+# 24. Debugging
+
+Untuk bug:
+
+1. pahami symptom;
+2. baca implementation terkait;
+3. cari bukti;
+4. tentukan root cause;
+5. buat fix terkecil;
+6. verifikasi behavior;
+7. periksa regression yang relevan.
+
+Gunakan:
+
+- browser logs untuk frontend error;
+- application logs;
+- tests;
+- schema;
+- database read-only;
+- routes;
+- config;
+
+sesuai kebutuhan.
+
+Jangan melakukan speculative refactor saat memperbaiki bug.
+
+---
+
+# 25. Observability
+
+Log hanya informasi yang benar-benar berguna.
+
+Log:
+
+- meaningful failure;
+- job failure penting;
+- kondisi abnormal yang membutuhkan investigasi.
+
+Jangan log:
+
+- password;
+- token;
+- cookie;
+- credential;
+- sensitive payload.
+
+Biarkan exception mengikuti mekanisme reporting aplikasi kecuali ada kebutuhan khusus.
+
+---
+
+# 26. Scope Discipline
+
+Hormati ruang lingkup task.
+
+Jangan:
+
+- memperbaiki hal lain yang tidak diminta;
+- redesign area tetangga;
+- mengganti naming unrelated;
+- upgrade package;
+- melakukan cleanup besar;
+- mengubah architecture;
+
+hanya karena kebetulan ditemukan saat bekerja.
+
+Task kecil seharusnya menghasilkan diff kecil.
+
+Diff besar harus mempunyai alasan teknis yang jelas.
+
+---
+
+# 27. Efisiensi Context dan Token
+
+Gunakan context secara hemat.
+
+Jangan:
+
+- membaca seluruh repository tanpa kebutuhan;
+- membuka file yang tidak relevan;
+- membaca rule yang tidak terkait;
+- mencari dokumentasi yang sudah diketahui;
+- mengecek package version berulang;
+- menjalankan test yang tidak berkaitan;
+- mengulang command output panjang;
+- menjelaskan langkah rutin;
+- menarasikan setiap tindakan.
 
 Prefer:
 
-- Feature tests for HTTP flows
-- Unit tests for isolated logic
+- targeted inspection;
+- targeted search;
+- targeted tests;
+- existing implementation sebagai reference;
+- direct implementation ketika requirement sudah jelas.
 
-## Inertia Testing
+---
 
-- Assert correct component names and key props for Inertia responses.
-- Do not rely only on status assertions.
+# 28. Definition of Done
 
-=== quality rules ===
+Task dianggap selesai apabila, sesuai relevansinya:
 
-## Definition of Done
+- requested behavior sudah bekerja;
+- existing convention dipertahankan;
+- tidak ada perubahan unrelated;
+- tidak ada dependency yang berubah tanpa izin;
+- UI menggunakan Bahasa Indonesia secara konsisten;
+- format tanggal mengikuti shared date helper;
+- security/authorization tidak melemah;
+- behavioral test yang relevan lolos;
+- PHP formatting lolos jika PHP berubah;
+- frontend lint/type/format checks lolos jika frontend berubah;
+- responsive behavior diperiksa jika layout berubah;
+- tidak ada accidental changes pada final diff.
 
-A change is complete only when:
+---
 
-- code is implemented
-- tests exist or updated
-- formatting checks pass
-- lint/type checks pass
+# 29. Final Review
 
-## Final Verification Checklist
+Sebelum menyelesaikan task:
 
-Backend:
+- review diff;
+- pastikan tidak ada perubahan accidental;
+- pastikan scope tetap sesuai;
+- pastikan semua error yang disebabkan perubahan sudah diselesaikan.
 
-- `php artisan test --compact`
-- `vendor/bin/pint --dirty`
+Jangan menjalankan pekerjaan tambahan hanya untuk membuat laporan akhir terlihat lebih lengkap.
 
-Frontend:
+---
 
-- `npm run lint`
-- `npm run types`
-- `npm run format:check`
+# 30. Respons Akhir
 
-=== observability rules ===
+Respons akhir harus singkat dan dalam Bahasa Indonesia.
 
-## Logging and Observability
+Laporkan hanya:
 
-- Log meaningful failures and important job errors.
-- Do not log secrets or sensitive payloads.
-- Ensure exceptions flow through the application's normal reporting system.
-</laravel-boost-guidelines>
+- apa yang berubah;
+- area/file penting yang berubah;
+- verifikasi yang dilakukan dan hasilnya;
+- masalah tersisa atau tindakan pengguna, hanya jika memang ada.
+
+Jangan:
+
+- menjelaskan kode obvious;
+- menyalin command output panjang;
+- mengulang isi task;
+- menulis narasi proses yang tidak dibutuhkan.

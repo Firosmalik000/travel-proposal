@@ -88,6 +88,36 @@ class PackageHppEstimateService
     }
 
     /**
+     * @param  array<string, mixed>  $configuration
+     * @param  array<int, array<string, mixed>>  $productItems
+     * @param  array<string, mixed>  $currencySnapshots
+     * @return array{items: array<int, array<string, mixed>>, total: int, tour_leader: int, muthawwif: int, warnings: array<int, string>}
+     */
+    public function calculateOperationalCosts(
+        array $configuration,
+        int $customerCount,
+        int $hotelTotal,
+        array $productItems,
+        array $currencySnapshots,
+    ): array {
+        [$items, $totals, $warnings] = $this->buildOperationalItems(
+            $configuration,
+            $customerCount,
+            $hotelTotal,
+            $productItems,
+            $currencySnapshots,
+        );
+
+        return [
+            'items' => $items,
+            'total' => $totals['total'],
+            'tour_leader' => $totals['tour_leader'],
+            'muthawwif' => $totals['muthawwif'],
+            'warnings' => $warnings,
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>  $estimate
      * @param  array<string, mixed>  $roomSellingPrices
      * @param  Collection<int, TravelProduct>  $products
@@ -941,6 +971,11 @@ class PackageHppEstimateService
         }
 
         $multiplier = max(1, $this->nonNegativeInteger($productMultipliers[(string) $product->id] ?? 1));
+
+        if (data_get($product->content, 'pricing_mode') === 'flat'
+            || strcasecmp((string) data_get($product->content, 'unit'), 'per paket') === 0) {
+            return $multiplier;
+        }
 
         return $customerCount * $multiplier;
     }

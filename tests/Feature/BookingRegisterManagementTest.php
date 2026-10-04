@@ -566,7 +566,8 @@ class BookingRegisterManagementTest extends TestCase
 
         $this->assertDatabaseHas('inventory_items', [
             'id' => $inventory->id,
-            'quantity' => 17,
+            'quantity' => 20,
+            'reserved_quantity' => 3,
         ]);
     }
 
@@ -609,11 +610,13 @@ class BookingRegisterManagementTest extends TestCase
 
         $this->assertDatabaseHas('inventory_items', [
             'id' => $inventory->id,
-            'quantity' => 18,
+            'quantity' => 30,
+            'reserved_quantity' => 12,
         ]);
         $this->assertDatabaseHas('inventory_stock_mutations', [
             'inventory_item_id' => $inventory->id,
-            'quantity_change' => -12,
+            'quantity_change' => 0,
+            'reserved_quantity_change' => 12,
         ]);
     }
 
@@ -692,7 +695,8 @@ class BookingRegisterManagementTest extends TestCase
 
         $this->assertDatabaseHas('inventory_items', [
             'id' => $inventory->id,
-            'quantity' => 16,
+            'quantity' => 20,
+            'reserved_quantity' => 4,
         ]);
 
         $booking = Booking::query()->latest('id')->firstOrFail();
@@ -713,6 +717,7 @@ class BookingRegisterManagementTest extends TestCase
         $this->assertDatabaseHas('inventory_items', [
             'id' => $inventory->id,
             'quantity' => 20,
+            'reserved_quantity' => 0,
         ]);
     }
 

@@ -3,10 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\Inventaris;
-use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Storage;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 
 class RegenerateInventarisQRCodes extends Command
 {
@@ -35,7 +35,7 @@ class RegenerateInventarisQRCodes extends Command
 
         // Ensure directory exists
         $directory = storage_path('app/public/qr-codes');
-        if (!file_exists($directory)) {
+        if (! file_exists($directory)) {
             mkdir($directory, 0755, true);
             $this->info('Created qr-codes directory');
         }
@@ -54,18 +54,19 @@ class RegenerateInventarisQRCodes extends Command
         foreach ($inventaris as $item) {
             try {
                 // Skip if QR code exists and not forcing
-                if (!$force && $item->qr_code_path && Storage::disk('public')->exists($item->qr_code_path)) {
+                if (! $force && $item->qr_code_path && Storage::disk('public')->exists($item->qr_code_path)) {
                     $skipped++;
                     $bar->advance();
+
                     continue;
                 }
 
                 // Generate QR code
-                $qrData = url('/inventaris/detail/' . $item->kode_barang);
-                $filename = 'qr-codes/' . $item->kode_barang . '.png';
+                $qrData = url('/inventaris/detail/'.$item->kode_barang);
+                $filename = 'qr-codes/'.$item->kode_barang.'.png';
 
                 $qrCode = new QrCode($qrData);
-                $writer = new PngWriter();
+                $writer = new PngWriter;
                 $result = $writer->write($qrCode);
 
                 // Save to storage
@@ -77,7 +78,7 @@ class RegenerateInventarisQRCodes extends Command
                 $generated++;
             } catch (\Exception $e) {
                 $failed++;
-                $this->error("\nFailed to generate QR code for {$item->kode_barang}: " . $e->getMessage());
+                $this->error("\nFailed to generate QR code for {$item->kode_barang}: ".$e->getMessage());
             }
 
             $bar->advance();
@@ -86,7 +87,7 @@ class RegenerateInventarisQRCodes extends Command
         $bar->finish();
         $this->newLine(2);
 
-        $this->info("QR code regeneration completed!");
+        $this->info('QR code regeneration completed!');
         $this->table(
             ['Status', 'Count'],
             [

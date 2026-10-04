@@ -19,7 +19,12 @@ class InventoryStockMutation extends Model
         'change_type',
         'quantity_before',
         'quantity_change',
+        'reserved_quantity_change',
         'quantity_after',
+        'unit_cost_idr',
+        'total_cost_idr',
+        'idempotency_key',
+        'payload_hash',
         'notes',
         'meta',
         'created_by',
@@ -31,7 +36,10 @@ class InventoryStockMutation extends Model
         return [
             'quantity_before' => 'integer',
             'quantity_change' => 'integer',
+            'reserved_quantity_change' => 'integer',
             'quantity_after' => 'integer',
+            'unit_cost_idr' => 'integer',
+            'total_cost_idr' => 'integer',
             'meta' => 'array',
         ];
     }

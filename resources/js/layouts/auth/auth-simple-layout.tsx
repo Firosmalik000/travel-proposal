@@ -1,10 +1,12 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import BrandThemeStyle from '@/components/brand-theme-style';
 import GlobalFaviconHead from '@/components/global-favicon-head';
+import KaabaIllustration from '@/components/kaaba-illustration';
 import { home } from '@/routes';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { type CSSProperties, type PropsWithChildren } from 'react';
+import { ArrowRight, MapPin, Plane } from 'lucide-react';
+import { type PropsWithChildren } from 'react';
 
 interface AuthLayoutProps {
     name?: string;
@@ -19,103 +21,78 @@ export default function AuthSimpleLayout({
 }: PropsWithChildren<AuthLayoutProps>) {
     const { branding } = usePage<SharedData>().props;
 
-    const authTheme = {
-        '--auth-shell': '#f3f6fb',
-        '--auth-shell-dark': '#0b1220',
-        '--auth-card-bg': '#ffffff',
-        '--auth-card-border': 'rgba(15, 23, 42, 0.08)',
-        '--auth-card-foreground': '#0f172a',
-        '--auth-card-muted': '#64748b',
-        '--auth-panel': '#0f172a',
-    } as CSSProperties;
-
     return (
-        <div
-            style={authTheme}
-            className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden bg-[var(--auth-shell)] px-4 py-8 font-[var(--font-auth-sans)] text-[var(--auth-card-foreground)] sm:px-6 dark:bg-[var(--auth-shell-dark)]"
-        >
+        <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-[#f5f3f0] px-4 py-8 font-[var(--font-auth-sans)] text-slate-950 sm:px-6 dark:bg-[#0d1117] dark:text-slate-50">
             <GlobalFaviconHead />
             <BrandThemeStyle />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.05),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.78),rgba(248,250,252,0.96))] dark:bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.10),transparent_36%),linear-gradient(180deg,rgba(2,6,23,0.78),rgba(2,6,23,0.96))]" />
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#0f172a,#c80012,#0f172a)] opacity-90" />
 
-            <div className="relative z-10 w-full max-w-[1080px]">
-                <div className="grid animate-in overflow-hidden rounded-[28px] border border-[var(--auth-card-border)] bg-[var(--auth-card-bg)] shadow-[0_24px_70px_-48px_rgba(15,23,42,0.35)] duration-700 fade-in slide-in-from-bottom-4 lg:grid-cols-[0.95fr_1.05fr]">
-                    <div className="flex flex-col justify-between gap-10 bg-[var(--auth-panel)] p-8 text-white sm:p-10">
-                        <Link
-                            href={home()}
-                            className="inline-flex items-center gap-3 font-medium transition-opacity hover:opacity-90"
-                        >
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
-                                <AppLogoIcon className="h-7 w-auto text-white" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-semibold text-white">
-                                    {branding.company_name}
-                                </p>
-                                <p className="text-[0.7rem] tracking-[0.22em] text-slate-300 uppercase">
-                                    {branding.company_subtitle}
-                                </p>
-                            </div>
-                        </Link>
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute -top-44 left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)] blur-3xl" />
+                <div className="absolute -right-40 -bottom-44 h-[28rem] w-[28rem] rounded-full bg-[color-mix(in_srgb,var(--brand-secondary)_12%,transparent)] blur-3xl" />
+                <div className="absolute top-10 left-8 h-40 w-40 rounded-full border border-[color-mix(in_srgb,var(--brand-primary)_10%,transparent)] sm:left-16" />
+                <div className="absolute top-16 left-14 h-28 w-28 rounded-full border border-[color-mix(in_srgb,var(--brand-primary)_8%,transparent)] sm:left-[5.5rem]" />
+            </div>
 
-                        <div className="space-y-4">
-                            <div className="inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-[0.16em] text-white uppercase">
-                                Admin Access
-                            </div>
-                            <div className="space-y-3">
-                                <h1 className="text-3xl font-[var(--font-auth-display)] font-semibold tracking-tight text-white md:text-4xl">
-                                    {title}
-                                </h1>
-                                <p className="max-w-md text-sm leading-relaxed text-slate-300">
-                                    {description}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3 text-sm text-slate-200">
-                            <div className="flex items-start gap-3">
-                                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-white/70" />
-                                <div>
-                                    <p className="font-medium text-white">
-                                        Stabil untuk operasional harian
-                                    </p>
-                                    <p className="mt-0.5 text-slate-300">
-                                        Desain ringkas untuk akses kerja yang
-                                        cepat.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex items-start gap-3">
-                                <span className="mt-2 h-2.5 w-2.5 shrink-0 rounded-full bg-white/70" />
-                                <div>
-                                    <p className="font-medium text-white">
-                                        Fokus ke data penting
-                                    </p>
-                                    <p className="mt-0.5 text-slate-300">
-                                        Tanpa elemen visual yang mengganggu.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+            <div className="relative z-10 w-full max-w-[460px]">
+                <Link
+                    href={home()}
+                    className="mx-auto mb-6 flex w-fit items-center gap-3 transition-opacity hover:opacity-75"
+                >
+                    <AppLogoIcon className="h-11 w-auto" />
+                    <div>
+                        <p className="text-sm font-semibold tracking-wide">
+                            {branding.company_name}
+                        </p>
+                        <p className="mt-0.5 text-[10px] tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
+                            {branding.company_subtitle}
+                        </p>
                     </div>
+                </Link>
 
-                    <div className="bg-white p-6 sm:p-8 lg:p-10 dark:bg-slate-950">
-                        <div className="mb-8 flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase dark:text-slate-400">
-                                    Login Panel
-                                </p>
-                                <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                                    Masuk menggunakan akun internal yang sudah
-                                    terdaftar.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="relative">{children}</div>
-                    </div>
+                <div className="mx-auto mb-5 flex w-fit items-center gap-3 rounded-full border border-black/5 bg-white/70 px-4 py-2 text-[10px] font-semibold tracking-[0.16em] text-slate-500 uppercase shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                    <MapPin className="h-3.5 w-3.5 text-[var(--brand-primary)]" />
+                    <span>Makkah</span>
+                    <span className="h-px w-7 border-t border-dashed border-slate-300 dark:border-white/20" />
+                    <Plane className="h-3.5 w-3.5 rotate-12 text-[var(--brand-primary)]" />
+                    <span>Madinah</span>
                 </div>
+
+                <main className="relative overflow-hidden rounded-[28px] bg-white px-6 py-8 shadow-[0_28px_90px_-52px_rgba(15,23,42,0.55)] ring-1 ring-black/5 sm:px-10 sm:py-10 dark:bg-[#151a22] dark:ring-white/10">
+                    <div className="relative -mx-6 -mt-8 mb-8 h-32 overflow-hidden bg-[var(--brand-secondary)] px-6 sm:-mx-10 sm:-mt-10 sm:px-10">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_10%,rgba(255,255,255,0.2),transparent_35%),linear-gradient(135deg,transparent_30%,rgba(0,0,0,0.18))]" />
+                        <KaabaIllustration className="absolute -right-1 bottom-[-4.5rem] h-48 w-64 text-white/90 sm:right-4" />
+                        <div className="relative flex h-full items-end pb-4">
+                            <div className="rounded-xl border border-white/15 bg-black/10 px-3 py-2 text-white backdrop-blur-sm">
+                                <p className="text-[9px] font-semibold tracking-[0.18em] text-white/60 uppercase">
+                                    Perjalanan ibadah
+                                </p>
+                                <p className="mt-1 text-xs font-medium">
+                                    Makkah dan Madinah
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="pointer-events-none absolute top-24 right-4 h-24 w-24 rounded-full border border-[color-mix(in_srgb,var(--brand-primary)_14%,transparent)]" />
+                    <div className="mb-8">
+                        <div className="mb-5 flex items-center gap-2 text-[var(--brand-primary)]">
+                            <span className="h-1 w-10 rounded-full bg-[var(--brand-primary)]" />
+                            <span className="h-1 w-1 rounded-full bg-[var(--brand-primary)]/45" />
+                            <span className="h-1 w-1 rounded-full bg-[var(--brand-primary)]/25" />
+                        </div>
+                        <h1 className="text-2xl font-semibold tracking-[-0.025em] sm:text-3xl">
+                            {title}
+                        </h1>
+                        <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                            {description}
+                        </p>
+                    </div>
+                    {children}
+                    <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-medium tracking-[0.12em] text-slate-400 uppercase dark:text-slate-500">
+                        <span>Jelas rencananya</span>
+                        <ArrowRight className="h-3 w-3" />
+                        <span>Terjamin amanahnya</span>
+                    </div>
+                </main>
             </div>
         </div>
     );

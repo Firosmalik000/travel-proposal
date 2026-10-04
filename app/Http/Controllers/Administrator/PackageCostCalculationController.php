@@ -267,6 +267,113 @@ class PackageCostCalculationController extends Controller
         ]);
     }
 
+    public function show(TravelPackage $package): Response
+    {
+        $package->loadMissing(['products', 'allInConfig']);
+        $package->loadCount([
+            'registrations as total_bookings' => fn ($query) => $query->where('status', 'registered'),
+        ]);
+        $package->loadSum([
+            'registrations as total_customers' => fn ($query) => $query->where('status', 'registered'),
+        ], 'passenger_count');
+
+        $hotelAssignmentsCount = HotelAssignment::query()
+            ->where('package_id', $package->id)
+            ->count();
+
+        $latestCalculation = PackageCostCalculation::query()
+            ->with('items')
+            ->where('package_id', $package->id)
+            ->orderByDesc('calculated_at')
+            ->orderByDesc('id')
+            ->first();
+
+        $hppEstimate = $this->hppEstimateService->calculateForPackage($package);
+
+        $calculationMode = (string) ($latestCalculation?->calculation_mode ?: PackageCostCalculationService::MODE_PER_PAX_MULTIPLIER);
+        $payload = $this->service->preview(
+            packageId: (int) $package->id,
+            departureScheduleId: null,
+            manualAdjustment: 0,
+            calculationMode: $calculationMode,
+        );
+
+        $tourLeaderFee = (int) ($latestCalculation?->tour_leader_fee ?? 0);
+        $muthawwifFee = (int) ($latestCalculation?->muthawwif_fee ?? 0);
+        $grandTotal = (int) ($payload['grand_total'] ?? 0) + $tourLeaderFee + $muthawwifFee;
+        $customerCount = (int) ($payload['customer_count'] ?? 0);
+
+        $actual = [
+            'id' => (int) ($latestCalculation?->id ?? 0),
+            'is_saved' => $latestCalculation !== null,
+            'calculation_mode' => $calculationMode,
+            'calculated_at' => $latestCalculation?->calculated_at?->toDateTimeString(),
+            'hotel_total' => (int) ($payload['hotel_total'] ?? 0),
+            'product_total' => (int) ($payload['product_total'] ?? 0),
+            'manual_adjustment' => 0,
+            'tour_leader_fee' => $tourLeaderFee,
+            'muthawwif_fee' => $muthawwifFee,
+            'grand_total' => $grandTotal,
+            'hpp_per_customer' => $customerCount > 0 ? (int) floor($grandTotal / $customerCount) : null,
+            'currency' => (string) ($payload['currency'] ?? 'IDR'),
+            'package_currency' => (string) ($payload['package_currency'] ?? $package->currency ?? 'IDR'),
+            'package_conversion_rate_to_idr' => (float) ($payload['package_conversion_rate_to_idr'] ?? 1),
+            'warnings' => collect($payload['warnings'] ?? [])->values()->all(),
+            'notes' => $latestCalculation?->notes,
+            'items' => collect($payload['items'] ?? [])->map(fn (array $item): array => [
+                'id' => (int) ($item['id'] ?? 0),
+                'cost_type' => (string) ($item['cost_type'] ?? ''),
+                'label' => (string) ($item['label'] ?? ''),
+                'description' => $item['description'] ?? null,
+                'quantity' => (int) ($item['quantity'] ?? 0),
+                'unit_price' => (int) ($item['unit_price'] ?? 0),
+                'total_price' => (int) ($item['total_price'] ?? 0),
+                'meta' => $item['meta'] ?? [],
+            ])->values()->all(),
+        ];
+
+        $packageData = [
+            'id' => (int) $package->id,
+            'name' => $this->resolvePackageName($package->name, $package->code),
+            'code' => (string) ($package->code ?? '-'),
+            'price' => (float) ($package->price ?? 0),
+            'currency' => (string) ($package->currency ?: 'IDR'),
+            'original_price' => $package->original_price !== null ? (float) $package->original_price : null,
+            'discount_percent' => $package->discountPercent(),
+            'room_prices' => data_get($package->content, 'room_prices', []),
+            'room_original_prices' => data_get($package->content, 'room_original_prices', []),
+            'departure_date' => $package->start_date?->toDateString(),
+            'departure_city' => $package->departure_city,
+            'booking_count' => (int) $package->total_bookings,
+            'customer_count' => (int) ($package->total_customers ?? 0),
+            'total_hotels_assigned' => $hotelAssignmentsCount,
+        ];
+
+        $history = PackageCostCalculation::query()
+            ->where('package_id', $package->id)
+            ->orderByDesc('calculated_at')
+            ->orderByDesc('id')
+            ->get(['id', 'calculation_mode', 'grand_total', 'hpp_per_customer', 'currency', 'calculated_at', 'notes'])
+            ->map(fn (PackageCostCalculation $calc): array => [
+                'id' => (int) $calc->id,
+                'calculation_mode' => (string) $calc->calculation_mode,
+                'grand_total' => (int) $calc->grand_total,
+                'hpp_per_customer' => $calc->hpp_per_customer ? (int) $calc->hpp_per_customer : null,
+                'currency' => (string) $calc->currency,
+                'calculated_at' => $calc->calculated_at?->toDateTimeString(),
+                'notes' => $calc->notes,
+            ])
+            ->values()
+            ->all();
+
+        return Inertia::render('Dashboard/FinancialManagement/HppPackage/Show', [
+            'package' => $packageData,
+            'actual' => $actual,
+            'hppEstimate' => $hppEstimate,
+            'history' => $history,
+        ]);
+    }
+
     public function store(StorePackageCostCalculationRequest $request): RedirectResponse
     {
         $this->service->generate(

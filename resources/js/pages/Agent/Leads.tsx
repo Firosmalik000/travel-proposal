@@ -21,11 +21,7 @@ export default function Leads({
     return (
         <AgentLayout title="Leads Referral">
             <Head title="Leads Referral" />
-            <PageIntro
-                eyebrow="Pipeline Referral"
-                title="Leads Referral"
-                description="Registrasi yang masuk dari kode referral Anda dan masih menunggu diproses menjadi booking."
-            />
+            <PageIntro title="Leads Referral" />
             <div className="mt-5">
                 <RecordFilters
                     route="/agent/leads"

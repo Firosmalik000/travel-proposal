@@ -1,0 +1,109 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  ci:
+    name: Quality, build, and tests
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: travel_propposal_codex_testing
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Check PHP formatting
+        run: vendor/bin/pint --test
+
+      - name: Check frontend formatting
+        run: npm run format:check
+
+      - name: Lint frontend
+        run: npm run lint:check
+
+      - name: Check frontend types
+        run: npm run types
+
+      - name: Build production assets
+        run: npm run build
+
+      - name: Run application tests
+        run: php artisan test --compact
+
+  deploy:
+    name: Deploy production to Ploi
+    needs: ci
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Trigger Ploi deployment
+        env:
+          PLOI_DEPLOY_WEBHOOK_URL: ${{ secrets.PLOI_DEPLOY_WEBHOOK_URL }}
+        run: |
+          if [ -z "$PLOI_DEPLOY_WEBHOOK_URL" ]; then
+            echo "::error::GitHub Secret PLOI_DEPLOY_WEBHOOK_URL belum dikonfigurasi."
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            --request POST \
+            --connect-timeout 10 \
+            --max-time 30 \
+            --retry 3 \
+            --retry-all-errors \
+            "$PLOI_DEPLOY_WEBHOOK_URL"

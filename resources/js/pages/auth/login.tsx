@@ -28,7 +28,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             <Head title="Masuk" />
 
             {status && (
-                <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-medium text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-200">
+                <div className="mb-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-center text-sm font-medium text-primary dark:bg-primary/10">
                     {status}
                 </div>
             )}
@@ -132,7 +132,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                 <div className="pt-2">
                                     <Button
                                         type="submit"
-                                        className="h-11 w-full rounded-xl bg-slate-900 text-white shadow-none transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+                                        className="h-11 w-full rounded-xl bg-[var(--brand-primary)] text-white shadow-none transition hover:bg-[var(--brand-primary)]/90"
                                         tabIndex={4}
                                         disabled={processing}
                                         data-test="login-button"

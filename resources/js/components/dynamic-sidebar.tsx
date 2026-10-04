@@ -73,7 +73,7 @@ interface MenuItem {
     children?: MenuItem[] | null;
 }
 
-const SIDEBAR_MENU_CACHE_KEY = 'travel-proposal:sidebar-menus:v3';
+const SIDEBAR_MENU_CACHE_KEY = 'travel-proposal:sidebar-menus:v5';
 
 function canonicalAdminPath(path: string | null | undefined): string {
     if (!path) {

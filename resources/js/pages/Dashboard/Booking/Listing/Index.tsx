@@ -7,14 +7,6 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -62,8 +54,6 @@ import {
     LoaderCircle,
     MessageCircle,
     MoreHorizontal,
-    Plus,
-    Search,
     Send,
     Trash2,
     Upload,
@@ -72,327 +62,49 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
-
-type Registration = {
-    id: number;
-    booking_type: string;
-    booking_code: string;
-    travel_package_id: number;
-    departure_schedule_id: number | null;
-    custom_unit_price?: number | null;
-    custom_total_amount?: number | null;
-    full_name: string;
-    phone: string;
-    email: string | null;
-    origin_city: string;
-    passenger_count: number;
-    participants_count?: number;
-    participant_data_complete?: boolean;
-    participant_outstanding_count?: number;
-    participant_reminder?: ParticipantReminder;
-    revenue?: {
-        currency: string;
-        amount: number;
-    };
-    payment: {
-        status: 'unpaid' | 'partial' | 'paid';
-        total_amount: number;
-        paid_amount: number;
-        remaining_amount: number;
-        currency: string;
-    };
-    notes: string | null;
-    status: string;
-    created_at: string | null;
-    has_review?: boolean;
-    review_url?: string | null;
-    travel_package: {
-        code: string | null;
-        slug: string | null;
-        name: Record<string, string> | null;
-        package_type: string | null;
-    };
-    departure_schedule: {
-        departure_date: string | null;
-        return_date: string | null;
-        departure_city: string | null;
-        status: string | null;
-    };
-};
-
-type ParticipantReminder = {
-    is_complete: boolean;
-    can_remind: boolean;
-    can_send_direct: boolean;
-    whatsapp_url: string | null;
-    outstanding_count: number;
-    incomplete_participants_count: number;
-    remaining_slots: number;
-    missing_fields_count: number;
-    missing_documents_count: number;
-};
-
-type TravelPackageOption = {
-    id: number;
-    code: string | null;
-    name: Record<string, string> | null;
-    package_type: string | null;
-    start_date?: string | null;
-    end_date?: string | null;
-    departure_city?: string | null;
-    seats_available?: number | null;
-};
-
-type ScheduleOption = {
-    id: number;
-    travel_package_id: number;
-    departure_date: string | null;
-    return_date: string | null;
-    departure_city: string | null;
-    status: string | null;
-    seats_available: number | null;
-};
-
-type BookingFormData = {
-    travel_package_id: string;
-    departure_schedule_id: string;
-    custom_departure_date: string;
-    custom_return_date: string;
-    custom_unit_price: string;
-    full_name: string;
-    phone: string;
-    email: string;
-    origin_city: string;
-    passenger_count: string;
-    notes: string;
-    status: string;
-};
-
-type Participant = {
-    id: number;
-    full_name: string;
-    gender: string | null;
-    birth_place: string | null;
-    birth_date: string | null;
-    marital_status: string | null;
-    address: string | null;
-    needs_wheelchair: boolean;
-    shirt_size: string | null;
-    passport_ready: boolean;
-    passport_issue_date: string | null;
-    passport_expiry_date: string | null;
-    passport_type: string | null;
-    passport_validity_years: number | null;
-    passport_scan_path: string | null;
-    family_card_scan_path: string | null;
-    marriage_book_scan_path: string | null;
-    birth_certificate_scan_path: string | null;
-    photo_path: string | null;
-    meningitis_vaccine_scan_path: string | null;
-    has_medical_history: boolean;
-    medical_history_notes: string | null;
-    emergency_contact_name: string | null;
-    emergency_contact_phone: string | null;
-    emergency_contact_relationship: string | null;
-    has_performed_umrah: boolean;
-    referral_source: string | null;
-};
-
-type ParticipantFormData = {
-    full_name: string;
-    gender: string;
-    birth_place: string;
-    birth_date: string;
-    marital_status: string;
-    address: string;
-    needs_wheelchair: boolean;
-    shirt_size: string;
-    passport_ready: boolean;
-    passport_issue_date: string;
-    passport_expiry_date: string;
-    passport_type: string;
-    passport_scan: File | null;
-    family_card_scan: File | null;
-    marriage_book_scan: File | null;
-    birth_certificate_scan: File | null;
-    photo: File | null;
-    meningitis_vaccine_scan: File | null;
-    has_medical_history: boolean;
-    medical_history_notes: string;
-    emergency_contact_name: string;
-    emergency_contact_phone: string;
-    emergency_contact_relationship: string;
-    has_performed_umrah: boolean;
-    referral_source: string;
-};
-
-type BulkParticipantImportRow = {
-    full_name: string;
-    gender: string | null;
-    birth_place: string;
-    birth_date: string;
-    marital_status: string | null;
-    address: string;
-    needs_wheelchair: boolean;
-    shirt_size: string;
-    passport_ready: boolean;
-    passport_issue_date: string;
-    passport_expiry_date: string;
-    passport_type: string | null;
-    has_medical_history: boolean;
-    medical_history_notes: string;
-    emergency_contact_name: string;
-    emergency_contact_phone: string;
-    emergency_contact_relationship: string;
-    has_performed_umrah: boolean;
-    referral_source: string;
-    passport_scan_url: string;
-    family_card_scan_url: string;
-    marriage_book_scan_url: string;
-    birth_certificate_scan_url: string;
-    photo_url: string;
-    meningitis_vaccine_scan_url: string;
-};
-
-type ParticipantImportPreviewRow = BulkParticipantImportRow & {
-    row_number: number;
-    is_valid: boolean;
-    note: string | null;
-    passport_scan_file: File | null;
-    family_card_scan_file: File | null;
-    marriage_book_scan_file: File | null;
-    birth_certificate_scan_file: File | null;
-    photo_file: File | null;
-    meningitis_vaccine_scan_file: File | null;
-    passport_scan_preview_url: string | null;
-    family_card_scan_preview_url: string | null;
-    marriage_book_scan_preview_url: string | null;
-    birth_certificate_scan_preview_url: string | null;
-    photo_preview_url: string | null;
-    meningitis_vaccine_scan_preview_url: string | null;
-};
-
-type ParticipantImportEditableField = keyof Pick<
-    ParticipantImportPreviewRow,
-    | 'full_name'
-    | 'gender'
-    | 'birth_place'
-    | 'birth_date'
-    | 'marital_status'
-    | 'address'
-    | 'needs_wheelchair'
-    | 'shirt_size'
-    | 'passport_ready'
-    | 'passport_issue_date'
-    | 'passport_expiry_date'
-    | 'passport_type'
-    | 'has_medical_history'
-    | 'medical_history_notes'
-    | 'emergency_contact_name'
-    | 'emergency_contact_phone'
-    | 'emergency_contact_relationship'
-    | 'has_performed_umrah'
-    | 'referral_source'
-    | 'passport_scan_url'
-    | 'family_card_scan_url'
-    | 'marriage_book_scan_url'
-    | 'birth_certificate_scan_url'
-    | 'photo_url'
-    | 'meningitis_vaccine_scan_url'
->;
-
-type ParticipantDocumentField = keyof Pick<
-    ParticipantFormData,
-    | 'passport_scan'
-    | 'family_card_scan'
-    | 'marriage_book_scan'
-    | 'birth_certificate_scan'
-    | 'photo'
-    | 'meningitis_vaccine_scan'
->;
-
-type ParticipantImportDocumentFileField =
-    | 'passport_scan_file'
-    | 'family_card_scan_file'
-    | 'marriage_book_scan_file'
-    | 'birth_certificate_scan_file'
-    | 'photo_file'
-    | 'meningitis_vaccine_scan_file';
-
-type ParticipantImportDocumentPreviewField =
-    | 'passport_scan_preview_url'
-    | 'family_card_scan_preview_url'
-    | 'marriage_book_scan_preview_url'
-    | 'birth_certificate_scan_preview_url'
-    | 'photo_preview_url'
-    | 'meningitis_vaccine_scan_preview_url';
-
-type ParticipantDocumentPreviewMap = Record<
+import type {
+    BookingFormData,
+    BulkParticipantImportResult,
+    BulkParticipantImportRow,
+    Participant,
     ParticipantDocumentField,
-    string | null
->;
-
-type ParticipantResponse = {
-    booking: {
-        id: number;
-        booking_code: string;
-        passenger_count: number;
-        participants_count: number;
-        remaining_slots: number;
-        participant_data_complete: boolean;
-        participant_outstanding_count: number;
-        participant_reminder: ParticipantReminder;
-    };
-    participants: Participant[];
-};
-
-type BulkParticipantImportResult = {
-    createdCount: number;
-    savedRowNumbers: number[];
-    skippedRows: Array<{
-        row: number;
-        name: string;
-        reason: string;
-    }>;
-};
-
-type PaginationLink = {
-    url: string | null;
-    label: string;
-    active: boolean;
-};
-
-type PaginatedRegistrations = {
-    data: Registration[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    from: number | null;
-    to: number | null;
-    links: PaginationLink[];
-};
-
-type Props = {
-    registrations: PaginatedRegistrations;
-    packages: TravelPackageOption[];
-    schedules: ScheduleOption[];
-    revenue: {
-        by_currency: Array<{
-            currency: string;
-            amount: number;
-            pax: number;
-            bookings: number;
-        }>;
-    };
-    filters: {
-        search: string;
-        status: string;
-        travel_package_id?: number | null;
-        booking_type?: string | null;
-    };
-    participant_upload_max_kilobytes: number;
-};
+    ParticipantDocumentPreviewMap,
+    ParticipantFormData,
+    ParticipantImportEditableField,
+    ParticipantImportPreviewRow,
+    ParticipantResponse,
+    Props,
+    Registration,
+} from './booking-listing-types';
+import {
+    detectPassportValidityYears,
+    emptyParticipantDocumentPreviewMap,
+    formatParticipantImportSkipSummary,
+    isImageDocument,
+    isPdfDocument,
+    normalizeSpreadsheetCell,
+    normalizeSpreadsheetDate,
+    normalizeSpreadsheetGender,
+    normalizeSpreadsheetKey,
+    normalizeSpreadsheetMaritalStatus,
+    normalizeSpreadsheetPassportType,
+    packageDisplayName,
+    parseSpreadsheetBoolean,
+    participantDocumentCount,
+    participantDraftDocumentInputs,
+    participantFileName,
+    participantFormDocumentCount,
+    paymentStatusMeta,
+    resolveCsrfToken,
+    statusBadgeVariant,
+    toAbsoluteParticipantDocumentUrl,
+    validateParticipantImportRows,
+} from './booking-listing-utils';
+import { BookingListingFilters } from './BookingListingFilters';
+import { BookingListingHeader } from './BookingListingHeader';
+import { BookingListingPagination } from './BookingListingPagination';
+import { BookingListingStats } from './BookingListingStats';
+import { DeleteBookingDialog } from './DeleteBookingDialog';
 
 const defaultFormData: BookingFormData = {
     travel_package_id: '',
@@ -470,423 +182,6 @@ const participantAdditionalFields: Array<keyof ParticipantFormData> = [
     'has_performed_umrah',
     'referral_source',
 ];
-
-function emptyParticipantDocumentPreviewMap(): ParticipantDocumentPreviewMap {
-    return {
-        passport_scan: null,
-        family_card_scan: null,
-        marriage_book_scan: null,
-        birth_certificate_scan: null,
-        photo: null,
-        meningitis_vaccine_scan: null,
-    };
-}
-
-function formatParticipantImportSkipSummary(
-    skippedRows: Array<{
-        row: number;
-        name: string;
-        reason: string;
-    }>,
-): string {
-    if (skippedRows.length === 0) {
-        return '';
-    }
-
-    const groupedReasons = skippedRows.reduce<Record<string, number>>(
-        (carry, skippedRow) => {
-            const reason = skippedRow.reason.trim();
-
-            carry[reason] = (carry[reason] ?? 0) + 1;
-
-            return carry;
-        },
-        {},
-    );
-
-    return `${skippedRows.length} peserta dilewati: ${Object.entries(
-        groupedReasons,
-    )
-        .map(([reason, count]) => `${count} karena ${reason}`)
-        .join(', ')}.`;
-}
-
-function resolveCsrfToken(): string {
-    return (
-        document
-            .querySelector('meta[name="csrf-token"]')
-            ?.getAttribute('content')
-            ?.trim() ?? ''
-    );
-}
-
-function statusBadgeVariant(
-    status: string,
-): 'default' | 'secondary' | 'outline' | 'destructive' {
-    if (status === 'registered') {
-        return 'default';
-    }
-
-    if (status === 'cancelled') {
-        return 'destructive';
-    }
-
-    return 'secondary';
-}
-
-const paymentStatusMeta = {
-    unpaid: {
-        label: 'Belum dibayar',
-        className:
-            'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200',
-    },
-    partial: {
-        label: 'Dibayar sebagian',
-        className:
-            'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300',
-    },
-    paid: {
-        label: 'Lunas',
-        className:
-            'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300',
-    },
-} as const;
-
-function participantFileName(value: string | null): string {
-    if (!value) {
-        return '-';
-    }
-
-    const segments = value.split('/');
-    const filename = segments[segments.length - 1] ?? value;
-
-    if (filename.length <= 28) {
-        return filename;
-    }
-
-    const extensionIndex = filename.lastIndexOf('.');
-    const extension = extensionIndex > -1 ? filename.slice(extensionIndex) : '';
-    const basename =
-        extensionIndex > -1 ? filename.slice(0, extensionIndex) : filename;
-
-    return `${basename.slice(0, 20)}...${extension}`;
-}
-
-function toAbsoluteParticipantDocumentUrl(value: string | null): string {
-    if (!value) {
-        return '';
-    }
-
-    if (/^https?:\/\//i.test(value)) {
-        return value;
-    }
-
-    if (value.startsWith('/')) {
-        return new URL(value, window.location.origin).toString();
-    }
-
-    return value;
-}
-
-const participantDraftDocumentInputs: Array<{
-    field: ParticipantDocumentField;
-    fileField: ParticipantImportDocumentFileField;
-    previewField: ParticipantImportDocumentPreviewField;
-    urlField: keyof Pick<
-        BulkParticipantImportRow,
-        | 'passport_scan_url'
-        | 'family_card_scan_url'
-        | 'marriage_book_scan_url'
-        | 'birth_certificate_scan_url'
-        | 'photo_url'
-        | 'meningitis_vaccine_scan_url'
-    >;
-    label: string;
-    description: string;
-    accept: string;
-}> = [
-    {
-        field: 'passport_scan',
-        fileField: 'passport_scan_file',
-        previewField: 'passport_scan_preview_url',
-        urlField: 'passport_scan_url',
-        label: 'Scan Paspor',
-        description: 'JPG, PNG, WEBP, atau PDF',
-        accept: '.jpg,.jpeg,.png,.webp,.pdf',
-    },
-    {
-        field: 'family_card_scan',
-        fileField: 'family_card_scan_file',
-        previewField: 'family_card_scan_preview_url',
-        urlField: 'family_card_scan_url',
-        label: 'Kartu Keluarga',
-        description: 'Upload KK atau isi URL file',
-        accept: '.jpg,.jpeg,.png,.webp,.pdf',
-    },
-    {
-        field: 'marriage_book_scan',
-        fileField: 'marriage_book_scan_file',
-        previewField: 'marriage_book_scan_preview_url',
-        urlField: 'marriage_book_scan_url',
-        label: 'Buku Nikah',
-        description: 'Opsional jika dibutuhkan',
-        accept: '.jpg,.jpeg,.png,.webp,.pdf',
-    },
-    {
-        field: 'birth_certificate_scan',
-        fileField: 'birth_certificate_scan_file',
-        previewField: 'birth_certificate_scan_preview_url',
-        urlField: 'birth_certificate_scan_url',
-        label: 'Akta Kelahiran',
-        description: 'Opsional data tambahan',
-        accept: '.jpg,.jpeg,.png,.webp,.pdf',
-    },
-    {
-        field: 'photo',
-        fileField: 'photo_file',
-        previewField: 'photo_preview_url',
-        urlField: 'photo_url',
-        label: 'Pas Foto',
-        description: 'Bisa upload gambar atau isi URL foto',
-        accept: 'image/png,image/jpeg,image/webp',
-    },
-    {
-        field: 'meningitis_vaccine_scan',
-        fileField: 'meningitis_vaccine_scan_file',
-        previewField: 'meningitis_vaccine_scan_preview_url',
-        urlField: 'meningitis_vaccine_scan_url',
-        label: 'Vaksin Meningitis',
-        description: 'Gambar atau PDF',
-        accept: '.jpg,.jpeg,.png,.webp,.pdf',
-    },
-];
-
-const normalizeSpreadsheetCell = (value: unknown): string =>
-    String(value ?? '')
-        .trim()
-        .replace(/\s+/g, ' ');
-
-const normalizeSpreadsheetKey = (value: string): string =>
-    normalizeSpreadsheetCell(value)
-        .normalize('NFKD')
-        .toLowerCase()
-        .replace(/[^\p{L}\p{N}]+/gu, '');
-
-function parseSpreadsheetBoolean(value: unknown): boolean {
-    const normalized = normalizeSpreadsheetCell(value).toLowerCase();
-
-    return [
-        '1',
-        'true',
-        'yes',
-        'ya',
-        'y',
-        'siap',
-        'sudah',
-        'sudah pernah',
-    ].includes(normalized);
-}
-
-function normalizeSpreadsheetGender(value: unknown): string | null {
-    const normalized = normalizeSpreadsheetCell(value).toLowerCase();
-
-    if (
-        ['male', 'laki-laki', 'lakilaki', 'pria', 'ikhwan'].includes(normalized)
-    ) {
-        return 'male';
-    }
-
-    if (['female', 'perempuan', 'wanita', 'akhwat'].includes(normalized)) {
-        return 'female';
-    }
-
-    return null;
-}
-
-function normalizeSpreadsheetMaritalStatus(value: unknown): string | null {
-    const normalized = normalizeSpreadsheetCell(value).toLowerCase();
-
-    if (
-        ['single', 'lajang', 'belummenikah', 'belum menikah'].includes(
-            normalized,
-        )
-    ) {
-        return 'single';
-    }
-
-    if (['married', 'menikah'].includes(normalized)) {
-        return 'married';
-    }
-
-    if (['divorced', 'cerai'].includes(normalized)) {
-        return 'divorced';
-    }
-
-    if (['widowed', 'janda', 'duda'].includes(normalized)) {
-        return 'widowed';
-    }
-
-    return null;
-}
-
-function normalizeSpreadsheetPassportType(value: unknown): string | null {
-    const normalized = normalizeSpreadsheetCell(value).toLowerCase();
-
-    if (['ordinary', 'biasa'].includes(normalized)) {
-        return 'ordinary';
-    }
-
-    if (['epassport', 'e-passport', 'epassport'].includes(normalized)) {
-        return 'e_passport';
-    }
-
-    if (['diplomatic', 'diplomatik'].includes(normalized)) {
-        return 'diplomatic';
-    }
-
-    if (['official', 'dinas'].includes(normalized)) {
-        return 'official';
-    }
-
-    return null;
-}
-
-function normalizeSpreadsheetDate(value: unknown): string {
-    return normalizeSpreadsheetCell(value);
-}
-
-function validateParticipantImportRows(
-    rows: ParticipantImportPreviewRow[],
-    existingParticipants: Participant[],
-    remainingSlots: number,
-): ParticipantImportPreviewRow[] {
-    const existingNames = new Set(
-        existingParticipants
-            .map((participant) => participant.full_name.trim().toLowerCase())
-            .filter(Boolean),
-    );
-    const payloadNames = new Set<string>();
-    let acceptedCount = 0;
-
-    return rows.map((row) => {
-        const fullName = row.full_name.trim();
-        const normalizedName = fullName.toLowerCase();
-        let isValid = true;
-        let note: string | null = null;
-
-        if (fullName === '') {
-            isValid = false;
-            note = 'Nama peserta wajib diisi.';
-        } else if (existingNames.has(normalizedName)) {
-            isValid = false;
-            note = 'Sudah ada di data peserta.';
-        } else if (payloadNames.has(normalizedName)) {
-            isValid = false;
-            note = 'Duplikat dalam draft import.';
-        } else if (acceptedCount >= remainingSlots) {
-            isValid = false;
-            note = 'Melebihi sisa slot pax.';
-        }
-
-        if (isValid) {
-            payloadNames.add(normalizedName);
-            acceptedCount++;
-        }
-
-        return {
-            ...row,
-            full_name: fullName,
-            is_valid: isValid,
-            note,
-        };
-    });
-}
-
-function isImageDocument(value: File | string | null): boolean {
-    if (!value) {
-        return false;
-    }
-
-    if (value instanceof File) {
-        return value.type.startsWith('image/');
-    }
-
-    return /\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(value);
-}
-
-function isPdfDocument(value: File | string | null): boolean {
-    if (!value) {
-        return false;
-    }
-
-    if (value instanceof File) {
-        return value.type === 'application/pdf';
-    }
-
-    return /\.pdf$/i.test(value);
-}
-
-function detectPassportValidityYears(
-    issuedAt: string,
-    expiresAt: string,
-): number | null {
-    if (!issuedAt || !expiresAt) {
-        return null;
-    }
-
-    const issuedDate = new Date(`${issuedAt}T00:00:00`);
-    const expiryDate = new Date(`${expiresAt}T00:00:00`);
-
-    if (
-        Number.isNaN(issuedDate.getTime()) ||
-        Number.isNaN(expiryDate.getTime())
-    ) {
-        return null;
-    }
-
-    const diffMs = expiryDate.getTime() - issuedDate.getTime();
-    const years = Math.round(diffMs / (1000 * 60 * 60 * 24 * 365));
-
-    return years > 0 ? years : null;
-}
-
-function participantDocumentCount(participant: Participant): number {
-    return [
-        participant.passport_scan_path,
-        participant.family_card_scan_path,
-        participant.marriage_book_scan_path,
-        participant.birth_certificate_scan_path,
-        participant.photo_path,
-        participant.meningitis_vaccine_scan_path,
-    ].filter(Boolean).length;
-}
-
-function participantFormDocumentCount(
-    formData: ParticipantFormData,
-    participant: Participant | null,
-): number {
-    return [
-        formData.passport_scan ?? participant?.passport_scan_path,
-        formData.family_card_scan ?? participant?.family_card_scan_path,
-        formData.marriage_book_scan ?? participant?.marriage_book_scan_path,
-        formData.birth_certificate_scan ??
-            participant?.birth_certificate_scan_path,
-        formData.photo ?? participant?.photo_path,
-        formData.meningitis_vaccine_scan ??
-            participant?.meningitis_vaccine_scan_path,
-    ].filter(Boolean).length;
-}
-
-function packageDisplayName(
-    travelPackage: TravelPackageOption | Registration['travel_package'],
-    locale: string,
-): string {
-    if (typeof travelPackage.name === 'string') {
-        return travelPackage.name || '-';
-    }
-
-    return travelPackage.name?.[locale] ?? travelPackage.name?.id ?? '-';
-}
 
 export default function BookingListingIndex({
     registrations,
@@ -2719,166 +2014,43 @@ export default function BookingListingIndex({
             <Head title="Booking Listing" />
 
             <div className="min-w-0 space-y-4 overflow-x-hidden p-4 md:p-5">
-                <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                        <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
-                            Booking Listing
-                        </h1>
-                        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
-                            {canExport ? (
-                                <Button
-                                    variant="outline"
-                                    onClick={openFilteredPdf}
-                                    className="w-full gap-2 md:w-auto"
-                                >
-                                    <FileText className="h-4 w-4" />
-                                    Export PDF
-                                </Button>
-                            ) : null}
-                            {canCreate ? (
-                                <Button
-                                    onClick={openCreateDialog}
-                                    className="w-full md:w-auto"
-                                >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Tambah Booking
-                                </Button>
-                            ) : null}
-                        </div>
-                    </div>
-                </div>
+                <BookingListingHeader
+                    canCreate={canCreate}
+                    canExport={canExport}
+                    onCreate={openCreateDialog}
+                    onExport={openFilteredPdf}
+                />
 
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {stats.map((stat) => (
-                        <Card
-                            key={stat.label}
-                            className="border-border/60 shadow-sm"
-                        >
-                            <CardContent className="flex items-center justify-between p-3.5">
-                                <div>
-                                    <p className="text-xs text-muted-foreground md:text-sm">
-                                        {stat.label}
-                                    </p>
-                                    <p className="mt-1 text-xl font-semibold md:text-2xl">
-                                        {stat.value}
-                                    </p>
-                                </div>
-                                <div className="rounded-full bg-muted p-2.5">
-                                    <stat.icon className="h-4 w-4 text-muted-foreground md:h-5 md:w-5" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                <BookingListingStats stats={stats} />
 
                 <Card className="min-w-0 border-border/60 shadow-sm">
                     <CardHeader className="gap-4">
                         <div>
                             <CardTitle>Data Booking Jamaah</CardTitle>
                         </div>
-                        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
-                            <div className="relative min-w-0">
-                                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(event.target.value)
-                                    }
-                                    placeholder="Cari kode, nama, paket, kota..."
-                                    className="pl-9"
-                                />
-                            </div>
-                            <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-[140px_180px_140px]">
-                                <div className="min-w-0">
-                                    <Select
-                                        value={bookingTypeFilter}
-                                        onValueChange={(value) => {
-                                            setBookingTypeFilter(value);
+                        <BookingListingFilters
+                            bookingType={bookingTypeFilter}
+                            packageId={packageFilter}
+                            packages={packageOptions.map((travelPackage) => ({
+                                label: packageDisplayName(
+                                    travelPackage,
+                                    locale,
+                                ),
+                                value: String(travelPackage.id),
+                            }))}
+                            search={search}
+                            status={statusFilter}
+                            onBookingTypeChange={(value) => {
+                                setBookingTypeFilter(value);
 
-                                            if (value === 'custom') {
-                                                setPackageFilter('all');
-                                            }
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Tipe" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="regular">
-                                                Paket
-                                            </SelectItem>
-                                            <SelectItem value="custom">
-                                                Custom
-                                            </SelectItem>
-                                            <SelectItem value="all">
-                                                Semua
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="min-w-0">
-                                    <Select
-                                        value={packageFilter}
-                                        disabled={
-                                            bookingTypeFilter === 'custom'
-                                        }
-                                        onValueChange={(value) => {
-                                            setPackageFilter(value);
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Paket" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">
-                                                Semua paket
-                                            </SelectItem>
-                                            {packageOptions.map(
-                                                (travelPackage) => (
-                                                    <SelectItem
-                                                        key={travelPackage.id}
-                                                        value={String(
-                                                            travelPackage.id,
-                                                        )}
-                                                    >
-                                                        {packageDisplayName(
-                                                            travelPackage,
-                                                            locale,
-                                                        )}
-                                                    </SelectItem>
-                                                ),
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="min-w-0">
-                                    <Select
-                                        value={statusFilter}
-                                        onValueChange={(value) => {
-                                            setStatusFilter(value);
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">
-                                                Semua status
-                                            </SelectItem>
-                                            <SelectItem value="pending">
-                                                Pending
-                                            </SelectItem>
-                                            <SelectItem value="registered">
-                                                Registered
-                                            </SelectItem>
-                                            <SelectItem value="cancelled">
-                                                Cancelled
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </div>
+                                if (value === 'custom') {
+                                    setPackageFilter('all');
+                                }
+                            }}
+                            onPackageChange={setPackageFilter}
+                            onSearchChange={setSearch}
+                            onStatusChange={setStatusFilter}
+                        />
                     </CardHeader>
                     <CardContent className="min-w-0">
                         {registrationItems.length === 0 ? (
@@ -3398,52 +2570,18 @@ export default function BookingListingIndex({
                                 </Table>
                             </div>
                         )}
-                        <div className="mt-4 flex flex-col gap-3 border-t pt-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-                            <p>
-                                Menampilkan{' '}
-                                <span className="font-medium text-foreground">
-                                    {registrations.from ?? 0}
-                                </span>{' '}
-                                -{' '}
-                                <span className="font-medium text-foreground">
-                                    {registrations.to ?? 0}
-                                </span>{' '}
-                                dari{' '}
-                                <span className="font-medium text-foreground">
-                                    {registrations.total}
-                                </span>{' '}
-                                booking
-                            </p>
-                            <div className="flex flex-wrap justify-end gap-2">
-                                {registrations.links.map((link, index) => (
-                                    <Button
-                                        key={`${link.label}-${index}`}
-                                        type="button"
-                                        variant={
-                                            link.active ? 'default' : 'outline'
-                                        }
-                                        size="sm"
-                                        disabled={link.url === null}
-                                        onClick={() => {
-                                            if (!link.url) {
-                                                return;
-                                            }
-
-                                            router.visit(link.url, {
-                                                preserveScroll: true,
-                                                preserveState: true,
-                                            });
-                                        }}
-                                    >
-                                        <span
-                                            dangerouslySetInnerHTML={{
-                                                __html: link.label,
-                                            }}
-                                        />
-                                    </Button>
-                                ))}
-                            </div>
-                        </div>
+                        <BookingListingPagination
+                            from={registrations.from}
+                            links={registrations.links}
+                            to={registrations.to}
+                            total={registrations.total}
+                            onNavigate={(url) =>
+                                router.visit(url, {
+                                    preserveScroll: true,
+                                    preserveState: true,
+                                })
+                            }
+                        />
                     </CardContent>
                 </Card>
             </div>
@@ -6996,40 +6134,14 @@ export default function BookingListingIndex({
                 </SheetContent>
             </Sheet>
 
-            <Dialog
+            <DeleteBookingDialog
+                bookingCode={deleteTarget?.booking_code ?? null}
+                canDelete={canDelete}
+                isDeleting={form.processing}
                 open={deleteTarget !== null}
-                onOpenChange={(open) => !open && setDeleteTarget(null)}
-            >
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Hapus Booking</DialogTitle>
-                        <DialogDescription>
-                            Booking{' '}
-                            <strong>{deleteTarget?.booking_code ?? '-'}</strong>{' '}
-                            akan dihapus permanen dari listing admin.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setDeleteTarget(null)}
-                        >
-                            Batal
-                        </Button>
-                        {canDelete ? (
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                onClick={handleDelete}
-                                disabled={form.processing}
-                            >
-                                Hapus Booking
-                            </Button>
-                        ) : null}
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                onClose={() => setDeleteTarget(null)}
+                onConfirm={handleDelete}
+            />
         </AppSidebarLayout>
     );
 }

@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -33,7 +34,7 @@ return new class extends Migration
                 if (! $article->is_active) {
                     $status = 'archived';
                 } elseif ($article->published_at) {
-                    $publishedAt = \Illuminate\Support\Carbon::parse($article->published_at);
+                    $publishedAt = Carbon::parse($article->published_at);
                     $status = $publishedAt->isFuture() ? 'scheduled' : 'published';
                 }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Administrator;
 
 use App\Actions\Agent\CreateBookingCommission;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Administrator\ReverseFinancialTransactionRequest;
 use App\Http\Requests\Administrator\StoreAgentRequest;
 use App\Http\Requests\Administrator\UpdateAgentCommissionRequest;
 use App\Http\Requests\Administrator\UpdateAgentPackageFeeRequest;
@@ -12,8 +13,11 @@ use App\Models\AgentCommission;
 use App\Models\AgentPackageFee;
 use App\Models\AgentProfile;
 use App\Models\Booking;
+use App\Models\FinancialAccount;
 use App\Models\TravelPackage;
 use App\Models\User;
+use App\Services\AgentCommissionLedgerService;
+use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -21,7 +25,10 @@ use Inertia\Response;
 
 class AgentManagementController extends Controller
 {
-    public function __construct(private readonly CreateBookingCommission $createBookingCommission) {}
+    public function __construct(
+        private readonly CreateBookingCommission $createBookingCommission,
+        private readonly AgentCommissionLedgerService $agentCommissionLedgerService,
+    ) {}
 
     public function agents(): Response
     {
@@ -151,6 +158,7 @@ class AgentManagementController extends Controller
     {
         $commissions = AgentCommission::query()
             ->with([
+                'financialTransactions' => fn ($query) => $query->where('transaction_type', 'agent_commission')->select(['id', 'source_type', 'source_id', 'transaction_number', 'transaction_type']),
                 'agentProfile.user:id,name',
                 'booking' => fn ($query) => $query
                     ->select(['id', 'booking_code', 'full_name', 'passenger_count', 'agreed_total_amount', 'status'])
@@ -176,10 +184,21 @@ class AgentManagementController extends Controller
                 'currency' => $commission->currency,
                 'status' => $commission->status,
                 'notes' => $commission->notes,
+                'financial_account_id' => $commission->financial_account_id,
+                'payment_date' => $commission->payment_date?->toDateString(),
+                'amount_idr' => $commission->amount_idr,
+                'transaction_number' => $commission->financialTransactions->first()?->transaction_number,
             ]);
 
         return Inertia::render('Dashboard/AgentManagement/Commissions/Index', [
             'commissions' => $commissions,
+            'today' => now()->toDateString(),
+            'cashAccounts' => FinancialAccount::query()
+                ->where('is_active', true)
+                ->where('is_cash_account', true)
+                ->whereIn('cash_account_type', ['operating', 'petty_cash'])
+                ->orderBy('code')
+                ->get(['id', 'code', 'name', 'currency']),
             'summary' => AgentCommission::query()
                 ->select('currency')
                 ->selectRaw("COALESCE(SUM(CASE WHEN status = 'pending' THEN commission_amount ELSE 0 END), 0) as pending")
@@ -199,34 +218,23 @@ class AgentManagementController extends Controller
 
     public function updateCommission(UpdateAgentCommissionRequest $request, AgentCommission $commission): RedirectResponse
     {
-        $status = $request->string('status')->value();
-        $allowedTransitions = [
-            'pending' => ['pending', 'approved', 'cancelled'],
-            'approved' => ['approved', 'pending', 'paid', 'cancelled'],
-            'paid' => ['paid'],
-            'cancelled' => ['cancelled', 'pending'],
-        ];
-
-        if (! in_array($status, $allowedTransitions[$commission->status] ?? [], true)) {
-            return back()->withErrors([
-                'commission' => 'Perubahan status komisi tidak valid. Komisi paid bersifat final dan pending harus disetujui sebelum dibayar.',
-            ]);
+        try {
+            $this->agentCommissionLedgerService->updateStatus($commission, $request->validated());
+        } catch (DomainException $exception) {
+            return back()->withErrors(['commission' => $exception->getMessage()]);
         }
-
-        $commission->loadMissing('booking:id,status');
-        if ($commission->booking?->status === 'cancelled' && $status !== 'cancelled') {
-            return back()->withErrors([
-                'commission' => 'Komisi booking yang dibatalkan tidak dapat diaktifkan kembali.',
-            ]);
-        }
-
-        $commission->update([
-            'status' => $status,
-            'notes' => $request->filled('notes') ? $request->string('notes')->value() : null,
-            'approved_at' => in_array($status, ['approved', 'paid'], true) ? ($commission->approved_at ?? now()) : null,
-            'paid_at' => $status === 'paid' ? ($commission->paid_at ?? now()) : null,
-        ]);
 
         return back()->with('success', 'Status komisi berhasil diperbarui.');
+    }
+
+    public function reverseCommissionPayment(ReverseFinancialTransactionRequest $request, AgentCommission $commission): RedirectResponse
+    {
+        try {
+            $this->agentCommissionLedgerService->reversePayment($commission, $request->string('reason')->value());
+        } catch (DomainException $exception) {
+            return back()->withErrors(['commission' => $exception->getMessage()]);
+        }
+
+        return back()->with('success', 'Pembayaran komisi dikoreksi tanpa menghapus histori.');
     }
 }

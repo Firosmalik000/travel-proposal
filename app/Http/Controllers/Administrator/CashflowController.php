@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Administrator\StoreCashflowRequest;
 use App\Http\Requests\Administrator\UpdateCashflowRequest;
 use App\Models\Cashflow;
-use App\Services\CashflowService;
 use App\Services\PdfBrandingService;
 use App\Services\PdfRenderer;
 use Illuminate\Http\RedirectResponse;
@@ -14,12 +13,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
-use RuntimeException;
 
 class CashflowController extends Controller
 {
     public function __construct(
-        private readonly CashflowService $cashflowService,
         private readonly PdfRenderer $pdfRenderer,
         private readonly PdfBrandingService $pdfBrandingService,
     ) {}
@@ -48,6 +45,11 @@ class CashflowController extends Controller
                 'amount' => $cashflow->amount,
                 'category' => $cashflow->category,
                 'description' => $cashflow->description,
+                'source' => $cashflow->bookingPaymentSource ? [
+                    'type' => 'booking_payment',
+                    'label' => 'Pembayaran '.$cashflow->bookingPaymentSource->booking?->booking_code,
+                    'booking_id' => $cashflow->bookingPaymentSource->booking_id,
+                ] : null,
                 'attachments' => $cashflow->attachments->map(fn ($attachment): array => [
                     'id' => $attachment->id,
                     'file_path' => $attachment->file_path,
@@ -164,53 +166,23 @@ class CashflowController extends Controller
 
     public function store(StoreCashflowRequest $request): RedirectResponse
     {
-        $this->cashflowService->create(
-            payload: [
-                'transaction_date' => $request->date('transaction_date'),
-                'type' => $request->string('type')->value(),
-                'amount' => $request->integer('amount'),
-                'category' => trim($request->string('category')->value()),
-                'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-            ],
-            attachments: $request->file('attachments', []),
-        );
-
-        return back()->with('success', 'Data cashflow berhasil ditambahkan.');
+        return back()->withErrors([
+            'cashflow' => 'Pencatatan cashflow manual sudah dipindahkan ke Akun & Ledger agar rekening dan klasifikasi akuntansinya selalu lengkap.',
+        ]);
     }
 
     public function update(UpdateCashflowRequest $request, Cashflow $cashflow): RedirectResponse
     {
-        try {
-            $this->cashflowService->update(
-                cashflow: $cashflow,
-                payload: [
-                    'transaction_date' => $request->date('transaction_date'),
-                    'type' => $request->string('type')->value(),
-                    'amount' => $request->integer('amount'),
-                    'category' => trim($request->string('category')->value()),
-                    'description' => $request->filled('description') ? trim($request->string('description')->value()) : null,
-                ],
-                newAttachments: $request->file('attachments', []),
-                deletedAttachmentIds: collect($request->input('deleted_attachment_ids', []))
-                    ->map(fn (mixed $id): int => (int) $id)
-                    ->filter(fn (int $id): bool => $id > 0)
-                    ->values()
-                    ->all(),
-            );
-        } catch (RuntimeException $exception) {
-            return back()->withErrors([
-                'attachments' => $exception->getMessage(),
-            ]);
-        }
-
-        return back()->with('success', 'Data cashflow berhasil diperbarui.');
+        return back()->withErrors([
+            'cashflow' => 'Histori Cashflow lama tidak dapat diedit. Koreksi transaksi keuangan dilakukan melalui reversal di modul sumber atau Akun & Ledger.',
+        ]);
     }
 
     public function destroy(Cashflow $cashflow): RedirectResponse
     {
-        $this->cashflowService->delete($cashflow);
-
-        return back()->with('success', 'Data cashflow berhasil dihapus.');
+        return back()->withErrors([
+            'cashflow' => 'Histori Cashflow tidak dapat dihapus. Gunakan reversal agar jejak audit tetap utuh.',
+        ]);
     }
 
     private function buildFilteredQuery(
@@ -223,7 +195,10 @@ class CashflowController extends Controller
         $query = Cashflow::query();
 
         if ($withAttachments) {
-            $query->with('attachments');
+            $query->with([
+                'attachments',
+                'bookingPaymentSource.booking:id,booking_code',
+            ]);
         }
 
         return $query
